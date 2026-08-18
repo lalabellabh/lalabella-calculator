@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#090506">
+<title>Lalabella — Tools</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#090506;--rose:#d77b91;--gold:#e6c47a;--cream:#f7eee5;--muted:#b39a98;--line:rgba(230,196,122,.28)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;overflow-x:hidden;color:var(--cream);font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 50% 32%,rgba(170,45,78,.18),transparent 28%),linear-gradient(145deg,#070405,#12090b 52%,#080405)}
+.ambient{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}.glow{position:absolute;width:42vw;height:42vw;border-radius:50%;filter:blur(70px);opacity:.16;animation:glowMove 10s ease-in-out infinite alternate}.glow.one{left:-15%;top:10%;background:#9d274f}.glow.two{right:-18%;bottom:5%;background:#d8a84e;animation-delay:-4s}@keyframes glowMove{from{transform:translate3d(-20px,0,0) scale(.95)}to{transform:translate3d(30px,-25px,0) scale(1.08)}}
+.petal-field{position:absolute;inset:0;overflow:hidden}.petal{position:absolute;top:-50px;opacity:0;animation:fall linear forwards;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}@keyframes fall{0%{transform:translate3d(0,-60px,0) rotate(0deg);opacity:0}10%{opacity:.7}90%{opacity:.45}100%{transform:translate3d(var(--drift),110vh,0) rotate(420deg);opacity:0}}
+header{position:relative;z-index:5;width:min(1240px,calc(100% - 34px));margin:18px auto 0;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--cream)}.brand-rose{font-size:34px;animation:rosePulse 3s ease-in-out infinite}@keyframes rosePulse{0%,100%{transform:scale(1) rotate(-4deg)}50%{transform:scale(1.08) rotate(4deg)}}.brand-name{font-family:"Cormorant Garamond",serif;font-size:27px;letter-spacing:.16em}.brand-sub{display:block;margin-top:-4px;font-size:8px;letter-spacing:.24em;color:var(--gold)}nav{display:flex;gap:30px}nav a{color:#cdbdb7;text-decoration:none;font-size:12px}.header-actions{display:flex;gap:10px}.sound,.enter-top{border:1px solid var(--line);background:rgba(20,8,11,.62);color:var(--cream);border-radius:30px;padding:10px 16px;cursor:pointer}.enter-top{background:linear-gradient(135deg,#f1d38c,#c79a4d);color:#24150c;border:0;font-weight:700}
+main{position:relative;z-index:2}.hero{width:min(1240px,calc(100% - 34px));min-height:520px;margin:18px auto 0;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:20px}.hero-copy{padding:30px 0 20px}.kicker{color:var(--gold);font-size:10px;letter-spacing:.38em;text-transform:uppercase;margin-bottom:12px}h1{font-family:"Cormorant Garamond",serif;font-size:clamp(58px,8vw,108px);line-height:.78;letter-spacing:.02em;font-weight:600;margin:0}.hero-line{width:210px;height:1px;margin:24px 0 18px;background:linear-gradient(90deg,var(--gold),transparent)}.tagline{font-family:"Cormorant Garamond",serif;font-size:24px;color:#dec9bf}.hero-copy p{max-width:510px;color:var(--muted);font-size:13px;line-height:1.8}.hero-buttons{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}.hero-btn{text-decoration:none;color:#28170e;background:linear-gradient(135deg,#f1d38c,#c89445);border-radius:24px;padding:12px 20px;font-weight:700;font-size:12px}.hero-btn.alt{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--cream)}
+.flower-stage{min-height:470px;display:flex;justify-content:center;align-items:center;position:relative}.orbit{position:absolute;width:min(430px,70vw);aspect-ratio:1;border:1px solid rgba(230,196,122,.2);border-radius:50%;animation:orbitSpin 22s linear infinite}.orbit:before,.orbit:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 16px var(--gold)}.orbit:before{left:8%;top:24%}.orbit:after{right:9%;bottom:22%}@keyframes orbitSpin{to{transform:rotate(360deg)}}
+.flower{width:270px;height:270px;position:relative;display:flex;justify-content:center;align-items:center;animation:flowerFloat 5s ease-in-out infinite;filter:drop-shadow(0 25px 45px rgba(0,0,0,.7))}@keyframes flowerFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}.petal-big{position:absolute;width:88px;height:132px;border-radius:75% 25% 75% 25%;transform-origin:50% 100%;background:linear-gradient(135deg,#f3b0bf,#a93658 55%,#5d172e);box-shadow:inset -10px -15px 20px rgba(74,7,25,.28),0 4px 20px rgba(150,25,65,.22)}.p1{transform:rotate(0deg) translateY(-50px)}.p2{transform:rotate(45deg) translateY(-50px)}.p3{transform:rotate(90deg) translateY(-50px)}.p4{transform:rotate(135deg) translateY(-50px)}.p5{transform:rotate(180deg) translateY(-50px)}.p6{transform:rotate(225deg) translateY(-50px)}.p7{transform:rotate(270deg) translateY(-50px)}.p8{transform:rotate(315deg) translateY(-50px)}.petal-mid{position:absolute;width:70px;height:112px;border-radius:70% 30% 70% 30%;transform-origin:50% 100%;background:linear-gradient(135deg,#ffccd6,#c44b6b 58%,#6e1935)}.m1{transform:rotate(22deg) translateY(-38px)}.m2{transform:rotate(82deg) translateY(-38px)}.m3{transform:rotate(142deg) translateY(-38px)}.m4{transform:rotate(202deg) translateY(-38px)}.m5{transform:rotate(262deg) translateY(-38px)}.m6{transform:rotate(322deg) translateY(-38px)}.rose-core{position:absolute;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#ffdbe3 0 5%,#e77994 6% 18%,#a82e51 35%,#551226 72%);box-shadow:0 0 35px rgba(238,105,137,.4)}.rose-core:before{content:"";position:absolute;inset:20px;border-radius:50%;border:9px solid rgba(255,193,207,.38);transform:rotate(28deg)}.stem{position:absolute;width:14px;height:110px;background:linear-gradient(90deg,#243c25,#5b7b46,#1d321e);bottom:-70px;border-radius:10px;transform:rotate(-7deg)}.leaf{position:absolute;width:65px;height:32px;background:linear-gradient(135deg,#6f944e,#213c25);border-radius:100% 0 100% 0}.leaf.l{bottom:-22px;left:45px;transform:rotate(20deg)}.leaf.r{bottom:8px;right:34px;transform:rotate(155deg)}
+.butterfly{position:absolute;font-size:34px;filter:drop-shadow(0 0 9px rgba(255,120,170,.65));animation:butterflyFly 8s ease-in-out infinite}.butterfly.b1{top:22%;left:4%}.butterfly.b2{right:5%;bottom:20%;animation-delay:-4s;font-size:28px}@keyframes butterflyFly{0%,100%{transform:translate(0,0) rotate(-10deg)}25%{transform:translate(45px,-28px) rotate(8deg)}50%{transform:translate(8px,-60px) rotate(-5deg)}75%{transform:translate(-42px,-18px) rotate(10deg)}}
+.tools{width:min(1240px,calc(100% - 34px));margin:0 auto 70px}.section-title{text-align:center;font-family:"Cormorant Garamond",serif;font-size:38px;margin:0 0 8px}.section-sub{text-align:center;color:var(--muted);font-size:12px;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.card{min-height:175px;padding:20px;border:1px solid var(--line);border-radius:18px;text-decoration:none;color:var(--cream);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012)),rgba(24,10,13,.58);backdrop-filter:blur(14px);transition:.3s;position:relative;overflow:hidden}.card:hover{transform:translateY(-7px);border-color:rgba(240,166,184,.6);box-shadow:0 18px 45px rgba(0,0,0,.4)}.card-icon{font-size:34px;margin-bottom:14px}.card-kicker{font-size:9px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}.card h3{font-family:"Cormorant Garamond",serif;font-size:23px;margin:5px 0 7px}.card p{font-size:11px;color:var(--muted);line-height:1.55;margin:0 0 13px}.card .open{font-size:10px;color:#e7cfc3}footer{text-align:center;padding:0 20px 35px;color:#8f7775;font-family:"Cormorant Garamond",serif;font-size:17px}footer span{color:#f0a6b8}
+@media(max-width:900px){nav{display:none}.hero{grid-template-columns:1fr;text-align:center;min-height:auto}.hero-line{margin:20px auto}.hero-copy p{margin-left:auto;margin-right:auto}.hero-buttons{justify-content:center}.flower-stage{min-height:380px}.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){header{width:calc(100% - 24px)}.brand-name{font-size:21px}.brand-sub{font-size:6px}.brand-rose{font-size:27px}.sound{padding:9px 12px}.enter-top{display:none}.hero{width:calc(100% - 24px)}h1{font-size:58px}.tagline{font-size:20px}.hero-copy p{font-size:12px}.flower-stage{min-height:330px}.flower{transform:scale(.78)}.orbit{width:330px}.butterfly{font-size:25px}.tools{width:calc(100% - 24px)}.section-title{font-size:32px}.grid{gap:9px}.card{min-height:160px;padding:15px}.card-icon{font-size:28px}.card h3{font-size:20px}.card p{font-size:10px}}
+@media(max-width:380px){.grid{grid-template-columns:1fr}.card{min-height:130px}.flower-stage{min-height:290px}.flower{transform:scale(.68)}}
+</style>
+</head>
+<body>
+<div class="ambient"><div class="glow one"></div><div class="glow two"></div><div class="petal-field" id="petalField"></div></div>
+
+<header>
+<a class="brand" href="#"><div class="brand-rose">🌹</div><div><div class="brand-name">LALABELLA</div><span class="brand-sub">FLOWERS • CHOCOLATES • TOOLS</span></div></a>
+<nav><a href="#home">Home</a><a href="#tools">Tools</a><a href="#about">About</a></nav>
+<div class="header-actions"><button class="sound" id="soundBtn">♫ Sound OFF</button><a class="enter-top" href="#tools">Enter System →</a></div>
+</header>
+
+<main id="home">
+<section class="hero">
+<div class="hero-copy">
+<div class="kicker">Floral Inventory • Operations</div>
+<h1>Lalabella</h1><div class="hero-line"></div>
+<div class="tagline">Where every detail blooms.</div>
+<p>A simple, elegant home for Lalabella's inventory, receiving, stock control, pricing and operational tools.</p>
+<div class="hero-buttons"><a class="hero-btn" href="#tools">Explore Tools →</a><a class="hero-btn alt" href="dashboard.html">Open Chocolate Dashboard</a></div>
+</div>
+<div class="flower-stage">
+<div class="orbit"></div><div class="butterfly b1">🦋</div><div class="butterfly b2">🦋</div>
+<div class="flower">
+<div class="petal-big p1"></div><div class="petal-big p2"></div><div class="petal-big p3"></div><div class="petal-big p4"></div><div class="petal-big p5"></div><div class="petal-big p6"></div><div class="petal-big p7"></div><div class="petal-big p8"></div>
+<div class="petal-mid m1"></div><div class="petal-mid m2"></div><div class="petal-mid m3"></div><div class="petal-mid m4"></div><div class="petal-mid m5"></div><div class="petal-mid m6"></div>
+<div class="rose-core"></div><div class="stem"></div><div class="leaf l"></div><div class="leaf r"></div>
+</div></div>
+</section>
+
+<section class="tools" id="tools">
+<h2 class="section-title">Lalabella Tools</h2><p class="section-sub">Choose a tool and let the system handle the details.</p>
+<div class="grid">
+<a class="card" href="dashboard.html"><div class="card-icon">📊</div><div class="card-kicker">Overview</div><h3>Chocolate Dashboard</h3><p>Live stock, reports, alerts and operational overview.</p><span class="open">Open →</span></a>
+<a class="card" href="chocolate-receiving.html"><div class="card-icon">📦</div><div class="card-kicker">Inventory</div><h3>Chocolate Receiving</h3><p>Receive supplier stock and monitor expiry information.</p><span class="open">Open →</span></a>
+<a class="card" href="initial-stock.html"><div class="card-icon">🌱</div><div class="card-kicker">Setup</div><h3>Initial Stock</h3><p>Record opening stock for each branch during setup.</p><span class="open">Open →</span></a>
+<a class="card" href="stock-count.html"><div class="card-icon">📋</div><div class="card-kicker">Inventory</div><h3>Stock Count</h3><p>Count physical stock and identify variances.</p><span class="open">Open →</span></a>
+<a class="card" href="stock-approval.html"><div class="card-icon">✅</div><div class="card-kicker">Approval</div><h3>Stock Approval</h3><p>Review stock count adjustments before they affect live stock.</p><span class="open">Open →</span></a>
+<a class="card" href="chocolate-release.html"><div class="card-icon">🧾</div><div class="card-kicker">Operations</div><h3>Chocolate Release</h3><p>Release stock to branches and automatically monitor quantities.</p><span class="open">Open →</span></a>
+<a class="card" href="supply-log.html"><div class="card-icon">🌸</div><div class="card-kicker">Suppliers</div><h3>Supply Log</h3><p>Track supplier purchases, records and supply history.</p><span class="open">Open →</span></a>
+<a class="card" href="chocolate-calc.html"><div class="card-icon">🍫</div><div class="card-kicker">Pricing</div><h3>Price Calculator</h3><p>Calculate chocolate pricing by pieces, grams or kilograms.</p><span class="open">Open →</span></a>
+<a class="card" href="chocolate-barcode.html"><div class="card-icon">🏷️</div><div class="card-kicker">Tools</div><h3>Chocolate Barcode</h3><p>Create and manage barcode labels for stock.</p><span class="open">Open →</span></a>
+</div>
+</section>
+</main>
+<footer id="about">Thank you for being part of <span>Lalabella</span> 🌹</footer>
+
+<script>
+const PETALS=['🌸','🌺','🌷','🌹','🌼','🩷','✨'];
+function spawnPetal(){const field=document.getElementById('petalField'),p=document.createElement('span');p.className='petal';p.textContent=PETALS[Math.floor(Math.random()*PETALS.length)];p.style.left=Math.random()*100+'vw';p.style.fontSize=12+Math.random()*17+'px';p.style.setProperty('--drift',(Math.random()*180-90)+'px');const d=11+Math.random()*11;p.style.animationDuration=d+'s';field.appendChild(p);setTimeout(()=>p.remove(),d*1000+500)}
+for(let i=0;i<12;i++)setTimeout(spawnPetal,i*450);setInterval(spawnPetal,1700);
+let audioCtx=null,soundOn=false;
+function clickTone(){if(!soundOn)return;try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=720;g.gain.setValueAtTime(.0001,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.045,audioCtx.currentTime+.015);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.16);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.18)}catch(e){}}
+document.getElementById('soundBtn').onclick=()=>{soundOn=!soundOn;document.getElementById('soundBtn').textContent=soundOn?'♫ Sound ON':'♫ Sound OFF';if(soundOn)clickTone()};
+</script>
+</body>
+</html>
