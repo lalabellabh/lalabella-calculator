@@ -149,6 +149,52 @@
   .status-approved{ background:#e3f0e6; color:var(--ok); }
   .status-rejected{ background:#f6e0e0; color:#7a2020; }
   .status-recount{ background:#fbe6d9; color:#c05a1f; }
+
+/* ===== Stock Count Garden redesign — keeps the original wind background ===== */
+@media (min-width:900px){
+  .wrap{max-width:1180px;padding:28px 28px 60px}
+  .count-layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);gap:18px;align-items:start}
+  .count-layout>.card{margin-bottom:18px}
+}
+.count-garden{
+  position:relative;min-height:575px;overflow:hidden;border:1px solid var(--line);
+  background:
+    radial-gradient(circle at 50% 45%,rgba(198,138,31,.16),transparent 31%),
+    radial-gradient(circle at 50% 100%,rgba(176,68,46,.08),transparent 35%),#fff;
+}
+.garden-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.garden-title{font-family:'Fraunces',serif;font-size:23px;margin:0}
+.garden-badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--gold);border:1px solid var(--line);padding:7px 9px;border-radius:20px}
+.garden-stage{height:390px;display:grid;place-items:center;position:relative}
+.count-orbit{position:absolute;border:1px solid rgba(198,138,31,.38);border-radius:50%;animation:countOrbit 16s linear infinite}
+.count-orbit.a{width:285px;height:285px}.count-orbit.b{width:225px;height:225px;animation-direction:reverse;animation-duration:11s}.count-orbit.c{width:170px;height:170px;animation-duration:8s}
+.count-orbit:after{content:"✦";position:absolute;top:-10px;left:50%;color:var(--gold);font-size:14px;text-shadow:0 0 9px rgba(198,138,31,.65)}
+.count-orbit.b:after{content:"✿";left:auto;right:-9px;top:50%;color:var(--rust)}
+.count-orbit.c:after{content:"•";top:auto;bottom:-8px;color:var(--ok)}
+@keyframes countOrbit{to{transform:rotate(360deg)}}
+.count-flower{position:relative;width:150px;height:180px;z-index:3;transition:.55s cubic-bezier(.2,.8,.2,1);cursor:pointer}
+.count-flower:hover{transform:scale(1.05)}
+.cf-glow{position:absolute;width:165px;height:165px;left:50%;top:58px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(176,68,46,.28),transparent 67%);filter:blur(10px);opacity:.35;transition:.5s}
+.cf-head{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:112px;height:105px}
+.cf-petal{position:absolute;width:55px;height:55px;border-radius:55% 45% 58% 42%;background:linear-gradient(145deg,#e66567,#a92e39 70%,#70212d);box-shadow:inset -5px -6px 8px rgba(50,0,0,.2);transition:.55s}
+.cf-p1{left:28px;top:0;transform:scale(.78)}.cf-p2{left:3px;top:20px;transform:rotate(-40deg) scale(.82)}
+.cf-p3{left:54px;top:20px;transform:rotate(40deg) scale(.82)}.cf-p4{left:18px;top:49px;transform:rotate(-72deg) scale(.76)}
+.cf-p5{left:45px;top:48px;transform:rotate(72deg) scale(.76)}.cf-p6{left:34px;top:31px;transform:scale(.55);z-index:4}
+.count-flower.bloom .cf-glow{opacity:1;transform:translate(-50%,-50%) scale(1.28)}
+.count-flower.bloom .cf-p1{transform:rotate(-8deg) translate(-10px,-7px) scale(1)}
+.count-flower.bloom .cf-p2{transform:rotate(-57deg) translate(-7px,-4px) scale(1)}
+.count-flower.bloom .cf-p3{transform:rotate(57deg) translate(7px,-4px) scale(1)}
+.count-flower.bloom .cf-p4{transform:rotate(-92deg) translate(-5px,7px) scale(.95)}
+.count-flower.bloom .cf-p5{transform:rotate(92deg) translate(5px,7px) scale(.95)}
+.cf-stem{position:absolute;left:69px;top:96px;width:10px;height:75px;background:linear-gradient(90deg,#365b32,#78a15d,#31542d);border-radius:9px;transform:rotate(3deg)}
+.cf-leaf{position:absolute;width:48px;height:22px;background:linear-gradient(135deg,#6d9757,#315a36);border-radius:100% 0;top:130px}
+.cf-leaf.l{left:31px;transform:rotate(20deg)}.cf-leaf.r{left:72px;top:145px;transform:scaleX(-1) rotate(18deg)}
+.count-number{position:absolute;z-index:6;left:50%;top:44px;transform:translateX(-50%);font-family:'Fraunces',serif;font-size:27px;color:#fff;text-shadow:0 2px 7px #551722;pointer-events:none}
+.garden-caption{text-align:center;margin-top:-5px}.garden-caption strong{font-family:'Fraunces',serif;font-size:20px}.garden-caption span{display:block;color:var(--ink-dim);font-size:11px;margin-top:3px}
+.garden-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}
+.g-stat{border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;background:rgba(243,237,224,.48)}
+.g-stat b{display:block;font:700 21px 'Fraunces',serif}.g-stat small{font-size:9px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em}
+@media(max-width:899px){.count-layout{display:block}.count-garden{min-height:500px}.garden-stage{height:330px}.count-orbit.a{width:240px;height:240px}.count-orbit.b{width:190px;height:190px}.count-orbit.c{width:145px;height:145px}}
 </style>
 </head>
 <body>
@@ -169,6 +215,8 @@
 
   <button class="refresh-link" id="refreshBtn">↻ Refresh Data</button>
 
+  <div class="count-layout">
+  <div>
   <div class="card">
     <div class="card-title">Session Info</div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -197,6 +245,32 @@
   <div class="card">
     <div class="card-title">Recent Count History (This Branch)</div>
     <div id="historyList"></div>
+  </div>
+  </div>
+
+  <div class="card count-garden">
+    <div class="garden-head">
+      <h2 class="garden-title">Stock Count Garden</h2>
+      <span class="garden-badge">COUNT PULSE</span>
+    </div>
+    <div class="garden-stage" id="countFlowerStage" title="Tap the flower">
+      <div class="count-orbit a"></div><div class="count-orbit b"></div><div class="count-orbit c"></div>
+      <div class="count-flower" id="countFlower">
+        <div class="cf-glow"></div>
+        <div class="cf-head">
+          <span class="cf-petal cf-p1"></span><span class="cf-petal cf-p2"></span><span class="cf-petal cf-p3"></span>
+          <span class="cf-petal cf-p4"></span><span class="cf-petal cf-p5"></span><span class="cf-petal cf-p6"></span>
+        </div>
+        <div class="count-number" id="countNumber">0</div>
+        <div class="cf-stem"></div><span class="cf-leaf l"></span><span class="cf-leaf r"></span>
+      </div>
+    </div>
+    <div class="garden-caption"><strong>Physical Count Pulse</strong><span>Tap the flower to open the count bloom</span></div>
+    <div class="garden-stats">
+      <div class="g-stat"><b id="gItems">0</b><small>Items</small></div>
+      <div class="g-stat"><b id="gCounted">0</b><small>Counted</small></div>
+      <div class="g-stat"><b id="gVariance">0</b><small>Variance</small></div>
+    </div>
   </div>
 </div>
 
@@ -258,6 +332,55 @@
       });
     }catch(e){}
   }
+
+
+  /* ---------- Stock Count Garden interaction ---------- */
+  const countFlower = document.getElementById('countFlower');
+  const countFlowerStage = document.getElementById('countFlowerStage');
+
+  function playBloomChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((freq, i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.11;
+        const dur = 0.34 + i * 0.1;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.05 - i * 0.008, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start); osc.stop(start + dur + 0.05);
+      });
+    }catch(e){}
+  }
+
+  function updateGarden(){
+    const inputs = [...document.querySelectorAll('.physicalInput')];
+    let counted=0, variance=0;
+    inputs.forEach((input)=>{
+      if(input.value !== ''){
+        counted++;
+        const row=input.closest('.count-row');
+        const idx=Number(row.dataset.idx);
+        variance += Number(input.value) - Number(stockItems[idx]?.SystemStock || 0);
+      }
+    });
+    document.getElementById('gItems').textContent=stockItems.length;
+    document.getElementById('gCounted').textContent=counted;
+    document.getElementById('gVariance').textContent=variance;
+    document.getElementById('countNumber').textContent=counted;
+  }
+  function bloomCountFlower(){
+    countFlower.classList.add('bloom');
+    playBloomChime();
+    clearTimeout(window.countBloomTimer);
+    window.countBloomTimer=setTimeout(()=>countFlower.classList.remove('bloom'),1000);
+  }
+  countFlowerStage.addEventListener('click', bloomCountFlower);
 
   async function loadData(){
     const t = Date.now();
@@ -343,6 +466,8 @@
         </div>
       </div>
     `).join('');
+    el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', updateGarden));
+    updateGarden();
   }
 
   function renderHistory(){
