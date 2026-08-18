@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Supply Receiving Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --mustard:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 18px 60px; position:relative; z-index:1; }
+
+  .petal-field{
+    position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0;
+  }
+  .petal{
+    position:absolute;
+    top:-40px;
+    font-size:18px;
+    opacity:0.55;
+    animation-name: petalFall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform;
+  }
+  @keyframes petalFall{
+    0%{ transform:translate(0,0) rotate(0deg); opacity:0; }
+    8%{ opacity:0.55; }
+    92%{ opacity:0.5; }
+    100%{ transform:translate(var(--drift,20px), 110vh) rotate(280deg); opacity:0; }
+  }
+  @keyframes fadeSlideUp{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes softPop{
+    0%{ opacity:0; transform:scale(.96) translateY(-4px); }
+    100%{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  @keyframes petalBurstFly{
+    0%{ opacity:1; transform:translate(0,0) scale(1) rotate(0deg); }
+    100%{ opacity:0; transform:translate(var(--bx,20px), -60px) scale(.4) rotate(160deg); }
+  }
+
+  header{ text-align:center; margin-bottom:24px; }
+  .eyebrow{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.3em;
+    text-transform:uppercase;
+    color:var(--rust);
+    margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem);
+    margin:0 0 6px;
+    line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .branch-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+    margin-bottom:20px;
+    background:var(--paper-2);
+    padding:5px;
+    border-radius:3px;
+  }
+  .branch-tab{
+    padding:11px 0;
+    text-align:center;
+    background:transparent;
+    border:none;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--ink-dim);
+    cursor:pointer;
+    border-radius:2px;
+  }
+  .branch-tab.active{ background:var(--ink); color:var(--paper); }
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px;
+    margin-bottom:18px;
+    animation: fadeSlideUp .3s ease both;
+  }
+  .card-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16px;
+    margin:0 0 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .gear-btn{
+    background:none; border:none; cursor:pointer;
+    font-size:15px; color:var(--ink-dim);
+  }
+
+  .week-label{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-bottom:12px;
+  }
+  .budget-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:6px;
+  }
+  .budget-spent{ font-family:'Fraunces',serif; font-weight:700; font-size:22px; }
+  .budget-of{ font-size:12px; color:var(--ink-dim); }
+  .bar-track{
+    height:10px; background:var(--paper-2); border-radius:5px; overflow:hidden; margin-bottom:10px;
+  }
+  .bar-fill{ height:100%; background:var(--ok); transition:width .25s ease; }
+  .bar-fill.over{ background:var(--rust); }
+
+  .warning-banner{
+    display:none;
+    align-items:center;
+    gap:10px;
+    background:#fbeae6;
+    border:1px solid var(--rust);
+    color:var(--rust);
+    padding:10px 14px;
+    border-radius:3px;
+    font-size:12px;
+    font-weight:600;
+  }
+  .warning-banner.show{ display:flex; }
+  .stamp{
+    font-family:'Space Mono',monospace;
+    border:2px solid var(--rust);
+    color:var(--rust);
+    padding:2px 6px;
+    font-size:10px;
+    letter-spacing:0.05em;
+    transform:rotate(-4deg);
+    white-space:nowrap;
+  }
+
+  canvas{ max-height:180px; }
+
+  label{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-dim);
+    margin-bottom:5px;
+    margin-top:14px;
+  }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=date], input[type=number], textarea, select{
+    width:100%;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:11px 12px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    outline:none;
+  }
+  input:focus, textarea:focus, select:focus{ border-color:var(--ink); }
+  textarea{ resize:vertical; min-height:56px; }
+
+  .hist-row-actions{ margin-top:6px; }
+  .edit-link{
+    background:none; border:none; color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    cursor:pointer; padding:0;
+  }
+  .edit-link:hover{ color:var(--rust); }
+
+  .submit-btn{
+    width:100%;
+    margin-top:18px;
+    padding:14px 0;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:3px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    cursor:pointer;
+  }
+  .submit-btn:hover{ background:#14213a; }
+
+  .hist-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .print-link{
+    background:none; border:1px solid var(--ink); color:var(--ink);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:7px 12px; border-radius:3px; cursor:pointer;
+  }
+  .hist-row{
+    border-top:1px solid var(--line);
+    padding:12px 0;
+    font-size:13px;
+    animation: softPop .22s ease both;
+  }
+  .hist-row:first-child{ border-top:none; }
+  .hist-top{ display:flex; justify-content:space-between; font-weight:600; }
+  .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
+  .hist-remarks{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; font-style:italic; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
+
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0; background:rgba(28,43,69,0.5);
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{
+    background:#fff; border-radius:6px; padding:24px; width:100%; max-width:380px;
+  }
+  .modal h3{ font-family:'Fraunces',serif; margin:0 0 16px; }
+  .modal .submit-btn{ margin-top:20px; }
+  .modal-close{
+    background:none; border:none; color:var(--ink-dim); font-size:12px;
+    display:block; margin:10px auto 0; cursor:pointer;
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{
+      display:block !important;
+      position:absolute; top:0; left:0; width:100%;
+      padding:16px; color:#111; font-family:'Space Grotesk',sans-serif;
+    }
+    #printArea h2{ font-family:'Fraunces',serif; margin-bottom:2px; }
+    #printArea .p-sub{ font-size:11px; color:#555; margin-bottom:14px; }
+    #printArea table{ width:100%; border-collapse:collapse; font-size:11px; }
+    #printArea th, #printArea td{ border:1px solid #999; padding:6px 8px; text-align:left; }
+  }
+  #printArea{ display:none; }
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:var(--ink-dim);
+    text-decoration:none;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:18px;
+    transition:color .12s ease;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+/* ===== Fun Supply Log sound layer ===== */
+.fun-sound{
+  display:inline-flex;align-items:center;gap:7px;margin-top:9px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);
+  padding:8px 12px;border-radius:999px;font:700 11px 'Space Mono',monospace;
+  cursor:pointer;box-shadow:0 5px 14px rgba(28,43,69,.08);
+}
+.fun-sound.on{background:#1c2b45;color:#f3ede0;border-color:#1c2b45}
+.sound-orb{
+  position:fixed;right:18px;bottom:18px;width:48px;height:48px;border-radius:50%;
+  display:grid;place-items:center;background:#fff;border:1px solid var(--line);
+  box-shadow:0 10px 25px rgba(28,43,69,.16);z-index:40;pointer-events:none;
+  opacity:.92
+}
+.sound-orb.playing{animation:happyBounce .65s ease}
+@keyframes happyBounce{
+  0%{transform:scale(1) rotate(0)}25%{transform:scale(1.18) rotate(-8deg)}
+  50%{transform:scale(.94) rotate(8deg)}75%{transform:scale(1.08) rotate(-4deg)}
+  100%{transform:scale(1) rotate(0)}
+}
+.fun-confetti{
+ position:fixed;pointer-events:none;z-index:999;font-size:16px;
+ animation:funFly .9s ease-out forwards
+}
+@keyframes funFly{
+ from{opacity:1;transform:translate(0,0) scale(1) rotate(0)}
+ to{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.55) rotate(260deg)}
+}
+.header-bounce{animation:headerBounce .5s ease}
+@keyframes headerBounce{0%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}70%{transform:translateY(2px)}}
+
+
+/* ===== LALABELLA FLOWER MARKET UI PATCH ===== */
+.fm-layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:18px;align-items:start}
+.fm-panel{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.48);padding:18px;position:relative;overflow:hidden}
+.fm-panel-title{font-family:'Fraunces',serif;font-size:24px;margin:0 0 4px;color:var(--ink)}
+.fm-panel-sub{font-size:10px;color:var(--ink-dim);margin:0 0 10px}
+.fm-live{font-size:9px;color:#5e8d57;letter-spacing:.12em}
+.fm-live:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#6aa060;box-shadow:0 0 9px rgba(106,160,96,.7);margin-right:5px}
+.fm-scene{height:330px;position:relative;display:grid;place-items:center;margin:0 -5px}
+.fm-orbit{position:absolute;border:1px solid rgba(198,138,31,.38);border-radius:50%;animation:fmSpin 14s linear infinite}
+.fm-o1{width:255px;height:255px}.fm-o2{width:205px;height:205px;animation-direction:reverse;animation-duration:10s}.fm-o3{width:155px;height:155px;animation-duration:7s}
+.fm-orbit:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--gold);top:-4px;left:50%;box-shadow:0 0 12px rgba(198,138,31,.8)}
+.fm-o2:after{background:#b0442e;left:auto;right:-4px;top:50%}.fm-o3:after{background:#71925e;top:auto;bottom:-4px;left:50%}
+@keyframes fmSpin{to{transform:rotate(360deg)}}
+.fm-basket{position:relative;width:190px;height:175px;z-index:3;cursor:pointer;transition:.4s;user-select:none}
+.fm-handle{position:absolute;left:38px;top:25px;width:115px;height:100px;border:9px solid #9a6739;border-bottom:0;border-radius:60px 60px 0 0}
+.fm-basket-body{position:absolute;left:20px;bottom:18px;width:150px;height:105px;border-radius:15px 15px 40px 40px;background:linear-gradient(145deg,#98633a,#4d2b19);border:4px solid #c18447;box-shadow:inset 0 -18px 25px rgba(0,0,0,.22),0 18px 28px rgba(0,0,0,.18)}
+.fm-flower{position:absolute;font-size:48px;filter:drop-shadow(0 0 7px rgba(220,75,120,.18));transition:.45s}
+.fm-f1{left:33px;top:23px}.fm-f2{left:74px;top:3px}.fm-f3{left:118px;top:25px}.fm-f4{left:54px;top:45px;font-size:39px}.fm-f5{left:102px;top:49px;font-size:38px}
+.fm-basket.bloom{filter:drop-shadow(0 0 23px rgba(230,191,105,.45));transform:scale(1.04)}
+.fm-basket.bloom .fm-flower{filter:drop-shadow(0 0 16px rgba(255,160,190,.9));transform:scale(1.13)}
+.fm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.fm-stat{padding:12px 7px;border:1px solid var(--line);border-radius:12px;text-align:center;background:rgba(255,255,255,.34)}
+.fm-stat strong{display:block;font-size:21px}.fm-stat span{display:block;margin-top:2px;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+.fm-budget{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.34)}
+.fm-budget-top{display:flex;justify-content:space-between;font-size:9px;color:var(--ink-dim)}.fm-budget-top b{color:#8a5d0b;font-size:16px}
+.fm-bar{height:8px;background:#e8dfd0;border-radius:99px;overflow:hidden;margin-top:8px}.fm-fill{height:100%;width:66%;background:linear-gradient(90deg,#71925e,#d3a43f);border-radius:99px;transition:width .5s}
+.fm-sound{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:16px;padding:7px 10px;cursor:pointer;font-size:10px;font-weight:700}.fm-sound.on{border-color:var(--gold);color:#8a5d0b}
+@media(min-width:900px){.fm-side{position:sticky;top:18px}}
+@media(max-width:899px){.fm-layout{grid-template-columns:1fr}.fm-side{position:relative}}
+@media(max-width:600px){.fm-scene{height:280px}.fm-o1{width:220px;height:220px}.fm-o2{width:175px;height:175px}.fm-o3{width:135px;height:135px}.fm-stats{grid-template-columns:repeat(3,1fr)}}
+
+</style>
+</head>
+<body><div class="wrap">
+<div class="fm-layout">
+<div class="fm-main">
+
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Supply Log</h1>
+    <p class="sub">Weekly receiving log &amp; budget monitoring</p>
+    <button class="print-link" id="refreshBtn" style="margin-top:10px;">↻ Refresh Data</button><br><button class="fun-sound" id="soundBtn" type="button">🔇 Fun Sounds OFF</button>
+  </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span id="budgetTitle">ModaMall — Current Week</span>
+      <button class="gear-btn" id="gearBtn" title="Set weekly budget">⚙</button>
+    </div>
+    <div class="week-label" id="weekLabel"></div>
+    <div class="budget-row">
+      <span class="budget-spent" id="spentAmount">0.000 BD</span>
+      <span class="budget-of" id="budgetOf">of 0.000 BD budget</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    <div class="warning-banner" id="warningBanner">
+      <span class="stamp">FOR APPROVAL</span>
+      <span>Weekly budget exceeded — approval required.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Branch Comparison (This Week)</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Log New Invoice</div>
+    <label>Date Received</label>
+    <input type="date" id="fDate" />
+    <label>Invoice No.</label>
+    <input type="text" id="fInvoice" placeholder="e.g. INV-00123" />
+    <label>Supplier</label>
+    <select id="fSupplier">
+      <option value="">Select supplier...</option>
+      <option value="__add_new__">+ Add new supplier</option>
+    </select>
+    <div id="newSupplierRow" style="display:none; margin-top:8px;">
+      <input type="text" id="fNewSupplier" placeholder="New supplier name" />
+      <button type="button" class="print-link" id="confirmNewSupplierBtn" style="margin-top:8px;">Add Supplier</button>
+    </div>
+    <label>Invoice Subtotal (BD)</label>
+    <input type="number" id="fSubtotal" min="0" step="0.001" placeholder="0.000" />
+    <label>Quantity (Bundles/Pcs) — optional</label>
+    <input type="number" id="fQty" min="0" placeholder="Optional" />
+    <label>Order By</label>
+    <input type="text" id="fOrderBy" list="orderByList" placeholder="Type or pick a name" />
+    <datalist id="orderByList"></datalist>
+    <label>Remarks/Purpose of order</label>
+    <textarea id="fRemarks" placeholder="Optional"></textarea>
+    <button class="submit-btn" id="logBtn">Log Invoice</button>
+  </div>
+
+  <div class="card">
+    <div class="hist-header">
+      <span class="card-title" style="margin:0;">History</span>
+      <button class="print-link" id="printBtn">Print</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal">
+    <h3>Edit Invoice</h3>
+    <label>Date Received</label>
+    <input type="date" id="eDate" />
+    <label>Invoice No.</label>
+    <input type="text" id="eInvoice" />
+    <label>Supplier</label>
+    <select id="eSupplier"></select>
+    <label>Invoice Subtotal (BD)</label>
+    <input type="number" id="eSubtotal" min="0" step="0.001" />
+    <label>Quantity (Bundles/Pcs)</label>
+    <input type="number" id="eQty" min="0" />
+    <label>Order By</label>
+    <input type="text" id="eOrderBy" list="orderByList" />
+    <label>Remarks/Purpose of order</label>
+    <textarea id="eRemarks"></textarea>
+    <button class="submit-btn" id="saveEditBtn">Save Changes</button>
+    <button class="modal-close" id="closeEditModalBtn">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>Set Weekly Budget</h3>
+    <label>ModaMall (BD)</label>
+    <input type="number" id="budgetModaMall" min="0" step="0.001" />
+    <label>Hamala (BD)</label>
+    <input type="number" id="budgetHamala" min="0" step="0.001" />
+    <label>Galali (BD)</label>
+    <input type="number" id="budgetGalali" min="0" step="0.001" />
+    <button class="submit-btn" id="saveBudgetBtn">Save</button>
+    <button class="modal-close" id="closeModalBtn">Close</button>
+  </div>
+</div>
+
+<div id="printArea">
+  <h2>Lalabella — Supply Log</h2>
+  <div class="p-sub" id="pMeta"></div>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Invoice No.</th><th>Supplier</th><th>Subtotal</th><th>Qty</th><th>Order By</th><th>Remarks/Purpose</th></tr>
+    </thead>
+    <tbody id="pTableBody"></tbody>
+  </table>
+</div>
+
+<div class="sound-orb" id="soundOrb">🎵</div>
+<script>
+  const BRANCHES = ['ModaMall','Hamala','Galali'];
+  let currentBranch = 'ModaMall';
+  let budgets = { ModaMall:0, Hamala:0, Galali:0 };
+  let entries = [];
+  let suppliers = [];
+  let orderByNames = [];
+  let editingId = null;
+  let chartInstance = null;
+
+  /* ---------- Fun UI sound effects (WebAudio; no audio files required) ---------- */
+  let funSound = false;
+  let audioCtx = null;
+  function audio(){
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return null;
+      audioCtx=new AC();
+    }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function beep(freq,start,dur,vol=.045,type='sine'){
+    const c=audio(); if(!c || !funSound) return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,c.currentTime+start);
+    g.gain.setValueAtTime(.0001,c.currentTime+start);
+    g.gain.exponentialRampToValueAtTime(vol,c.currentTime+start+.018);
+    g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+start+dur);
+    o.connect(g).connect(c.destination); o.start(c.currentTime+start); o.stop(c.currentTime+start+dur+.03);
+  }
+  function happyClick(){ beep(520,0,.07,.035); beep(740,.055,.10,.025); }
+  function happySuccess(){
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>beep(f,i*.075,.25,.045));
+    burst('🎉'); burst('🌸'); burst('✨'); burst('💐');
+  }
+  function happyWarning(){ beep(392,0,.14,.04); beep(330,.13,.20,.035); }
+  function burst(emoji){
+    const el=document.createElement('span'); el.className='fun-confetti'; el.textContent=emoji;
+    el.style.left=(45+Math.random()*10)+'vw'; el.style.top=(45+Math.random()*10)+'vh';
+    el.style.setProperty('--fx',(Math.random()*220-110)+'px');
+    el.style.setProperty('--fy',(-80-Math.random()*140)+'px');
+    document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
+  }
+  function soundBounce(){
+    const o=document.getElementById('soundOrb'); o.classList.remove('playing'); void o.offsetWidth; o.classList.add('playing');
+  }
+  const soundBtn=document.getElementById('soundBtn');
+  soundBtn.addEventListener('click',()=>{
+    funSound=!funSound; audio();
+    soundBtn.textContent=funSound?'🔊 Fun Sounds ON':'🔇 Fun Sounds OFF';
+    soundBtn.classList.toggle('on',funSound);
+    if(funSound){ happyClick(); soundBounce(); }
+  });
+
+  const fmtBD = n => Number(n).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD';
+
+  /* ---------- Petal field (ambient background) ---------- */
+  const PETAL_EMOJI = ['🌸','🌺','🌷','🌼'];
+  function spawnPetal(){
+    const field = document.getElementById('petalField');
+    const petal = document.createElement('div');
+    petal.className = 'petal';
+    petal.textContent = PETAL_EMOJI[Math.floor(Math.random()*PETAL_EMOJI.length)];
+    const left = Math.random() * 100;
+    const duration = 12 + Math.random() * 10;
+    const drift = (Math.random() * 80 - 40) + 'px';
+    const size = 14 + Math.random() * 12;
+    petal.style.left = left + 'vw';
+    petal.style.fontSize = size + 'px';
+    petal.style.setProperty('--drift', drift);
+    petal.style.animationDuration = duration + 's';
+    field.appendChild(petal);
+    setTimeout(()=> petal.remove(), duration * 1000 + 200);
+  }
+  for(let i=0;i<6;i++){ setTimeout(spawnPetal, i * 900); }
+  setInterval(spawnPetal, 2600);
+
+  function petalBurst(fromEl){
+    const rect = fromEl.getBoundingClientRect();
+    for(let i=0;i<6;i++){
+      const p = document.createElement('div');
+      p.textContent = PETAL_EMOJI[Math.floor(Math.random()*PETAL_EMOJI.length)];
+      const bx = (Math.random()*100 - 50) + 'px';
+      p.style.cssText = `
+        position:fixed; left:${rect.left + rect.width/2}px; top:${rect.top}px;
+        font-size:${12+Math.random()*8}px; pointer-events:none; z-index:999;
+        animation: petalBurstFly ${0.6+Math.random()*0.3}s ease-out forwards;
+      `;
+      p.style.setProperty('--bx', bx);
+      document.body.appendChild(p);
+      setTimeout(()=> p.remove(), 1000);
+    }
+  }
+
+  /* ---------- Smooth chime sounds (generated, no files needed) ---------- */
+  function getCtx(){
+    return audio();
+  }
+  function tone(freq, start, dur, vol=0.1){
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+    gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime + start);
+    osc.stop(ctx.currentTime + start + dur + 0.03);
+  }
+  function playSoftClick(){ tone(520, 0, 0.09, 0.06); }
+  function playChime(){
+    tone(659.25, 0, 0.35, 0.09);
+    tone(783.99, 0.1, 0.4, 0.08);
+    tone(987.77, 0.22, 0.5, 0.07);
+  }
+  function playWarningTone(){
+    tone(392, 0, 0.18, 0.08);
+    tone(349.23, 0.15, 0.25, 0.07);
+  }
+
+  function getWeekRange(refDate){
+    const d = new Date(refDate);
+    d.setHours(0,0,0,0);
+    const day = d.getDay();
+    const start = new Date(d);
+    start.setDate(d.getDate() - day);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+
+  function fmtDate(d){
+    return d.toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  function isInWeek(dateStr, range){
+    const d = new Date(dateStr);
+    return d >= range.start && d <= range.end;
+  }
+
+  function weeklyTotal(branch, range){
+    return entries
+      .filter(e => e.branch === branch && isInWeek(e.dateReceived, range))
+      .reduce((sum, e) => sum + Number(e.subtotal), 0);
+  }
+
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyvQl0VEx-SObaV5CMeKK-sDEopFH0X-rauQkElWPW7N_Hraxsuth-odm_rW-SVMzk/exec';
+
+  async function loadData(){
+    const t = Date.now();
+    const [budgetsRes, entriesRaw, suppliersRes, orderByRes] = await Promise.all([
+      fetch(API_URL + '?action=getBudgets&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error('Failed to load budgets', e); return {}; }),
+      fetch(API_URL + '?action=getEntries&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error('Failed to load entries', e); return []; }),
+      fetch(API_URL + '?action=getSuppliers&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error('Failed to load suppliers', e); return []; }),
+      fetch(API_URL + '?action=getOrderBy&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error('Failed to load order-by names', e); return []; })
+    ]);
+
+    budgets = budgetsRes;
+    entries = entriesRaw.map(r => ({
+      id: r.ID,
+      branch: r.Branch,
+      dateReceived: r.DateReceived,
+      invoiceNo: r.InvoiceNo,
+      supplier: r.Supplier,
+      subtotal: Number(r.Subtotal),
+      qty: r.Qty || null,
+      orderBy: r.OrderBy,
+      remarks: r.Remarks,
+      lastEdited: r.LastEdited
+    }));
+    suppliers = suppliersRes;
+    orderByNames = orderByRes;
+
+    populateSupplierDropdown();
+    populateOrderByList();
+    render();
+  }
+
+  function populateSupplierDropdown(){
+    [document.getElementById('fSupplier'), document.getElementById('eSupplier')].forEach(sel=>{
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="">Select supplier...</option>' +
+        suppliers.map(s => `<option value="${s}">${s}</option>`).join('') +
+        (sel.id === 'fSupplier' ? '<option value="__add_new__">+ Add new supplier</option>' : '');
+      if(suppliers.includes(currentVal)) sel.value = currentVal;
+    });
+  }
+
+  function populateOrderByList(){
+    const dl = document.getElementById('orderByList');
+    dl.innerHTML = orderByNames.map(n => `<option value="${n}"></option>`).join('');
+  }
+
+  function render(){
+    const range = getWeekRange(new Date());
+    document.getElementById('weekLabel').textContent = `Week: ${fmtDate(range.start)} – ${fmtDate(range.end)} (Sunday–Saturday)`;
+    document.getElementById('budgetTitle').textContent = `${currentBranch} — Current Week`;
+
+    const spent = weeklyTotal(currentBranch, range);
+    const budget = Number(budgets[currentBranch]) || 0;
+    document.getElementById('spentAmount').textContent = fmtBD(spent);
+    document.getElementById('budgetOf').textContent = `of ${fmtBD(budget)} budget`;
+
+    const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+    const fillEl = document.getElementById('barFill');
+    fillEl.style.width = pct + '%';
+    fillEl.classList.toggle('over', budget > 0 && spent > budget);
+
+    document.getElementById('warningBanner').classList.toggle('show', budget > 0 && spent > budget);
+
+    renderChart(range);
+    renderHistory();
+  }
+
+  function renderChart(range){
+    const spentData = BRANCHES.map(b => weeklyTotal(b, range));
+    const budgetData = BRANCHES.map(b => Number(budgets[b]) || 0);
+    const ctx = document.getElementById('chart').getContext('2d');
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: BRANCHES,
+        datasets: [
+          { label:'Spent', data:spentData, backgroundColor:'#1c2b45' },
+          { label:'Budget', data:budgetData, backgroundColor:'#c9bfa0' }
+        ]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+        scales:{ y:{ beginAtZero:true, ticks:{ font:{ size:10 } } }, x:{ ticks:{ font:{ size:11 } } } }
+      }
+    });
+  }
+
+  function renderHistory(){
+    const list = entries
+      .filter(e => e.branch === currentBranch)
+      .sort((a,b) => new Date(b.dateReceived) - new Date(a.dateReceived));
+    const el = document.getElementById('historyList');
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">No invoices logged yet for ' + currentBranch + '.</div>';
+      return;
+    }
+    el.innerHTML = list.map(e => `
+      <div class="hist-row">
+        <div class="hist-top">
+          <span>${e.invoiceNo || '(no invoice no.)'} — ${e.supplier || '—'}</span>
+          <span>${fmtBD(e.subtotal)}</span>
+        </div>
+        <div class="hist-meta">${fmtDate(new Date(e.dateReceived))} ${e.qty ? '· ' + e.qty + ' pcs/bundles' : ''} · Order by: ${e.orderBy || '—'}</div>
+        ${e.remarks ? `<div class="hist-remarks">${e.remarks}</div>` : ''}
+        ${e.lastEdited ? `<div class="hist-remarks">Last edited: ${new Date(e.lastEdited).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+        ${e.id ? `<div class="hist-row-actions"><button class="edit-link" data-id="${e.id}">Edit</button></div>` : ''}
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.edit-link').forEach(btn=>{
+      btn.addEventListener('click', ()=> openEditModal(btn.dataset.id));
+    });
+  }
+
+  function openEditModal(id){
+    const entry = entries.find(e => e.id === id);
+    if(!entry) return;
+    editingId = id;
+    document.getElementById('eDate').value = entry.dateReceived ? entry.dateReceived.slice(0,10) : '';
+    document.getElementById('eInvoice').value = entry.invoiceNo || '';
+    document.getElementById('eSupplier').value = entry.supplier || '';
+    document.getElementById('eSubtotal').value = entry.subtotal || '';
+    document.getElementById('eQty').value = entry.qty || '';
+    document.getElementById('eOrderBy').value = entry.orderBy || '';
+    document.getElementById('eRemarks').value = entry.remarks || '';
+    document.getElementById('editModalOverlay').classList.add('show');
+  }
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    playSoftClick();
+    happyClick(); soundBounce();
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+
+  const modalOverlay = document.getElementById('modalOverlay');
+  document.getElementById('gearBtn').addEventListener('click', ()=>{
+    happyClick(); soundBounce();
+    document.getElementById('budgetModaMall').value = budgets.ModaMall || '';
+    document.getElementById('budgetHamala').value = budgets.Hamala || '';
+    document.getElementById('budgetGalali').value = budgets.Galali || '';
+    modalOverlay.classList.add('show');
+  });
+  document.getElementById('closeModalBtn').addEventListener('click', ()=> modalOverlay.classList.remove('show'));
+  document.getElementById('saveBudgetBtn').addEventListener('click', async ()=>{
+    const saveBtn = document.getElementById('saveBudgetBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    budgets.ModaMall = parseFloat(document.getElementById('budgetModaMall').value) || 0;
+    budgets.Hamala = parseFloat(document.getElementById('budgetHamala').value) || 0;
+    budgets.Galali = parseFloat(document.getElementById('budgetGalali').value) || 0;
+    try{
+      for(const b of BRANCHES){
+        await fetch(`${API_URL}?action=setBudget&branch=${encodeURIComponent(b)}&budget=${budgets[b]}`);
+      }
+    }catch(e){ alert('Could not save budgets. Check your connection.'); }
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+    modalOverlay.classList.remove('show');
+    render();
+  });
+
+  document.getElementById('fSupplier').addEventListener('change', function(){
+    document.getElementById('newSupplierRow').style.display = (this.value === '__add_new__') ? 'block' : 'none';
+  });
+
+  document.getElementById('confirmNewSupplierBtn').addEventListener('click', async ()=>{
+    happyClick(); soundBounce();
+    const name = document.getElementById('fNewSupplier').value.trim();
+    if(!name) return;
+    const btn = document.getElementById('confirmNewSupplierBtn');
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+    try{
+      await fetch(`${API_URL}?action=addSupplier&name=${encodeURIComponent(name)}`);
+      if(!suppliers.includes(name)) suppliers.push(name);
+      populateSupplierDropdown();
+      document.getElementById('fSupplier').value = name;
+      document.getElementById('newSupplierRow').style.display = 'none';
+      document.getElementById('fNewSupplier').value = '';
+    }catch(e){
+      alert('Could not add supplier. Check your connection.');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Add Supplier';
+  });
+
+  document.getElementById('logBtn').addEventListener('click', async ()=>{
+    const dateReceived = document.getElementById('fDate').value;
+    const invoiceNo = document.getElementById('fInvoice').value.trim();
+    const supplierSel = document.getElementById('fSupplier').value;
+    const supplier = (supplierSel === '__add_new__') ? '' : supplierSel;
+    const subtotal = parseFloat(document.getElementById('fSubtotal').value);
+    const qty = document.getElementById('fQty').value;
+    const orderBy = document.getElementById('fOrderBy').value.trim();
+    const remarks = document.getElementById('fRemarks').value.trim();
+
+    if(!dateReceived || isNaN(subtotal) || subtotal <= 0){
+      alert('Date received and subtotal (greater than 0) are required.');
+      return;
+    }
+    if(!supplier){
+      alert('Please select a supplier.');
+      return;
+    }
+
+    const logBtn = document.getElementById('logBtn');
+    logBtn.disabled = true;
+    logBtn.textContent = 'Logging...';
+
+    const params = new URLSearchParams({
+      action: 'addEntry',
+      branch: currentBranch,
+      dateReceived, invoiceNo, supplier,
+      subtotal: subtotal, qty: qty || '',
+      orderBy, remarks
+    });
+
+    try{
+      const res = await fetch(`${API_URL}?${params.toString()}`);
+      const data = await res.json();
+
+      entries.push({
+        id: data.id,
+        branch: currentBranch,
+        dateReceived, invoiceNo, supplier,
+        subtotal, qty: qty ? Number(qty) : null,
+        orderBy, remarks,
+        lastEdited: new Date().toISOString()
+      });
+
+      if(orderBy && !orderByNames.includes(orderBy)){
+        orderByNames.push(orderBy);
+        populateOrderByList();
+        fetch(`${API_URL}?action=addOrderBy&name=${encodeURIComponent(orderBy)}`).catch(()=>{});
+      }
+
+      playChime();
+      if(funSound) happySuccess();
+      petalBurst(logBtn);
+
+      const rangeNow = getWeekRange(new Date());
+      const spentNow = weeklyTotal(currentBranch, rangeNow);
+      const budgetNow = Number(budgets[currentBranch]) || 0;
+      if(budgetNow > 0 && spentNow > budgetNow){
+        setTimeout(playWarningTone, 500);
+        if(funSound) setTimeout(happyWarning, 650);
+      }
+
+      document.getElementById('fDate').value = '';
+      document.getElementById('fInvoice').value = '';
+      document.getElementById('fSupplier').value = '';
+      document.getElementById('fSubtotal').value = '';
+      document.getElementById('fQty').value = '';
+      document.getElementById('fOrderBy').value = '';
+      document.getElementById('fRemarks').value = '';
+      render();
+    }catch(e){
+      alert('Could not log invoice. Check your connection and try again.');
+    }
+    logBtn.disabled = false;
+    logBtn.textContent = 'Log Invoice';
+  });
+
+  document.getElementById('closeEditModalBtn').addEventListener('click', ()=>{
+    document.getElementById('editModalOverlay').classList.remove('show');
+    editingId = null;
+  });
+
+  document.getElementById('saveEditBtn').addEventListener('click', async ()=>{
+    if(!editingId) return;
+    const dateReceived = document.getElementById('eDate').value;
+    const invoiceNo = document.getElementById('eInvoice').value.trim();
+    const supplier = document.getElementById('eSupplier').value;
+    const subtotal = parseFloat(document.getElementById('eSubtotal').value);
+    const qty = document.getElementById('eQty').value;
+    const orderBy = document.getElementById('eOrderBy').value.trim();
+    const remarks = document.getElementById('eRemarks').value.trim();
+
+    if(!dateReceived || isNaN(subtotal) || subtotal <= 0){
+      alert('Date received and subtotal (greater than 0) are required.');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveEditBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    const params = new URLSearchParams({
+      action: 'editEntry',
+      id: editingId,
+      dateReceived, invoiceNo, supplier,
+      subtotal: subtotal, qty: qty || '',
+      orderBy, remarks
+    });
+
+    try{
+      await fetch(`${API_URL}?${params.toString()}`);
+      const entry = entries.find(e => e.id === editingId);
+      if(entry){
+        Object.assign(entry, {
+          dateReceived, invoiceNo, supplier,
+          subtotal, qty: qty ? Number(qty) : null,
+          orderBy, remarks,
+          lastEdited: new Date().toISOString()
+        });
+      }
+      if(orderBy && !orderByNames.includes(orderBy)){
+        orderByNames.push(orderBy);
+        populateOrderByList();
+        fetch(`${API_URL}?action=addOrderBy&name=${encodeURIComponent(orderBy)}`).catch(()=>{});
+      }
+      document.getElementById('editModalOverlay').classList.remove('show');
+      editingId = null;
+      render();
+    }catch(e){
+      alert('Could not save changes. Check your connection.');
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Changes';
+  });
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    happyClick(); soundBounce();
+    const list = entries
+      .filter(e => e.branch === currentBranch)
+      .sort((a,b) => new Date(b.dateReceived) - new Date(a.dateReceived));
+    document.getElementById('pMeta').textContent =
+      `${currentBranch} · Printed on ${new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+    document.getElementById('pTableBody').innerHTML = list.map(e => `
+      <tr>
+        <td>${fmtDate(new Date(e.dateReceived))}</td>
+        <td>${e.invoiceNo || '—'}</td>
+        <td>${e.supplier || '—'}</td>
+        <td>${fmtBD(e.subtotal)}</td>
+        <td>${e.qty || '—'}</td>
+        <td>${e.orderBy || '—'}</td>
+        <td>${e.remarks || ''}</td>
+      </tr>
+    `).join('');
+    window.print();
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+    happyClick(); soundBounce();
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = 'Refreshing...';
+    await loadData();
+    btn.textContent = '↻ Refresh Data';
+  });
+
+  loadData();
+</script>
+
+</div>
+
+<div class="fm-panel fm-side">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div>
+      <h2 class="fm-panel-title">Flower Market</h2>
+      <p class="fm-panel-sub">A cheerful live view of your supply activity.</p>
+    </div>
+    <span class="fm-live">LIVE MONITOR</span>
+  </div>
+
+  <div class="fm-scene" id="fmScene">
+    <div class="fm-orbit fm-o1"></div>
+    <div class="fm-orbit fm-o2"></div>
+    <div class="fm-orbit fm-o3"></div>
+    <div class="fm-basket" id="fmBasket" title="Tap the flower basket">
+      <div class="fm-handle"></div>
+      <div class="fm-basket-body"></div>
+      <span class="fm-flower fm-f1">🌷</span>
+      <span class="fm-flower fm-f2">🌹</span>
+      <span class="fm-flower fm-f3">🌼</span>
+      <span class="fm-flower fm-f4">🌸</span>
+      <span class="fm-flower fm-f5">🌺</span>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin:-2px 0 8px">
+    <button type="button" class="fm-sound" id="fmSound">♪ Fun Sounds OFF</button>
+  </div>
+
+  <div class="fm-stats">
+    <div class="fm-stat"><strong id="fmInvoices">0</strong><span>Invoices</span></div>
+    <div class="fm-stat"><strong id="fmAmount">0.000</strong><span>BD Today</span></div>
+    <div class="fm-stat"><strong id="fmBudgetPct">0%</strong><span>Budget Used</span></div>
+  </div>
+
+  <div class="fm-budget">
+    <div class="fm-budget-top"><span>DAILY PURCHASE BUDGET</span><b id="fmBudgetText">0 / 350 BD</b></div>
+    <div class="fm-bar"><div class="fm-fill" id="fmFill"></div></div>
+  </div>
+</div>
+</div>
+
+</div><script>
+
+/* ===== Flower Market interaction: WebAudio only, no external sound files ===== */
+(function(){
+  let fmSoundOn=false, fmAudio=null;
+
+  function fmAudioCtx(){
+    if(!fmAudio){
+      const A=window.AudioContext||window.webkitAudioContext;
+      if(!A)return null;
+      fmAudio=new A();
+    }
+    if(fmAudio.state==='suspended')fmAudio.resume();
+    return fmAudio;
+  }
+  function fmTone(freq,delay,duration,volume=.035,type='sine'){
+    if(!fmSoundOn)return;
+    const c=fmAudioCtx();if(!c)return;
+    const o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,c.currentTime+delay);
+    g.gain.setValueAtTime(.0001,c.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(volume,c.currentTime+delay+.018);
+    g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+delay+duration);
+    o.connect(g);g.connect(c.destination);
+    o.start(c.currentTime+delay);o.stop(c.currentTime+delay+duration+.03);
+  }
+  function fmHappy(){
+    fmTone(523,0,.16,.04);fmTone(659,.07,.2,.04);fmTone(784,.15,.26,.035);fmTone(1047,.24,.34,.025);
+  }
+  function fmSoft(){fmTone(392,0,.12,.025);fmTone(523,.08,.16,.02)}
+
+  const sb=document.getElementById('fmSound');
+  if(sb)sb.addEventListener('click',function(e){
+    e.stopPropagation();fmSoundOn=!fmSoundOn;
+    sb.textContent=fmSoundOn?'♪ Fun Sounds ON':'♪ Fun Sounds OFF';
+    sb.classList.toggle('on',fmSoundOn);
+    if(fmSoundOn){fmAudioCtx();fmHappy();}
+  });
+
+  const basket=document.getElementById('fmBasket');
+  if(basket)basket.addEventListener('click',function(){
+    basket.classList.add('bloom');fmHappy();
+    setTimeout(()=>basket.classList.remove('bloom'),1100);
+  });
+
+  /* Read existing entries when available, without changing the existing API logic. */
+  window.updateFlowerMarketStats=function(){
+    try{
+      if(typeof entries==='undefined')return;
+      const branch=typeof currentBranch!=='undefined'?currentBranch:null;
+      const rows=branch?entries.filter(e=>String(e.Branch||'')===String(branch)):entries;
+      const today=new Date();today.setHours(0,0,0,0);
+      const todays=rows.filter(e=>{
+        const raw=e['Invoice Date']||e['Date']||e['Purchase Date'];
+        if(!raw)return false;
+        const d=new Date(raw);d.setHours(0,0,0,0);
+        return d.getTime()===today.getTime();
+      });
+      const total=todays.reduce((s,e)=>s+Number(e['Amount']||e['Total']||e['Amount (BD)']||0),0);
+      const budget=350;
+      const pct=budget?Math.min(999,(total/budget)*100):0;
+      const i=document.getElementById('fmInvoices'),a=document.getElementById('fmAmount'),p=document.getElementById('fmBudgetPct'),t=document.getElementById('fmBudgetText'),f=document.getElementById('fmFill');
+      if(i)i.textContent=todays.length;
+      if(a)a.textContent=total.toFixed(3);
+      if(p)p.textContent=pct.toFixed(0)+'%';
+      if(t)t.textContent=total.toFixed(3)+' / '+budget.toFixed(0)+' BD';
+      if(f)f.style.width=Math.min(100,pct)+'%';
+    }catch(err){}
+  };
+
+  /* Patch common successful save / render hooks if they exist. */
+  const oldRender=window.renderEntries;
+  if(typeof oldRender==='function'){
+    window.renderEntries=function(){const r=oldRender.apply(this,arguments);updateFlowerMarketStats();return r;};
+  }
+  setTimeout(()=>window.updateFlowerMarketStats&&window.updateFlowerMarketStats(),500);
+})();
+
+</script>
+</body>
+</html>
