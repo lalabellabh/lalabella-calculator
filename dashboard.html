@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --gold:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:680px; margin:0 auto; padding:28px 18px 60px; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+  header{ text-align:center; margin-bottom:24px; }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .branch-tabs{
+    display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px;
+    margin-bottom:20px; background:var(--paper-2); padding:5px; border-radius:3px;
+  }
+  .branch-tab{
+    padding:11px 0; text-align:center; background:transparent; border:none;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px;
+    color:var(--ink-dim); cursor:pointer; border-radius:2px;
+  }
+  .branch-tab.active{ background:var(--ink); color:var(--paper); }
+
+  .refresh-link{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:7px 12px; border-radius:3px; cursor:pointer; margin-bottom:14px;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:4px;
+    padding:20px; margin-bottom:18px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px;
+    margin:0 0 14px;
+  }
+
+  .kpi-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  .kpi-cell{
+    background:var(--paper); border:1px solid var(--line); border-radius:3px;
+    padding:12px;
+  }
+  .kpi-cell.warn{ background:#fbf1de; border-color:var(--gold); }
+  .kpi-cell.danger{ background:#f6e0e0; border-color:var(--rust); }
+  .kpi-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-dim); }
+  .kpi-value{ font-family:'Space Mono',monospace; font-weight:700; font-size:18px; margin-top:4px; }
+
+  .stat-row{ display:flex; justify-content:space-between; border-top:1px solid var(--line); padding:10px 0; font-size:13px; }
+  .stat-row:first-child{ border-top:none; }
+  .stat-row .val{ font-weight:600; }
+
+  .branch-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  .branch-table th{ text-align:left; padding:6px 4px; color:var(--ink-dim); font-weight:600; border-bottom:1px solid var(--line); font-size:10.5px; text-transform:uppercase; }
+  .branch-table td{ padding:8px 4px; border-bottom:1px solid var(--paper-2); }
+  .lock-badge{ font-size:9.5px; padding:2px 6px; border-radius:8px; font-weight:700; }
+  .lock-yes{ background:#e3f0e6; color:var(--ok); }
+  .lock-no{ background:#fbf1de; color:var(--gold); }
+
+  .list-row{ border-top:1px solid var(--line); padding:10px 0; font-size:13px; display:flex; justify-content:space-between; }
+  .list-row:first-child{ border-top:none; }
+  .list-row-meta{ color:var(--ink-dim); font-size:11px; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+  .badge-days{ font-size:10px; padding:2px 7px; border-radius:9px; font-weight:700; }
+  .badge-expired{ background:#f6e0e0; color:var(--rust); }
+  .badge-near{ background:#fbf1de; color:var(--gold); }
+
+  .loading{ text-align:center; padding:40px 0; color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Dashboard</h1>
+    <p class="sub">Live overview across all branches</p>
+  </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="All">All</button>
+    <button class="branch-tab" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
+  <button class="refresh-link" id="refreshBtn">↻ Refresh Data</button>
+
+  <div id="dashboardContent">
+    <div class="loading">Loading dashboard...</div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec';
+  let currentBranch = 'All';
+  let data = null;
+
+  function fmtBD(n){
+    return Number(n || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' BD';
+  }
+  function fmtNum(n){
+    return Number(n || 0).toLocaleString('en-US');
+  }
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d);
+    if(isNaN(dt)) return String(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  async function loadData(){
+    document.getElementById('dashboardContent').innerHTML = '<div class="loading">Loading dashboard...</div>';
+    try{
+      const t = Date.now();
+      data = await (await fetch(API_URL + '?action=getDashboardData&branch=' + currentBranch + '&_ts=' + t)).json();
+      render();
+    }catch(e){
+      document.getElementById('dashboardContent').innerHTML = '<div class="loading">Could not load dashboard data.</div>';
+      console.error(e);
+    }
+  }
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    loadData();
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = 'Refreshing...';
+    await loadData();
+    btn.textContent = '↻ Refresh Data';
+  });
+
+  function render(){
+    if(!data) return;
+    const el = document.getElementById('dashboardContent');
+
+    const expiredClass = data.expiredCount > 0 ? 'danger' : (data.nearExpiryCount > 0 ? 'warn' : '');
+
+    let html = `
+      <div class="card">
+        <div class="card-title">Today at a Glance</div>
+        <div class="kpi-grid">
+          <div class="kpi-cell">
+            <div class="kpi-label">Available Chocolates</div>
+            <div class="kpi-value">${fmtNum(data.totalAvailable)}</div>
+          </div>
+          <div class="kpi-cell">
+            <div class="kpi-label">Inventory Value</div>
+            <div class="kpi-value">${fmtBD(data.totalValue)}</div>
+          </div>
+          <div class="kpi-cell">
+            <div class="kpi-label">Today's Receiving</div>
+            <div class="kpi-value">${fmtBD(data.todayReceiving)}</div>
+          </div>
+          <div class="kpi-cell">
+            <div class="kpi-label">Today's Releases</div>
+            <div class="kpi-value">${fmtBD(data.todayReleases)}</div>
+          </div>
+          <div class="kpi-cell">
+            <div class="kpi-label">Today's Transfers</div>
+            <div class="kpi-value">${fmtNum(data.todayTransfers)}</div>
+          </div>
+          <div class="kpi-cell ${data.pendingApprovalsCount > 0 ? 'warn' : ''}">
+            <div class="kpi-label">Pending Approvals</div>
+            <div class="kpi-value">${fmtNum(data.pendingApprovalsCount)}</div>
+          </div>
+          <div class="kpi-cell ${expiredClass}">
+            <div class="kpi-label">Near Expiry / Expired</div>
+            <div class="kpi-value">${fmtNum(data.nearExpiryCount)} / ${fmtNum(data.expiredCount)}</div>
+          </div>
+          <div class="kpi-cell ${data.lowStockCount > 0 ? 'warn' : ''}">
+            <div class="kpi-label">Low Stock Items</div>
+            <div class="kpi-value">${fmtNum(data.lowStockCount)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">This Week</div>
+        <div class="stat-row"><span>Received This Week</span><span class="val">${fmtBD(data.weekReceiving)}</span></div>
+        <div class="stat-row"><span>Released This Week</span><span class="val">${fmtBD(data.weekReleases)}</span></div>
+        <div class="stat-row"><span>Transferred This Week</span><span class="val">${fmtNum(data.weekTransfers)}</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Last Activity</div>
+        ${lastActivityRow('Last Receiving', data.lastReceiving)}
+        ${lastActivityRow('Last Release', data.lastRelease)}
+        ${lastActivityRow('Last Transfer', data.lastTransfer)}
+      </div>
+    `;
+
+    if(currentBranch === 'All'){
+      html += `
+        <div class="card">
+          <div class="card-title">Branch Summary</div>
+          <table class="branch-table">
+            <thead>
+              <tr><th>Branch</th><th>Available</th><th>Value</th><th>Low</th><th>Near/Exp</th><th>Setup</th></tr>
+            </thead>
+            <tbody>
+              ${data.branchSummary.map(b => `
+                <tr>
+                  <td><strong>${b.branch}</strong></td>
+                  <td>${fmtNum(b.available)}</td>
+                  <td>${fmtBD(b.value)}</td>
+                  <td>${b.lowStock}</td>
+                  <td>${b.nearExpiry}/${b.expired}</td>
+                  <td><span class="lock-badge ${b.locked ? 'lock-yes' : 'lock-no'}">${b.locked ? 'Locked' : 'Open'}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="card">
+        <div class="card-title">Low Stock</div>
+        ${renderList(data.lowStockList, item => `
+          <div class="list-row">
+            <div><strong>${item.name}</strong><div class="list-row-meta">${item.branch}</div></div>
+            <div style="text-align:right;">${item.available} / ${item.min}<div class="list-row-meta">need ${item.deficit} more</div></div>
+          </div>
+        `, 'No low stock items right now.')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Expired</div>
+        ${renderList(data.expiredList, item => `
+          <div class="list-row">
+            <div><strong>${item.name}</strong><div class="list-row-meta">${item.branch}</div></div>
+            <div style="text-align:right;"><span class="badge-days badge-expired">${Math.abs(item.daysLeft)}d ago</span><div class="list-row-meta">${fmtDate(item.expiryDate)}</div></div>
+          </div>
+        `, 'No expired items.')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Near Expiry</div>
+        ${renderList(data.nearExpiryList, item => `
+          <div class="list-row">
+            <div><strong>${item.name}</strong><div class="list-row-meta">${item.branch}</div></div>
+            <div style="text-align:right;"><span class="badge-days badge-near">${item.daysLeft}d left</span><div class="list-row-meta">${fmtDate(item.expiryDate)}</div></div>
+          </div>
+        `, 'No items nearing expiry.')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Top Moving Items</div>
+        ${renderList(data.topMovingList, (item, i) => `
+          <div class="list-row">
+            <div><strong>${i+1}. ${item.name}</strong></div>
+            <div>${fmtNum(item.used)} used</div>
+          </div>
+        `, 'No movement data yet.')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Recent Transfers</div>
+        ${renderList(data.recentTransfers, item => `
+          <div class="list-row">
+            <div><strong>${item.chocolateName}</strong><div class="list-row-meta">${item.fromBranch} → ${item.toBranch}</div></div>
+            <div style="text-align:right;">${item.qty}<div class="list-row-meta">${fmtDate(item.date)}</div></div>
+          </div>
+        `, 'No transfers yet.')}
+      </div>
+    `;
+
+    el.innerHTML = html;
+  }
+
+  function lastActivityRow(label, info){
+    if(!info){
+      return `<div class="stat-row"><span>${label}</span><span class="val" style="color:var(--ink-dim);">No activity yet</span></div>`;
+    }
+    return `<div class="stat-row"><span>${label}</span><span class="val">${info.chocolateName || '—'} · ${fmtDate(info.date)}</span></div>`;
+  }
+
+  function renderList(list, rowFn, emptyText){
+    if(!list || list.length === 0){
+      return `<div class="empty-note">${emptyText}</div>`;
+    }
+    return list.map(rowFn).join('');
+  }
+
+  loadData();
+</script>
+</body>
+</html>
