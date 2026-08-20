@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0;
+    --blush-2:#f6e0da;
+    --mint:#eaf3ec;
+    --rose:#c9506b;
+    --rose-deep:#9e2f4a;
+    --gold:#d9a441;
+    --leaf:#5f8f63;
+    --ink:#3a2530;
+    --ink-dim:#8a7078;
+    --line:#f0d9d9;
+    --ok:#3d7a4f;
+    --warn:#c68a1f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 8% 18%, rgba(255,190,210,.22), transparent 22%),
+      radial-gradient(circle at 92% 28%, rgba(255,225,130,.20), transparent 22%),
+      radial-gradient(circle at 18% 82%, rgba(190,145,255,.16), transparent 24%),
+      radial-gradient(circle at 82% 88%, rgba(255,170,190,.18), transparent 24%),
+      linear-gradient(145deg, #dcefd5 0%, #b9dfb5 48%, #e6f1c9 100%);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+  }
+  .back-link:hover{ color:var(--rose-deep); }
+
+  header{
+    text-align:center; margin-bottom:22px; padding:24px 18px;
+    background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%);
+    border-radius:18px; border:1px solid var(--line);
+    box-shadow:0 8px 26px rgba(158,47,74,0.08);
+    position:relative; overflow:hidden;
+  }
+  header::before{
+    content:'🌹'; position:absolute; font-size:64px; opacity:0.08;
+    left:-12px; top:-16px; transform:rotate(-16deg);
+  }
+  header::after{
+    content:'🌷'; position:absolute; font-size:56px; opacity:0.09;
+    right:-8px; bottom:-14px; transform:rotate(14deg);
+  }
+  .eyebrow{
+    font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold);
+    margin-bottom:6px; font-weight:600; position:relative; z-index:1;
+  }
+  h1{
+    font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep);
+    font-size:clamp(2.1rem,8vw,2.8rem); margin:0; line-height:1;
+    position:relative; z-index:1;
+  }
+
+  .branch-tabs{
+    display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px;
+    margin-bottom:18px; background:#fff; padding:5px; border-radius:14px;
+    border:1px solid var(--line);
+  }
+  .branch-tab{
+    padding:11px 0; text-align:center; background:transparent; border:none;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px;
+    color:var(--ink-dim); cursor:pointer; border-radius:10px; transition:all .2s ease;
+  }
+  .branch-tab.active{
+    background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff;
+    box-shadow:0 3px 10px rgba(158,47,74,0.25);
+  }
+
+  .refresh-link{
+    background:#fff; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:9px 16px; border-radius:20px; cursor:pointer; margin-bottom:14px;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:16px;
+    padding:22px; margin-bottom:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05);
+  }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+
+  .card.provisional{ border-color:var(--warn); background:linear-gradient(160deg,#fbf1de,#fff); }
+  .provisional-note{
+    font-size:11.5px; color:var(--warn); background:#fdf6e8; border:1px dashed var(--warn);
+    border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.5;
+  }
+
+  .kpi-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .kpi-cell{
+    background:var(--blush); border:1px solid var(--line); border-radius:12px;
+    padding:12px; border-left:4px solid var(--rose);
+  }
+  .kpi-cell.leaf{ border-left-color:var(--leaf); }
+  .kpi-cell.gold{ border-left-color:var(--gold); }
+  .kpi-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-dim); }
+  .kpi-value{ font-family:'Space Mono',monospace; font-weight:700; font-size:18px; margin-top:5px; }
+
+  .budget-bar{ height:8px; background:var(--blush-2); border-radius:4px; overflow:hidden; margin-top:8px; }
+  .budget-fill{ height:100%; background:var(--leaf); transition:width .3s ease; }
+  .budget-fill.over{ background:var(--rose); }
+  .budget-text{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); margin-top:6px; }
+
+  .hist-row{ border-top:1px solid var(--blush-2); padding:12px 0; font-size:13px; }
+  .hist-row:first-child{ border-top:none; }
+  .hist-name{ font-weight:600; }
+  .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+  .loading{ text-align:center; padding:20px 0; color:var(--ink-dim); font-size:13px; }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:1080px; padding:34px 30px 70px; }
+    .branch-tabs{ max-width:480px; }
+    .layout{ display:flex; gap:18px; align-items:flex-start; }
+    .col-main{ flex:1.3; display:flex; flex-direction:column; gap:18px; }
+    .col-side{ flex:1; display:flex; flex-direction:column; gap:18px; position:sticky; top:24px; }
+  }
+
+
+  /* Floating refresh balloon + safe pull handle */
+  .grab-wrap{
+    position:fixed; right:14px; top:50%; transform:translateY(-50%);
+    z-index:60; width:78px; display:flex; flex-direction:column;
+    align-items:center; user-select:none; touch-action:none;
+  }
+  .grab-balloon{
+    width:72px; height:72px; border-radius:50%;
+    border:2px solid rgba(158,47,74,.22);
+    background:radial-gradient(circle at 32% 28%, #fff 0 12%, #ffe9ed 38%, #c9506b 100%);
+    color:#fff; text-shadow:0 1px 3px rgba(80,20,40,.35);
+    box-shadow:0 10px 28px rgba(158,47,74,.25);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:26px; position:relative;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .grab-balloon::after{
+    content:''; position:absolute; left:50%; bottom:-9px; transform:translateX(-50%);
+    width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent;
+    border-top:10px solid #c9506b;
+  }
+  .grab-balloon:hover{transform:scale(1.04);box-shadow:0 13px 32px rgba(158,47,74,.3)}
+  .grab-balloon.busy{opacity:.72;pointer-events:none}
+  .grab-string{width:2px;height:72px;background:linear-gradient(#c9506b,#b6a0a7);position:relative}
+  .grab-handle{
+    width:28px;height:38px;border:2px solid #c9506b;border-radius:16px;
+    background:#fff8f8;box-shadow:0 5px 14px rgba(158,47,74,.18);
+    cursor:grab;touch-action:none;display:flex;align-items:center;justify-content:center;
+    color:#9e2f4a;font-size:13px;line-height:1;
+  }
+  .grab-handle:active{cursor:grabbing}
+  .grab-hint{font-size:8px;color:var(--ink-dim);margin-top:5px;white-space:nowrap}
+  .dash-tools{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .dash-tool{background:#fff;border:1px solid var(--line);color:var(--ink-dim);font-size:11px;padding:8px 13px;border-radius:20px;cursor:pointer}
+  .dash-tool:hover{color:var(--rose-deep);border-color:var(--rose)}
+  .music-on{background:var(--blush);color:var(--rose-deep);border-color:var(--rose)}
+  .music-panel{
+    display:none;max-width:520px;margin:0 auto 14px;padding:14px;
+    background:rgba(255,255,255,.94);border:1px solid var(--line);
+    border-radius:18px;box-shadow:0 10px 30px rgba(90,40,55,.12);
+  }
+  .music-panel.show{display:block}
+  .music-panel-title{font-weight:700;font-size:12px;color:var(--rose-deep);margin-bottom:8px}
+  .music-row{display:flex;gap:7px}
+  .music-row input{
+    min-width:0;flex:1;border:1px solid var(--line);border-radius:18px;
+    padding:9px 12px;font:12px 'Space Grotesk',sans-serif;color:var(--ink);
+    outline:none;background:#fff;
+  }
+  .music-row input:focus{border-color:var(--rose)}
+  .music-status{font-size:10px;color:var(--ink-dim);margin-top:7px;line-height:1.4}
+  @media(max-width:600px){
+    .grab-wrap{right:7px;top:auto;bottom:16px;transform:none}
+    .grab-balloon{width:64px;height:64px}
+    .grab-string{height:48px}
+  }
+
+
+  .garden-side{
+    position:fixed; z-index:1; pointer-events:none; opacity:.82;
+    font-size:34px; line-height:1; filter:drop-shadow(0 4px 5px rgba(45,90,50,.12));
+  }
+  .garden-left{left:4px;top:18%}
+  .garden-right{right:4px;bottom:16%}
+  .garden-top{right:9%;top:7%;font-size:25px}
+  .garden-side span{display:block;margin:10px 0}
+  .garden-vine{
+    position:fixed;z-index:1;pointer-events:none;color:rgba(45,110,55,.5);
+    font-size:46px;line-height:.7;
+  }
+  .vine-left{left:-8px;bottom:4%}
+  .vine-right{right:-8px;top:38%}
+  @media(max-width:600px){
+    .garden-side{font-size:24px;opacity:.55}
+    .garden-left{left:-4px;top:22%}
+    .garden-right{right:-4px;bottom:20%}
+    .garden-top{right:7%;top:10%;font-size:20px}
+    .garden-vine{font-size:32px;opacity:.35}
+  }
+
+</style>
+</head>
+<body>
+<div class="garden-side garden-left" aria-hidden="true"><span>🌷</span><span>🌼</span><span>🌸</span></div>
+<div class="garden-side garden-right" aria-hidden="true"><span>🌺</span><span>🌻</span><span>🌷</span></div>
+<div class="garden-side garden-top" aria-hidden="true">🌸 🦋 🌼</div>
+<div class="garden-vine vine-left" aria-hidden="true">🌿<br>🌱<br>🌿</div>
+<div class="garden-vine vine-right" aria-hidden="true">🌿<br>🌱<br>🌿</div>
+<div class="wrap">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <a class="back-link" href="flower-receiving.html" style="float:right;">📦 Receiving &rarr;</a>
+  <a class="back-link" href="flower-stock-count.html" style="float:right; margin-right:14px;">📋 Stock Count</a>
+  <header>
+    <div class="eyebrow">Lalabella Flowers</div>
+    <h1>Flower Dashboard</h1>
+  </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="All">All</button>
+    <button class="branch-tab" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+  <div class="dash-tools">
+    <button class="dash-tool" id="musicBtn" type="button">🎵 Music</button>
+  </div>
+  <div class="music-panel" id="musicPanel">
+    <div class="music-panel-title">🎵 Background Music</div>
+    <div class="music-row">
+      <input id="musicUrl" type="url" placeholder="Paste direct MP3/OGG/WAV URL…">
+      <button class="dash-tool" id="playMusicBtn" type="button">▶ Play Music</button>
+    </div>
+    <div class="music-status" id="musicStatus">
+      Tap Play Music to start. Double-click “Playing” later to change the URL.
+    </div>
+  </div>
+
+
+  <div class="grab-wrap" id="grabWrap">
+    <button class="grab-balloon" id="grabBtn" type="button">🌹</button>
+    <div class="grab-string" aria-hidden="true"></div>
+    <div class="grab-handle" id="grabHandle" title="Pull to refresh">↕</div>
+    <div class="grab-hint">pull to refresh</div>
+  </div>
+  <div id="dashboardContent"><div class="loading">Loading…</div></div>
+</div>
+
+<audio id="bgMusic" loop preload="none"></audio>
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+  let currentBranch = 'All';
+  let data = null;
+
+  function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
+  function fmtNum(n){ return Number(n||0).toLocaleString('en-US'); }
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d);
+    if(isNaN(dt)) return String(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  function renderRecentReceiving(list){
+    if(!list || list.length === 0){
+      return '<div class="empty-note">No flower receiving logged yet.</div>';
+    }
+    return list.map(e => `
+      <div class="hist-row">
+        <div style="font-weight:600;">${e.Flower || '—'} <span style="color:var(--ink-dim); font-weight:400;">(${e.Origin || 'N/A'})</span></div>
+        <div class="hist-meta" style="color:var(--ink-dim); font-size:11.5px; margin-top:3px;">${fmtDate(e.Date)} · ${e.Branch || ''} · Qty ${e.Qty} ${e.Unit || ''} · ${fmtBD(e.Subtotal)}</div>
+        <div class="hist-meta" style="color:var(--ink-dim); font-size:11.5px;">Supplier: ${e.Supplier || '—'} · Received by: ${e['Received By'] || '—'}</div>
+      </div>
+    `).join('');
+  }
+
+  function render(){
+    if(!data) return;
+    const el = document.getElementById('dashboardContent');
+    const budget = data.weeklyBudget || {};
+    const pct = Math.min(100, budget.percentUsed || 0);
+    const over = (budget.actual || 0) > (budget.weeklyLimit || 0);
+
+    el.innerHTML = `
+      <div class="layout">
+        <div class="col-main">
+
+          <div class="card">
+            <div class="card-title">📅 This Week</div>
+            <div class="kpi-grid">
+              <div class="kpi-cell">
+                <div class="kpi-label">Today's Purchases</div>
+                <div class="kpi-value">${fmtBD(data.todayPurchases)}</div>
+              </div>
+              <div class="kpi-cell leaf">
+                <div class="kpi-label">This Week's Purchases</div>
+                <div class="kpi-value">${fmtBD(data.weekPurchases)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🌿 Weekly Budget</div>
+            <div class="budget-text"><span>${fmtBD(budget.actual)} of ${fmtBD(budget.weeklyLimit)}</span><span>${budget.percentUsed||0}%</span></div>
+            <div class="budget-bar"><div class="budget-fill ${over?'over':''}" style="width:${pct}%"></div></div>
+            <div class="budget-text"><span>Remaining</span><span>${fmtBD(budget.remaining)}</span></div>
+          </div>
+
+          <div class="card provisional">
+            <div class="card-title">⚠️ Provisional Inventory</div>
+            <div class="provisional-note">Cumulative receiving figures only — not actual Available Stock because Stock Count is not yet connected.</div>
+            <div class="kpi-grid">
+              <div class="kpi-cell gold">
+                <div class="kpi-label">Cumulative Received</div>
+                <div class="kpi-value">${fmtNum(data.cumulativeReceivedQty)}</div>
+              </div>
+              <div class="kpi-cell gold">
+                <div class="kpi-label">Estimated Company Value</div>
+                <div class="kpi-value">${fmtBD(data.estimatedCompanyValue)}</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="col-side">
+
+          <div class="card">
+            <div class="card-title">🌸 Flower Catalog</div>
+            <div class="kpi-cell">
+              <div class="kpi-label">Distinct Flower Names</div>
+              <div class="kpi-value">${fmtNum(data.distinctFlowerCount)}</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">⏳ Rate Approvals</div>
+            <div class="kpi-cell ${data.pendingApprovalsCount > 0 ? 'gold' : 'leaf'}">
+              <div class="kpi-label">Pending Approval</div>
+              <div class="kpi-value">${fmtNum(data.pendingApprovalsCount)}</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">📋 Recent Receiving</div>
+            <div id="recentReceivingList">
+              ${renderRecentReceiving(data.recentReceiving)}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadData(){
+    document.getElementById('dashboardContent').innerHTML = '<div class="loading">Loading…</div>';
+    try{
+      const t = Date.now();
+      data = await (await fetch(API_URL + '?action=getFlowerDashboard&branch=' + currentBranch + '&_ts=' + t)).json();
+      render();
+    }catch(e){
+      document.getElementById('dashboardContent').innerHTML = '<div class="loading">Could not load dashboard data.</div>';
+      console.error(e);
+    }
+  }
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    loadData();
+  });
+
+
+  /* Manual refresh only — no automatic refresh */
+  let refreshBusy = false;
+
+  async function manualRefresh(sourceBtn){
+    if(refreshBusy) return;
+    refreshBusy = true;
+    const original = sourceBtn.textContent;
+    sourceBtn.classList.add('busy');
+    sourceBtn.textContent = '↻';
+    try { await loadData(); }
+    finally {
+      sourceBtn.textContent = original;
+      sourceBtn.classList.remove('busy');
+      refreshBusy = false;
+    }
+  }
+
+  document.getElementById('grabBtn').addEventListener('click', ()=>{
+    manualRefresh(document.getElementById('grabBtn'));
+  });
+
+  /* Pull the handle downward. A short pull or balloon click also refreshes.
+     No page dragging, no scroll locking, and pointer capture is limited to the handle. */
+  const grabHandle = document.getElementById('grabHandle');
+  let pullStartY = null;
+  let pullTriggered = false;
+
+  grabHandle.addEventListener('pointerdown', e=>{
+    pullStartY = e.clientY;
+    pullTriggered = false;
+    grabHandle.setPointerCapture(e.pointerId);
+  });
+
+  grabHandle.addEventListener('pointermove', e=>{
+    if(pullStartY === null || pullTriggered) return;
+    if(e.clientY - pullStartY >= 28){
+      pullTriggered = true;
+      manualRefresh(document.getElementById('grabBtn'));
+    }
+  });
+
+  const endPull = ()=>{
+    pullStartY = null;
+    pullTriggered = false;
+  };
+  grabHandle.addEventListener('pointerup', endPull);
+  grabHandle.addEventListener('pointercancel', endPull);
+  grabHandle.addEventListener('lostpointercapture', endPull);
+
+  /* Music panel:
+     - Tap Music -> show URL box
+     - Play Music -> hide panel and show Playing
+     - Tap Playing -> pause
+     - Double-click Playing -> reopen URL editor
+     URL is saved locally so it survives data refreshes/page reloads. */
+  const musicBtn = document.getElementById('musicBtn');
+  const musicPanel = document.getElementById('musicPanel');
+  const musicUrl = document.getElementById('musicUrl');
+  const playMusicBtn = document.getElementById('playMusicBtn');
+  const musicStatus = document.getElementById('musicStatus');
+  const bgMusic = document.getElementById('bgMusic');
+  let musicPlaying = false;
+  let savedMusicUrl = localStorage.getItem('flowerDashboardMusicUrl') || '';
+
+  if(savedMusicUrl) musicUrl.value = savedMusicUrl;
+
+  function openMusicPanel(){
+    musicPanel.classList.add('show');
+    musicBtn.textContent = musicPlaying ? '🎵 Playing' : '🎵 Music';
+    setTimeout(()=>musicUrl.focus(), 0);
+  }
+
+  musicBtn.addEventListener('click', async ()=>{
+    if(musicPlaying){
+      bgMusic.pause();
+      musicPlaying = false;
+      musicBtn.textContent = '🎵 Music';
+      musicBtn.classList.remove('music-on');
+      musicStatus.textContent = 'Paused. Tap Music to choose another sound.';
+      return;
+    }
+    openMusicPanel();
+  });
+
+  musicBtn.addEventListener('dblclick', ()=>{
+    openMusicPanel();
+  });
+
+  playMusicBtn.addEventListener('click', async ()=>{
+    const url = musicUrl.value.trim();
+    if(!/^https?:\/\//i.test(url)){
+      musicStatus.textContent = 'Please paste a direct audio URL (MP3, OGG, or WAV).';
+      return;
+    }
+    try{
+      if(bgMusic.src !== url) bgMusic.src = url;
+      await bgMusic.play();
+      savedMusicUrl = url;
+      localStorage.setItem('flowerDashboardMusicUrl', url);
+      musicPlaying = true;
+      musicPanel.classList.remove('show');
+      musicBtn.textContent = '🎵 Playing';
+      musicBtn.classList.add('music-on');
+      musicStatus.textContent = 'Playing. Tap once to pause; double-click Playing to change the URL.';
+    }catch(e){
+      musicStatus.textContent = 'The sound URL could not be played. Use a direct MP3/OGG/WAV file URL.';
+    }
+  });
+
+  /* Double-clicking the Playing button opens the URL editor; single click pauses. */
+  musicBtn.addEventListener('dblclick', openMusicPanel);
+
+  loadData();
+</script>
+</body>
+</html>
