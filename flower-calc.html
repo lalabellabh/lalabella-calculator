@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'🌹'; position:absolute; font-size:64px; opacity:0.08; left:-12px; top:-16px; transform:rotate(-16deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:12px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number], input[type=date]{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; font-size:14px; color:var(--ink); outline:none;
+  }
+
+  .search-box{ position:relative; }
+  #searchResults{
+    display:none; position:absolute; top:100%; left:0; right:0; z-index:20;
+    background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:4px;
+    max-height:260px; overflow-y:auto; box-shadow:0 12px 28px rgba(0,0,0,0.12);
+  }
+  #searchResults.show{ display:block; }
+  .result-item{ padding:11px 14px; border-top:1px solid var(--blush-2); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .result-item:first-child{ border-top:none; }
+  .result-item:hover{ background:var(--blush); }
+  .result-name{ font-weight:600; font-size:13px; }
+  .result-rate{ font-size:12px; color:var(--rose-deep); font-weight:700; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid-3{ display:grid; grid-template-columns:2fr 1fr auto; gap:8px; align-items:end; }
+  .btn{ padding:11px 0; width:100%; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-leaf{ background:linear-gradient(135deg, var(--leaf), #3f6b45); color:#fff; }
+  .btn-outline{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+  .btn-sm{ padding:9px 14px; width:auto; font-size:12px; }
+  .btn:disabled{ opacity:0.5; pointer-events:none; }
+
+  .cart-row{ border-top:1px solid var(--blush-2); padding:11px 0; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .cart-row:first-child{ border-top:none; }
+  .cart-row-name{ font-weight:600; font-size:13px; }
+  .cart-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .remove-btn{ background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; flex-shrink:0; padding:4px 8px; }
+
+  .total-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+  .total-row.grand{ border-top:2px solid var(--rose); margin-top:8px; padding-top:12px; font-size:17px; font-weight:800; color:var(--rose-deep); }
+
+  .print-options{ display:flex; gap:10px; margin-top:6px; }
+  .toggle-row{ display:flex; align-items:center; gap:8px; margin-top:14px; font-size:12.5px; color:var(--ink-dim); }
+  .toggle-row input{ width:auto; }
+
+  /* ---------- On-screen preview hidden by default; only the print
+     templates render, and only during window.print() ---------- */
+  .receipt{ display:none; }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:1080px; padding:34px 30px 70px; }
+    .layout{ display:flex; gap:18px; align-items:flex-start; }
+    .col-main{ flex:1.3; display:flex; flex-direction:column; gap:16px; }
+    .col-side{ flex:1; display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
+  }
+
+  /* ================= PRINT STYLES ================= */
+  @media print{
+    /* Hide the actual calculator layout completely during printing.
+       visibility:hidden alone keeps its layout space and can create a
+       second blank page. */
+    body.print-a4 > .wrap,
+    body.print-thermal > .wrap{
+      display:none !important;
+    }
+    body *{ visibility:hidden; }
+
+    body.print-a4 .receipt-a4,
+    body.print-a4 .receipt-a4 *{ visibility:visible; }
+    body.print-a4 .receipt-a4{
+      display:block; position:absolute; top:0; left:0; width:100%;
+      font-family:'Space Grotesk', sans-serif; color:#000; padding:30px;
+    }
+    body.print-a4 .receipt-a4 table{ width:100%; border-collapse:collapse; margin-top:16px; }
+    body.print-a4 .receipt-a4 th, body.print-a4 .receipt-a4 td{ padding:8px 6px; border-bottom:1px solid #ddd; text-align:left; font-size:13px; }
+    body.print-a4 .receipt-a4 th{ font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
+    body.print-a4 .receipt-a4 .r-total{ text-align:right; font-size:20px; font-weight:800; margin-top:14px; }
+    @page{ size:A4; margin:14mm; }
+
+    body.print-thermal .receipt-thermal,
+    body.print-thermal .receipt-thermal *{ visibility:visible; }
+    body.print-thermal .receipt-thermal{
+      display:block; position:absolute; top:0; left:0; width:72mm;
+      font-family:'Space Mono', monospace; color:#000; font-size:11px; padding:2mm;
+    }
+    body.print-thermal .receipt-thermal .t-line{ border-top:1px dashed #000; margin:5px 0; }
+    body.print-thermal .receipt-thermal .t-row{ display:flex; justify-content:space-between; padding:2px 0; }
+    body.print-thermal .receipt-thermal .t-total{ font-weight:800; font-size:14px; }
+    @page{ size:72mm auto; margin:2mm; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <a class="back-link" href="flower-dashboard.html" style="float:right;">🌷 Dashboard &rarr;</a>
+  <header>
+    <div class="eyebrow">Lalabella Flowers</div>
+    <h1>Flower Calculator</h1>
+  </header>
+
+  <div class="layout">
+    <div class="col-main">
+
+      <div class="card">
+        <div class="card-title">🌸 Search a Flower</div>
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Type a flower name…" autocomplete="off" />
+          <div id="searchResults"></div>
+        </div>
+
+        <div class="grid-3" style="margin-top:14px;">
+          <div>
+            <label>Quantity</label>
+            <input type="number" id="qtyInput" min="0" step="0.5" placeholder="0" />
+          </div>
+          <div>
+            <label>Rate (BD)</label>
+            <input type="number" id="rateInput" min="0" step="0.001" placeholder="0.000" />
+          </div>
+          <button class="btn btn-primary btn-sm" id="addBtn" disabled>Add</button>
+        </div>
+        <div id="selectedName" style="margin-top:8px; font-size:12.5px; color:var(--ink-dim);"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎀 Extras</div>
+        <div class="grid-3">
+          <div>
+            <label>Description</label>
+            <input type="text" id="extraDesc" placeholder="e.g. Vase, Handwork, Box" />
+          </div>
+          <div>
+            <label>Price (BD)</label>
+            <input type="number" id="extraPrice" min="0" step="0.001" placeholder="0.000" />
+          </div>
+          <button class="btn btn-outline btn-sm" id="addExtraBtn">Add</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-side">
+      <div class="card">
+        <div class="card-title">🧾 Order List</div>
+        <div id="cartList"><div class="empty-note">Wala pang idinagdag.</div></div>
+        <div id="extrasList"></div>
+
+        <div class="total-row"><span>Subtotal (Flowers)</span><span id="sumFlowers">0.000 BD</span></div>
+        <div class="total-row"><span>Subtotal (Extras)</span><span id="sumExtras">0.000 BD</span></div>
+        <div class="total-row grand"><span>Grand Total</span><span id="sumGrand">0.000 BD</span></div>
+
+        <label style="margin-top:16px;">For / Customer (optional)</label>
+        <input type="text" id="customerName" placeholder="optional" />
+
+        <div class="print-options">
+          <button class="btn btn-outline" id="printA4Btn">🖨️ Print A4</button>
+          <button class="btn btn-outline" id="printThermalBtn">🧾 Thermal</button>
+        </div>
+        <button class="btn btn-leaf" id="shareBtn" style="margin-top:10px; display:none;">📤 Save &amp; Share to WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Hidden print templates — only visible during print ===== -->
+<div class="receipt receipt-a4" id="receiptA4">
+  <div style="text-align:center; margin-bottom:10px;">
+    <h2 style="margin:0; font-family:'Fraunces',serif;">Lalabella Flowers</h2>
+    <div style="font-size:12px; color:#666;" id="a4Date"></div>
+    <div style="font-size:12px; color:#666;" id="a4Customer"></div>
+  </div>
+  <table>
+    <thead><tr><th>Flower</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+    <tbody id="a4Rows"></tbody>
+  </table>
+  <div class="r-total">Grand Total: <span id="a4Grand"></span></div>
+</div>
+
+<div class="receipt receipt-thermal" id="receiptThermal">
+  <div style="text-align:center;">
+    <b>LALABELLA FLOWERS</b><br>
+    <span id="tDate"></span><br>
+    <span id="tCustomer"></span>
+  </div>
+  <div class="t-line"></div>
+  <div id="tRows"></div>
+  <div class="t-line"></div>
+  <div class="t-row t-total"><span>TOTAL</span><span id="tGrand"></span></div>
+  <div class="t-line"></div>
+  <div style="text-align:center; margin-top:6px;">Thank you! 🌸</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+
+  const fmtBD = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD';
+
+  let CATALOG = [];
+  let cart = [];       // { name, qty, rate }
+  let extras = [];     // { desc, price }
+  let selected = null;
+
+  async function loadCatalog(){
+    try{
+      const items = await fetch(API_URL + '?action=getFlowerItems&_ts=' + Date.now()).then(r=>r.json());
+      CATALOG = items
+        .filter(it => String(it['Origin']||'').trim() === 'Legacy/Unknown' && String(it['Status']||'').trim() === 'Active')
+        .map(it => ({ name: String(it['Flowers']||'').trim(), rate: Number(it['Rate']) || 0 }))
+        .filter(it => it.name);
+    }catch(e){ console.error(e); }
+  }
+
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+
+  searchInput.addEventListener('input', ()=>{
+    const q = searchInput.value.trim().toLowerCase();
+    if(!q){ searchResults.classList.remove('show'); return; }
+    const matches = CATALOG.filter(f => f.name.toLowerCase().includes(q)).slice(0, 10);
+    if(matches.length === 0){
+      searchResults.innerHTML = '<div class="empty-note">Walang nahanap.</div>';
+    } else {
+      searchResults.innerHTML = matches.map(f => `
+        <div class="result-item" data-name="${f.name}" data-rate="${f.rate}">
+          <span class="result-name">${f.name}</span>
+          <span class="result-rate">${fmtBD(f.rate)}</span>
+        </div>
+      `).join('');
+    }
+    searchResults.classList.add('show');
+  });
+
+  searchResults.addEventListener('click', (e)=>{
+    const item = e.target.closest('.result-item[data-name]');
+    if(!item) return;
+    selected = { name: item.dataset.name, rate: Number(item.dataset.rate) };
+    searchInput.value = selected.name;
+    document.getElementById('rateInput').value = selected.rate.toFixed(3);
+    document.getElementById('selectedName').textContent = 'Napili: ' + selected.name;
+    searchResults.classList.remove('show');
+    document.getElementById('addBtn').disabled = false;
+    document.getElementById('qtyInput').focus();
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.search-box')) searchResults.classList.remove('show');
+  });
+
+  function renderCart(){
+    const el = document.getElementById('cartList');
+    if(cart.length === 0){
+      el.innerHTML = '<div class="empty-note">Wala pang idinagdag.</div>';
+    } else {
+      el.innerHTML = cart.map((c, i) => `
+        <div class="cart-row">
+          <div>
+            <div class="cart-row-name">${c.name}</div>
+            <div class="cart-row-meta">${c.qty} × ${fmtBD(c.rate)} = ${fmtBD(c.qty * c.rate)}</div>
+          </div>
+          <button class="remove-btn" data-idx="${i}" data-kind="cart">✕</button>
+        </div>
+      `).join('');
+    }
+
+    const exEl = document.getElementById('extrasList');
+    exEl.innerHTML = extras.map((x, i) => `
+      <div class="cart-row">
+        <div>
+          <div class="cart-row-name">${x.desc}</div>
+          <div class="cart-row-meta">${fmtBD(x.price)}</div>
+        </div>
+        <button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button>
+      </div>
+    `).join('');
+
+    const sumFlowers = cart.reduce((s, c) => s + c.qty * c.rate, 0);
+    const sumExtras = extras.reduce((s, x) => s + x.price, 0);
+    document.getElementById('sumFlowers').textContent = fmtBD(sumFlowers);
+    document.getElementById('sumExtras').textContent = fmtBD(sumExtras);
+    document.getElementById('sumGrand').textContent = fmtBD(sumFlowers + sumExtras);
+
+    // Mobile share button only makes sense once there's something to share.
+    const canShare = (cart.length > 0 || extras.length > 0) && !!navigator.share;
+    document.getElementById('shareBtn').style.display = canShare ? 'block' : 'none';
+  }
+
+  document.getElementById('addBtn').addEventListener('click', ()=>{
+    const qty = parseFloat(document.getElementById('qtyInput').value) || 0;
+    const rate = parseFloat(document.getElementById('rateInput').value) || 0;
+    if(!selected || qty <= 0){ alert('Pumili ng flower at maglagay ng Qty.'); return; }
+    cart.push({ name: selected.name, qty, rate });
+    selected = null;
+    searchInput.value = '';
+    document.getElementById('qtyInput').value = '';
+    document.getElementById('rateInput').value = '';
+    document.getElementById('selectedName').textContent = '';
+    document.getElementById('addBtn').disabled = true;
+    renderCart();
+  });
+
+  document.getElementById('addExtraBtn').addEventListener('click', ()=>{
+    const desc = document.getElementById('extraDesc').value.trim();
+    const price = parseFloat(document.getElementById('extraPrice').value) || 0;
+    if(!desc || price <= 0){ alert('Maglagay ng Description at Price.'); return; }
+    extras.push({ desc, price });
+    document.getElementById('extraDesc').value = '';
+    document.getElementById('extraPrice').value = '';
+    renderCart();
+  });
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.remove-btn');
+    if(!btn) return;
+    const idx = Number(btn.dataset.idx);
+    if(btn.dataset.kind === 'cart') cart.splice(idx, 1);
+    else extras.splice(idx, 1);
+    renderCart();
+  });
+
+  function populateReceipts(){
+    const dateStr = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    const customer = document.getElementById('customerName').value.trim();
+    const sumFlowers = cart.reduce((s, c) => s + c.qty * c.rate, 0);
+    const sumExtras = extras.reduce((s, x) => s + x.price, 0);
+    const grand = sumFlowers + sumExtras;
+
+    document.getElementById('a4Date').textContent = dateStr;
+    document.getElementById('a4Customer').textContent = customer ? 'For: ' + customer : '';
+    document.getElementById('a4Rows').innerHTML = cart.map(c => `
+      <tr><td>${c.name}</td><td>${c.qty}</td><td>${fmtBD(c.rate)}</td><td>${fmtBD(c.qty*c.rate)}</td></tr>
+    `).join('') + extras.map(x => `
+      <tr><td colspan="3">${x.desc}</td><td>${fmtBD(x.price)}</td></tr>
+    `).join('');
+    document.getElementById('a4Grand').textContent = fmtBD(grand);
+
+    document.getElementById('tDate').textContent = dateStr;
+    document.getElementById('tCustomer').textContent = customer ? 'For: ' + customer : '';
+    document.getElementById('tRows').innerHTML = cart.map(c => `
+      <div class="t-row"><span>${c.name} x${c.qty}</span><span>${fmtBD(c.qty*c.rate)}</span></div>
+    `).join('') + extras.map(x => `
+      <div class="t-row"><span>${x.desc}</span><span>${fmtBD(x.price)}</span></div>
+    `).join('');
+    document.getElementById('tGrand').textContent = fmtBD(grand);
+  }
+
+  function doPrint(mode){
+    if(cart.length === 0 && extras.length === 0){ alert('Wala pang idinagdag sa listahan.'); return; }
+    populateReceipts();
+    document.body.classList.remove('print-a4', 'print-thermal');
+    document.body.classList.add(mode === 'a4' ? 'print-a4' : 'print-thermal');
+    window.print();
+  }
+
+  document.getElementById('printA4Btn').addEventListener('click', ()=> doPrint('a4'));
+  document.getElementById('printThermalBtn').addEventListener('click', ()=> doPrint('thermal'));
+
+  // ---- Mobile: render the A4 receipt to an image, then hand it to the
+  // native share sheet so it can go straight to WhatsApp. ----
+  document.getElementById('shareBtn').addEventListener('click', async ()=>{
+    if(cart.length === 0 && extras.length === 0){ alert('Wala pang idinagdag sa listahan.'); return; }
+    populateReceipts();
+    const btn = document.getElementById('shareBtn');
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+    try{
+      const el = document.getElementById('receiptA4');
+      el.style.display = 'block';
+      const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 });
+      el.style.display = 'none';
+      canvas.toBlob(async (blob)=>{
+        const file = new File([blob], 'lalabella-flower-order.png', { type: 'image/png' });
+        try{
+          await navigator.share({ files: [file], title: 'Lalabella Flower Order' });
+        }catch(shareErr){
+          // User cancelled the share sheet, or share isn't fully supported — no error needed.
+        }
+        btn.disabled = false;
+        btn.textContent = '📤 Save & Share to WhatsApp';
+      }, 'image/png');
+    }catch(e){
+      alert('Hindi na-generate ang larawan.');
+      btn.disabled = false;
+      btn.textContent = '📤 Save & Share to WhatsApp';
+    }
+  });
+
+  window.addEventListener('afterprint', ()=>{
+    document.body.classList.remove('print-a4', 'print-thermal');
+  });
+
+  loadCatalog();
+  renderCart();
+</script>
+</body>
+</html>
