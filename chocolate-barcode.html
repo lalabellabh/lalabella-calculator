@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chocolate Barcode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --gold:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 18px 60px; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+  header{ text-align:center; margin-bottom:24px; }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .tabs{
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+    margin-bottom:20px; background:var(--paper-2); padding:5px; border-radius:3px;
+  }
+  .tab{
+    padding:11px 0; text-align:center; background:transparent; border:none;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+    color:var(--ink-dim); cursor:pointer; border-radius:2px;
+  }
+  .tab.active{ background:var(--ink); color:var(--paper); }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:4px;
+    padding:20px; margin-bottom:18px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px;
+    margin:0 0 14px;
+  }
+
+  label{
+    display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-dim); margin-bottom:5px; margin-top:14px;
+  }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number]{
+    width:100%; background:var(--paper); border:1px solid var(--line); border-radius:3px;
+    padding:11px 12px; font-family:'Space Grotesk',sans-serif; font-size:14px;
+    color:var(--ink); outline:none;
+  }
+  input[type=text]{ text-transform:uppercase; }
+  input:focus{ border-color:var(--ink); }
+
+  .category-pills{
+    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none;
+  }
+  .category-pills::-webkit-scrollbar{ display:none; }
+  .cat-pill{
+    flex-shrink:0; background:var(--paper); border:1px solid var(--line); color:var(--ink-dim);
+    font-family:'Space Grotesk',sans-serif; font-size:11.5px; padding:7px 12px;
+    border-radius:16px; cursor:pointer; white-space:nowrap; transition:all .12s ease;
+  }
+  .cat-pill:hover{ border-color:var(--ink); color:var(--ink); }
+  .cat-pill.active{ background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:600; }
+
+  .qty-presets{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .preset-btn{
+    background:var(--paper); border:1px solid var(--line); color:var(--ink-dim);
+    font-size:12px; padding:8px 14px; border-radius:16px; cursor:pointer;
+  }
+  .preset-btn.active{ background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:600; }
+
+  .preview-label{
+    border:1.5px dashed var(--line); border-radius:4px; padding:14px; margin-top:16px;
+    text-align:center; background:var(--paper);
+  }
+  .preview-label .p-name{ font-weight:700; font-size:13px; }
+  .preview-label .p-price{ font-size:12px; color:var(--ink-dim); margin-top:2px; }
+  .preview-label svg{ margin-top:8px; }
+  .preview-label .p-code{ font-size:10px; color:var(--ink-dim); }
+
+  .cart-item-row{
+    border-top:1px solid var(--line); padding:10px 0; font-size:13px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .cart-item-row:first-child{ border-top:none; }
+  .cart-item-main{ flex:1; }
+  .cart-item-title{ font-weight:600; }
+  .cart-item-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:2px; }
+  .cart-remove-btn{
+    background:none; border:none; color:var(--rust); font-size:16px; cursor:pointer;
+    padding:0 4px; line-height:1;
+  }
+
+  .gen-btn, .submit-btn{
+    width:100%; margin-top:18px; padding:14px 0; background:var(--ink); color:var(--paper);
+    border:none; border-radius:3px; font-weight:700; font-size:14px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+  }
+  .gen-btn:hover, .submit-btn:hover{ background:#14213a; }
+  .gen-btn:disabled{ background:var(--line); cursor:not-allowed; }
+
+  .print-page-btn{
+    width:100%; margin-top:10px; padding:12px 0; background:transparent; color:var(--ink);
+    border:1px solid var(--ink); border-radius:3px; font-weight:700; font-size:13px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:none;
+  }
+  .print-page-btn.show{ display:block; }
+
+  .scan-row{ display:flex; gap:8px; }
+  .scan-row input{ flex:1; }
+  .scan-btn{
+    background:var(--ink); color:var(--paper); border:none; border-radius:3px;
+    padding:0 16px; font-size:18px; cursor:pointer;
+  }
+  .scanner-modal{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999;
+    align-items:center; justify-content:center; flex-direction:column; padding:20px;
+  }
+  .scanner-modal.show{ display:flex; }
+  .scanner-modal video{ width:100%; max-width:400px; border-radius:6px; }
+  .scanner-modal .close-scan{
+    margin-top:16px; background:var(--rust); color:#fff; border:none;
+    padding:10px 24px; border-radius:20px; font-weight:700; cursor:pointer;
+  }
+  .scanner-hint{ color:#fff; font-size:12px; margin-top:10px; text-align:center; }
+
+  .lookup-result{ margin-top:18px; }
+  .lookup-row{ border-top:1px solid var(--line); padding:10px 0; font-size:13px; display:flex; justify-content:space-between; }
+  .lookup-row:first-child{ border-top:none; }
+  .lookup-total{ display:flex; justify-content:space-between; padding-top:12px; margin-top:6px; border-top:2px solid var(--ink); font-weight:700; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+
+  #labelPrintArea, #lookupPrintArea{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #labelPrintArea.printing, #labelPrintArea.printing *{ visibility:visible; }
+    #labelPrintArea.printing{
+      display:block !important; position:absolute; top:0; left:0; width:100%;
+      padding:6mm;
+    }
+    .label-grid{
+      display:grid; grid-template-columns:repeat(3, 1fr); gap:4mm;
+    }
+    .label-cell{
+      border:1px dotted #999; border-radius:2mm; padding:3mm; text-align:center;
+      page-break-inside:avoid;
+    }
+    .label-cell .l-name{ font-weight:bold; font-size:8pt; }
+    .label-cell .l-price{ font-size:7pt; }
+    .label-cell .l-code{ font-size:6pt; }
+  }
+
+/* ===== LALABELLA ROSE + CHOCOLATE ATM UI =====
+   Visual add-on only. Existing barcode / lookup / print logic remains untouched.
+*/
+.atm-hero{
+  position:relative;margin:0 auto 22px;max-width:980px;height:330px;
+  border-radius:24px;overflow:hidden;isolation:isolate;
+  background:
+    radial-gradient(circle at 50% 25%,rgba(255,231,184,.35),transparent 26%),
+    linear-gradient(160deg,#261417 0%,#160b0d 55%,#0d0809 100%);
+  border:1px solid rgba(222,180,105,.45);
+  box-shadow:0 22px 55px rgba(0,0,0,.28);
+}
+.atm-hero:before{
+  content:"";position:absolute;inset:-30%;
+  background:conic-gradient(from 0deg,transparent 0 8%,rgba(225,180,90,.10) 10%,transparent 14% 28%,rgba(205,70,105,.07) 31%,transparent 36%);
+  animation:atmAura 18s linear infinite;z-index:-1;
+}
+@keyframes atmAura{to{transform:rotate(360deg)}}
+
+.atm-brand{
+  position:absolute;left:26px;top:20px;z-index:6;
+  color:#f3dfb0;font-family:Georgia,serif;letter-spacing:.15em;font-size:13px;
+}
+.atm-brand span{display:block;color:#d98aa2;font-size:7px;letter-spacing:.25em;margin-top:4px}
+
+.atm-orbit{position:absolute;border:1px solid rgba(224,183,101,.34);border-radius:50%;left:50%;top:48%;transform:translate(-50%,-50%);z-index:1}
+.atm-orbit.o1{width:260px;height:260px;animation:atmSpin 15s linear infinite}
+.atm-orbit.o2{width:205px;height:205px;animation:atmSpin 10s linear infinite reverse}
+.atm-orbit.o3{width:150px;height:150px;animation:atmSpin 7s linear infinite}
+.atm-orbit:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:#e8c46a;top:-4px;left:50%;box-shadow:0 0 12px #e8c46a}
+.atm-orbit.o2:after{background:#e48aa5;left:auto;right:-4px;top:50%}
+.atm-orbit.o3:after{background:#fff1cc;top:auto;bottom:-4px}
+@keyframes atmSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+.atm-machine{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-45%);
+  width:230px;height:245px;border-radius:18px 18px 12px 12px;
+  background:linear-gradient(145deg,#d8c8b9,#8e7a70);
+  border:4px solid #554a46;z-index:4;
+  box-shadow:0 18px 35px rgba(0,0,0,.45),inset 6px 0 rgba(255,255,255,.28);
+}
+.atm-screen{
+  position:absolute;left:50%;top:20px;transform:translateX(-50%);
+  width:166px;height:72px;border-radius:9px;background:#101a25;
+  border:5px solid #4c5159;box-shadow:inset 0 0 18px rgba(66,223,176,.13);
+  color:#79e3b4;text-align:center;padding-top:12px;font:7px monospace;
+}
+.atm-screen strong{display:block;color:#f0cd75;font:12px Georgia,serif;margin-bottom:6px;letter-spacing:.06em}
+.atm-slot{
+  position:absolute;left:50%;top:111px;transform:translateX(-50%);
+  width:116px;height:12px;border-radius:8px;background:#191919;
+  box-shadow:inset 0 2px 3px #000;
+}
+.atm-slot:after{
+  content:"BARCODE LABEL";position:absolute;left:0;right:0;top:17px;
+  text-align:center;color:#6c5f57;font:6px monospace;
+}
+.atm-keypad{position:absolute;left:50%;transform:translateX(-50%);bottom:27px;width:105px;display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.atm-keypad i{height:12px;border-radius:3px;background:#665b55;box-shadow:inset 0 1px rgba(255,255,255,.25)}
+
+.atm-rose{position:absolute;z-index:5;font-size:55px;filter:drop-shadow(0 5px 7px rgba(0,0,0,.4));animation:atmFloat 3.2s ease-in-out infinite}
+.atm-rose.r1{left:8%;bottom:38px}.atm-rose.r2{right:8%;bottom:42px;animation-delay:-1.4s}
+.atm-choc{position:absolute;z-index:5;font-size:34px;filter:drop-shadow(0 5px 7px rgba(0,0,0,.4));animation:atmFloat 3.8s ease-in-out infinite}
+.atm-choc.c1{left:17%;top:96px}.atm-choc.c2{right:17%;top:82px;animation-delay:-2s}
+@keyframes atmFloat{50%{transform:translateY(-8px) rotate(3deg)}}
+
+.atm-petal{position:absolute;font-size:16px;z-index:2;opacity:.65;animation:atmPetal 6s linear infinite}
+.atm-petal.p1{left:27%;top:-20px}.atm-petal.p2{left:70%;top:-45px;animation-delay:2s}.atm-petal.p3{left:43%;top:-70px;animation-delay:4s}
+@keyframes atmPetal{to{transform:translateY(380px) rotate(280deg);opacity:0}}
+
+.atm-ticket{
+  position:absolute;left:50%;bottom:2px;transform:translateX(-50%);
+  width:115px;height:35px;background:#fff8e9;color:#2b2730;z-index:6;
+  text-align:center;padding-top:6px;font:6px monospace;
+  box-shadow:0 5px 12px rgba(0,0,0,.3);transition:.4s;
+}
+.atm-ticket:before{content:"";position:absolute;left:0;right:0;top:-4px;height:5px;background:repeating-linear-gradient(90deg,#fff8e9 0 8px,transparent 8px 13px)}
+.atm-hero:hover .atm-ticket{transform:translateX(-50%) translateY(-9px)}
+
+.atm-label{
+  position:absolute;left:0;right:0;bottom:12px;text-align:center;z-index:7;
+  color:#e8d4b1;font:7px monospace;letter-spacing:.16em;opacity:.8;
+}
+.atm-status{
+  position:absolute;right:25px;top:22px;z-index:6;color:#77d29c;font:7px monospace;letter-spacing:.1em
+}
+.atm-status:before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#77d29c;box-shadow:0 0 8px #77d29c;margin-right:5px}
+
+@media(max-width:600px){
+  .atm-hero{height:300px;border-radius:18px}
+  .atm-machine{width:200px;height:215px}
+  .atm-screen{width:142px;height:63px}.atm-slot{top:96px}
+  .atm-keypad{bottom:23px;width:92px}
+  .atm-orbit.o1{width:230px;height:230px}.atm-orbit.o2{width:180px;height:180px}.atm-orbit.o3{width:132px;height:132px}
+  .atm-rose{font-size:42px}.atm-choc{font-size:27px}
+  .atm-brand{left:16px}.atm-status{right:15px}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Rose + Chocolate ATM visual layer: no existing barcode controls changed. -->
+  <section class="atm-hero" id="roseChocolateATM">
+    <div class="atm-brand">LALABELLA<span>FLOWERS • CHOCOLATES • TOOLS</span></div>
+    <div class="atm-status">ATM READY</div>
+
+    <div class="atm-petal p1">🌸</div>
+    <div class="atm-petal p2">🌹</div>
+    <div class="atm-petal p3">🌸</div>
+
+    <div class="atm-orbit o1"></div>
+    <div class="atm-orbit o2"></div>
+    <div class="atm-orbit o3"></div>
+
+    <div class="atm-rose r1">🌹</div>
+    <div class="atm-rose r2">🌷</div>
+    <div class="atm-choc c1">🍫</div>
+    <div class="atm-choc c2">🍫</div>
+
+    <div class="atm-machine">
+      <div class="atm-screen">
+        <strong>CHOCOLATE ATM</strong>
+        SCAN → PRINT → READY
+      </div>
+      <div class="atm-slot"></div>
+      <div class="atm-keypad">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </div>
+
+    <div class="atm-ticket">LALABELLA<br>BARCODE LABEL ♥</div>
+    <div class="atm-label">CHOCOLATE BARCODE STATION</div>
+  </section>
+
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Chocolate Barcode</h1>
+    <p class="sub">Print labels, or look up a release</p>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="labels">Print Labels</button>
+    <button class="tab" data-tab="lookup">Look Up Release</button>
+    <button class="tab" data-tab="display">Build Display</button>
+    <button class="tab" data-tab="odoo">Export for Odoo</button>
+  </div>
+
+  <div class="panel active" id="panelLabels">
+    <div class="card">
+      <div class="card-title">Choose Chocolate</div>
+      <label>Category</label>
+      <div id="categoryPills" class="category-pills"></div>
+
+      <label>Chocolate Name</label>
+      <input type="text" id="fSearch" list="itemList" placeholder="Type to search..." autocomplete="off" />
+      <datalist id="itemList"></datalist>
+
+      <label>Pricing Unit</label>
+      <div class="qty-presets" id="unitModeTabs">
+        <button class="preset-btn active" data-mode="piece">Per Piece</button>
+        <button class="preset-btn" data-mode="gram">Per Gram</button>
+        <button class="preset-btn" data-mode="kg">Per Kg</button>
+      </div>
+      <label id="unitAmountLabel">How many pieces per label?</label>
+      <input type="number" id="fUnitAmount" min="0" step="0.01" placeholder="e.g. 1" value="1" />
+
+      <label>How Many Labels of This?</label>
+      <input type="number" id="fQty" min="1" placeholder="e.g. 12" />
+      <div class="qty-presets" id="labelQtyPresets">
+        <button class="preset-btn" data-qty="1">1 Label</button>
+        <button class="preset-btn" data-qty="15">Half Sheet (15)</button>
+        <button class="preset-btn" data-qty="30">Full Sheet (30)</button>
+      </div>
+
+      <div class="preview-label" id="previewLabel" style="display:none;">
+        <div class="p-name" id="pvName"></div>
+        <div class="p-price" id="pvPrice"></div>
+        <svg id="pvBarcode"></svg>
+        <div class="p-code" id="pvCode"></div>
+      </div>
+
+      <button class="gen-btn" id="addToCartBtn">Add to Print List</button>
+    </div>
+
+    <div class="card" id="labelCartCard" style="display:none;">
+      <div class="card-title">Print List <span id="cartLabelCount" style="color:var(--ink-dim); font-family:'Space Mono',monospace;"></span></div>
+      <div id="labelCartList"></div>
+      <button class="print-page-btn show" id="printLabelsBtn">Print Full Sheet</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panelLookup">
+    <div class="card">
+      <div class="card-title">Scan or Enter Release No</div>
+      <div class="scan-row">
+        <input type="text" id="fReleaseNo" placeholder="e.g. REL-000001" autocomplete="off" />
+        <button class="scan-btn" id="scanBtn" title="Scan barcode">📷</button>
+      </div>
+      <button class="submit-btn" id="lookupBtn">Look Up</button>
+
+      <div class="lookup-result" id="lookupResult"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelDisplay">
+    <div class="card">
+      <div class="card-title">🎁 Build a Display</div>
+      <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:14px;">
+        Pick several chocolates to build a display/box. We'll calculate the total price and generate its own barcode.
+      </div>
+
+      <label>Search Chocolate</label>
+      <input type="text" id="displaySearch" list="displayItemList" placeholder="Type a chocolate name…" autocomplete="off" />
+      <datalist id="displayItemList"></datalist>
+
+      <div class="unit-row" style="display:flex; gap:8px; margin-top:10px;">
+        <div style="flex:1;">
+          <label>Qty (pieces)</label>
+          <input type="number" id="displayQty" min="1" value="1" />
+        </div>
+        <div style="flex:1;">
+          <label>Price / Piece (BD)</label>
+          <input type="number" id="displayPrice" min="0" step="0.001" />
+        </div>
+      </div>
+      <button class="submit-btn" id="addToDisplayBtn" style="margin-top:10px;">+ Add to Display</button>
+
+      <div id="displayCartList" style="margin-top:16px;"></div>
+      <div class="lookup-result" id="displayTotalRow" style="display:none; font-weight:800; text-align:right;"></div>
+
+      <label style="margin-top:16px;">Display Name</label>
+      <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
+
+      <button class="submit-btn" id="saveDisplayBtn" style="margin-top:14px;">💾 Save &amp; Generate Barcode</button>
+
+      <div class="preview-label" id="displayPreview" style="display:none; margin-top:16px;">
+        <div class="p-name" id="dpName"></div>
+        <div class="p-price" id="dpPrice"></div>
+        <svg id="dpBarcode"></svg>
+        <div class="p-code" id="dpCode"></div>
+      </div>
+      <button class="submit-btn" id="printDisplayBtn" style="display:none; margin-top:10px;">🖨️ Print This Label</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panelOdoo">
+    <div class="card">
+      <div class="card-title">📦 Export for Odoo</div>
+      <div style="font-size:12.5px; color:var(--ink-dim); line-height:1.6; margin-bottom:14px;">
+        This generates a CSV file you can import directly into Odoo's Product import tool — covering every individual chocolate AND every saved display, with Name, Barcode, Sales Price, and — for displays — a Description listing exactly what's inside.
+      </div>
+      <div id="odooCount" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;"></div>
+      <button class="submit-btn" id="exportOdooBtn">⬇️ Download Odoo CSV</button>
+    </div>
+  </div>
+</div>
+
+<div class="scanner-modal" id="scannerModal">
+  <video id="scannerVideo" autoplay playsinline muted></video>
+  <div class="scanner-hint">Point the camera at a release barcode</div>
+  <button class="close-scan" id="closeScanBtn">Cancel</button>
+</div>
+
+<div id="labelPrintArea">
+  <div class="label-grid" id="labelGrid"></div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec';
+
+  let items = [];
+  let selectedItem = null;
+  let unitMode = 'piece';
+
+  function fmtBD(n){
+    return Number(n || 0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD';
+  }
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d);
+    if(isNaN(dt)) return String(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  document.getElementById('tabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.tab');
+    if(!btn) return;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === btn));
+    document.getElementById('panelLabels').classList.toggle('active', btn.dataset.tab === 'labels');
+    document.getElementById('panelLookup').classList.toggle('active', btn.dataset.tab === 'lookup');
+    document.getElementById('panelDisplay').classList.toggle('active', btn.dataset.tab === 'display');
+    document.getElementById('panelOdoo').classList.toggle('active', btn.dataset.tab === 'odoo');
+    if(btn.dataset.tab === 'odoo'){
+      const displayCount = savedDisplays.length;
+      document.getElementById('odooCount').textContent = items.length + ' chocolates + ' + displayCount + ' saved display(s) ready to export.';
+    }
+  });
+
+  let activeCategory = null;
+
+  let savedDisplays = [];
+
+  async function loadData(){
+    const t = Date.now();
+    try{ items = await (await fetch(API_URL + '?action=getItems&_ts=' + t)).json(); }catch(e){ console.error(e); }
+    try{ savedDisplays = await (await fetch(API_URL + '?action=getDisplayList&_ts=' + t)).json(); }catch(e){ console.error(e); }
+    populateItemList(null);
+    renderCategoryPills();
+    populateDisplayItemList();
+  }
+
+  function populateItemList(filterCategory){
+    const filtered = filterCategory ? items.filter(it => it['Category'] === filterCategory) : items;
+    document.getElementById('itemList').innerHTML =
+      filtered.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+  }
+
+  function renderCategoryPills(){
+    const cats = [...new Set(items.map(it => it['Category']).filter(Boolean))];
+    const el = document.getElementById('categoryPills');
+    el.innerHTML =
+      `<button class="cat-pill${activeCategory === null ? ' active' : ''}" data-cat="">All</button>` +
+      cats.map(c =>
+        `<button class="cat-pill${c === activeCategory ? ' active' : ''}" data-cat="${c}">${c}</button>`
+      ).join('');
+    el.querySelectorAll('.cat-pill').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        activeCategory = btn.dataset.cat || null;
+        renderCategoryPills();
+        populateItemList(activeCategory);
+      });
+    });
+  }
+
+  document.getElementById('fSearch').addEventListener('input', function(){
+    const match = items.find(it => it['Chocolate Name'] === this.value);
+    if(match){
+      selectedItem = match;
+      showPreview(match);
+      if(match['Category'] && match['Category'] !== activeCategory){
+        activeCategory = match['Category'];
+        renderCategoryPills();
+        populateItemList(activeCategory);
+      }
+    } else {
+      selectedItem = null;
+      document.getElementById('previewLabel').style.display = 'none';
+    }
+  });
+
+  document.getElementById('unitModeTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.preset-btn');
+    if(!btn) return;
+    document.querySelectorAll('#unitModeTabs .preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    unitMode = btn.dataset.mode;
+    const label = document.getElementById('unitAmountLabel');
+    if(unitMode === 'piece') label.textContent = 'How many pieces per label?';
+    else if(unitMode === 'gram') label.textContent = 'How many grams per label?';
+    else label.textContent = 'How many kg per label?';
+    if(selectedItem) showPreview(selectedItem);
+  });
+
+  document.getElementById('fUnitAmount').addEventListener('input', ()=>{
+    if(selectedItem) showPreview(selectedItem);
+  });
+
+  function computeLabelPrice(){
+    if(!selectedItem) return null;
+    const n = parseFloat(document.getElementById('fUnitAmount').value) || 0;
+    if(n <= 0) return null;
+    const pricePerKg = Number(String(selectedItem['Standard Price / Kg']).replace(/[^0-9.]/g,'')) || 0;
+    const weightPerPiece = Number(selectedItem['Grams']) || 0;
+    let kg, label;
+    if(unitMode === 'piece'){
+      kg = (n * weightPerPiece) / 1000;
+      label = n + (n != 1 ? ' pcs' : ' pc');
+    } else if(unitMode === 'gram'){
+      kg = n / 1000;
+      label = n + ' g';
+    } else {
+      kg = n;
+      label = n + ' kg';
+    }
+    const total = kg * pricePerKg;
+    return { total, label };
+  }
+
+  function showPreview(item){
+    const el = document.getElementById('previewLabel');
+    el.style.display = 'block';
+    document.getElementById('pvName').textContent = item['Chocolate Name'];
+
+    const priceResult = computeLabelPrice();
+    if(priceResult){
+      document.getElementById('pvPrice').textContent = priceResult.label + ' — ' + fmtBD(priceResult.total);
+    } else {
+      document.getElementById('pvPrice').textContent = 'Enter an amount above.';
+    }
+
+    document.getElementById('pvCode').textContent = item['Product Code'] || '';
+    document.getElementById('pvBarcode').innerHTML = '';
+    if(item['Product Code']){
+      try{
+        JsBarcode("#pvBarcode", String(item['Product Code']), { format: "CODE128", width: 1.3, height: 32, displayValue: false });
+      }catch(e){}
+    }
+  }
+
+  document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('fQty').value = btn.dataset.qty;
+    });
+  });
+  document.getElementById('fQty').addEventListener('input', ()=>{
+    document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(b => b.classList.remove('active'));
+  });
+
+  let labelCart = [];
+
+  document.getElementById('addToCartBtn').addEventListener('click', ()=>{
+    if(!selectedItem || !selectedItem['Product Code']){
+      alert('Pick a chocolate with a Product Code first.');
+      return;
+    }
+    const qty = parseInt(document.getElementById('fQty').value) || 0;
+    if(qty <= 0){
+      alert('Enter how many labels to print.');
+      return;
+    }
+    const priceResult = computeLabelPrice();
+    if(!priceResult){
+      alert('Enter a valid pricing amount first.');
+      return;
+    }
+
+    labelCart.push({
+      chocolateName: selectedItem['Chocolate Name'],
+      productCode: selectedItem['Product Code'],
+      priceLine: priceResult.label + ' — ' + fmtBD(priceResult.total),
+      qty
+    });
+
+    renderLabelCart();
+
+    document.getElementById('fSearch').value = '';
+    selectedItem = null;
+    document.getElementById('previewLabel').style.display = 'none';
+    document.getElementById('fQty').value = '';
+    document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(b => b.classList.remove('active'));
+  });
+
+  function renderLabelCart(){
+    const card = document.getElementById('labelCartCard');
+    const el = document.getElementById('labelCartList');
+    const totalLabels = labelCart.reduce((s,c)=>s+c.qty, 0);
+
+    if(labelCart.length === 0){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = 'block';
+    document.getElementById('cartLabelCount').textContent = `(${totalLabels} label${totalLabels != 1 ? 's' : ''})`;
+
+    el.innerHTML = labelCart.map((c, i) => `
+      <div class="cart-item-row">
+        <div class="cart-item-main">
+          <div class="cart-item-title">${c.chocolateName}</div>
+          <div class="cart-item-meta">${c.priceLine} · ${c.qty} label${c.qty != 1 ? 's' : ''}</div>
+        </div>
+        <button class="cart-remove-btn" data-idx="${i}">✕</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.cart-remove-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ labelCart.splice(Number(btn.dataset.idx), 1); renderLabelCart(); });
+    });
+  }
+
+  document.getElementById('printLabelsBtn').addEventListener('click', ()=>{
+    if(labelCart.length === 0) return;
+
+    const grid = document.getElementById('labelGrid');
+    grid.innerHTML = '';
+    let idx = 0;
+    const barcodeJobs = [];
+
+    labelCart.forEach(item=>{
+      for(let i = 0; i < item.qty; i++){
+        const cell = document.createElement('div');
+        cell.className = 'label-cell';
+        cell.innerHTML = `
+          <div class="l-name">${item.chocolateName}</div>
+          <div class="l-price">${item.priceLine}</div>
+          <svg class="lbl-svg-${idx}"></svg>
+          <div class="l-code">${item.productCode}</div>
+        `;
+        grid.appendChild(cell);
+        barcodeJobs.push({ cls: `.lbl-svg-${idx}`, code: item.productCode });
+        idx++;
+      }
+    });
+
+    barcodeJobs.forEach(job=>{
+      try{
+        JsBarcode(job.cls, String(job.code), { format: "CODE128", width: 1, height: 22, displayValue: false });
+      }catch(e){}
+    });
+
+    document.getElementById('labelPrintArea').classList.add('printing');
+    window.print();
+    setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  });
+
+  /* ---------- Look Up Release ---------- */
+  document.getElementById('lookupBtn').addEventListener('click', async ()=>{
+    const releaseNo = document.getElementById('fReleaseNo').value.trim();
+    if(!releaseNo){
+      alert('Enter or scan a Release No.');
+      return;
+    }
+    const el = document.getElementById('lookupResult');
+    el.innerHTML = '<div class="empty-note">Looking up...</div>';
+    try{
+      const t = Date.now();
+      const data = await (await fetch(API_URL + '?action=getReleaseByNo&releaseNo=' + encodeURIComponent(releaseNo) + '&_ts=' + t)).json();
+      renderLookupResult(releaseNo, data);
+    }catch(e){
+      el.innerHTML = '<div class="empty-note">Could not look up this release.</div>';
+    }
+  });
+
+  function renderLookupResult(releaseNo, data){
+    const el = document.getElementById('lookupResult');
+    const items = data.items || [];
+    const extras = data.extras || [];
+    if(items.length === 0 && extras.length === 0){
+      el.innerHTML = '<div class="empty-note">No release found for ' + releaseNo + '.</div>';
+      return;
+    }
+
+    let total = 0;
+    let rowsHtml = items.map(it=>{
+      total += Number(it['Total']) || 0;
+      const exp = it['ExpiryDate'] ? ' · Exp: ' + fmtDate(it['ExpiryDate']) : '';
+      return `<div class="lookup-row"><span>${it['Chocolate Name']} (${it['Qty Release']} ${it['Unit']})${exp}</span><span>${fmtBD(it['Total'])}</span></div>`;
+    }).join('');
+    rowsHtml += extras.map(ex=>{
+      total += Number(ex['Amount']) || 0;
+      return `<div class="lookup-row"><span>${ex['Description']}</span><span>${fmtBD(ex['Amount'])}</span></div>`;
+    }).join('');
+
+    const branch = items[0] ? items[0]['Branch'] : '';
+    const date = items[0] ? items[0]['Realese Date'] : '';
+    const type = items[0] ? items[0]['Transaction Type'] : '';
+
+    el.innerHTML = `
+      <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
+        ${releaseNo} · ${branch || '—'} · ${fmtDate(date)} · ${type || '—'}
+      </div>
+      ${rowsHtml}
+      <div class="lookup-total"><span>Total</span><span>${fmtBD(total)}</span></div>
+    `;
+  }
+
+  /* ---------- Barcode scanning (native BarcodeDetector, camera-based) ---------- */
+  let scanStream = null;
+  let scanLoopActive = false;
+
+  document.getElementById('scanBtn').addEventListener('click', async ()=>{
+    if(!('BarcodeDetector' in window)){
+      alert('Barcode scanning is not supported in this browser. Please type the Release No manually.');
+      return;
+    }
+    const modal = document.getElementById('scannerModal');
+    const video = document.getElementById('scannerVideo');
+    modal.classList.add('show');
+    try{
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = scanStream;
+      scanLoopActive = true;
+      const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+      const scanLoop = async ()=>{
+        if(!scanLoopActive) return;
+        try{
+          const codes = await detector.detect(video);
+          if(codes.length > 0){
+            stopScanner();
+            document.getElementById('fReleaseNo').value = codes[0].rawValue;
+            document.getElementById('lookupBtn').click();
+            return;
+          }
+        }catch(e){}
+        requestAnimationFrame(scanLoop);
+      };
+      scanLoop();
+    }catch(e){
+      alert('Could not access the camera. Check permissions and try again.');
+      modal.classList.remove('show');
+    }
+  });
+
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    document.getElementById('scannerModal').classList.remove('show');
+  }
+
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+
+  loadData();
+</script>
+
+<script>
+(function(){
+  const atm=document.getElementById('roseChocolateATM');
+  if(!atm)return;
+  const machine=atm.querySelector('.atm-machine');
+  const ticket=atm.querySelector('.atm-ticket');
+  atm.addEventListener('click',function(e){
+    if(e.target.closest('input,button,select,textarea,a')) return;
+    machine.animate(
+      [{transform:'translate(-50%,-45%) scale(1)'},{transform:'translate(-50%,-48%) scale(1.015)'},{transform:'translate(-50%,-45%) scale(1)'}],
+      {duration:320,easing:'ease-out'}
+    );
+    ticket.animate(
+      [{transform:'translateX(-50%) translateY(0)'},{transform:'translateX(-50%) translateY(-13px)'},{transform:'translateX(-50%) translateY(0)'}],
+      {duration:520,easing:'ease-out'}
+    );
+  });
+})();
+
+// ==================== Build Display ====================
+let displayCart = [];
+
+function populateDisplayItemList(){
+  document.getElementById('displayItemList').innerHTML =
+    items.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+}
+
+document.getElementById('displaySearch').addEventListener('input', function(){
+  const match = items.find(it => it['Chocolate Name'] === this.value);
+  if(match){
+    const priceKg = Number(match['Standard Price / Kg']) || 0;
+    const gramsPerPiece = Number(match['Grams']) || 0;
+    const pricePerPiece = gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : 0;
+    document.getElementById('displayPrice').value = pricePerPiece.toFixed(3);
+  }
+});
+
+document.getElementById('addToDisplayBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('displaySearch').value.trim();
+  const qty = parseInt(document.getElementById('displayQty').value) || 0;
+  const price = parseFloat(document.getElementById('displayPrice').value) || 0;
+  if(!name || qty <= 0){ alert('Select a chocolate and enter a Qty.'); return; }
+  displayCart.push({ name, qty, price });
+  document.getElementById('displaySearch').value = '';
+  document.getElementById('displayQty').value = 1;
+  document.getElementById('displayPrice').value = '';
+  renderDisplayCart();
+});
+
+function renderDisplayCart(){
+  const el = document.getElementById('displayCartList');
+  if(displayCart.length === 0){
+    el.innerHTML = '<div style="color:var(--ink-dim); font-size:12.5px; text-align:center; padding:10px 0;">Nothing added yet.</div>';
+    document.getElementById('displayTotalRow').style.display = 'none';
+    return;
+  }
+  el.innerHTML = displayCart.map((c, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--line);">
+      <div>
+        <div style="font-weight:600; font-size:13px;">${c.name}</div>
+        <div style="font-size:11px; color:var(--ink-dim);">${c.qty} pcs × ${fmtBD(c.price)} = ${fmtBD(c.qty * c.price)}</div>
+      </div>
+      <button data-idx="${i}" class="remove-display-item" style="background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+  const total = displayCart.reduce((s, c) => s + c.qty * c.price, 0);
+  const totalRow = document.getElementById('displayTotalRow');
+  totalRow.style.display = 'block';
+  totalRow.textContent = 'Total: ' + fmtBD(total);
+}
+
+document.getElementById('displayCartList').addEventListener('click', e=>{
+  const btn = e.target.closest('.remove-display-item');
+  if(!btn) return;
+  displayCart.splice(Number(btn.dataset.idx), 1);
+  renderDisplayCart();
+});
+
+let lastSavedDisplay = null;
+
+document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
+  const displayName = document.getElementById('displayName').value.trim();
+  if(!displayName){ alert('Enter a Display Name.'); return; }
+  if(displayCart.length === 0){ alert('Add at least one chocolate.'); return; }
+
+  const btn = document.getElementById('saveDisplayBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try{
+    const params = new URLSearchParams({
+      action: 'saveDisplay',
+      displayName,
+      items: JSON.stringify(displayCart)
+    });
+    const res = await fetch(API_URL + '?' + params.toString());
+    const data = await res.json();
+    if(data.error){
+      alert(data.error);
+    } else {
+      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice };
+      document.getElementById('dpName').textContent = displayName;
+      document.getElementById('dpPrice').textContent = fmtBD(data.totalPrice);
+      document.getElementById('dpCode').textContent = data.displayCode;
+      document.getElementById('dpBarcode').innerHTML = '';
+      try{
+        JsBarcode("#dpBarcode", data.displayCode, { format: "CODE128", width: 1.3, height: 32, displayValue: false });
+      }catch(e){}
+      document.getElementById('displayPreview').style.display = 'block';
+      document.getElementById('printDisplayBtn').style.display = 'block';
+      alert('Saved! Display Code: ' + data.displayCode);
+
+      displayCart = [];
+      document.getElementById('displayName').value = '';
+      renderDisplayCart();
+      await loadData();
+    }
+  }catch(e){
+    alert('Could not save. Check your connection and try again.');
+  }
+  btn.disabled = false; btn.textContent = '💾 Save & Generate Barcode';
+});
+
+document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
+  if(!lastSavedDisplay) return;
+  document.getElementById('labelGrid').innerHTML = `
+    <div class="label-cell">
+      <div class="l-name">${lastSavedDisplay.name}</div>
+      <div class="l-price">${fmtBD(lastSavedDisplay.total)}</div>
+      <svg id="printDpBarcode"></svg>
+      <div class="l-code">${lastSavedDisplay.code}</div>
+    </div>
+  `;
+  try{
+    JsBarcode("#printDpBarcode", lastSavedDisplay.code, { format: "CODE128", width: 1, height: 22, displayValue: false });
+  }catch(e){}
+  document.getElementById('labelPrintArea').classList.add('printing');
+  window.print();
+  setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+});
+
+// ==================== Export for Odoo ====================
+function csvEscapeChoc(val){
+  const s = String(val ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
+  if(items.length === 0 && savedDisplays.length === 0){ alert('The catalog is empty. Try refreshing the page.'); return; }
+  const header = ['Name', 'Barcode', 'Sales Price', 'Description'];
+
+  const itemRows = items
+    .filter(it => it['Product Code'])
+    .map(it => {
+      const priceKg = Number(it['Standard Price / Kg']) || 0;
+      const gramsPerPiece = Number(it['Grams']) || 0;
+      const pricePerPiece = gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : priceKg;
+      return [it['Chocolate Name'], it['Product Code'], pricePerPiece.toFixed(3), ''];
+    });
+
+  // A display's Description lists exactly what's inside it, so that
+  // even though Odoo shows it as one product, opening the product
+  // record (not just scanning) reveals the breakdown.
+  const displayRows = savedDisplays.map(d => {
+    const contents = (d['Items'] || []).map(it => it.qty + 'x ' + it.name).join(', ');
+    return [d['Display Name'], d['Display Code'], Number(d['Total Price']).toFixed(3), contents];
+  });
+
+  const csv = [header, ...itemRows, ...displayRows].map(r => r.map(csvEscapeChoc).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lalabella-chocolate-odoo-import-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+</script>
+
+</body>
+</html>
