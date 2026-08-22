@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:900px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'🧾'; position:absolute; font-size:64px; opacity:0.10; left:-12px; top:-16px; transform:rotate(-16deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px;
+    box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px;
+  }
+  .head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .head h2{ margin:0; font-family:'Fraunces',serif; font-weight:700; color:var(--rose-deep); font-size:20px; }
+  .muted{ color:var(--ink-dim); font-size:12px; margin-top:2px; }
+  .orderbox{ text-align:right; }
+  .orderbox .lbl{ font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-dim); }
+  .orderbox b{ display:block; font-family:'Space Mono',monospace; font-size:20px; color:var(--rose-deep); }
+
+  .section{ margin-bottom:18px; }
+  .section h3{ font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--rose-deep); font-weight:700; margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field.full{ grid-column:1/-1; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  input, select, textarea{
+    border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px;
+    color:var(--ink); font-family:inherit; background:#fff; outline:none;
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--rose); }
+  textarea{ min-height:70px; resize:vertical; }
+
+  /* ---------- Arrangement Photo ---------- */
+  .photo-zone{
+    display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .photo-box{
+    width:150px; height:150px; border-radius:12px; border:2px dashed var(--line);
+    background:var(--blush); display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; cursor:pointer; position:relative; overflow:hidden; text-align:center;
+    font-size:11px; color:var(--ink-dim); padding:10px;
+  }
+  .photo-box.has-img{ border-style:solid; border-color:var(--rose); }
+  .photo-box img{ width:100%; height:100%; object-fit:cover; }
+  .photo-box .clear-photo{
+    position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
+    background:rgba(255,255,255,0.92); color:#c0392b; border:none; font-size:12px; cursor:pointer;
+    display:none; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  .photo-box.has-img .clear-photo{ display:flex; }
+  .photo-side{ flex:1; min-width:200px; }
+  .photo-side .hint{ font-size:11px; color:var(--ink-dim); line-height:1.6; margin-top:6px; }
+
+  /* ---------- Order Items ---------- */
+  .items-head{
+    display:grid; grid-template-columns:1fr 60px 90px 90px 30px; gap:8px;
+    font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-dim);
+    padding:0 4px 6px; font-weight:700;
+  }
+  .item{
+    display:grid; grid-template-columns:1fr 60px 90px 90px 30px; gap:8px; align-items:center;
+    margin-bottom:6px;
+  }
+  .item input{ padding:8px 9px; font-size:13px; }
+  .calc{ font-family:'Space Mono',monospace; font-size:13px; text-align:right; color:var(--ink); padding-right:4px; }
+  .remove{
+    width:26px; height:26px; border-radius:50%; border:none; background:var(--blush);
+    color:#c0392b; cursor:pointer; font-size:13px;
+  }
+  .add-row{
+    background:none; border:1px dashed var(--rose); color:var(--rose-deep); border-radius:10px;
+    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; margin-top:4px; margin-right:8px;
+  }
+
+  .summary{ background:var(--blush); border-radius:12px; padding:14px 16px; margin-top:6px; }
+  .sumrow{ display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:13px; }
+  .sumrow b{ font-family:'Space Mono',monospace; font-weight:700; }
+  .sumrow.total{ border-top:1px solid var(--line); margin-top:6px; padding-top:10px; font-size:16px; }
+  .sumrow.total span:last-child{ color:var(--rose-deep); font-family:'Space Mono',monospace; font-weight:700; }
+
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .btn{ padding:11px 18px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-outline{ background:#fff; border:1px solid var(--rose-deep); color:var(--rose-deep); }
+  .btn-ghost{ background:var(--blush); color:var(--ink-dim); border:1px solid var(--line); }
+  .saved-msg{ display:none; margin-top:10px; color:var(--ok); font-size:12.5px; font-weight:600; }
+
+  @media print{
+    body{ background:#fff; }
+    .back-link, .actions{ display:none !important; }
+    .card{ box-shadow:none; border:1px solid #ccc; }
+  }
+  @media (max-width:600px){
+    .fields{ grid-template-columns:1fr; }
+    .items-head{ display:none; }
+    .item{ grid-template-columns:1fr 1fr; grid-template-areas:"name name" "qty unit" "calc remove"; }
+    .item .iname{ grid-area:name; }
+    .item .qty{ grid-area:qty; }
+    .item .unit{ grid-area:unit; }
+    .item .calc{ grid-area:calc; text-align:left; }
+    .item .remove{ grid-area:remove; justify-self:end; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Order Form</h1>
+  </header>
+
+  <div class="card">
+    <div class="head">
+      <div>
+        <h2>New Order</h2>
+        <div class="muted">Fill in the order details — total calculates automatically.</div>
+      </div>
+      <div class="orderbox">
+        <div class="lbl">OR Number</div>
+        <b id="orderNo"></b>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Arrangement</h3>
+      <div class="photo-zone">
+        <div class="photo-box" id="photoBox" title="Click to browse, or click then paste (Ctrl+V)" tabindex="0">
+          <span id="photoPlaceholder">🖼️<br>Click to browse<br>or paste (Ctrl+V)</span>
+          <img id="photoImg" style="display:none;">
+          <button class="clear-photo" id="clearPhotoBtn" title="Remove photo">✕</button>
+        </div>
+        <div class="photo-side">
+          <div class="field">
+            <label>Arrangement Name</label>
+            <input id="arrangementName" placeholder="e.g. Rose Bouquet Deluxe">
+          </div>
+          <div class="hint">You can browse for a photo of the arrangement, or copy an image (from your website, gallery, or a screenshot) and paste it directly here.</div>
+        </div>
+      </div>
+      <input type="file" id="photoFileInput" accept="image/*" hidden>
+    </div>
+
+    <div class="section">
+      <h3>Customer / Sender</h3>
+      <div class="fields">
+        <div class="field"><label>Customer / Sender Name</label><input id="sender" placeholder="Full name"></div>
+        <div class="field"><label>Sender Phone</label><input id="senderPhone" placeholder="+973 ..."></div>
+        <div class="field"><label>Receiver Name</label><input id="receiver" placeholder="Full name"></div>
+        <div class="field"><label>Receiver Phone</label><input id="receiverPhone" placeholder="+973 ..."></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Delivery</h3>
+      <div class="fields">
+        <div class="field">
+          <label>Delivery Method</label>
+          <select id="method"><option>Delivery</option><option>Pick-up</option><option>Walk-in</option></select>
+        </div>
+        <div class="field"><label>Delivery Date</label><input id="date" type="date"></div>
+        <div class="field"><label>Delivery Time</label><input id="time" placeholder="10:00 AM - 2:00 PM"></div>
+        <div class="field full"><label>Delivery Address</label><input id="address" placeholder="Building, Road, Block, Area"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Order Items</h3>
+      <div class="items-head"><span>Item / Description</span><span>Qty</span><span>Unit Price</span><span>Total</span><span></span></div>
+      <div id="items"></div>
+      <button class="add-row" id="addItemBtn">＋ Add Item</button>
+      <button class="add-row" id="addExtraBtn">＋ Add Extra</button>
+    </div>
+
+    <div class="section">
+      <h3>Notes & Receiving</h3>
+      <div class="fields">
+        <div class="field"><label>Received By</label><input id="receivedBy" placeholder="Staff name"></div>
+        <div class="field">
+          <label>Payment / Order Status</label>
+          <select id="status"><option>Pending</option><option>Confirmed</option><option>Paid</option><option>Completed</option></select>
+        </div>
+        <div class="field full"><label>Order Notes</label><textarea id="notes" placeholder="Message, special request, delivery instruction..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="sumrow"><span>Subtotal</span><b id="subtotal">0.000 BHD</b></div>
+      <div class="sumrow"><span>VAT (10%)</span><b id="vat">0.000 BHD</b></div>
+      <div class="sumrow"><span>Delivery / Shipping</span><b><input id="shipping" type="number" step="0.001" min="0" value="0" style="width:110px;text-align:right"> BHD</b></div>
+      <div class="sumrow total"><span>Grand Total</span><span id="grand">0.000 BHD</span></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" id="clearBtn">Clear</button>
+      <button class="btn btn-outline" id="saveBtn">💾 Save Order</button>
+      <button class="btn btn-primary" id="printBtn">🖨️ Print Order</button>
+    </div>
+    <div class="saved-msg" id="savedMsg">✓ Order saved in this browser.</div>
+  </div>
+</div>
+
+<script>
+function playClick(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 660;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    o.connect(g).connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.25);
+  }catch(e){}
+}
+function playAdd(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 783.99].forEach((freq,i)=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      const start = ctx.currentTime + i*0.06;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.05, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      o.connect(g).connect(ctx.destination);
+      o.start(start); o.stop(start + 0.25);
+    });
+  }catch(e){}
+}
+
+let nextNo = parseInt(localStorage.getItem('lalabellaNextOR') || '19714', 10);
+function makeNo(){ const n = nextNo++; localStorage.setItem('lalabellaNextOR', nextNo); return n; }
+document.getElementById('orderNo').textContent = makeNo();
+
+// ---------- Arrangement photo: browse or paste ----------
+const photoBox = document.getElementById('photoBox');
+const photoImg = document.getElementById('photoImg');
+const photoPlaceholder = document.getElementById('photoPlaceholder');
+const photoFileInput = document.getElementById('photoFileInput');
+
+function setPhoto(dataUrl){
+  photoImg.src = dataUrl;
+  photoImg.style.display = 'block';
+  photoPlaceholder.style.display = 'none';
+  photoBox.classList.add('has-img');
+}
+function clearPhoto(){
+  photoImg.src = '';
+  photoImg.style.display = 'none';
+  photoPlaceholder.style.display = 'block';
+  photoBox.classList.remove('has-img');
+}
+
+photoBox.addEventListener('click', (e)=>{
+  if(e.target.closest('.clear-photo')) return;
+  photoFileInput.click();
+});
+photoFileInput.addEventListener('change', ()=>{
+  const file = photoFileInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{ playAdd(); setPhoto(ev.target.result); };
+  reader.readAsDataURL(file);
+  photoFileInput.value = '';
+});
+photoBox.addEventListener('paste', (e)=>{
+  const items = (e.clipboardData || window.clipboardData).items;
+  for(const item of items){
+    if(item.type.indexOf('image') !== -1){
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ playAdd(); setPhoto(ev.target.result); };
+      reader.readAsDataURL(file);
+    }
+  }
+});
+// Allow pasting anywhere on the page when the photo box was last focused,
+// since a plain <div> only receives paste events while it holds focus.
+document.addEventListener('paste', (e)=>{
+  if(document.activeElement !== photoBox) return;
+  const items = (e.clipboardData || window.clipboardData).items;
+  for(const item of items){
+    if(item.type.indexOf('image') !== -1){
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ playAdd(); setPhoto(ev.target.result); };
+      reader.readAsDataURL(file);
+    }
+  }
+});
+document.getElementById('clearPhotoBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  playClick();
+  clearPhoto();
+});
+
+// ---------- Order items ----------
+function addItem(type=''){
+  playAdd();
+  const row = document.createElement('div');
+  row.className = 'item';
+  row.innerHTML = `<input class="iname" value="${type}" placeholder="Flower / chocolate / service">
+    <input class="qty" type="number" min="0" step="1" value="1">
+    <input class="unit" type="number" min="0" step="0.001" value="0">
+    <div class="calc">0.000</div>
+    <button class="remove" title="Remove">×</button>`;
+  document.getElementById('items').appendChild(row);
+  row.querySelector('.qty').addEventListener('input', calculate);
+  row.querySelector('.unit').addEventListener('input', calculate);
+  row.querySelector('.remove').addEventListener('click', ()=>{ playClick(); row.remove(); calculate(); });
+  calculate();
+}
+
+function calculate(){
+  let sub = 0;
+  document.querySelectorAll('.item').forEach(r=>{
+    const q = parseFloat(r.querySelector('.qty').value) || 0;
+    const u = parseFloat(r.querySelector('.unit').value) || 0;
+    const t = q * u; sub += t;
+    r.querySelector('.calc').textContent = t.toFixed(3);
+  });
+  const vat = sub * 0.10;
+  const ship = parseFloat(document.getElementById('shipping').value) || 0;
+  document.getElementById('subtotal').textContent = sub.toFixed(3) + ' BHD';
+  document.getElementById('vat').textContent = vat.toFixed(3) + ' BHD';
+  document.getElementById('grand').textContent = (sub + vat + ship).toFixed(3) + ' BHD';
+}
+document.getElementById('shipping').addEventListener('input', calculate);
+document.getElementById('addItemBtn').addEventListener('click', ()=> addItem());
+document.getElementById('addExtraBtn').addEventListener('click', ()=> addItem('Extra'));
+
+// ---------- Save / Clear / Print ----------
+function saveOrder(){
+  playClick();
+  const data = {
+    or: document.getElementById('orderNo').textContent,
+    arrangementName: document.getElementById('arrangementName').value,
+    photo: photoImg.style.display === 'block' ? photoImg.src : '',
+    sender: sender.value, senderPhone: senderPhone.value,
+    receiver: receiver.value, receiverPhone: receiverPhone.value,
+    method: method.value, date: date.value, time: time.value,
+    address: address.value, receivedBy: receivedBy.value, status: status.value, notes: notes.value,
+    items: [...document.querySelectorAll('.item')].map(r=>({
+      name: r.querySelector('.iname').value, qty: r.querySelector('.qty').value, unit: r.querySelector('.unit').value
+    })),
+    subtotal: subtotal.textContent, vat: vat.textContent, shipping: shipping.value, grand: grand.textContent,
+    created: new Date().toISOString()
+  };
+  localStorage.setItem('lalabellaOrder_' + data.or, JSON.stringify(data));
+  const msg = document.getElementById('savedMsg');
+  msg.style.display = 'block';
+  setTimeout(()=>{ msg.style.display = 'none'; }, 3000);
+}
+
+function clearForm(){
+  if(!confirm('Clear this order?')) return;
+  playClick();
+  document.querySelectorAll('input, textarea').forEach(e=>{ if(e.id !== 'shipping') e.value = ''; });
+  document.getElementById('shipping').value = 0;
+  document.getElementById('items').innerHTML = '';
+  clearPhoto();
+  addItem();
+  calculate();
+}
+
+document.getElementById('saveBtn').addEventListener('click', saveOrder);
+document.getElementById('clearBtn').addEventListener('click', clearForm);
+document.getElementById('printBtn').addEventListener('click', ()=>{ playClick(); window.print(); });
+
+document.getElementById('date').value = new Date().toISOString().slice(0,10);
+addItem();
+</script>
+</body>
+</html>
