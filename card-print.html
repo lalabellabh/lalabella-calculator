@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaLaBella Card Print</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3eee8;color:#2f2430;font-family:Arial,sans-serif}
+.toolbar{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #ddd;padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select,input{border:1px solid #d8c9cc;border-radius:8px;background:#fff;padding:9px 11px;font-size:14px}
+button{cursor:pointer}.brand{font-weight:700;margin-right:8px}
+.wrap{max-width:1100px;margin:20px auto;padding:0 14px}
+.hint{font-size:13px;color:#766b72;margin:8px 0 18px}
+.stage{display:flex;justify-content:center}
+.card{width:4.33in;height:4.33in;background:#fff;border:1px solid #ddd;box-shadow:0 5px 22px #0001;padding:.35in;position:relative;overflow:hidden}
+.card.small{width:2.95in;height:2.95in;padding:.25in}
+.editor{min-height:100%;outline:none;white-space:pre-wrap;overflow-wrap:anywhere;font-family:"Baskerville Old Face","Baskerville",Georgia,serif;font-size:16px;line-height:1.35;direction:auto;text-align:start;unicode-bidi:plaintext}
+.small .editor{font-size:13px}
+.editor img{max-width:100%;height:auto;display:block;margin:6px 0}
+@media print{
+ @page{size:auto;margin:0}
+ body{background:#fff}
+ .toolbar,.hint{display:none!important}
+ .wrap{margin:0;padding:0}
+ .stage{display:block}
+ .card{box-shadow:none;border:0;margin:0;break-after:page;page-break-after:always}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+<span class="brand">🌸 LaLaBella Card Print</span>
+<label>Size:
+<select id="size"><option value="big">BIG — 4.33 × 4.33"</option><option value="small">SMALL — 2.95 × 2.95"</option></select>
+</label>
+<label>Columns:
+<select id="cols"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+</label>
+<label>Font:
+<select id="font"><option value="bask">Baskerville Old Face</option><option value="arabic">Arabic / Naskh</option></select>
+</label>
+<label>Text:
+<input id="fontSize" type="number" min="8" max="40" value="16" style="width:65px"> px
+</label>
+<button onclick="window.print()">🖨️ Print Card</button>
+<button onclick="clearCard()">Clear</button>
+</div>
+<div class="wrap">
+<div class="hint">Paste or type from the top. Use Enter for spacing. Arabic, English and emojis are supported. You can also paste an image from Snipping Tool.</div>
+<div class="stage">
+<div id="card" class="card">
+<div id="editor" class="editor" contenteditable="true" dir="auto" spellcheck="false">Type or paste your message here…</div>
+</div>
+</div>
+</div>
+<script>
+const editor=document.getElementById('editor'),card=document.getElementById('card');
+document.getElementById('size').onchange=e=>card.classList.toggle('small',e.target.value==='small');
+document.getElementById('font').onchange=e=>editor.style.fontFamily=e.target.value==='arabic'?
+'"Noto Naskh Arabic","Amiri","Traditional Arabic",serif':'"Baskerville Old Face","Baskerville",Georgia,serif';
+document.getElementById('fontSize').oninput=e=>editor.style.fontSize=e.target.value+'px';
+document.getElementById('cols').onchange=e=>{
+  editor.style.columnCount=e.target.value;
+  editor.style.columnGap='14px';
+};
+editor.addEventListener('focus',()=>{
+ if(editor.textContent.trim()==='Type or paste your message here…') editor.innerHTML='';
+});
+editor.addEventListener('paste',e=>{
+ const items=e.clipboardData?.items||[];
+ for(const item of items){
+  if(item.type.startsWith('image/')){
+   e.preventDefault();
+   const file=item.getAsFile(),reader=new FileReader();
+   reader.onload=ev=>{
+    const img=document.createElement('img');img.src=ev.target.result;
+    insertAtCursor(img);
+   };reader.readAsDataURL(file);return;
+  }
+ }
+ e.preventDefault();
+ document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));
+});
+function insertAtCursor(node){
+ const s=window.getSelection();
+ if(!s||!s.rangeCount){editor.appendChild(node);return}
+ const r=s.getRangeAt(0);r.deleteContents();r.insertNode(node);
+ r.setStartAfter(node);r.collapse(true);s.removeAllRanges();s.addRange(r);
+}
+function clearCard(){editor.innerHTML='';editor.focus()}
+</script>
+</body>
+</html>
