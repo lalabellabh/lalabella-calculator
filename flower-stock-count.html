@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower Stock Count</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f; --warn:#c68a1f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'🌹'; position:absolute; font-size:64px; opacity:0.08; left:-12px; top:-16px; transform:rotate(-16deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .branch-tabs{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .branch-tab{ padding:11px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; }
+  .branch-tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:12px; }
+  label:first-child{ margin-top:0; }
+  input[type=date], input[type=text]{ width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--ink); outline:none; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn{ padding:12px 0; width:100%; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; margin-top:12px; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-secondary{ background:var(--blush); color:var(--rose-deep); border:1px solid var(--line); }
+  .btn-leaf{ background:linear-gradient(135deg, var(--leaf), #3f6b45); color:#fff; }
+  .btn:disabled{ opacity:0.5; }
+
+  .summary-row{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-dim); padding:6px 0; border-top:1px solid var(--blush-2); }
+  .summary-row:first-child{ border-top:none; }
+  .summary-row b{ color:var(--ink); font-family:'Space Mono',monospace; }
+
+  .search-box{ margin-bottom:12px; }
+  .flower-row{ border-top:1px solid var(--blush-2); padding:8px 0; display:flex; align-items:center; gap:8px; }
+  .flower-row:first-child{ border-top:none; }
+  .flower-info{ flex:1; min-width:0; }
+  .flower-name{ font-weight:600; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .flower-meta{ font-size:10px; color:var(--ink-dim); }
+  .flower-inputs{ display:flex; gap:6px; flex-shrink:0; }
+  .flower-inputs input{ width:60px; padding:6px 6px; font-size:12px; text-align:center; }
+  .add-input{
+    width:36px !important; color:var(--gold); font-weight:700; border-color:var(--gold) !important;
+    background:#fff8ea !important;
+  }
+  .add-input::placeholder{ color:var(--gold); opacity:0.6; }
+  .count-flash{ animation:countFlash 0.5s ease; }
+  @keyframes countFlash{ 0%{ background:#eaf3ec; } 100%{ background:var(--blush); } }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
+  .loading{ text-align:center; padding:20px 0; color:var(--ink-dim); font-size:13px; }
+  .badge{ display:inline-block; font-size:10px; padding:3px 9px; border-radius:10px; font-weight:700; text-transform:uppercase; }
+  .badge.baseline{ background:var(--mint); color:var(--ok); }
+  .badge.readonly{ background:#fbf1de; color:var(--warn); }
+
+  #printView{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printView, #printView *{ visibility:visible; }
+    #printView{ display:block; position:absolute; left:0; top:0; width:100%; }
+  }
+  .pv-title{ text-align:center; font-family:'Fraunces',serif; font-size:22px; font-weight:900; margin-bottom:10px; }
+  .pv-meta{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+  .pv-table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:12px; }
+  .pv-table th, .pv-table td{ border:1px solid #999; padding:6px 8px; text-align:left; }
+  .pv-table th{ background:#eee; }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:1080px; padding:34px 30px 70px; }
+    .branch-tabs{ max-width:420px; }
+    .layout{ display:flex; gap:18px; align-items:flex-start; }
+    .col-main{ flex:1.3; display:flex; flex-direction:column; gap:16px; }
+    .col-side{ flex:1; display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <a class="back-link" href="flower-dashboard.html" style="float:right;">🌷 Dashboard &rarr;</a>
+  <a class="back-link" href="flower-receiving.html" style="float:right; margin-right:14px;">📦 Receiving</a>
+  <header>
+    <div class="eyebrow">Lalabella Flowers</div>
+    <h1>Stock Count</h1>
+  </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
+  <div class="layout">
+    <div class="col-main">
+
+      <div class="card">
+        <div class="card-title">📅 Count Session</div>
+        <label>Count Date</label>
+        <input type="date" id="countDate" />
+        <div class="grid-2">
+          <button class="btn btn-primary" id="loadBtn">Load Flowers</button>
+          <button class="btn btn-secondary" id="recallBtn">Recall Count</button>
+        </div>
+        <button class="btn btn-secondary" id="searchBtn">🔍 Search History (Read-only)</button>
+        <div id="statusLabel" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card" id="countCard" style="display:none;">
+        <div class="card-title">🌸 Physical Count <span id="itemsCountedLabel" style="font-weight:400;font-size:11px;color:var(--ink-dim);"></span></div>
+        <div class="search-box">
+          <input type="text" id="searchFlower" placeholder="Search flower or item code…" />
+        </div>
+        <div id="flowerList" style="max-height:56vh; overflow-y:auto;"></div>
+        <button class="btn btn-secondary" id="addMissingBtn">+ Add Missing Flower</button>
+      </div>
+
+    </div>
+
+    <div class="col-side">
+
+      <div class="card">
+        <div class="card-title">📊 Live Summary</div>
+        <div class="summary-row"><span>Inventory Weekly Stock</span><b id="sumInventory">0.000 BD</b></div>
+        <div class="summary-row"><span>Cost Weekly Wastage</span><b id="sumWastageCost">0.000 BD</b></div>
+        <div class="summary-row"><span>Items Counted</span><b id="sumCounted">0</b></div>
+      </div>
+
+      <div class="card" id="saveCard" style="display:none;">
+        <button class="btn btn-primary" id="saveBtn">💾 Save Count</button>
+        <button class="btn btn-leaf" id="printBtn">🖨️ Print Sheet</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="printView">
+  <div class="pv-title">Weekly Inventory Sheet</div>
+  <div class="pv-meta"><span id="pvDate"></span><span id="pvBranch"></span></div>
+  <div class="pv-meta"><span id="pvInventory"></span><span id="pvWastage"></span></div>
+  <table class="pv-table">
+    <thead><tr><th>No.</th><th>Product</th><th>Quantity</th><th>Wastage</th><th>Legacy Rate (BD)</th></tr></thead>
+    <tbody id="pvBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+  let currentBranch = 'ModaMall';
+  let flowerItems = [];       // raw FlowerItem rows, for legacy rate lookup
+  let stockList = [];         // {flowerName, contributingItemCodes}
+  let backing = [];           // {flowerName, contributingItemCodes, physicalCount, wastage, legacyRate}
+  let hasCountDate = false;
+  let isReadOnlyView = false;
+  let hasBeenEdited = false;
+
+  function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
+
+  function legacyRateFor(flowerName){
+    const match = flowerItems.find(it =>
+      (it.Flowers||'').trim().toLowerCase() === flowerName.toLowerCase() &&
+      (it.Origin||'').trim() === 'Legacy/Unknown' &&
+      (it.Status||'').trim() === 'Active'
+    );
+    return match ? Number(match.Rate) || 0 : 0;
+  }
+
+  async function loadFlowerItemsAndList(){
+    const t = Date.now();
+    const [items, list] = await Promise.all([
+      fetch(API_URL + '?action=getFlowerItems&_ts=' + t).then(r=>r.json()).catch(()=>[]),
+      fetch(API_URL + '?action=getFlowerStockList&_ts=' + t).then(r=>r.json()).catch(()=>[])
+    ]);
+    flowerItems = items;
+    stockList = list;
+  }
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+  });
+
+  document.getElementById('loadBtn').addEventListener('click', async ()=>{
+    const dateVal = document.getElementById('countDate').value;
+    if(!dateVal){ alert('Pumili muna ng Count Date.'); return; }
+
+    await loadFlowerItemsAndList();
+
+    backing = stockList.map(s => ({
+      flowerName: s.flowerName,
+      contributingItemCodes: s.contributingItemCodes,
+      physicalCount: '',
+      wastage: '',
+      legacyRate: legacyRateFor(s.flowerName)
+    }));
+
+    hasCountDate = true;
+    isReadOnlyView = false;
+    hasBeenEdited = true;
+    document.getElementById('statusLabel').innerHTML = '<span class="badge baseline">Fresh Load — ' + backing.length + ' flowers</span>';
+    document.getElementById('countCard').style.display = 'block';
+    document.getElementById('saveCard').style.display = 'block';
+    renderFlowerList();
+    renderSummary();
+  });
+
+  document.getElementById('recallBtn').addEventListener('click', async ()=>{
+    const dateVal = document.getElementById('countDate').value;
+    if(!dateVal){ alert('Pumili muna ng Count Date.'); return; }
+    await loadFlowerItemsAndList();
+    const rows = await (await fetch(API_URL + '?action=getStockCountByDate&branch=' + currentBranch + '&date=' + dateVal)).json();
+    if(!rows.length){ alert('Walang naka-save na count para sa branch/date na ito.'); return; }
+
+    backing = rows.map(r => ({
+      flowerName: r.Flower,
+      contributingItemCodes: r['Contributing Item Codes'] || '',
+      physicalCount: r['Physical Count'],
+      wastage: r.Wastage,
+      legacyRate: Number(r['Rate At Count']) || legacyRateFor(r.Flower)
+    }));
+
+    hasCountDate = true;
+    isReadOnlyView = false;
+    hasBeenEdited = false;
+    document.getElementById('statusLabel').innerHTML = '<span class="badge baseline">Recalled — ' + backing.length + ' flowers, editable</span>';
+    document.getElementById('countCard').style.display = 'block';
+    document.getElementById('saveCard').style.display = 'block';
+    renderFlowerList();
+    renderSummary();
+  });
+
+  document.getElementById('searchBtn').addEventListener('click', async ()=>{
+    const dateVal = document.getElementById('countDate').value;
+    if(!dateVal){ alert('Pumili muna ng Count Date.'); return; }
+    await loadFlowerItemsAndList();
+    const rows = await (await fetch(API_URL + '?action=getStockCountByDate&branch=' + currentBranch + '&date=' + dateVal)).json();
+    if(!rows.length){ alert('Walang naka-save na count para sa branch/date na ito.'); return; }
+
+    backing = rows.map(r => ({
+      flowerName: r.Flower,
+      contributingItemCodes: r['Contributing Item Codes'] || '',
+      physicalCount: r['Physical Count'],
+      wastage: r.Wastage,
+      legacyRate: Number(r['Rate At Count']) || 0
+    }));
+
+    hasCountDate = true;
+    isReadOnlyView = true;
+    document.getElementById('statusLabel').innerHTML = '<span class="badge readonly">Read-only view — click Recall Count to edit</span>';
+    document.getElementById('countCard').style.display = 'block';
+    document.getElementById('saveCard').style.display = 'block';
+    renderFlowerList();
+    renderSummary();
+  });
+
+  document.getElementById('searchFlower').addEventListener('input', renderFlowerList);
+
+  function renderFlowerList(){
+    const filter = document.getElementById('searchFlower').value.trim().toLowerCase();
+    const el = document.getElementById('flowerList');
+    const visible = backing.filter(b =>
+      !filter || b.flowerName.toLowerCase().includes(filter) || (b.contributingItemCodes||'').toLowerCase().includes(filter)
+    );
+
+    if(visible.length === 0){
+      el.innerHTML = '<div class="empty-note">Walang flowers na tumutugma.</div>';
+    } else {
+      el.innerHTML = visible.map((b) => {
+        const idx = backing.indexOf(b);
+        return `
+        <div class="flower-row">
+          <div class="flower-info">
+            <div class="flower-name">${b.flowerName}</div>
+            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD</div>
+          </div>
+          <div class="flower-inputs">
+            <input type="text" inputmode="decimal" placeholder="Count" value="${b.physicalCount}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="+" class="add-input" data-idx="${idx}" data-field="addCount" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="Waste" value="${b.wastage}" data-idx="${idx}" data-field="wastage" ${isReadOnlyView?'disabled':''} />
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('itemsCountedLabel').textContent =
+      '(' + backing.filter(b => (b.physicalCount !== '' && !isNaN(b.physicalCount)) || (b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0)).length + ' counted)';
+
+    el.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', e=>{
+        const idx = Number(e.target.dataset.idx);
+        const field = e.target.dataset.field;
+        if(field === 'addCount') return; // handled separately below, not stored directly
+        backing[idx][field] = e.target.value;
+        hasBeenEdited = true;
+        renderSummary();
+      });
+    });
+
+    // "+" additional-count input: type a batch amount, press Enter (or
+    // tap away) to add it onto the existing Count — then it clears
+    // itself, ready for the next batch. Lets you count in rounds
+    // (10, then 10, then 10 more) instead of adding them up in your
+    // head before typing one final number.
+    function applyAddCount(input){
+      const idx = Number(input.dataset.idx);
+      const addVal = parseFloat(input.value);
+      if(isNaN(addVal) || addVal === 0){ input.value = ''; return; }
+      const current = parseFloat(backing[idx].physicalCount) || 0;
+      const newTotal = current + addVal;
+      backing[idx].physicalCount = String(newTotal);
+      const countInput = document.getElementById('count-' + idx);
+      if(countInput){
+        countInput.value = newTotal;
+        countInput.classList.remove('count-flash');
+        void countInput.offsetWidth; // restart the animation
+        countInput.classList.add('count-flash');
+      }
+      input.value = '';
+      hasBeenEdited = true;
+      renderSummary();
+    }
+
+    el.querySelectorAll('.add-input').forEach(inp => {
+      inp.addEventListener('keydown', e=>{
+        if(e.key === 'Enter'){ e.preventDefault(); applyAddCount(e.target); }
+      });
+      inp.addEventListener('blur', e=>{ applyAddCount(e.target); });
+    });
+  }
+
+  function renderSummary(){
+    let inventoryTotal = 0, wastageCostTotal = 0, itemsCounted = 0;
+    backing.forEach(b => {
+      const hasCount = b.physicalCount !== '' && !isNaN(b.physicalCount);
+      const hasWastage = b.wastage !== '' && !isNaN(b.wastage);
+      if(hasCount) inventoryTotal += Number(b.physicalCount) * b.legacyRate;
+      if(hasWastage) wastageCostTotal += Number(b.wastage) * b.legacyRate;
+      if(hasCount || hasWastage) itemsCounted++;
+    });
+    document.getElementById('sumInventory').textContent = fmtBD(inventoryTotal);
+    document.getElementById('sumWastageCost').textContent = fmtBD(wastageCostTotal);
+    document.getElementById('sumCounted').textContent = itemsCounted;
+  }
+
+  document.getElementById('addMissingBtn').addEventListener('click', ()=>{
+    const term = prompt('Enter the Flower Name to add:');
+    if(!term) return;
+    if(backing.some(b => b.flowerName.toLowerCase() === term.trim().toLowerCase())){
+      alert('Nasa listahan na ito.');
+      return;
+    }
+    const match = stockList.find(s => s.flowerName.toLowerCase() === term.trim().toLowerCase());
+    if(!match){
+      alert('Walang nahanap na flower na "' + term + '".');
+      return;
+    }
+    backing.push({
+      flowerName: match.flowerName,
+      contributingItemCodes: match.contributingItemCodes,
+      physicalCount: '', wastage: '',
+      legacyRate: legacyRateFor(match.flowerName)
+    });
+    hasBeenEdited = true;
+    document.getElementById('searchFlower').value = '';
+    renderFlowerList();
+    renderSummary();
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    if(isReadOnlyView){ alert('Read-only view ito. Click Recall Count muna para makapag-edit.'); return; }
+    const dateVal = document.getElementById('countDate').value;
+    if(!dateVal || backing.length === 0){ alert('Walang laman na i-se-save.'); return; }
+
+    const toSave = backing.filter(b =>
+      (b.physicalCount !== '' && !isNaN(b.physicalCount)) ||
+      (b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0)
+    );
+    if(toSave.length === 0){ alert('Walang Physical Count o Wastage na na-type pa.'); return; }
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const params = new URLSearchParams({
+      action: 'saveStockCount',
+      branch: currentBranch,
+      date: dateVal,
+      items: JSON.stringify(toSave)
+    });
+
+    try{
+      const res = await fetch(API_URL + '?' + params.toString());
+      const data = await res.json();
+      if(data.error){ alert(data.error); }
+      else {
+        const shortages = data.results.filter(r => r.variance < 0).length;
+        alert(data.savedCount + ' item(s) na-save.' + (shortages ? '\\n' + shortages + ' na may shortage (negative variance).' : ''));
+        hasBeenEdited = false;
+      }
+    }catch(e){
+      alert('Hindi na-save. I-check ang connection mo.');
+    }
+    btn.disabled = false; btn.textContent = '💾 Save Count';
+  });
+
+  document.getElementById('printBtn').addEventListener('click', async ()=>{
+    const dateVal = document.getElementById('countDate').value;
+    const toPrint = backing.filter(b => (b.physicalCount !== '' && !isNaN(b.physicalCount)) || (b.wastage !== '' && Number(b.wastage) > 0));
+    if(toPrint.length === 0){ alert('Walang laman na pwedeng i-print.'); return; }
+
+    document.getElementById('pvDate').textContent = 'Date: ' + dateVal;
+    document.getElementById('pvBranch').textContent = 'Branch: ' + currentBranch;
+    document.getElementById('pvInventory').textContent = 'Inventory Weekly Stock: ' + document.getElementById('sumInventory').textContent;
+    document.getElementById('pvWastage').textContent = 'Cost Weekly Wastage: ' + document.getElementById('sumWastageCost').textContent;
+    document.getElementById('pvBody').innerHTML = toPrint.map((b,i) => `
+      <tr>
+        <td>${i+1}</td><td>${b.flowerName}</td>
+        <td>${b.physicalCount === '' ? 'N/A' : b.physicalCount}</td>
+        <td>${b.wastage === '' || Number(b.wastage) === 0 ? '' : b.wastage}</td>
+        <td>${b.legacyRate.toFixed(3)}</td>
+      </tr>`).join('');
+
+    window.print();
+
+    const params = new URLSearchParams({
+      action: 'printStockCount',
+      branch: currentBranch,
+      date: dateVal,
+      inventoryWeeklyStock: document.getElementById('sumInventory').textContent,
+      costWeeklyWastage: document.getElementById('sumWastageCost').textContent,
+      rows: JSON.stringify(toPrint)
+    });
+    fetch(API_URL + '?' + params.toString()).catch(()=>{});
+  });
+
+  document.getElementById('countDate').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
