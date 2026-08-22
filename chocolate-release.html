@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chocolate Release</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --gold:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  .rain-field{ position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .rain-streak{
+    position:absolute; top:-60px; width:1.5px;
+    background:linear-gradient(180deg, transparent, rgba(28,43,69,0.18), transparent);
+    animation-name: rainFall; animation-timing-function: linear; animation-iteration-count: infinite;
+  }
+  @keyframes rainFall{
+    0%{ transform:translateY(0); opacity:0; }
+    10%{ opacity:1; }
+    90%{ opacity:0.8; }
+    100%{ transform:translateY(115vh); opacity:0; }
+  }
+
+  .drop-side{ position:fixed; top:0; bottom:0; width:26px; overflow:hidden; pointer-events:none; z-index:0; }
+  .drop-side.left{ left:0; }
+  .drop-side.right{ right:0; }
+  .water-drop{
+    position:absolute; top:-20px; width:7px; height:9px;
+    background:radial-gradient(circle at 50% 65%, rgba(198,138,31,0.35), rgba(28,43,69,0.15) 75%);
+    border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+    transform:rotate(180deg);
+    animation-name: dropSlide; animation-timing-function: ease-in; animation-iteration-count: infinite;
+  }
+  @keyframes dropSlide{
+    0%{ transform:translateY(0) rotate(180deg); opacity:0; }
+    8%{ opacity:0.8; }
+    70%{ opacity:0.7; }
+    100%{ transform:translateY(110vh) rotate(180deg); opacity:0; }
+  }
+
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 18px 60px; position:relative; z-index:1; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+  header{ text-align:center; margin-bottom:24px; }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .branch-tabs{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;
+    margin-bottom:20px; background:var(--paper-2); padding:5px; border-radius:3px;
+  }
+  .branch-tab{
+    padding:11px 0; text-align:center; background:transparent; border:none;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+    color:var(--ink-dim); cursor:pointer; border-radius:2px;
+  }
+  .branch-tab.active{ background:var(--ink); color:var(--paper); }
+
+  .refresh-link{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:7px 12px; border-radius:3px; cursor:pointer; margin-bottom:14px;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:4px;
+    padding:20px; margin-bottom:18px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px;
+    margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;
+  }
+
+  label{
+    display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-dim); margin-bottom:5px; margin-top:14px;
+  }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=date], input[type=number], select, textarea{
+    width:100%; background:var(--paper); border:1px solid var(--line); border-radius:3px;
+    padding:11px 12px; font-family:'Space Grotesk',sans-serif; font-size:14px;
+    color:var(--ink); outline:none;
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--ink); }
+  input:disabled, select:disabled{ background:var(--paper-2); color:var(--ink-dim); }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .type-hint{
+    background:#fbf1de; border:1px solid var(--gold); border-radius:3px;
+    padding:10px 12px; font-size:12px; color:#8a6415; margin-top:8px;
+  }
+
+  .scan-row{ display:flex; gap:8px; }
+  .scan-row input{ flex:1; }
+  .scan-btn{
+    background:var(--ink); color:var(--paper); border:none; border-radius:3px;
+    padding:0 16px; font-size:18px; cursor:pointer; white-space:nowrap;
+  }
+  .scanner-modal{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999;
+    align-items:center; justify-content:center; flex-direction:column; padding:20px;
+  }
+  .scanner-modal.show{ display:flex; }
+  .scanner-modal video{ width:100%; max-width:400px; border-radius:6px; }
+  .scanner-modal .close-scan{
+    margin-top:16px; background:var(--rust); color:#fff; border:none;
+    padding:10px 24px; border-radius:20px; font-weight:700; cursor:pointer;
+  }
+  .scanner-hint{ color:#fff; font-size:12px; margin-top:10px; text-align:center; }
+
+  .available-line{
+    font-size:11.5px; color:var(--ink-dim); margin-top:6px;
+    background:var(--paper); border:1px dashed var(--line); border-radius:3px; padding:8px 10px;
+  }
+
+  .add-btn{
+    width:100%; margin-top:16px; padding:12px 0; background:var(--ink); color:var(--paper);
+    border:none; border-radius:3px; font-weight:700; font-size:13px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+  }
+  .add-btn.extra{ background:var(--gold); }
+
+  .cart-row{ border-top:1px solid var(--line); padding:12px 0; font-size:13px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .cart-row:first-child{ border-top:none; }
+  .cart-row-main{ flex:1; }
+  .cart-row-title{ font-weight:600; }
+  .cart-row-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:2px; }
+  .cart-row-amt{ font-family:'Space Mono',monospace; font-weight:700; white-space:nowrap; }
+  .remove-btn{
+    background:none; border:none; color:var(--rust); font-size:16px; cursor:pointer;
+    padding:0 4px; line-height:1;
+  }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+
+  .total-row{ display:flex; justify-content:space-between; align-items:baseline; padding-top:12px; margin-top:6px; border-top:2px solid var(--ink); }
+  .total-row .label{ font-family:'Fraunces',serif; font-weight:600; }
+  .total-row .amt{ font-family:'Space Mono',monospace; font-weight:700; font-size:18px; }
+
+  .submit-btn{
+    width:100%; margin-top:18px; padding:14px 0; background:var(--ink); color:var(--paper);
+    border:none; border-radius:3px; font-weight:700; font-size:14px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
+  }
+  .submit-btn:hover{ background:#14213a; }
+  .submit-btn:disabled{ background:var(--line); cursor:not-allowed; }
+  .print-btn{
+    width:100%; margin-top:10px; padding:12px 0; background:transparent; color:var(--ink);
+    border:1px solid var(--ink); border-radius:3px; font-weight:700; font-size:13px;
+    text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; display:none;
+  }
+  .print-btn.show{ display:block; }
+
+  .hist-row{ border-top:1px solid var(--line); padding:12px 0; font-size:13px; }
+  .hist-row:first-child{ border-top:none; }
+  .hist-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-weight:600; }
+  .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
+  .reprint-btn{
+    margin-top:8px; background:transparent; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; padding:5px 10px; border-radius:3px; cursor:pointer;
+  }
+  .reprint-btn:hover{ border-color:var(--ink); color:var(--ink); }
+
+  #printArea{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{
+      display:block !important; position:absolute; top:0; left:0; width:80mm;
+      padding:2mm; font-family:Arial, sans-serif; font-size:7pt; color:#000;
+    }
+    #printArea .r-item{ font-weight:bold; }
+    #printArea .r-sub{ font-size:7pt; }
+    #printArea .r-line{ display:flex; justify-content:space-between; }
+    #printArea .r-total{ font-weight:bold; font-size:9pt; }
+    #printArea .r-summary{ font-size:6pt; margin-top:4px; }
+    #printArea .r-barcode{ text-align:center; margin-top:6px; }
+  }
+
+/* ===== RELEASE DESIGN: CHOCOLATE BOUTIQUE COUNTER ===== */
+:root{--cocoa:#3a211b;--cream2:#fff8ed;--copper:#b87333;--rose2:#b94d62;--sage:#657b55}
+body{background:
+ radial-gradient(circle at 82% 18%,rgba(184,115,51,.12),transparent 23%),
+ radial-gradient(circle at 18% 82%,rgba(185,77,98,.08),transparent 25%),var(--paper)}
+.wrap{max-width:1180px}
+.release-layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(350px,.72fr);gap:18px;align-items:start}
+.release-visual{position:sticky;top:18px;min-height:610px;background:linear-gradient(145deg,#2c1714,#4b241c 55%,#24100f);color:#fff7e8;border:1px solid rgba(198,138,31,.35);border-radius:16px;overflow:hidden;padding:24px;box-shadow:0 22px 70px rgba(60,28,20,.22)}
+.release-visual:before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle,rgba(255,196,108,.08) 0 1px,transparent 2px);background-size:32px 32px;animation:dust 22s linear infinite;pointer-events:none}
+@keyframes dust{to{transform:translate(50px,30px) rotate(8deg)}}
+.choco-orbit{position:absolute;border:1px solid rgba(220,164,83,.28);border-radius:50%;left:50%;top:49%;transform:translate(-50%,-50%);pointer-events:none}
+.choco-orbit.a{width:290px;height:290px;animation:spin 18s linear infinite}.choco-orbit.b{width:215px;height:215px;animation:spin 11s linear infinite reverse}.choco-orbit.c{width:150px;height:150px;animation:spin 8s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.choco-orbit:after{content:"🍫";position:absolute;left:50%;top:-14px;font-size:22px;filter:drop-shadow(0 0 8px rgba(255,196,108,.5))}
+.visual-head{position:relative;z-index:2}.visual-kicker{font:10px "Space Mono";letter-spacing:.25em;color:#d9ae66;text-transform:uppercase}.visual-head h2{font:34px "Fraunces";margin:6px 0}.visual-head p{font-size:12px;color:#d4c0b0}
+.choco-box{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);z-index:3;width:160px;height:115px;border-radius:12px;background:linear-gradient(145deg,#6b321f,#351610);box-shadow:0 25px 45px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12);display:grid;place-items:center;transition:.5s}
+.choco-box:before{content:"LALABELLA";font:18px "Fraunces";letter-spacing:.12em;color:#e9c57e}
+.choco-box:after{content:"CHOCOLATE RELEASE";position:absolute;bottom:15px;font:7px "Space Mono";letter-spacing:.2em;color:#d6ad68}
+.choco-box:hover{transform:translate(-50%,-50%) rotate(-3deg) scale(1.06);box-shadow:0 0 35px rgba(198,138,31,.32),0 25px 45px rgba(0,0,0,.45)}
+.visual-stats{position:absolute;left:24px;right:24px;bottom:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;z-index:4}
+.vstat{border:1px solid rgba(255,255,255,.13);background:rgba(0,0,0,.22);border-radius:10px;padding:13px;text-align:center;backdrop-filter:blur(8px)}.vstat b{font:25px "Fraunces";display:block;color:#f3d18a}.vstat span{font-size:8px;color:#cdb9aa;text-transform:uppercase;letter-spacing:.1em}
+@media(max-width:900px){.release-layout{grid-template-columns:1fr}.release-visual{position:relative;min-height:430px;order:-1}.choco-box{top:50%}.visual-stats{bottom:18px}}
+@media(max-width:600px){.release-visual{min-height:390px;padding:18px}.choco-orbit.a{width:245px;height:245px}.choco-orbit.b{width:185px;height:185px}.choco-orbit.c{width:130px;height:130px}.choco-box{width:140px;height:100px}.choco-box:before{font-size:15px}.visual-stats{left:14px;right:14px}.vstat{padding:10px 5px}.vstat b{font-size:21px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="rain-field" id="rainField"></div>
+<div class="drop-side left" id="dropLeft"></div>
+<div class="drop-side right" id="dropRight"></div>
+<div class="wrap">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Chocolate Release</h1>
+    <p class="sub">Sales, transfers, and stock-out — per branch</p>
+  </header>
+
+  <div class="release-layout"><div class="release-main">
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
+  <button class="refresh-link" id="refreshBtn">↻ Refresh Data</button>
+
+  <div class="card">
+    <div class="card-title">Release Details</div>
+
+    <div class="grid-2">
+      <div>
+        <label>Release Date</label>
+        <input type="date" id="fReleaseDate" />
+      </div>
+      <div>
+        <label>Prepared By</label>
+        <input type="text" id="fPreparedBy" list="preparedByList" placeholder="Type or pick a name" autocomplete="off" />
+        <datalist id="preparedByList"></datalist>
+      </div>
+    </div>
+
+    <label>Transaction Type</label>
+    <select id="fTransactionType">
+      <option value="Retail Sale">Retail Sale</option>
+      <option value="Wholesale">Wholesale</option>
+      <option value="Internal Use">Internal Use</option>
+      <option value="Damage">Damage</option>
+      <option value="Transfer">Transfer</option>
+      <option value="Other">Other</option>
+    </select>
+    <div class="type-hint" id="typeHint">Regular sale to a customer within the branch/store.</div>
+
+    <div id="toBranchRow" style="display:none;">
+      <label>To Branch</label>
+      <select id="fToBranch">
+        <option value="">Select destination...</option>
+        <option value="ModaMall">ModaMall</option>
+        <option value="Hamala">Hamala</option>
+        <option value="Galali">Galali</option>
+      </select>
+    </div>
+
+    <label>Customer / Department</label>
+    <input type="text" id="fCustomerDept" placeholder="Optional" />
+
+    <label>Remarks</label>
+    <textarea id="fRemarks" rows="2" placeholder="Optional"></textarea>
+  </div>
+
+  <div class="card" id="displayReleaseCard">
+    <div class="card-title">🎁 Release a Display</div>
+    <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;">
+      Pick a saved display and its chocolates will be added to the cart below automatically, matched to available batches.
+    </div>
+    <label>Saved Display</label>
+    <select id="fDisplayPicker">
+      <option value="">Select a display…</option>
+    </select>
+    <button class="submit-btn" id="loadDisplayBtn" style="margin-top:10px;" disabled>+ Add Display to Cart</button>
+    <div id="displayLoadResult" style="font-size:12px; margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Chocolate Details</div>
+
+    <label>Scan or Search</label>
+    <div class="scan-row">
+      <input type="text" id="fSearch" list="itemList" placeholder="Type chocolate name..." autocomplete="off" />
+      <button class="scan-btn" id="scanBtn" title="Scan barcode">📷</button>
+    </div>
+    <datalist id="itemList"></datalist>
+
+    <label>Batch</label>
+    <select id="fBatch"></select>
+    <div class="available-line" id="availableLine">Pick a chocolate and batch to see stock.</div>
+
+    <div class="grid-2">
+      <div>
+        <label>Qty Release</label>
+        <input type="number" id="fQty" min="0" step="0.01" placeholder="0" />
+      </div>
+      <div>
+        <label>Release Unit</label>
+        <select id="fReleaseUnit">
+          <option value="Kg">Kg</option>
+          <option value="Piece">Piece</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Price (BD)</label>
+        <input type="text" id="fComputedPrice" disabled />
+      </div>
+      <div>
+        <label>Total (BD)</label>
+        <input type="text" id="fComputedTotal" disabled />
+      </div>
+    </div>
+
+    <button class="add-btn" id="addItemBtn">Add Item</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Release Items</div>
+    <div id="cartList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Extras <span style="font-size:11px; color:var(--ink-dim); font-weight:400;">(plate, hand work, etc.)</span></div>
+    <div class="grid-2">
+      <div>
+        <label>Description</label>
+        <input type="text" id="fExtraDesc" placeholder="e.g. Hand Work" />
+      </div>
+      <div>
+        <label>Amount (BD)</label>
+        <input type="number" id="fExtraAmount" min="0" step="0.001" placeholder="0.000" />
+      </div>
+    </div>
+    <button class="add-btn extra" id="addExtraBtn">Add Extra</button>
+    <div id="extrasList" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="total-row">
+      <span class="label">Grand Total</span>
+      <span class="amt" id="grandTotalDisplay">0.000 BD</span>
+    </div>
+    <button class="submit-btn" id="saveBtn">Save Release</button>
+    <button class="print-btn" id="printBtn">Print Receipt</button>
+    <button class="print-btn" id="shareBtn">📤 Send to WhatsApp</button>
+  </div>
+
+  </div>
+  <aside class="release-visual">
+    <div class="visual-head">
+      <div class="visual-kicker">Lalabella • Stock Out</div>
+      <h2>Chocolate Counter</h2>
+      <p>Release with a little boutique magic. The chocolate box reacts when you touch it.</p>
+    </div>
+    <div class="choco-orbit a"></div><div class="choco-orbit b"></div><div class="choco-orbit c"></div>
+    <div class="choco-box" id="chocoBox" title="Tap me">🍫</div>
+    <div class="visual-stats">
+      <div class="vstat"><b id="vItems">0</b><span>Items</span></div>
+      <div class="vstat"><b id="vTotal">0.000</b><span>Total BD</span></div>
+      <div class="vstat"><b id="vHistory">0</b><span>Releases</span></div>
+    </div>
+  </aside>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent Releases (This Branch)</div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="scanner-modal" id="scannerModal">
+  <video id="scannerVideo" autoplay playsinline muted></video>
+  <div class="scanner-hint" id="scannerHint">Point the camera at a barcode</div>
+  <button class="close-scan" id="closeScanBtn">Cancel</button>
+</div>
+
+<div id="printArea">
+  <div style="text-align:center; font-weight:bold; font-size:9pt;">Lalabella</div>
+  <div id="pReleaseHeader" style="text-align:center; font-size:6pt; margin-bottom:4px;"></div>
+  <div id="pItemsArea"></div>
+  <div class="r-line r-total"><span>Total</span><span id="pGrandTotal"></span></div>
+  <div class="r-summary" id="pSummaryLine"></div>
+  <div class="r-barcode">
+    <div id="pReleaseNoTop" style="font-weight:bold; font-size:8pt;"></div>
+    <svg id="pBarcodeSvg"></svg>
+    <div id="pReleaseNoBottom" style="font-weight:bold; font-size:8pt;"></div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec';
+  const BRANCHES = ['ModaMall','Hamala','Galali'];
+  const VAT_RATE = 0.1;
+  let currentBranch = 'ModaMall';
+
+  let items = [];
+  let preparedByNames = [];
+  let history = [];
+  let batches = [];
+  let selectedBatch = null;
+  let cart = [];
+  let savedDisplays = [];
+  let extras = [];
+  let lastReleaseNo = '';
+  let lastReleaseDate = '';
+  let lastReleaseItems = [];
+  let lastReleaseExtras = [];
+
+  const TYPE_HINTS = {
+    'Retail Sale': 'Regular sale to a customer within the branch/store.',
+    'Wholesale': 'Bulk order, lower price — for resellers or large quantities.',
+    'Internal Use': 'Used within the business (e.g. samples, kitchen, promo) — not sold.',
+    'Damage': 'Damaged or expired item, no longer sellable.',
+    'Transfer': 'Internal stock movement to another branch.',
+    'Other': 'A different kind of transaction not on this list.'
+  };
+
+  function fmtBD(n){
+    return Number(n || 0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD';
+  }
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d);
+    if(isNaN(dt)) return String(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  async function loadData(){
+    const t = Date.now();
+    const results = await Promise.all([
+      fetch(API_URL + '?action=getItems&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; }),
+      fetch(API_URL + '?action=getReceivedBy&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; }),
+      fetch(API_URL + '?action=getReleaseHistory&branch=' + currentBranch + '&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; }),
+      fetch(API_URL + '?action=getDisplayList&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; })
+    ]);
+
+    [items, preparedByNames, history, savedDisplays] = results;
+
+    document.getElementById('itemList').innerHTML =
+      items.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+    document.getElementById('preparedByList').innerHTML =
+      preparedByNames.map(n => `<option value="${n}"></option>`).join('');
+    document.getElementById('fDisplayPicker').innerHTML =
+      '<option value="">Select a display…</option>' +
+      savedDisplays.map((d, i) => `<option value="${i}">${d['Display Name']} — ${fmtBD(d['Total Price'])}</option>`).join('');
+
+    renderHistory();
+  }
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('chocoBox')?.addEventListener('click',()=>{
+    const b=document.getElementById('chocoBox'); b.style.transform='translate(-50%,-50%) rotate(3deg) scale(1.12)';
+    setTimeout(()=>b.style.transform='',450);
+  });
+  loadData();
+  });
+
+  document.getElementById('fTransactionType').addEventListener('change', function(){
+    document.getElementById('typeHint').textContent = TYPE_HINTS[this.value] || '';
+    document.getElementById('toBranchRow').style.display = (this.value === 'Transfer') ? 'block' : 'none';
+  });
+
+  document.getElementById('fDisplayPicker').addEventListener('change', function(){
+    document.getElementById('loadDisplayBtn').disabled = this.value === '';
+    document.getElementById('displayLoadResult').textContent = '';
+  });
+
+  // Expands a saved Display into its component chocolates, resolving
+  // each one to a real available batch at the current branch (same
+  // lookup the manual search box uses), then adds them all to the
+  // cart at once. From here on it's an ordinary release — Save
+  // Release deducts stock exactly like any other cart.
+  document.getElementById('loadDisplayBtn').addEventListener('click', async ()=>{
+    const idx = document.getElementById('fDisplayPicker').value;
+    if(idx === '') return;
+    const display = savedDisplays[idx];
+    const btn = document.getElementById('loadDisplayBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    const shortages = [];
+    const added = [];
+    const t = Date.now();
+
+    for(const comp of display['Items']){
+      let batches = [];
+      try{
+        batches = await (await fetch(API_URL + '?action=getBatchesForChocolate&branch=' + currentBranch + '&chocolateName=' + encodeURIComponent(comp.name) + '&_ts=' + t)).json();
+      }catch(e){ batches = []; }
+
+      // Prefer the batch expiring soonest, so displays naturally use
+      // up older stock first (FIFO) instead of leaving it to expire.
+      batches.sort((a, b) => new Date(a.ExpiryDate) - new Date(b.ExpiryDate));
+      const batch = batches.find(b => Number(b.AvailableStock) >= Number(comp.qty));
+
+      if(!batch){
+        shortages.push(comp.name + ' (need ' + comp.qty + ')');
+        continue;
+      }
+
+      const price = Number(batch.PricePerPiece) || 0;
+      cart.push({
+        chocolateName: comp.name, productCode: batch.ProductCode || '', batch: batch.Batch,
+        databaseId: batch.DatabaseID, qty: Number(comp.qty), unit: 'Piece',
+        price, total: Number(comp.qty) * price, expiryDate: batch.ExpiryDate || ''
+      });
+      added.push(comp.name);
+    }
+
+    renderCart();
+    playAddChime();
+
+    const resultEl = document.getElementById('displayLoadResult');
+    if(shortages.length === 0){
+      resultEl.style.color = 'var(--ok)';
+      resultEl.textContent = '✓ Added all ' + added.length + ' chocolate(s) from "' + display['Display Name'] + '" to the cart.';
+    } else {
+      resultEl.style.color = '#c0392b';
+      resultEl.textContent = '⚠ Added ' + added.length + ' item(s). Not enough stock for: ' + shortages.join(', ') + '.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '+ Add Display to Cart';
+    document.getElementById('fDisplayPicker').value = '';
+  });
+
+  async function loadBatches(chocolateName){
+    const t = Date.now();
+    try{
+      batches = await (await fetch(API_URL + '?action=getBatchesForChocolate&branch=' + currentBranch + '&chocolateName=' + encodeURIComponent(chocolateName) + '&_ts=' + t)).json();
+    }catch(e){ batches = []; }
+    const sel = document.getElementById('fBatch');
+    if(batches.length === 0){
+      sel.innerHTML = '<option value="">No stock available</option>';
+      document.getElementById('availableLine').textContent = 'No stock available for this chocolate at ' + currentBranch + '.';
+      selectedBatch = null;
+      return;
+    }
+    sel.innerHTML = '<option value="">Select batch...</option>' +
+      batches.map((b, i) => `<option value="${i}">${b.Batch || '—'} (${b.AvailableStock} ${b.Unit})</option>`).join('');
+  }
+
+  document.getElementById('fSearch').addEventListener('input', function(){
+    const match = items.find(it => it['Chocolate Name'] === this.value);
+    if(match){
+      loadBatches(this.value);
+    }
+  });
+
+  document.getElementById('fBatch').addEventListener('change', function(){
+    const idx = this.value;
+    if(idx === '' || !batches[idx]){
+      selectedBatch = null;
+      document.getElementById('availableLine').textContent = 'Pick a chocolate and batch to see stock.';
+      return;
+    }
+    selectedBatch = batches[idx];
+    document.getElementById('availableLine').textContent =
+      `Available: ${selectedBatch.AvailableStock} ${selectedBatch.Unit} · Price/Kg: ${fmtBD(selectedBatch.PricePerKg)} · Expiry: ${fmtDate(selectedBatch.ExpiryDate)}`;
+    computeRelease();
+  });
+
+  document.getElementById('fQty').addEventListener('input', computeRelease);
+  document.getElementById('fReleaseUnit').addEventListener('change', computeRelease);
+
+  function computeRelease(){
+    if(!selectedBatch) return;
+    const qty = parseFloat(document.getElementById('fQty').value) || 0;
+    const unit = document.getElementById('fReleaseUnit').value;
+    let price, total;
+    if(unit === 'Kg'){
+      price = Number(selectedBatch.PricePerKg) || 0;
+      total = qty * price;
+    } else {
+      price = Number(selectedBatch.PricePerPiece) || 0;
+      total = qty * price;
+    }
+    document.getElementById('fComputedPrice').value = fmtBD(price);
+    document.getElementById('fComputedTotal').value = fmtBD(total);
+  }
+
+  function playAddChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.25);
+    }catch(e){}
+  }
+
+  function playSuccessChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.09;
+        const dur = 0.3 + i * 0.06;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.055, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start); osc.stop(start + dur + 0.05);
+      });
+    }catch(e){}
+  }
+
+  document.getElementById('addItemBtn').addEventListener('click', ()=>{
+    const chocolateName = document.getElementById('fSearch').value.trim();
+    const qty = parseFloat(document.getElementById('fQty').value);
+    const unit = document.getElementById('fReleaseUnit').value;
+
+    if(!chocolateName || !selectedBatch || isNaN(qty) || qty <= 0){
+      alert('Pick a chocolate, a batch, and enter a valid quantity.');
+      return;
+    }
+    if(qty > selectedBatch.AvailableStock){
+      alert(`Insufficient stock. Available: ${selectedBatch.AvailableStock} ${selectedBatch.Unit}`);
+      return;
+    }
+
+    const price = unit === 'Kg' ? Number(selectedBatch.PricePerKg) || 0 : Number(selectedBatch.PricePerPiece) || 0;
+    const total = qty * price;
+
+    cart.push({
+      chocolateName, productCode: selectedBatch.ProductCode || '', batch: selectedBatch.Batch,
+      databaseId: selectedBatch.DatabaseID, qty, unit, price, total, expiryDate: selectedBatch.ExpiryDate || ''
+    });
+    playAddChime();
+
+    document.getElementById('fSearch').value = '';
+    document.getElementById('fBatch').innerHTML = '';
+    document.getElementById('availableLine').textContent = 'Pick a chocolate and batch to see stock.';
+    document.getElementById('fQty').value = '';
+    document.getElementById('fComputedPrice').value = '';
+    document.getElementById('fComputedTotal').value = '';
+    selectedBatch = null;
+
+    renderCart();
+  });
+
+  function renderCart(){
+    const el = document.getElementById('cartList');
+    if(cart.length === 0){
+      el.innerHTML = '<div class="empty-note">No items added yet.</div>';
+    } else {
+      el.innerHTML = cart.map((c, i) => `
+        <div class="cart-row">
+          <div class="cart-row-main">
+            <div class="cart-row-title">${c.chocolateName}</div>
+            <div class="cart-row-meta">${c.qty} ${c.unit} × ${fmtBD(c.price)} · Batch: ${c.batch || '—'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="cart-row-amt">${fmtBD(c.total)}</div>
+            <button class="remove-btn" data-idx="${i}">✕</button>
+          </div>
+        </div>
+      `).join('');
+      el.querySelectorAll('.remove-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{ cart.splice(Number(btn.dataset.idx), 1); renderCart(); updateGrandTotal(); });
+      });
+    }
+    updateGrandTotal();
+    const vi=document.getElementById('vItems'); if(vi) vi.textContent=cart.length;
+    const vt=document.getElementById('vTotal'); if(vt) vt.textContent=(itemsTotal+extrasTotal).toFixed(3);
+  }
+
+  document.getElementById('addExtraBtn').addEventListener('click', ()=>{
+    const description = document.getElementById('fExtraDesc').value.trim();
+    const amount = parseFloat(document.getElementById('fExtraAmount').value);
+    if(!description || isNaN(amount) || amount <= 0){
+      alert('Enter an extra description and a valid amount.');
+      return;
+    }
+    extras.push({ description, amount });
+    document.getElementById('fExtraDesc').value = '';
+    document.getElementById('fExtraAmount').value = '';
+    renderExtras();
+  });
+
+  function renderExtras(){
+    const el = document.getElementById('extrasList');
+    el.innerHTML = extras.map((ex, i) => `
+      <div class="cart-row">
+        <div class="cart-row-main"><div class="cart-row-title">${ex.description}</div></div>
+        <div style="text-align:right;">
+          <div class="cart-row-amt">${fmtBD(ex.amount)}</div>
+          <button class="remove-btn" data-idx="${i}">✕</button>
+        </div>
+      </div>
+    `).join('');
+    el.querySelectorAll('.remove-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ extras.splice(Number(btn.dataset.idx), 1); renderExtras(); updateGrandTotal(); });
+    });
+    updateGrandTotal();
+  }
+
+  function updateGrandTotal(){
+    const itemsTotal = cart.reduce((s,c)=>s+c.total, 0);
+    const extrasTotal = extras.reduce((s,e)=>s+e.amount, 0);
+    document.getElementById('grandTotalDisplay').textContent = fmtBD(itemsTotal + extrasTotal);
+  }
+
+  function renderHistory(){
+    const el = document.getElementById('historyList');
+    if(history.length === 0){
+      el.innerHTML = '<div class="empty-note">No releases yet for ' + currentBranch + '.</div>';
+      return;
+    }
+    const byRelease = {};
+    history.forEach(h => {
+      const rn = h['Release No'];
+      if(!byRelease[rn]) byRelease[rn] = { date: h['Realese Date'], type: h['Transaction Type'], total: 0, count: 0 };
+      byRelease[rn].total += Number(h['Total']) || 0;
+      byRelease[rn].count += 1;
+    });
+    const releaseNos = Object.keys(byRelease).sort().reverse().slice(0, 20);
+    const vh=document.getElementById('vHistory'); if(vh) vh.textContent=Object.keys(byRelease).length;
+    el.innerHTML = releaseNos.map(rn => {
+      const r = byRelease[rn];
+      return `
+        <div class="hist-row">
+          <div class="hist-top">
+            <span>${rn}</span>
+            <span>${fmtBD(r.total)}</span>
+          </div>
+          <div class="hist-meta">${fmtDate(r.date)} · ${r.type} · ${r.count} item(s)</div>
+          <button class="reprint-btn" data-rn="${rn}" data-date="${r.date}">🖨 Reprint</button>
+        </div>
+      `;
+    }).join('');
+    el.querySelectorAll('.reprint-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> reprintRelease(btn.dataset.rn, btn.dataset.date));
+    });
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    if(cart.length === 0){
+      alert('Add at least one item before saving.');
+      return;
+    }
+    const releaseDate = document.getElementById('fReleaseDate').value;
+    const preparedBy = document.getElementById('fPreparedBy').value.trim();
+    const transactionType = document.getElementById('fTransactionType').value;
+    const toBranch = document.getElementById('fToBranch').value;
+    const customerDept = document.getElementById('fCustomerDept').value.trim();
+    const remarks = document.getElementById('fRemarks').value.trim();
+
+    if(!releaseDate || !preparedBy){
+      alert('Release date and Prepared By are required.');
+      return;
+    }
+    if(transactionType === 'Transfer' && !toBranch){
+      alert('Select a destination branch for this Transfer.');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+
+    try{
+      const params = new URLSearchParams({
+        action: 'saveRelease',
+        branch: currentBranch, toBranch, transactionType, customerDept, preparedBy, remarks, releaseDate,
+        items: JSON.stringify(cart), extras: JSON.stringify(extras)
+      });
+      const res = await fetch(`${API_URL}?${params.toString()}`);
+      const data = await res.json();
+
+      if(data.error){
+        alert(data.error);
+        saveBtn.disabled = false; saveBtn.textContent = 'Save Release';
+        return;
+      }
+
+      lastReleaseNo = data.releaseNo;
+      lastReleaseDate = releaseDate;
+      lastReleaseItems = cart.map(c => ({...c}));
+      lastReleaseExtras = extras.map(x => ({...x}));
+      document.getElementById('printBtn').classList.add('show');
+      if(navigator.share) document.getElementById('shareBtn').classList.add('show');
+      playSuccessChime();
+
+      if(preparedBy && !preparedByNames.includes(preparedBy)){
+        preparedByNames.push(preparedBy);
+        document.getElementById('preparedByList').innerHTML =
+          preparedByNames.map(n => `<option value="${n}"></option>`).join('');
+      }
+
+      alert('Release saved: ' + data.releaseNo);
+      cart = [];
+      extras = [];
+      renderCart();
+      renderExtras();
+      await loadData();
+    }catch(e){
+      alert('Could not save this release. Check your connection and try again.');
+    }
+    saveBtn.disabled = false; saveBtn.textContent = 'Save Release';
+  });
+
+  function populateReceipt(releaseNo, releaseDate, itemLines, extraLines){
+    let itemsHtml = '';
+    let subtotal = 0;
+    let totalPieces = 0, totalWeightKg = 0;
+    let earliestExpiry = null;
+
+    itemLines.forEach(c=>{
+      const qty = Number(c.qty);
+      const price = Number(c.price);
+      const total = Number(c.total);
+      subtotal += total;
+      if(c.unit === 'Piece') totalPieces += qty;
+      else totalWeightKg += qty;
+      if(c.expiryDate){
+        const d = new Date(c.expiryDate);
+        if(!isNaN(d) && (earliestExpiry === null || d < earliestExpiry)) earliestExpiry = d;
+      }
+      itemsHtml += `
+        <div class="r-item">${c.chocolateName}</div>
+        <div class="r-line r-sub"><span>${qty.toFixed(2)} x ${fmtBD(price)} / ${c.unit}</span><span>${fmtBD(total)}</span></div>
+      `;
+    });
+    extraLines.forEach(ex=>{
+      const amount = Number(ex.amount);
+      subtotal += amount;
+      itemsHtml += `
+        <div class="r-item">${ex.description}</div>
+        <div class="r-line r-sub"><span>1.00 x ${fmtBD(amount)} / Unit</span><span>${fmtBD(amount)}</span></div>
+      `;
+    });
+
+    document.getElementById('pReleaseHeader').textContent = `Release No: ${releaseNo}  ·  Date: ${fmtDate(releaseDate)}`;
+    document.getElementById('pItemsArea').innerHTML = itemsHtml;
+    document.getElementById('pGrandTotal').textContent = fmtBD(subtotal);
+    let summary = '';
+    if(totalPieces > 0) summary += totalPieces + 'pcs/';
+    summary += totalWeightKg.toFixed(3) + 'kgs';
+    if(earliestExpiry){
+      const mm = String(earliestExpiry.getMonth()+1).padStart(2,'0');
+      const yy = String(earliestExpiry.getFullYear()).slice(-2);
+      summary += ' best before ' + mm + '/' + yy;
+    }
+    summary += ' vat inclusive';
+    document.getElementById('pSummaryLine').textContent = summary;
+    document.getElementById('pReleaseNoTop').textContent = releaseNo;
+    document.getElementById('pReleaseNoBottom').textContent = releaseNo;
+
+    document.getElementById('pBarcodeSvg').innerHTML = '';
+    try{
+      JsBarcode("#pBarcodeSvg", releaseNo, { format: "CODE128", width: 1.5, height: 40, displayValue: false });
+    }catch(e){}
+  }
+
+  function printReceipt(releaseNo, releaseDate, itemLines, extraLines){
+    populateReceipt(releaseNo, releaseDate, itemLines, extraLines);
+    window.print();
+  }
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    if(!lastReleaseNo) return;
+    printReceipt(lastReleaseNo, lastReleaseDate, lastReleaseItems, lastReleaseExtras);
+  });
+
+  const shareBtn = document.getElementById('shareBtn');
+  shareBtn.addEventListener('click', async ()=>{
+    if(!lastReleaseNo) return;
+    populateReceipt(lastReleaseNo, lastReleaseDate, lastReleaseItems, lastReleaseExtras);
+
+    shareBtn.disabled = true;
+    shareBtn.textContent = 'Preparing…';
+    try{
+      const el = document.getElementById('printArea');
+      el.style.display = 'block';
+      const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 });
+      el.style.display = '';
+      canvas.toBlob(async (blob)=>{
+        const file = new File([blob], 'lalabella-release-' + lastReleaseNo + '.png', { type: 'image/png' });
+        try{
+          await navigator.share({ files: [file], title: 'Lalabella Release ' + lastReleaseNo });
+        }catch(shareErr){}
+        shareBtn.disabled = false;
+        shareBtn.textContent = '📤 Send to WhatsApp';
+      }, 'image/png');
+    }catch(e){
+      alert('Hindi na-generate ang larawan.');
+      shareBtn.disabled = false;
+      shareBtn.textContent = '📤 Send to WhatsApp';
+    }
+  });
+
+  async function reprintRelease(releaseNo, releaseDate){
+    try{
+      const t = Date.now();
+      const data = await (await fetch(API_URL + '?action=getReleaseByNo&releaseNo=' + encodeURIComponent(releaseNo) + '&_ts=' + t)).json();
+      const itemLines = (data.items || []).map(it => ({
+        chocolateName: it['Chocolate Name'], qty: it['Qty Release'], unit: it['Unit'],
+        price: it['Price'], total: it['Total'], expiryDate: it['ExpiryDate'] || ''
+      }));
+      const extraLines = (data.extras || []).map(ex => ({
+        description: ex['Description'], amount: ex['Amount']
+      }));
+      printReceipt(releaseNo, releaseDate, itemLines, extraLines);
+    }catch(e){
+      alert('Could not load this release for printing.');
+    }
+  }
+
+  /* ---------- Barcode scanning (native BarcodeDetector, camera-based) ---------- */
+  let scanStream = null;
+  let scanLoopActive = false;
+
+  document.getElementById('scanBtn').addEventListener('click', async ()=>{
+    if(!('BarcodeDetector' in window)){
+      alert('Barcode scanning is not supported in this browser. Please type the chocolate name or product code manually.');
+      return;
+    }
+    const modal = document.getElementById('scannerModal');
+    const video = document.getElementById('scannerVideo');
+    modal.classList.add('show');
+    try{
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = scanStream;
+      scanLoopActive = true;
+      const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+      const scanLoop = async ()=>{
+        if(!scanLoopActive) return;
+        try{
+          const codes = await detector.detect(video);
+          if(codes.length > 0){
+            handleScanResult(codes[0].rawValue);
+            return;
+          }
+        }catch(e){}
+        requestAnimationFrame(scanLoop);
+      };
+      scanLoop();
+    }catch(e){
+      alert('Could not access the camera. Check permissions and try again.');
+      modal.classList.remove('show');
+    }
+  });
+
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    document.getElementById('scannerModal').classList.remove('show');
+  }
+
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+
+  function handleScanResult(code){
+    stopScanner();
+    const match = items.find(it => String(it['Product Code']).trim() === String(code).trim());
+    if(match){
+      document.getElementById('fSearch').value = match['Chocolate Name'];
+      loadBatches(match['Chocolate Name']);
+    } else {
+      alert('No chocolate found for code: ' + code);
+    }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = 'Refreshing...';
+    await loadData();
+    btn.textContent = '↻ Refresh Data';
+  });
+
+  document.getElementById('fReleaseDate').value = new Date().toISOString().slice(0,10);
+
+  /* ---------- Rain background + side water drops ---------- */
+  function spawnRainStreak(){
+    const field = document.getElementById('rainField');
+    const s = document.createElement('div');
+    s.className = 'rain-streak';
+    const left = Math.random() * 100;
+    const height = 40 + Math.random() * 60;
+    const duration = 0.7 + Math.random() * 0.6;
+    s.style.left = left + 'vw';
+    s.style.height = height + 'px';
+    s.style.animationDuration = duration + 's';
+    field.appendChild(s);
+    setTimeout(()=> s.remove(), duration * 1000 + 100);
+  }
+  setInterval(spawnRainStreak, 90);
+
+  function spawnWaterDrop(side){
+    const container = document.getElementById(side === 'left' ? 'dropLeft' : 'dropRight');
+    const d = document.createElement('div');
+    d.className = 'water-drop';
+    const left = Math.random() * 18;
+    const duration = 4 + Math.random() * 3;
+    d.style.left = left + 'px';
+    d.style.animationDuration = duration + 's';
+    container.appendChild(d);
+    setTimeout(()=> d.remove(), duration * 1000 + 100);
+  }
+  setInterval(()=> spawnWaterDrop('left'), 1600);
+  setInterval(()=> spawnWaterDrop('right'), 1900);
+
+  loadData();
+</script>
+</body>
+</html>
