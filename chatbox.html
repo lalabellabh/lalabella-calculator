@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lalabella Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0;
+    --blush-2:#f9dfe0;
+    --rose:#c9506b;
+    --rose-deep:#9e2f4a;
+    --gold:#d9a441;
+    --ink:#3a2530;
+    --ink-dim:#8a7078;
+    --line:#f0d9d9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:linear-gradient(160deg, var(--blush) 0%, var(--blush-2) 100%);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+
+  .page{ max-width:480px; margin:0 auto; padding:18px 16px 30px; min-height:100vh; display:flex; flex-direction:column; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:16px;
+  }
+  .back-link:hover{ color:var(--rose-deep); }
+
+  .music-bar{
+    display:flex; align-items:center; gap:10px;
+    background:#fff; border:1px solid var(--line); border-radius:30px;
+    padding:9px 14px; margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(158,47,74,0.06);
+  }
+  .music-toggle-btn{
+    width:34px; height:34px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff;
+    font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .music-info{ flex:1; min-width:0; }
+  .music-title{ font-size:11.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .music-sub{ font-size:10px; color:var(--ink-dim); }
+  .music-url-toggle{
+    background:none; border:none; color:var(--rose-deep); font-size:10.5px; cursor:pointer;
+    text-decoration:underline; flex-shrink:0;
+  }
+  .music-url-panel{
+    display:none; background:#fff; border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin:-6px 0 14px;
+  }
+  .music-url-panel.show{ display:block; }
+  .music-url-panel label{ font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--rose-deep); display:block; margin-bottom:6px; }
+  .music-url-panel input{
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px;
+    font-family:'Space Grotesk',sans-serif; font-size:12.5px; outline:none; background:var(--blush);
+  }
+  .music-url-panel .hint{ font-size:10px; color:var(--ink-dim); margin-top:6px; line-height:1.5; }
+  .music-url-panel .apply-btn{
+    margin-top:10px; width:100%; padding:9px 0; background:linear-gradient(135deg, var(--rose), var(--rose-deep));
+    color:#fff; border:none; border-radius:10px; font-weight:700; font-size:11.5px; cursor:pointer;
+  }
+
+  .chat-panel{
+    background:#fff; border:1px solid var(--line); border-radius:18px;
+    box-shadow:0 10px 30px rgba(158,47,74,0.08);
+    display:flex; flex-direction:column; flex:1; overflow:hidden; min-height:520px;
+  }
+  .chat-head{
+    padding:18px 20px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(135deg, #fff, #fdf6f6);
+  }
+  .chat-head-title{ display:flex; align-items:center; gap:10px; }
+  .chat-head-rose{ font-size:22px; }
+  .chat-head h1{ font-family:'Fraunces',serif; font-size:19px; margin:0; font-weight:700; }
+  .chat-status{ font-size:10px; letter-spacing:0.08em; margin-top:2px; }
+  .chat-status.online{ color:#3d7a4f; }
+  .chat-status.offline{ color:var(--rose-deep); }
+
+  .chat-messages{ flex:1; overflow-y:auto; padding:16px; }
+  .chat-msg{ margin:0 0 12px; display:flex; }
+  .chat-msg.me{ justify-content:flex-end; }
+  .chat-bubble{
+    max-width:78%; padding:10px 14px; border-radius:16px;
+    background:var(--blush); font-size:13px; line-height:1.5; color:var(--ink);
+    word-break:break-word;
+  }
+  .chat-msg.me .chat-bubble{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .chat-meta{ display:block; margin-top:5px; font-size:9.5px; opacity:0.65; }
+
+  .chat-note{ padding:0 18px 10px; color:var(--ink-dim); font-size:10px; text-align:center; }
+
+  .chat-form{ display:flex; gap:8px; padding:14px; border-top:1px solid var(--line); background:#fff; }
+  .chat-form input{
+    flex:1; min-width:0; padding:12px 14px; border-radius:14px;
+    border:1px solid var(--line); outline:none; background:var(--blush);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; font-size:13px;
+  }
+  .chat-form input:focus{ border-color:var(--rose); }
+  .chat-form button{
+    width:46px; border:none; border-radius:14px; cursor:pointer;
+    background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; font-size:17px;
+  }
+
+  /* ---------- Desktop: side decorative panel ---------- */
+  .layout{ display:flex; flex-direction:column; flex:1; }
+  .side-panel{ display:none; }
+
+  @media (min-width: 900px){
+    body{ display:flex; align-items:center; justify-content:center; }
+    .page{ max-width:1000px; padding:30px; min-height:auto; }
+    .layout{ flex-direction:row; gap:24px; align-items:stretch; }
+    .chat-panel{ flex:1; min-height:600px; }
+    .side-panel{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      flex:0.85; background:linear-gradient(160deg, #fff, var(--blush-2));
+      border-radius:18px; border:1px solid var(--line); position:relative; overflow:hidden;
+      box-shadow:0 10px 30px rgba(158,47,74,0.08);
+    }
+    .side-rose{ width:210px; height:210px; position:relative; margin-bottom:24px; }
+    .side-petal{
+      position:absolute; width:70px; height:105px; border-radius:75% 25% 75% 25%;
+      transform-origin:50% 100%; left:50%; top:50%;
+      background:linear-gradient(135deg,#f3b0bf,#c9506b 55%,#7a2a44);
+      box-shadow:inset -8px -12px 16px rgba(122,42,68,0.25);
+    }
+    .side-petal:nth-child(1){ transform:translate(-50%,-100%) rotate(0deg); }
+    .side-petal:nth-child(2){ transform:translate(-50%,-100%) rotate(51deg); }
+    .side-petal:nth-child(3){ transform:translate(-50%,-100%) rotate(102deg); }
+    .side-petal:nth-child(4){ transform:translate(-50%,-100%) rotate(153deg); }
+    .side-petal:nth-child(5){ transform:translate(-50%,-100%) rotate(204deg); }
+    .side-petal:nth-child(6){ transform:translate(-50%,-100%) rotate(255deg); }
+    .side-petal:nth-child(7){ transform:translate(-50%,-100%) rotate(306deg); }
+    .side-core{
+      position:absolute; left:50%; top:50%; width:76px; height:76px; border-radius:50%;
+      transform:translate(-50%,-50%);
+      background:radial-gradient(circle at 40% 30%, #ffdbe3, #e77994 30%, #9e2f4a 70%);
+      box-shadow:0 0 26px rgba(201,80,107,0.35);
+    }
+    .side-text{ text-align:center; padding:0 40px 36px; }
+    .side-text .eyebrow{ font-size:10px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
+    .side-text h2{ font-family:'Fraunces',serif; font-size:24px; margin:0 0 10px; }
+    .side-text p{ font-size:12.5px; color:var(--ink-dim); line-height:1.7; margin:0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+
+  <div class="music-bar">
+    <button class="music-toggle-btn" id="musicToggleBtn">▶</button>
+    <div class="music-info">
+      <div class="music-title" id="musicTitle">No sound source set</div>
+      <div class="music-sub" id="musicSub">Tap "Set Sound" to add one</div>
+    </div>
+    <button class="music-url-toggle" id="musicUrlToggleBtn">Set Sound</button>
+  </div>
+
+  <div class="music-url-panel" id="musicUrlPanel">
+    <label>Sound URL — YouTube link or direct mp3</label>
+    <input type="text" id="musicUrlInput" placeholder="Paste a YouTube link or an mp3 URL" />
+    <div class="hint">Paste a YouTube video link (easiest), or a direct mp3 link you own the rights to. On phones, sound needs a tap to start — that's a browser rule, not a bug.</div>
+    <button class="apply-btn" id="musicUrlApplyBtn">Play This Sound</button>
+    <div class="music-now" id="musicNow" style="font-size:10px; color:var(--ink-dim); margin-top:8px;"></div>
+  </div>
+  <audio id="audioPlayer" loop></audio>
+  <div id="ytPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+  <div class="layout">
+    <div class="chat-panel">
+      <div class="chat-head">
+        <div class="chat-head-title">
+          <span class="chat-head-rose">🌹</span>
+          <div>
+            <h1>Lalabella Chat</h1>
+            <div class="chat-status offline" id="chatStatus">CONNECTING…</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg">
+          <div class="chat-bubble">Welcome to Lalabella 🌹<span class="chat-meta">Live chat</span></div>
+        </div>
+      </div>
+      <div class="chat-note">Realtime Lalabella chat</div>
+      <form class="chat-form" id="chatForm">
+        <input id="chatInput" maxlength="500" autocomplete="off" placeholder="Write a message…" />
+        <button type="submit">➤</button>
+      </form>
+    </div>
+
+    <div class="side-panel">
+      <div class="side-rose">
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-petal"></div>
+        <div class="side-core"></div>
+      </div>
+      <div class="side-text">
+        <div class="eyebrow">Lalabella</div>
+        <h2>We're here to help</h2>
+        <p>Chat with the team about orders, deliveries, or anything chocolate & flowers.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAz4M9M9fZiYTNBuKt8y7eQ01-KQULKwLM",
+  authDomain: "lalabellachatbot.firebaseapp.com",
+  databaseURL: "https://lalabellachatbot-default-rtdb.firebaseio.com",
+  projectId: "lalabellachatbot",
+  storageBucket: "lalabellachatbot.firebasestorage.app",
+  messagingSenderId: "224994260432",
+  appId: "1:224994260432:web:beb2f3ce3738291738f5d5",
+  measurementId: "G-BWXNBJ4JJ2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const chatRef = ref(db, "chat");
+
+const status = document.getElementById('chatStatus');
+const msgs = document.getElementById('chatMessages');
+const form = document.getElementById('chatForm');
+const input = document.getElementById('chatInput');
+
+let uid = null;
+let ready = false;
+let audioCtx = null;
+
+function ensureAudio(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }catch(e){}
+}
+function beep(kind){
+  try{
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = kind === 'send' ? 720 : 560;
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.05, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'send' ? 0.22 : 0.32));
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(now + 0.35);
+  }catch(e){}
+}
+document.addEventListener('pointerdown', ()=>{ ensureAudio(); }, { once:true, passive:true });
+
+function add(v){
+  if(!v || !v.text) return;
+  const r = document.createElement('div');
+  r.className = 'chat-msg' + (v.uid === uid ? ' me' : '');
+  const b = document.createElement('div');
+  b.className = 'chat-bubble';
+  b.appendChild(document.createTextNode(v.text));
+  const m = document.createElement('span');
+  m.className = 'chat-meta';
+  m.textContent = (v.uid === uid ? 'You' : 'Guest') + ' • ' + new Date(v.time || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  b.appendChild(m);
+  r.appendChild(b);
+  msgs.appendChild(r);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  if(v.uid !== uid) beep('receive');
+
+  try{
+    localStorage.setItem('lalabellaChatLastSeenTime', String(v.time || Date.now()));
+  }catch(e){}
+}
+
+async function start(){
+  try{
+    const c = await signInAnonymously(auth);
+    uid = c.user.uid;
+    ready = true;
+    status.textContent = '● ONLINE';
+    status.classList.remove('offline');
+    status.classList.add('online');
+    onChildAdded(query(chatRef, limitToLast(100)), s => add(s.val()));
+  }catch(e){
+    console.error('Lalabella chat:', e);
+    status.textContent = 'OFFLINE';
+  }
+}
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  ensureAudio();
+  const text = input.value.trim();
+  if(!text || !ready) return;
+  try{
+    await push(chatRef, { uid, text, time: Date.now() });
+    input.value = '';
+    input.focus();
+    beep('send');
+  }catch(e){
+    console.error(e);
+    status.textContent = 'SEND ERROR';
+  }
+});
+
+start();
+</script>
+
+<script>
+  const musicPanel = document.getElementById('musicUrlPanel');
+  const audio = document.getElementById('audioPlayer');
+  const soundBtn = document.getElementById('musicToggleBtn');
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){
+      const m = url.match(p);
+      if(m) return m[1];
+    }
+    return null;
+  }
+
+  function playYouTube(id){
+    const wrap = document.getElementById('ytPlayerWrap');
+    wrap.innerHTML = `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){
+    document.getElementById('ytPlayerWrap').innerHTML = '';
+  }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+        document.getElementById('musicNow').textContent = 'Saved: YouTube track (tap ▶ to play)';
+      } else {
+        audio.src = savedUrl;
+        document.getElementById('musicNow').textContent = 'Saved: ' + (savedUrl.length > 46 ? savedUrl.slice(0,46) + '…' : savedUrl);
+      }
+      document.getElementById('musicUrlInput').value = savedUrl;
+      document.getElementById('musicTitle').textContent = 'Saved sound ready';
+      document.getElementById('musicSub').textContent = 'Tap ▶ to play';
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  soundBtn.addEventListener('click', ()=>{
+    if(!audio.src && !ytVideoId){
+      musicPanel.classList.toggle('show');
+      return;
+    }
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      soundBtn.textContent = '▶';
+      isPlaying = false;
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      soundBtn.textContent = '⏸';
+      isPlaying = true;
+    }
+  });
+
+  document.getElementById('musicUrlToggleBtn').addEventListener('click', ()=>{
+    musicPanel.classList.toggle('show');
+  });
+
+  document.getElementById('musicUrlApplyBtn').addEventListener('click', ()=>{
+    const url = document.getElementById('musicUrlInput').value.trim();
+    if(!url){ alert('Paste a sound URL first.'); return; }
+
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id;
+      audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      document.getElementById('musicTitle').textContent = 'Now playing YouTube track';
+      document.getElementById('musicSub').textContent = 'Tap ⏸ to stop';
+      isPlaying = true;
+      soundBtn.textContent = '⏸';
+      musicPanel.classList.remove('show');
+      saveSoundChoice(url, true);
+      return;
+    }
+
+    ytVideoId = null;
+    stopYouTube();
+    audio.src = url;
+    document.getElementById('musicTitle').textContent = 'Now playing';
+    document.getElementById('musicSub').textContent = url.length > 40 ? url.slice(0,40) + '…' : url;
+    saveSoundChoice(url, false);
+    audio.play().then(()=>{
+      isPlaying = true;
+      soundBtn.textContent = '⏸';
+      musicPanel.classList.remove('show');
+    }).catch(()=>{
+      soundBtn.textContent = '▶';
+    });
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(musicPanel.classList.contains('show') && !musicPanel.contains(e.target) && e.target !== soundBtn && !e.target.closest('#musicUrlToggleBtn')){
+      musicPanel.classList.remove('show');
+    }
+  });
+</script>
+</body>
+</html>
