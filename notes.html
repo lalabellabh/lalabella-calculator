@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'📝'; position:absolute; font-size:60px; opacity:0.10; left:-10px; top:-14px; transform:rotate(-14deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px; }
+  .card h2{ margin:0 0 12px; font-family:'Fraunces',serif; font-weight:700; color:var(--rose-deep); font-size:18px; }
+  .field{ display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  input, textarea{
+    border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px;
+    color:var(--ink); font-family:inherit; background:#fff; outline:none; width:100%;
+  }
+  input:focus, textarea:focus{ border-color:var(--rose); }
+  textarea{ min-height:110px; resize:vertical; }
+  .btn{ padding:11px 20px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-ghost{ background:var(--blush); color:var(--ink-dim); border:1px solid var(--line); }
+
+  .note{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px; position:relative; }
+  .note h3{ margin:0 0 4px; font-family:'Fraunces',serif; font-size:15px; color:var(--rose-deep); padding-right:26px; }
+  .note p{ margin:0; font-size:13.5px; color:var(--ink); white-space:pre-wrap; line-height:1.5; }
+  .note .meta{ font-size:10.5px; color:var(--ink-dim); margin-top:8px; font-family:'Space Mono',monospace; }
+  .note .del{ position:absolute; top:12px; right:12px; width:24px; height:24px; border-radius:50%; border:none; background:var(--blush); color:#c0392b; cursor:pointer; font-size:12px; }
+  .note .edit{ position:absolute; top:12px; right:42px; width:24px; height:24px; border-radius:50%; border:none; background:var(--blush); color:var(--rose-deep); cursor:pointer; font-size:12px; }
+  .empty{ text-align:center; color:var(--ink-dim); font-size:13px; padding:30px 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" id="backLink" href="index.html">&larr; Back</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Notes</h1>
+  </header>
+
+  <div class="card">
+    <h2 id="formTitle">Add Note</h2>
+    <div class="field"><label>Title</label><input id="noteTitle" placeholder="e.g. Supplier reminder"></div>
+    <div class="field"><label>Message</label><textarea id="noteMessage" placeholder="Write your note here..."></textarea></div>
+    <button class="btn btn-primary" id="saveNoteBtn">💾 Save Note</button>
+    <button class="btn btn-ghost" id="cancelEditBtn" style="display:none;">Cancel</button>
+  </div>
+
+  <div id="notesList"></div>
+</div>
+
+<script>
+// ---------- Smart back button ----------
+// Remembers whether you opened Notes from Flower Tools or from the
+// Chocolate home page, so Back always returns you to the right place
+// — even after a refresh, since the referrer alone isn't reliable.
+const params = new URLSearchParams(window.location.search);
+let cameFrom = params.get('from');
+if(cameFrom){
+  localStorage.setItem('lalabellaNotesFrom', cameFrom);
+} else {
+  cameFrom = localStorage.getItem('lalabellaNotesFrom');
+}
+const backLink = document.getElementById('backLink');
+if(cameFrom === 'flower-tools'){
+  backLink.href = 'flower-tools.html';
+  backLink.textContent = '← Flower Tools';
+} else {
+  backLink.href = 'index.html';
+  backLink.textContent = '← Chocolate Home';
+}
+
+// ---------- Notes storage (localStorage) ----------
+function getNotes(){
+  try{ return JSON.parse(localStorage.getItem('lalabellaNotes') || '[]'); }
+  catch(e){ return []; }
+}
+function setNotes(notes){
+  localStorage.setItem('lalabellaNotes', JSON.stringify(notes));
+}
+
+function renderNotes(){
+  const notes = getNotes();
+  const list = document.getElementById('notesList');
+  if(notes.length === 0){
+    list.innerHTML = '<div class="empty">No notes yet — add your first one above.</div>';
+    return;
+  }
+  list.innerHTML = notes.slice().reverse().map(n => `
+    <div class="note" data-id="${n.id}">
+      <button class="edit" title="Edit">✎</button>
+      <button class="del" title="Delete">✕</button>
+      <h3>${escapeHtml(n.title || '(Untitled)')}</h3>
+      <p>${escapeHtml(n.message || '')}</p>
+      <div class="meta">${new Date(n.created).toLocaleString()}</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.note').dataset.id;
+      if(!confirm('Delete this note?')) return;
+      setNotes(getNotes().filter(n => String(n.id) !== id));
+      if(String(editingId) === id) cancelEdit();
+      renderNotes();
+    });
+  });
+  list.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.note').dataset.id;
+      const note = getNotes().find(n => String(n.id) === id);
+      if(!note) return;
+      editingId = note.id;
+      document.getElementById('noteTitle').value = note.title || '';
+      document.getElementById('noteMessage').value = note.message || '';
+      document.getElementById('formTitle').textContent = 'Edit Note';
+      document.getElementById('saveNoteBtn').textContent = '💾 Update Note';
+      document.getElementById('cancelEditBtn').style.display = 'inline-block';
+      document.getElementById('noteTitle').scrollIntoView({ behavior:'smooth', block:'center' });
+      document.getElementById('noteTitle').focus();
+    });
+  });
+}
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+let editingId = null;
+
+function cancelEdit(){
+  editingId = null;
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteMessage').value = '';
+  document.getElementById('formTitle').textContent = 'Add Note';
+  document.getElementById('saveNoteBtn').textContent = '💾 Save Note';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+document.getElementById('cancelEditBtn').addEventListener('click', cancelEdit);
+
+document.getElementById('saveNoteBtn').addEventListener('click', ()=>{
+  const title = document.getElementById('noteTitle').value.trim();
+  const message = document.getElementById('noteMessage').value.trim();
+  if(!title && !message) return;
+  const notes = getNotes();
+  if(editingId !== null){
+    const note = notes.find(n => n.id === editingId);
+    if(note){ note.title = title; note.message = message; note.edited = new Date().toISOString(); }
+    setNotes(notes);
+    cancelEdit();
+  } else {
+    notes.push({ id: Date.now(), title, message, created: new Date().toISOString() });
+    setNotes(notes);
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteMessage').value = '';
+  }
+  renderNotes();
+});
+
+renderNotes();
+</script>
+</body>
+</html>
