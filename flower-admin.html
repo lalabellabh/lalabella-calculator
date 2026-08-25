@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+    --choc:#6b4226; --choc-deep:#4a2c18;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(107,66,38,0.08), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tab-btn{
+    flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:#fff;
+    font-weight:700; font-size:14px; cursor:pointer; color:var(--ink-dim);
+  }
+  .tab-btn.active.flower{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
+  .tab-btn.active.chocolate{ background:linear-gradient(135deg, var(--choc), var(--choc-deep)); color:#fff; border-color:transparent; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field.full{ grid-column:1/-1; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  input, select{
+    border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px;
+    color:var(--ink); font-family:inherit; background:#fff; outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--rose); }
+
+  .btn{ padding:12px 20px; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; margin-top:16px; width:100%; }
+  .btn.flower{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn.chocolate{ background:linear-gradient(135deg, var(--choc), var(--choc-deep)); color:#fff; }
+  .btn:disabled{ opacity:0.6; cursor:default; }
+
+  .result{ display:none; margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; }
+  .result.ok{ background:#eaf6ec; color:var(--ok); display:block; }
+  .result.err{ background:#fdecec; color:#c0392b; display:block; }
+
+  @media (max-width:600px){ .fields{ grid-template-columns:1fr; } }
+</style>
+<style id="chocoSharedNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid rgba(255,255,255,0.15);
+  background:rgba(20,10,7,0.85); color:#f1d38c; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(5,2,3,0.55); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
+  background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
+  border-right:1px solid rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  font-family:Arial,sans-serif;
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:#f1e4d8; text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
+.choco-drawer .choco-drawer-title{
+  color:#f1d38c; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.choco-drawer .choco-music-box{
+  margin-top:10px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+}
+.choco-drawer .choco-music-box input{
+  width:100%; padding:9px 10px; border:1px solid rgba(255,255,255,0.14); border-radius:9px;
+  background:rgba(255,255,255,0.05); color:#f1e4d8; font-size:12px; outline:none; margin-bottom:8px;
+  box-sizing:border-box;
+}
+.choco-drawer .choco-music-box button{
+  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
+  background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
+}
+.choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
+/* hamburger stays visible on mobile too now */
+/* The fixed hamburger button sits at top:16px, extending to about
+   60px tall — without extra clearance it was sitting on top of (and
+   hiding) each page's own title/back-link in that same corner. */
+.wrap{ padding-top:76px !important; }
+</style>
+
+</head>
+<body>
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-drawer-title">Quick Tools</div>
+  <a href="#" id="chocoHomeLink">🏠 Home</a>
+  <a href="notes.html?from=flower-tools">📝 Notes</a>
+  <a href="order-form.html?from=flower-tools">🧾 Order Form</a>
+  <a href="card-print.html?from=flower-tools">💌 Card Print</a>
+  <div class="choco-music-box">
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
+    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
+    <button id="chocoMusicToggleBtn">♫ Music</button>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
+      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
+    </div>
+    <div class="choco-music-now" id="chocoMusicNow"></div>
+  </div>
+</nav>
+<audio id="chocoAudioPlayer" loop></audio>
+<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);display:flex;align-items:center;justify-content:center;z-index:999;">
+  <div style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:32px 28px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 26px rgba(158,47,74,0.12);">
+    <div style="font-size:38px;margin-bottom:8px;">🔒</div>
+    <h2 style="font-family:'Fraunces',serif;color:var(--rose-deep);margin:0 0 4px;">Flower Admin</h2>
+    <div style="font-size:12px;color:var(--ink-dim);margin-bottom:16px;">Enter the admin password to continue.</div>
+    <input type="password" id="adminPassInput" placeholder="Password" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;font-size:14px;text-align:center;margin-bottom:10px;" autofocus>
+    <button id="adminPassBtn" class="btn flower" style="margin-top:0;">Unlock</button>
+    <div id="adminPassError" style="display:none;color:#c0392b;font-size:12px;margin-top:10px;">Incorrect password.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Flower Admin</h1>
+  </header>
+
+  <div class="card">
+    <div class="panel active" id="panelFlower">
+      <div class="fields">
+        <div class="field full"><label>Flower Name</label><input id="flowerName" placeholder="e.g. Rose"></div>
+        <div class="field"><label>Origin</label><input id="flowerOrigin" placeholder="e.g. Kenya"></div>
+        <div class="field">
+          <label>Unit</label>
+          <select id="flowerUnit"><option>Stem</option><option>Bunch</option><option>Piece</option></select>
+        </div>
+        <div class="field"><label>Stems per Bunch</label><input id="flowerStems" type="number" min="1" value="1"></div>
+        <div class="field"><label>Rate (BHD)</label><input id="flowerRate" type="number" step="0.001" min="0" value="0"></div>
+        <div class="field full" id="hollandHintBox" style="display:none;"><div style="font-size:11px;color:var(--rose-deep);background:var(--blush);border-radius:8px;padding:8px 10px;"></div></div>
+        <div class="field full"><label>Min Stock</label><input id="flowerMinStock" type="number" min="0" value="0"></div>
+      </div>
+      <button class="btn flower" id="saveFlowerBtn">Add Flower Item</button>
+      <div class="result" id="flowerResult"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Temporary admin password gate — client-side only, meant as a
+// simple deterrent for now, not real security.
+const ADMIN_PASSWORD = '12345';
+function tryUnlock(){
+  const input = document.getElementById('adminPassInput');
+  const err = document.getElementById('adminPassError');
+  if(input.value === ADMIN_PASSWORD){
+    document.getElementById('lockScreen').style.display = 'none';
+  } else {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+document.getElementById('adminPassBtn').addEventListener('click', tryUnlock);
+document.getElementById('adminPassInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') tryUnlock();
+});
+
+const FLOWER_API = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+
+// ---------- Holland price auto-suggest ----------
+// Quietly loads the HollandTracking list on page open, then watches
+// the Flower Name + Origin fields — when both point to a tracked
+// Holland item, the Rate field is pre-filled using the SAME company
+// formula as everywhere else, treating the Odoo price as the
+// Supplier Rate input. You can still edit it before saving.
+let hollandTrackingList = [];
+fetch(FLOWER_API + '?action=getHollandTracking')
+  .then(r => r.json())
+  .then(data => { hollandTrackingList = Array.isArray(data) ? data : []; })
+  .catch(()=>{});
+
+function computeCompanyRate(supplierRate, unit, stemsPerBunch){
+  const stems = Number(stemsPerBunch) || 1;
+  const perStem = (String(unit).toLowerCase() === 'bunch' && stems > 0) ? supplierRate / stems : supplierRate;
+  return perStem * 3 * 1.10;
+}
+
+let hollandSuggestedRate = null;
+let hollandOdooPrice = null;
+
+function checkHollandSuggestion(){
+  const name = document.getElementById('flowerName').value.trim().toLowerCase();
+  const origin = document.getElementById('flowerOrigin').value.trim().toLowerCase();
+  const hintBox = document.getElementById('hollandHintBox');
+  const hintText = hintBox.querySelector('div');
+
+  if(!name || !origin.includes('holland')){
+    hintBox.style.display = 'none';
+    hollandSuggestedRate = null;
+    hollandOdooPrice = null;
+    return;
+  }
+  const match = hollandTrackingList.find(h => String(h['Flower Name'] || '').trim().toLowerCase() === name);
+  if(!match){
+    hintBox.style.display = 'none';
+    hollandSuggestedRate = null;
+    hollandOdooPrice = null;
+    return;
+  }
+  const odooPrice = Number(match['Odoo Price (BHD)']) || 0;
+  const unit = document.getElementById('flowerUnit').value;
+  const stems = document.getElementById('flowerStems').value;
+  const suggested = computeCompanyRate(odooPrice, unit, stems);
+  const originalRate = Number(document.getElementById('flowerRate').value) || 0;
+
+  if(originalRate > 0 && suggested <= originalRate){
+    // Same price or a decrease — safe to apply directly, no approval
+    // needed. The Rate field is filled in and this is treated as a
+    // normal (already-Approved) item once saved.
+    document.getElementById('flowerRate').value = suggested.toFixed(3);
+    hollandSuggestedRate = null;
+    hollandOdooPrice = null;
+    hintText.textContent = `📋 Odoo price ${odooPrice} → ${suggested.toFixed(3)} BHD, hindi tumaas sa original (${originalRate.toFixed(3)}) — direkta nang inilagay sa Rate, walang kailangang approval.`;
+    hintBox.style.display = 'block';
+    return;
+  }
+
+  // The actual Rate input is left alone — this only shows a proposal.
+  // Approving or rejecting it happens later, through the same Rate
+  // Approval card used everywhere else in the system.
+  hollandSuggestedRate = suggested;
+  hollandOdooPrice = odooPrice;
+  hintText.textContent = `📋 Suggested mula sa Odoo tracking (${match['Date Checked'] || ''}): Odoo price ${odooPrice} → Suggested Rate ${suggested.toFixed(3)} BHD${originalRate > 0 ? ' (mas mataas sa original na ' + originalRate.toFixed(3) + ')' : ''}. Kung i-save mo ngayon, mapupunta ito sa \"Pending Approval\" — hindi babaguhin ang Rate field sa itaas hangga't hindi ito na-a-approve sa Dashboard.`;
+  hintBox.style.display = 'block';
+}
+
+// If the person edits the Rate by hand after a Holland auto-fill, this
+// is no longer an unreviewed machine suggestion — treat it as a normal
+// manually-entered rate again (Approved immediately, as usual).
+
+['flowerName','flowerOrigin','flowerUnit','flowerStems'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', checkHollandSuggestion);
+  document.getElementById(id).addEventListener('change', checkHollandSuggestion);
+});
+
+// Rate's own listener only re-checks the comparison text — it never
+// overwrites what you're typing there.
+document.getElementById('flowerRate').addEventListener('input', ()=>{
+  if(hollandSuggestedRate === null) return; // no active suggestion to compare against
+  const originalRate = Number(document.getElementById('flowerRate').value) || 0;
+  const hintText = document.getElementById('hollandHintBox').querySelector('div');
+  if(originalRate > 0 && hollandSuggestedRate <= originalRate){
+    hintText.textContent = `📋 Odoo-based suggestion (${hollandSuggestedRate.toFixed(3)}) ay hindi na mas mataas sa Rate mo ngayon (${originalRate.toFixed(3)}) — puwede mo nang i-type nang direkta, walang approval na kakailanganin kung ito ang ise-save mo.`;
+  }
+});
+
+
+// ---------- Flower save ----------
+document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('flowerName').value.trim();
+  const resultBox = document.getElementById('flowerResult');
+  if(!name){
+    resultBox.className = 'result err';
+    resultBox.textContent = 'Flower name is required.';
+    return;
+  }
+  const btn = document.getElementById('saveFlowerBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const body = new URLSearchParams({
+    action: 'addFlowerItem',
+    flowerName: name,
+    origin: document.getElementById('flowerOrigin').value,
+    unit: document.getElementById('flowerUnit').value,
+    stemsPerBunch: document.getElementById('flowerStems').value,
+    rate: document.getElementById('flowerRate').value,
+    minStock: document.getElementById('flowerMinStock').value
+  });
+  if(hollandSuggestedRate !== null){
+    body.set('pendingSuggestedRate', hollandSuggestedRate.toFixed(3));
+    body.set('hollandOdooPrice', hollandOdooPrice);
+  }
+
+  fetch(FLOWER_API, { method: 'POST', body })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false; btn.textContent = 'Add Flower Item';
+      if(res.error || !res.success){
+        resultBox.className = 'result err';
+        resultBox.textContent = 'Error: ' + (res.error || 'Unknown error');
+        return;
+      }
+      resultBox.className = 'result ok';
+      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode +
+        (hollandSuggestedRate !== null ? ' (Rate: Pending Approval — tingnan sa Dashboard)' : '');
+      document.getElementById('flowerName').value = '';
+      document.getElementById('flowerOrigin').value = '';
+      document.getElementById('flowerRate').value = 0;
+      document.getElementById('flowerMinStock').value = 0;
+      hollandSuggestedRate = null;
+      hollandOdooPrice = null;
+      document.getElementById('hollandHintBox').style.display = 'none';
+    })
+    .catch(err => {
+      btn.disabled = false; btn.textContent = 'Add Flower Item';
+      resultBox.className = 'result err';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    });
+});
+
+</script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+
+  // Smart Home — goes to the Flower hub from a flower page, or the
+  // Chocolate hub from a chocolate page.
+  const homeLink=document.getElementById('chocoHomeLink');
+  if(homeLink){
+    const isFlowerPage = 'flower' === 'flower';
+    homeLink.href = isFlowerPage ? 'flower-tools.html' : 'index.html';
+    homeLink.textContent = isFlowerPage ? '🏠 Flower Tools' : '🏠 Chocolate Home';
+  }
+})();
+
+// ---------- Shared music player (same saved sound as the rest of
+// Lalabella on THIS device — set it once anywhere, it follows you
+// across every page on this same browser/phone). ----------
+(function(){
+  const audio = document.getElementById('chocoAudioPlayer');
+  const musicBtn = document.getElementById('chocoMusicToggleBtn');
+  const urlInput = document.getElementById('chocoMusicUrlInput');
+  const nowText = document.getElementById('chocoMusicNow');
+  const searchInput = document.getElementById('chocoMusicSearchInput');
+  const searchBtn = document.getElementById('chocoMusicSearchBtn');
+  if(!audio || !musicBtn) return;
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+  function playYouTube(id){
+    document.getElementById('chocoYtPlayerWrap').innerHTML =
+      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      urlInput.value = savedUrl;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+      } else {
+        audio.src = savedUrl;
+      }
+      // sessionStorage clears itself the moment the browser tab/window
+      // closes — exactly the reset point we want. If this session has
+      // already pressed ♫ once (on any page), every other page picks
+      // right back up automatically; otherwise it stays silent until
+      // tapped, same as a first-ever visit.
+      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
+      if(sessionPlaying){
+        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
+        isPlaying = true;
+        musicBtn.textContent = '♫ Playing';
+        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
+      } else {
+        isPlaying = false;
+        musicBtn.textContent = '♫ Music';
+        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
+      }
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  function applyUrl(url){
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      nowText.textContent = 'Now playing YouTube track';
+      isPlaying = true; musicBtn.textContent = '♫ Playing';
+      saveSoundChoice(url, true);
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    } else {
+      ytVideoId = null; stopYouTube();
+      audio.src = url;
+      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
+      saveSoundChoice(url, false);
+      audio.play().then(()=>{
+        isPlaying = true; musicBtn.textContent = '♫ Playing';
+        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    }
+  }
+
+  musicBtn.addEventListener('click', ()=>{
+    const url = urlInput.value.trim();
+    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
+      applyUrl(url);
+      return;
+    }
+    // No new URL typed — just toggle play/pause of whatever's loaded.
+    if(!audio.src && !ytVideoId) return;
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      musicBtn.textContent = '♫ Music'; isPlaying = false;
+      // Pausing here means "stop following me" — the next page won't
+      // resume on its own until ♫ is pressed again.
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      musicBtn.textContent = '♫ Playing'; isPlaying = true;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    }
+  });
+
+  // "Search" doesn't auto-pick a video (no API key set up) — it opens
+  // YouTube's own search in a new tab so you can pick the exact one,
+  // then paste that video's link back into the URL box above.
+  if(searchBtn && searchInput){
+    searchBtn.addEventListener('click', ()=>{
+      const q = searchInput.value.trim();
+      if(!q) return;
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+    });
+    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+  }
+})();
+</script>
+
+</body>
+</html>
