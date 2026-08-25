@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Odoo Price Import</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:900px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
+  .sub{ color:var(--ink-dim); font-size:13px; margin-top:14px; line-height:1.6; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px; }
+  .card h2{ margin:0 0 12px; font-family:'Fraunces',serif; font-weight:700; color:var(--rose-deep); font-size:18px; }
+
+  .drop-zone{
+    border:2px dashed var(--line); border-radius:14px; padding:30px; text-align:center;
+    color:var(--ink-dim); font-size:13px; cursor:pointer; background:var(--blush);
+  }
+  .drop-zone.drag-over{ border-color:var(--rose); background:var(--blush-2); }
+  input[type=file]{ display:none; }
+
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  select{ border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px; color:var(--ink); font-family:inherit; background:#fff; outline:none; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:14px; }
+  th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); padding:8px 6px; border-bottom:1px solid var(--line); }
+  td{ padding:8px 6px; border-bottom:1px solid var(--blush); }
+  tr.diff td{ background:#fff8e8; }
+  tr.no-match td{ color:var(--ink-dim); font-style:italic; }
+  .old-rate{ text-decoration:line-through; color:var(--ink-dim); }
+  .new-rate{ color:var(--rose-deep); font-weight:700; }
+  .row-select{ width:16px; height:16px; }
+
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center; }
+  .btn{ padding:11px 18px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-outline{ background:#fff; border:1px solid var(--rose-deep); color:var(--rose-deep); }
+  .btn:disabled{ opacity:0.6; cursor:default; }
+  .saved-msg{ display:none; margin-top:10px; color:var(--ok); font-size:12.5px; font-weight:600; }
+  .summary-line{ font-size:12.5px; color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" id="backLink" href="flower-tools.html">&larr; Flower Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Odoo Price Import</h1>
+    <div class="sub">Upload the product list you exported from Odoo — we'll match each item by its Barcode (Item Code) and show you exactly what would change before anything is saved.</div>
+  </header>
+
+  <div class="card">
+    <h2>1. Upload Odoo CSV</h2>
+    <div class="drop-zone" id="dropZone">
+      📄 I-click dito para pumili ng CSV file, o i-drag-and-drop
+      <input type="file" id="fileInput" accept=".csv">
+    </div>
+    <div class="fields" id="columnMapFields" style="display:none;">
+      <div class="field">
+        <label>Alin ang Barcode/Item Code column?</label>
+        <select id="barcodeColSelect"></select>
+      </div>
+      <div class="field">
+        <label>Alin ang Sales Price column?</label>
+        <select id="priceColSelect"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="compareCard" style="display:none;">
+    <h2>2. I-review ang mga Pagbabago</h2>
+    <div class="summary-line" id="summaryLine"></div>
+    <table>
+      <thead>
+        <tr><th></th><th>Item Code</th><th>Flower</th><th>Kasalukuyang Rate</th><th>Bagong Rate (Odoo)</th></tr>
+      </thead>
+      <tbody id="compareBody"></tbody>
+    </table>
+    <div class="actions">
+      <button class="btn btn-outline" id="selectAllBtn">Piliin Lahat na May Pagbabago</button>
+      <button class="btn btn-primary" id="applyBtn">💾 I-apply ang mga Napiling Presyo</button>
+    </div>
+    <div class="saved-msg" id="savedMsg"></div>
+  </div>
+</div>
+
+<script>
+const FLOWER_API = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+
+// Smart back — same pattern as the rest of the tools.
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let cameFrom = params.get('from');
+  if(cameFrom){ localStorage.setItem('lalabellaBackFrom', cameFrom); }
+  else{ cameFrom = localStorage.getItem('lalabellaBackFrom'); }
+  const backLink = document.getElementById('backLink');
+  if(cameFrom === 'index'){
+    backLink.href = 'index.html';
+    backLink.innerHTML = '&larr; Chocolate Home';
+  }
+})();
+
+// ---------- CSV parsing (handles quoted fields with commas) ----------
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else { field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && next === '\n') i++;
+        row.push(field); field = '';
+        if(row.length > 1 || row[0] !== ''){ rows.push(row); }
+        row = [];
+      } else { field += c; }
+    }
+  }
+  if(field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+let csvRows = [];
+let csvHeaders = [];
+let flowerItems = [];
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const parsed = parseCSV(e.target.result);
+    if(!parsed.length){ alert('Walang laman ang CSV file.'); return; }
+    csvHeaders = parsed[0];
+    csvRows = parsed.slice(1);
+    populateColumnSelectors();
+  };
+  reader.readAsText(file);
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function populateColumnSelectors(){
+  const barcodeSel = document.getElementById('barcodeColSelect');
+  const priceSel = document.getElementById('priceColSelect');
+  barcodeSel.innerHTML = csvHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+  priceSel.innerHTML = csvHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+
+  // Best-effort auto-pick based on common Odoo column names.
+  const barcodeGuess = csvHeaders.findIndex(h => /barcode|item code/i.test(h));
+  const priceGuess = csvHeaders.findIndex(h => /sales price|price/i.test(h));
+  if(barcodeGuess !== -1) barcodeSel.value = barcodeGuess;
+  if(priceGuess !== -1) priceSel.value = priceGuess;
+
+  document.getElementById('columnMapFields').style.display = 'grid';
+  loadFlowerItemsAndCompare();
+}
+
+function loadFlowerItemsAndCompare(){
+  fetch(FLOWER_API + '?action=getFlowerItems')
+    .then(r => r.json())
+    .then(data => {
+      flowerItems = Array.isArray(data) ? data : [];
+      buildComparison();
+    })
+    .catch(()=> alert('Hindi nakuha ang kasalukuyang FlowerItem list — check ang internet connection.'));
+}
+
+document.getElementById('barcodeColSelect').addEventListener('change', buildComparison);
+document.getElementById('priceColSelect').addEventListener('change', buildComparison);
+
+let comparisonRows = [];
+
+function buildComparison(){
+  if(!flowerItems.length || !csvRows.length) return;
+  const bIdx = Number(document.getElementById('barcodeColSelect').value);
+  const pIdx = Number(document.getElementById('priceColSelect').value);
+
+  const odooByCode = {};
+  csvRows.forEach(r => {
+    const code = (r[bIdx] || '').trim();
+    const price = parseFloat(r[pIdx]);
+    if(code && !isNaN(price)) odooByCode[code] = price;
+  });
+
+  comparisonRows = flowerItems
+    .map(item => {
+      const code = String(item['Item Code'] || '').trim();
+      const currentRate = Number(item['Rate']) || 0;
+      const odooRate = odooByCode.hasOwnProperty(code) ? odooByCode[code] : null;
+      return {
+        itemCode: code,
+        flowerName: item['Flowers'] || '',
+        currentRate,
+        odooRate,
+        hasMatch: odooRate !== null,
+        isDifferent: odooRate !== null && Math.abs(odooRate - currentRate) > 0.0001
+      };
+    })
+    .filter(r => r.hasMatch); // only show items Odoo actually has a price for
+
+  renderComparison();
+}
+
+function renderComparison(){
+  document.getElementById('compareCard').style.display = 'block';
+  const diffCount = comparisonRows.filter(r => r.isDifferent).length;
+  document.getElementById('summaryLine').textContent =
+    `${comparisonRows.length} items na-match sa pamamagitan ng Item Code — ${diffCount} may pagkakaiba sa presyo.`;
+
+  const tbody = document.getElementById('compareBody');
+  tbody.innerHTML = comparisonRows.map((r, i) => `
+    <tr class="${r.isDifferent ? 'diff' : ''}">
+      <td>${r.isDifferent ? `<input type="checkbox" class="row-select" data-idx="${i}">` : ''}</td>
+      <td>${r.itemCode}</td>
+      <td>${r.flowerName}</td>
+      <td class="${r.isDifferent ? 'old-rate' : ''}">${r.currentRate.toFixed(3)}</td>
+      <td class="${r.isDifferent ? 'new-rate' : ''}">${r.isDifferent ? r.odooRate.toFixed(3) : '(same)'}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('selectAllBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.row-select').forEach(cb => cb.checked = true);
+});
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  const checked = [...document.querySelectorAll('.row-select:checked')];
+  if(!checked.length){ alert('Wala kang pinili na item na i-a-apply.'); return; }
+
+  const updates = checked.map(cb => {
+    const row = comparisonRows[Number(cb.dataset.idx)];
+    return { itemCode: row.itemCode, newRate: row.odooRate };
+  });
+
+  const preview = updates.map(u => u.itemCode + ' → ' + u.newRate.toFixed(3)).join('\n');
+  if(!confirm(`I-a-apply ang ${updates.length} bagong presyo:\n\n${preview}\n\nSigurado ka ba?`)) return;
+
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Nagsa-save…';
+
+  const body = new URLSearchParams({ action: 'updateFlowerRates', updates: JSON.stringify(updates) });
+
+  fetch(FLOWER_API, { method: 'POST', body })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = '💾 I-apply ang mga Napiling Presyo';
+      if(res.error || !res.success){
+        alert('May error: ' + (res.error || 'Unknown error'));
+        return;
+      }
+      const msg = document.getElementById('savedMsg');
+      msg.textContent = `✓ Na-update ang ${res.updated} item(s).`;
+      msg.style.display = 'block';
+      loadFlowerItemsAndCompare(); // refresh to reflect the new rates
+    })
+    .catch(()=>{
+      btn.disabled = false;
+      btn.textContent = '💾 I-apply ang mga Napiling Presyo';
+      alert('Hindi na-save — check ang internet connection mo.');
+    });
+});
+</script>
+</body>
+</html>
