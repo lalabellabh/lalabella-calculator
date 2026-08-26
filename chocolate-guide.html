@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lalabella Chocolate Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#f8ede0; --cream-2:#f0dcc3; --mint:#eaf3ec;
+    --choc:#6b4226; --choc-deep:#4a2c18; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2a20; --ink-dim:#8a766a; --line:#e9d9c4; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(107,66,38,0.08), transparent 40%),
+      radial-gradient(circle at 92% 30%, rgba(217,164,65,0.12), transparent 40%),
+      linear-gradient(180deg, var(--cream) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{ text-align:center; padding:60px 18px 40px; position:relative; overflow:hidden; animation:heroIn 1s ease; }
+  @keyframes heroIn{ from{ opacity:0; transform:translateY(-16px); } to{ opacity:1; transform:translateY(0); } }
+  .back-link{ position:absolute; top:16px; left:18px; display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; }
+  .back-link:hover{ color:var(--choc-deep); }
+  .hero .eyebrow{ font-size:12px; letter-spacing:0.35em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:10px; }
+  .hero h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--choc-deep); font-size:clamp(2.6rem,9vw,4.2rem); margin:0 0 10px; line-height:1; }
+  .hero p{ color:var(--ink-dim); font-size:15px; max-width:440px; margin:0 auto; line-height:1.6; }
+
+  /* ---------- Mascot (fixed companion) ---------- */
+  .mascot-dock{
+    position:fixed; left:18px; bottom:18px; z-index:50;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .mascot{
+    width:74px; height:74px; position:relative; cursor:pointer;
+    animation:mascotBob 2.6s ease-in-out infinite;
+  }
+  @keyframes mascotBob{ 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-8px) rotate(2deg); } }
+  .mascot svg{ width:100%; height:100%; filter:drop-shadow(0 8px 14px rgba(74,44,24,.3)); }
+  .mascot .eye{ animation:blink 4.5s ease-in-out infinite; transform-origin:center; }
+  @keyframes blink{ 0%,92%,100%{ transform:scaleY(1); } 95%{ transform:scaleY(0.1); } }
+  .mascot .shine{ animation:shineMove 3.5s ease-in-out infinite; }
+  @keyframes shineMove{ 0%,100%{ opacity:0.55; } 50%{ opacity:0.9; } }
+  .mascot-bubble{
+    background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:8px 12px;
+    font-size:11.5px; color:var(--choc-deep); font-weight:600; max-width:150px; text-align:center;
+    box-shadow:0 6px 16px rgba(74,44,24,.15); opacity:0; transform:translateY(6px); transition:all .3s ease;
+  }
+  .mascot-bubble.show{ opacity:1; transform:translateY(0); }
+  @media (max-width:720px){ .mascot-dock{ display:none; } }
+
+  /* ---------- Garden path ---------- */
+  .path{ max-width:760px; margin:0 auto; padding:20px 20px 100px; position:relative; }
+  .path::before{
+    content:''; position:absolute; left:29px; top:10px; bottom:60px; width:2px;
+    background:repeating-linear-gradient(to bottom, var(--choc) 0 8px, transparent 8px 16px);
+    opacity:0.3;
+  }
+  @media (max-width:600px){ .path::before{ left:21px; } }
+
+  .stop{
+    position:relative; padding-left:70px; margin-bottom:56px; opacity:0; transform:translateY(24px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .stop.in-view{ opacity:1; transform:translateY(0); }
+  @media (max-width:600px){ .stop{ padding-left:52px; } }
+
+  .stop-marker{
+    position:absolute; left:0; top:0; width:60px; height:60px; border-radius:50%;
+    background:linear-gradient(145deg,#fff,var(--cream-2)); border:3px solid rgba(107,66,38,.2);
+    display:grid; place-items:center; font-size:26px; box-shadow:0 8px 20px rgba(74,44,24,.15);
+    transition:transform .3s ease;
+  }
+  .stop.in-view .stop-marker{ animation:markerPop .5s ease; }
+  @keyframes markerPop{ 0%{ transform:scale(0.6) rotate(-10deg); } 60%{ transform:scale(1.12) rotate(4deg); } 100%{ transform:scale(1) rotate(0); } }
+  @media (max-width:600px){ .stop-marker{ width:44px; height:44px; font-size:19px; } }
+
+  .stop-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .stop h2{ font-family:'Fraunces',serif; font-weight:700; color:var(--choc-deep); font-size:clamp(20px,3vw,26px); margin:0; }
+  .stop .chapter-label{ font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase; color:var(--gold); font-weight:700; display:block; margin-bottom:4px; }
+
+  .speak-btn{
+    display:inline-flex; align-items:center; gap:6px; background:var(--cream); border:1px solid var(--line);
+    color:var(--choc-deep); border-radius:20px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer;
+    flex-shrink:0;
+  }
+  .speak-btn.speaking{ background:linear-gradient(135deg,var(--choc),var(--choc-deep)); color:#fff; border-color:transparent; }
+
+  .stop-card{
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px 22px;
+    box-shadow:0 6px 20px rgba(74,44,24,.08);
+  }
+  .stop-card h3{ font-size:13px; text-transform:uppercase; letter-spacing:0.06em; color:var(--leaf); margin:18px 0 8px; }
+  .stop-card h3:first-child{ margin-top:0; }
+  .stop-card ol, .stop-card ul{ margin:0; padding-left:20px; }
+  .stop-card li{ font-size:14px; line-height:1.7; margin-bottom:4px; }
+  .stop-card p{ font-size:14px; line-height:1.7; margin:0 0 10px; color:var(--ink); }
+
+  .tag-grid{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .tag{ background:var(--mint); color:var(--leaf); font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; }
+  .tag.choc{ background:var(--cream); color:var(--choc-deep); }
+
+  .shape-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
+  @media (max-width:500px){ .shape-grid{ grid-template-columns:1fr; } }
+  .shape-item{ background:var(--cream); border-radius:12px; padding:10px 12px; transition:transform .2s ease, box-shadow .2s ease; }
+  .shape-item:hover{ transform:translateY(-4px); box-shadow:0 8px 16px rgba(74,44,24,.15); }
+  .shape-item b{ display:block; font-size:12.5px; color:var(--choc-deep); margin-bottom:2px; }
+  .shape-item span{ font-size:11.5px; color:var(--ink-dim); }
+  .shape-illust{ width:100%; height:52px; margin-bottom:6px; }
+
+  /* ---------- Animated technique demos ---------- */
+  .demo-box{ background:var(--mint); border-radius:12px; padding:10px 6px; margin:8px 0 14px; }
+  .demo-svg{ width:100%; height:auto; display:block; }
+
+  footer{ text-align:center; padding:40px 18px 60px; color:var(--ink-dim); font-size:12px; }
+</style>
+
+</head>
+<body>
+
+
+
+<div class="hero">
+  <a class="back-link" id="backLink" href="index.html">&larr; Chocolate Home</a>
+  <div class="eyebrow">Lalabella</div>
+  <h1>The Chocolate Guide</h1>
+  <p>A little walk through tempering, talking with clients, and shaping every display — with Cocoa along the way.</p>
+</div>
+
+<div class="mascot-dock">
+  <div class="mascot-bubble" id="mascotBubble"></div>
+  <div class="mascot" id="mascot" title="Hi, I'm Cocoa!">
+    <svg viewBox="0 0 100 100">
+      <g>
+        <path d="M50 12 C72 12 84 34 80 56 C76 82 60 92 50 92 C40 92 24 82 20 56 C16 34 28 12 50 12 Z" fill="#6b4226"/>
+        <path class="shine" d="M32 30 C36 22 44 18 50 18 C46 24 40 30 36 40 Z" fill="#8a5a36" opacity="0.6"/>
+        <circle cx="50" cy="58" r="17" fill="#f8ede0"/>
+        <g class="eye"><circle cx="43" cy="56" r="3" fill="#3a2a20"/></g>
+        <g class="eye"><circle cx="57" cy="56" r="3" fill="#3a2a20"/></g>
+        <path d="M43 65 Q50 70 57 65" stroke="#3a2a20" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="36" cy="61" r="3.5" fill="#d9a441" opacity="0.5"/>
+        <circle cx="64" cy="61" r="3.5" fill="#d9a441" opacity="0.5"/>
+        <path d="M46 16 Q50 8 54 16" stroke="#5f8f63" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<div class="path">
+
+  <div class="stop" id="stop1">
+    <div class="stop-marker">🍫</div>
+    <div class="stop-head">
+      <div>
+        <span class="chapter-label">Chapter One</span>
+        <h2>Working With Chocolate</h2>
+      </div>
+      <button class="speak-btn" data-target="content1">🔊 Read to me</button>
+    </div>
+    <div class="stop-card" id="content1">
+      <h3>Why Tempering Matters</h3>
+      <div class="demo-box">
+        <svg class="demo-svg" viewBox="0 0 220 90" id="temperDemo">
+          <line x1="10" y1="45" x2="210" y2="45" stroke="#e9d9c4" stroke-width="2"/>
+          <path id="temperCurve" d="M10,60 Q45,10 80,40 Q110,60 140,20 Q170,5 210,35" stroke="#d9a441" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle id="temperDot" cx="10" cy="60" r="5" fill="#6b4226"/>
+          <text x="12" y="80" font-size="10" fill="#8a766a" font-family="Space Grotesk">Melt</text>
+          <text x="95" y="80" font-size="10" fill="#8a766a" font-family="Space Grotesk">Cool</text>
+          <text x="175" y="80" font-size="10" fill="#8a766a" font-family="Space Grotesk">Reheat slightly</text>
+        </svg>
+      </div>
+      <p>Good temper gives chocolate its snap, gloss, and smooth melt. Warm it fully, cool it down to re-form stable crystals, then gently reheat to a workable temperature — never rush the curve.</p>
+      <h3>Melting</h3>
+      <ul>
+        <li>Melt over a double boiler, or in short microwave bursts, stirring between each one.</li>
+        <li>Keep every bowl and tool completely dry — even a drop of water can seize the batch.</li>
+        <li>Work in a cool, dry room, away from direct sun and strong kitchen odors.</li>
+      </ul>
+      <h3>Avoiding Bloom</h3>
+      <p>Chalky white streaks usually mean poor temper or a temperature swing during storage. Store finished pieces somewhere cool and steady, never in the fridge unless the box says otherwise.</p>
+      <h3>Dipping</h3>
+      <div class="demo-box">
+        <svg class="demo-svg" viewBox="0 0 220 90" id="dipDemo">
+          <ellipse cx="110" cy="70" rx="60" ry="10" fill="#e9d9c4"/>
+          <path d="M55,70 Q110,55 165,70" fill="#6b4226"/>
+          <g id="dipItem">
+            <circle cx="110" cy="30" r="12" fill="#f3d9b1"/>
+          </g>
+        </svg>
+      </div>
+      <p>Dip in one smooth motion, let the excess drip back into the bowl, then set on parchment to firm up undisturbed.</p>
+      <h3>Piping & Drizzle</h3>
+      <div class="demo-box">
+        <svg class="demo-svg" viewBox="0 0 220 60" id="drizzleDemo">
+          <path id="drizzlePath" d="M10,30 Q30,10 50,30 Q70,50 90,30 Q110,10 130,30 Q150,50 170,30 Q190,10 210,30" stroke="#6b4226" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="300" stroke-dashoffset="300"/>
+        </svg>
+      </div>
+      <p>Keep a steady, close hand and a light, even pressure for a clean, consistent line.</p>
+    </div>
+  </div>
+
+  <div class="stop" id="stop2">
+    <div class="stop-marker">💬</div>
+    <div class="stop-head">
+      <div>
+        <span class="chapter-label">Chapter Two</span>
+        <h2>Talking With Clients</h2>
+      </div>
+      <button class="speak-btn" data-target="content2">🔊 Read to me</button>
+    </div>
+    <div class="stop-card" id="content2">
+      <h3>Know Your Craft</h3>
+      <ul>
+        <li>Learn the flavors, fillings, and cacao percentages we carry.</li>
+        <li>Know which items are made fresh daily versus made to order.</li>
+        <li>Remember returning clients — knowing their taste builds trust.</li>
+      </ul>
+      <h3>Understand the Order</h3>
+      <ul>
+        <li>Ask about the occasion, the recipient, and any allergies before quoting.</li>
+        <li>Confirm quantity and packaging style — box, bouquet, or tiered display.</li>
+        <li>Fill out the order form completely before the client leaves.</li>
+      </ul>
+      <h3>How We Speak</h3>
+      <p>We don't say "no" — we say "let me check and get back to you." Keep the tone warm, keep the workspace quiet when working on-site, and speak English with clients so nothing gets lost.</p>
+    </div>
+  </div>
+
+  <div class="stop" id="stop3">
+    <div class="stop-marker">🎁</div>
+    <div class="stop-head">
+      <div>
+        <span class="chapter-label">Chapter Three</span>
+        <h2>Occasions & Displays</h2>
+      </div>
+      <button class="speak-btn" data-target="content3">🔊 Read to me</button>
+    </div>
+    <div class="stop-card" id="content3">
+      <h3>What's It For?</h3>
+      <div class="tag-grid">
+        <span class="tag choc">Birthday</span>
+        <span class="tag choc">Wedding Favors</span>
+        <span class="tag choc">Corporate Gifting</span>
+        <span class="tag choc">Valentine's</span>
+        <span class="tag choc">Baby Delivery</span>
+        <span class="tag choc">Shop Opening</span>
+        <span class="tag choc">Anniversary</span>
+      </div>
+      <h3>Choosing a Display</h3>
+      <div class="shape-grid">
+        <div class="shape-item">
+          <svg class="shape-illust" viewBox="0 0 100 52"><circle cx="50" cy="30" r="18" fill="#f0dcc3"/><circle cx="50" cy="30" r="7" fill="#6b4226"/><circle cx="38" cy="22" r="6" fill="#8a5a36"/><circle cx="62" cy="22" r="6" fill="#8a5a36"/><circle cx="38" cy="38" r="6" fill="#8a5a36"/><circle cx="62" cy="38" r="6" fill="#8a5a36"/></svg>
+          <b>Bouquet Style</b><span>Wrapped chocolates on sticks</span>
+        </div>
+        <div class="shape-item">
+          <svg class="shape-illust" viewBox="0 0 100 52"><rect x="26" y="16" width="48" height="30" rx="3" fill="#f0dcc3" stroke="#6b4226" stroke-width="2"/><line x1="26" y1="26" x2="74" y2="26" stroke="#6b4226" stroke-width="1.5"/><line x1="42" y1="16" x2="42" y2="46" stroke="#6b4226" stroke-width="1.5"/><line x1="58" y1="16" x2="58" y2="46" stroke="#6b4226" stroke-width="1.5"/></svg>
+          <b>Boxed Set</b><span>Curated pieces in a gift box</span>
+        </div>
+        <div class="shape-item">
+          <svg class="shape-illust" viewBox="0 0 100 52"><rect x="35" y="34" width="30" height="10" fill="#8a5a36"/><rect x="40" y="22" width="20" height="10" fill="#6b4226"/><rect x="44" y="12" width="12" height="8" fill="#4a2c18"/></svg>
+          <b>Tiered Display</b><span>Stacked stand for events</span>
+        </div>
+        <div class="shape-item">
+          <svg class="shape-illust" viewBox="0 0 100 52"><ellipse cx="35" cy="30" rx="9" ry="12" fill="#f3d9b1"/><path d="M26,26 Q35,14 44,26 Q40,34 35,42 Q30,34 26,26 Z" fill="#6b4226"/><ellipse cx="65" cy="30" rx="9" ry="12" fill="#f3d9b1"/><path d="M56,26 Q65,14 74,26 Q70,34 65,42 Q60,34 56,26 Z" fill="#6b4226"/></svg>
+          <b>Dipped / Covered</b><span>Fruit or treats, chocolate-coated</span>
+        </div>
+        <div class="shape-item">
+          <svg class="shape-illust" viewBox="0 0 100 52"><rect x="25" y="18" width="50" height="20" rx="2" fill="#6b4226"/><text x="50" y="32" font-size="9" fill="#f0dcc3" text-anchor="middle" font-family="Fraunces, serif">Lalabella</text></svg>
+          <b>Chocolate Plaque</b><span>Personalized flat piece</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>🍫 Lalabella Chocolate Guide — made with care for the whole team 🍫</footer>
+
+<script>
+// Smart back — remembers whether you opened this from Chocolate home
+// or from Flower Tools.
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let cameFrom = params.get('from');
+  if(cameFrom){ localStorage.setItem('lalabellaBackFrom', cameFrom); }
+  else{ cameFrom = localStorage.getItem('lalabellaBackFrom'); }
+  const backLink = document.getElementById('backLink');
+  if(backLink){
+    if(cameFrom === 'flower-tools'){
+      backLink.href = 'flower-tools.html';
+      backLink.innerHTML = '&larr; Flower Tools';
+    } else {
+      backLink.href = 'index.html';
+      backLink.innerHTML = '&larr; Chocolate Home';
+    }
+  }
+})();
+
+// ---------- Mascot: greets each chapter as it scrolls into view ----------
+const mascotBubble = document.getElementById('mascotBubble');
+const stops = document.querySelectorAll('.stop');
+const greetings = {
+  stop1: "Let's talk tempering!",
+  stop2: "Now, how we talk with clients.",
+  stop3: "Last stop — displays & occasions!"
+};
+
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('in-view');
+      const msg = greetings[entry.target.id];
+      if(msg){
+        mascotBubble.textContent = msg;
+        mascotBubble.classList.add('show');
+        clearTimeout(mascotBubble._t);
+        mascotBubble._t = setTimeout(()=> mascotBubble.classList.remove('show'), 2800);
+      }
+    }
+  });
+}, { threshold: 0.35 });
+
+stops.forEach(s => observer.observe(s));
+
+document.getElementById('mascot').addEventListener('click', ()=>{
+  mascotBubble.textContent = "Tap 'Read to me' on any chapter — I'll read it out loud!";
+  mascotBubble.classList.add('show');
+  clearTimeout(mascotBubble._t);
+  mascotBubble._t = setTimeout(()=> mascotBubble.classList.remove('show'), 3200);
+});
+
+// ---------- Demo animations (temper curve dot, dip motion, drizzle draw) ----------
+function animateTemperDot(){
+  const path = document.getElementById('temperCurve');
+  const dot = document.getElementById('temperDot');
+  const len = path.getTotalLength();
+  const duration = 3200; let start = null;
+  function step(ts){
+    if(!start) start = ts;
+    const t = ((ts - start) % duration) / duration;
+    const pt = path.getPointAtLength(t * len);
+    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+animateTemperDot();
+
+function animateDip(){
+  const item = document.getElementById('dipItem');
+  let start = null; const duration = 2400;
+  function step(ts){
+    if(!start) start = ts;
+    const t = ((ts - start) % duration) / duration;
+    let y;
+    if(t < 0.4){ y = 30 + (t/0.4) * 35; }
+    else if(t < 0.55){ y = 65; }
+    else if(t < 0.85){ y = 65 - ((t-0.55)/0.3) * 35; }
+    else{ y = 30; }
+    item.setAttribute('transform', `translate(0, ${y - 30})`);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+animateDip();
+
+function animateDrizzle(){
+  const path = document.getElementById('drizzlePath');
+  const len = path.getTotalLength();
+  path.style.strokeDasharray = len;
+  path.style.strokeDashoffset = len;
+  let start = null; const duration = 2600; const pause = 900;
+  function step(ts){
+    if(!start) start = ts;
+    const elapsed = (ts - start) % (duration + pause);
+    const t = Math.min(elapsed / duration, 1);
+    path.style.strokeDashoffset = len * (1 - t);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+animateDrizzle();
+
+// ---------- Text-to-speech narration (prefers a female voice) ----------
+let voices = [];
+function loadVoices(){ voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; }
+loadVoices();
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices;
+
+function pickFemaleVoice(){
+  if(!voices.length) return null;
+  const femaleHints = /female|woman|zira|samantha|victoria|susan|karen|moira|tessa|fiona|serena|allison|ava|kate|amy|emma|joanna|salli|kendra|nicole/i;
+  let v = voices.find(v => femaleHints.test(v.name));
+  if(!v) v = voices.find(v => v.lang && v.lang.startsWith('en') && !/male/i.test(v.name));
+  if(!v) v = voices.find(v => v.lang && v.lang.startsWith('en'));
+  return v || voices[0];
+}
+
+function textFromElement(el){
+  return el.innerText.replace(/\s+/g,' ').trim();
+}
+
+document.querySelectorAll('.speak-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(!window.speechSynthesis){
+      alert('Hindi supported ng browser mo ang text-to-speech.');
+      return;
+    }
+    if(btn.classList.contains('speaking')){
+      window.speechSynthesis.cancel();
+      btn.classList.remove('speaking');
+      btn.textContent = '🔊 Read to me';
+      return;
+    }
+    window.speechSynthesis.cancel();
+    document.querySelectorAll('.speak-btn').forEach(b=>{ b.classList.remove('speaking'); b.textContent = '🔊 Read to me'; });
+
+    const targetEl = document.getElementById(btn.dataset.target);
+    const utter = new SpeechSynthesisUtterance(textFromElement(targetEl));
+    const femaleVoice = pickFemaleVoice();
+    if(femaleVoice) utter.voice = femaleVoice;
+    utter.rate = 0.98;
+    utter.pitch = 1.05;
+
+    utter.onend = ()=>{ btn.classList.remove('speaking'); btn.textContent = '🔊 Read to me'; };
+    utter.onerror = ()=>{ btn.classList.remove('speaking'); btn.textContent = '🔊 Read to me'; };
+
+    btn.classList.add('speaking');
+    btn.textContent = '⏹ Stop';
+    window.speechSynthesis.speak(utter);
+  });
+});
+</script>
+
+</body>
+</html>
