@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chocolate Odoo Price Import</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#f8ede0; --blush-2:#f0dcc3; --mint:#eaf3ec;
+    --rose:#6b4226; --rose-deep:#4a2c18; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:900px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
+  .sub{ color:var(--ink-dim); font-size:13px; margin-top:14px; line-height:1.6; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px; }
+  .card h2{ margin:0 0 12px; font-family:'Fraunces',serif; font-weight:700; color:var(--rose-deep); font-size:18px; }
+
+  .drop-zone{
+    border:2px dashed var(--line); border-radius:14px; padding:30px; text-align:center;
+    color:var(--ink-dim); font-size:13px; cursor:pointer; background:var(--blush);
+  }
+  .drop-zone.drag-over{ border-color:var(--rose); background:var(--blush-2); }
+  input[type=file]{ display:none; }
+
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  select{ border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px; color:var(--ink); font-family:inherit; background:#fff; outline:none; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:14px; }
+  th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); padding:8px 6px; border-bottom:1px solid var(--line); }
+  td{ padding:8px 6px; border-bottom:1px solid var(--blush); }
+  tr.diff td{ background:#fff8e8; }
+  tr.no-match td{ color:var(--ink-dim); font-style:italic; }
+  .old-rate{ text-decoration:line-through; color:var(--ink-dim); }
+  .new-rate{ color:var(--rose-deep); font-weight:700; }
+  .row-select{ width:16px; height:16px; }
+
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center; }
+  .btn{ padding:11px 18px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-outline{ background:#fff; border:1px solid var(--rose-deep); color:var(--rose-deep); }
+  .btn:disabled{ opacity:0.6; cursor:default; }
+  .saved-msg{ display:none; margin-top:10px; color:var(--ok); font-size:12.5px; font-weight:600; }
+  .summary-line{ font-size:12.5px; color:var(--ink-dim); }
+</style>
+<style>
+#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0,#f6e0da);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;}
+#lala-lock-box{background:#fff;border-radius:18px;padding:32px 28px;box-shadow:0 12px 40px rgba(158,47,74,.18);text-align:center;max-width:300px;width:90%;}
+#lala-lock-box h2{font-family:'Great Vibes',cursive;color:#9e2f4a;font-size:2.2rem;margin:0 0 6px;}
+#lala-lock-box p{color:#8a7078;font-size:12.5px;margin:0 0 18px;}
+#lala-lock-input{width:100%;padding:12px;border:1px solid #f0d9d9;border-radius:10px;font-size:20px;text-align:center;letter-spacing:6px;margin-bottom:12px;box-sizing:border-box;font-family:inherit;}
+#lala-lock-input:focus{outline:none;border-color:#c9506b;}
+#lala-lock-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+#lala-lock-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;}
+</style>
+</head>
+<body>
+<div id="lala-lock-overlay">
+  <div id="lala-lock-box">
+    <h2>Lalabella</h2>
+    <p>I-type ang password para magpatuloy</p>
+    <div id="lala-lock-quote" style="font-size:11.5px;color:#c9506b;font-style:italic;margin-bottom:16px;line-height:1.5;"></div>
+    <input type="password" id="lala-lock-input" inputmode="numeric" maxlength="10" placeholder="••••••" autocomplete="off">
+    <button id="lala-lock-btn">Unlock</button>
+    <div id="lala-lock-error">Maling password, subukan ulit.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <a class="back-link" id="backLink" href="index.html">&larr; Chocolate Home</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Chocolate Odoo Import</h1>
+    <div class="sub">Upload the product list you exported from Odoo — we'll match each item by its Barcode (Item Code) and show you exactly what would change before anything is saved.</div>
+  </header>
+
+  <div class="card">
+    <h2>1. Upload Odoo CSV</h2>
+    <div class="drop-zone" id="dropZone">
+      📄 I-click dito para pumili ng CSV file, o i-drag-and-drop
+      <input type="file" id="fileInput" accept=".csv">
+    </div>
+    <div class="fields" id="columnMapFields" style="display:none;">
+      <div class="field">
+        <label>Alin ang Barcode/Item Code column?</label>
+        <select id="barcodeColSelect"></select>
+      </div>
+      <div class="field">
+        <label>Alin ang Sales Price column?</label>
+        <select id="priceColSelect"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="compareCard" style="display:none;">
+    <h2>2. I-review ang mga Pagbabago</h2>
+    <div class="summary-line" id="summaryLine"></div>
+    <table>
+      <thead>
+        <tr><th></th><th>Item Code</th><th>Chocolate</th><th>Kasalukuyang Rate</th><th>Bagong Rate (Odoo)</th></tr>
+      </thead>
+      <tbody id="compareBody"></tbody>
+    </table>
+    <div class="actions">
+      <button class="btn btn-outline" id="selectAllBtn">Piliin Lahat na May Pagbabago</button>
+      <button class="btn btn-primary" id="applyBtn">💾 I-apply ang mga Napiling Presyo</button>
+    </div>
+    <div class="saved-msg" id="savedMsg"></div>
+  </div>
+</div>
+
+<script>
+const CHOCOLATE_API = 'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec';
+
+// Smart back — same pattern as the rest of the tools.
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let cameFrom = params.get('from');
+  if(cameFrom){ localStorage.setItem('lalabellaBackFrom', cameFrom); }
+  else{ cameFrom = localStorage.getItem('lalabellaBackFrom'); }
+  const backLink = document.getElementById('backLink');
+  if(cameFrom === 'flower-tools'){
+    backLink.href = 'flower-tools.html';
+    backLink.innerHTML = '&larr; Flower Tools';
+  }
+})();
+
+// ---------- CSV parsing (handles quoted fields with commas) ----------
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else { field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && next === '\n') i++;
+        row.push(field); field = '';
+        if(row.length > 1 || row[0] !== ''){ rows.push(row); }
+        row = [];
+      } else { field += c; }
+    }
+  }
+  if(field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+let csvRows = [];
+let csvHeaders = [];
+let chocolateItems = [];
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const parsed = parseCSV(e.target.result);
+    if(!parsed.length){ alert('Walang laman ang CSV file.'); return; }
+    csvHeaders = parsed[0];
+    csvRows = parsed.slice(1);
+    populateColumnSelectors();
+  };
+  reader.readAsText(file);
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function populateColumnSelectors(){
+  const barcodeSel = document.getElementById('barcodeColSelect');
+  const priceSel = document.getElementById('priceColSelect');
+  barcodeSel.innerHTML = csvHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+  priceSel.innerHTML = csvHeaders.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+
+  // Best-effort auto-pick based on common Odoo column names.
+  const barcodeGuess = csvHeaders.findIndex(h => /barcode|item code/i.test(h));
+  const priceGuess = csvHeaders.findIndex(h => /sales price|price/i.test(h));
+  if(barcodeGuess !== -1) barcodeSel.value = barcodeGuess;
+  if(priceGuess !== -1) priceSel.value = priceGuess;
+
+  document.getElementById('columnMapFields').style.display = 'grid';
+  loadChocolateItemsAndCompare();
+}
+
+function loadChocolateItemsAndCompare(){
+  fetch(CHOCOLATE_API + '?action=getItems')
+    .then(r => r.json())
+    .then(data => {
+      chocolateItems = Array.isArray(data) ? data : [];
+      buildComparison();
+    })
+    .catch(()=> alert('Hindi nakuha ang kasalukuyang Item List — check ang internet connection.'));
+}
+
+document.getElementById('barcodeColSelect').addEventListener('change', buildComparison);
+document.getElementById('priceColSelect').addEventListener('change', buildComparison);
+
+let comparisonRows = [];
+
+function buildComparison(){
+  if(!chocolateItems.length || !csvRows.length) return;
+  const bIdx = Number(document.getElementById('barcodeColSelect').value);
+  const pIdx = Number(document.getElementById('priceColSelect').value);
+
+  const odooByCode = {};
+  csvRows.forEach(r => {
+    const code = (r[bIdx] || '').trim();
+    const price = parseFloat(r[pIdx]);
+    if(code && !isNaN(price)) odooByCode[code] = price;
+  });
+
+  comparisonRows = chocolateItems
+    .map(item => {
+      const code = String(item['Product Code'] || '').trim();
+      const currentRate = Number(item['Standard Price / Kg']) || 0;
+      const odooRate = odooByCode.hasOwnProperty(code) ? odooByCode[code] : null;
+      return {
+        itemCode: code,
+        flowerName: item['Chocolate Name'] || '',
+        currentRate,
+        odooRate,
+        hasMatch: odooRate !== null,
+        isDifferent: odooRate !== null && Math.abs(odooRate - currentRate) > 0.0001
+      };
+    })
+    .filter(r => r.hasMatch); // only show items Odoo actually has a price for
+
+  renderComparison();
+}
+
+function renderComparison(){
+  document.getElementById('compareCard').style.display = 'block';
+  const diffCount = comparisonRows.filter(r => r.isDifferent).length;
+  document.getElementById('summaryLine').textContent =
+    `${comparisonRows.length} items na-match sa pamamagitan ng Item Code — ${diffCount} may pagkakaiba sa presyo.`;
+
+  const tbody = document.getElementById('compareBody');
+  tbody.innerHTML = comparisonRows.map((r, i) => `
+    <tr class="${r.isDifferent ? 'diff' : ''}">
+      <td>${r.isDifferent ? `<input type="checkbox" class="row-select" data-idx="${i}">` : ''}</td>
+      <td>${r.itemCode}</td>
+      <td>${r.flowerName}</td>
+      <td class="${r.isDifferent ? 'old-rate' : ''}">${r.currentRate.toFixed(3)}</td>
+      <td class="${r.isDifferent ? 'new-rate' : ''}">${r.isDifferent ? r.odooRate.toFixed(3) : '(same)'}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('selectAllBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.row-select').forEach(cb => cb.checked = true);
+});
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  const checked = [...document.querySelectorAll('.row-select:checked')];
+  if(!checked.length){ alert('Wala kang pinili na item na i-a-apply.'); return; }
+
+  const updates = checked.map(cb => {
+    const row = comparisonRows[Number(cb.dataset.idx)];
+    return { itemCode: row.itemCode, newRate: row.odooRate };
+  });
+
+  const preview = updates.map(u => u.itemCode + ' → ' + u.newRate.toFixed(3)).join('\n');
+  if(!confirm(`I-a-apply ang ${updates.length} bagong presyo:\n\n${preview}\n\nSigurado ka ba?`)) return;
+
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Nagsa-save…';
+
+  const body = new URLSearchParams({ action: 'updateChocolateRates', updates: JSON.stringify(updates) });
+
+  fetch(CHOCOLATE_API, { method: 'POST', body })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = '💾 I-apply ang mga Napiling Presyo';
+      if(res.error || !res.success){
+        alert('May error: ' + (res.error || 'Unknown error'));
+        return;
+      }
+      const msg = document.getElementById('savedMsg');
+      msg.textContent = `✓ Na-update ang ${res.updated} item(s).`;
+      msg.style.display = 'block';
+      loadChocolateItemsAndCompare(); // refresh to reflect the new rates
+    })
+    .catch(()=>{
+      btn.disabled = false;
+      btn.textContent = '💾 I-apply ang mga Napiling Presyo';
+      alert('Hindi na-save — check ang internet connection mo.');
+    });
+});
+</script>
+<script>
+(function(){
+  var CORRECT = '525304';
+  var QUOTES = [{"text": "The only way to do great work is to love what you do.", "author": "Steve Jobs"}, {"text": "Success is not final, failure is not fatal: it is the courage to continue that counts.", "author": "Winston Churchill"}, {"text": "Believe you can and you're halfway there.", "author": "Theodore Roosevelt"}, {"text": "It always seems impossible until it's done.", "author": "Nelson Mandela"}, {"text": "The future belongs to those who believe in the beauty of their dreams.", "author": "Eleanor Roosevelt"}, {"text": "Don't watch the clock; do what it does. Keep going.", "author": "Sam Levenson"}, {"text": "Every flower must grow through dirt.", "author": "Unknown"}, {"text": "Small steps every day lead to big results.", "author": "Unknown"}, {"text": "Great things never come from comfort zones.", "author": "Unknown"}, {"text": "Push yourself, because no one else is going to do it for you.", "author": "Unknown"}, {"text": "Dream it. Wish it. Do it.", "author": "Unknown"}, {"text": "Success doesn't just find you. You have to go out and get it.", "author": "Unknown"}, {"text": "The harder you work for something, the greater you'll feel when you achieve it.", "author": "Unknown"}, {"text": "Wake up with determination. Go to bed with satisfaction.", "author": "Unknown"}, {"text": "Do something today that your future self will thank you for.", "author": "Unknown"}, {"text": "Little things make big days.", "author": "Unknown"}, {"text": "It's going to be hard, but hard does not mean impossible.", "author": "Unknown"}, {"text": "Don't wait for opportunity. Create it.", "author": "Unknown"}, {"text": "Sometimes we're tested not to show our weaknesses, but to discover our strengths.", "author": "Unknown"}, {"text": "The key to success is to focus on goals, not obstacles.", "author": "Unknown"}];
+  var q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var qEl = document.getElementById('lala-lock-quote');
+  if(qEl) qEl.textContent = '"' + q.text + '" — ' + q.author;
+
+  if(localStorage.getItem('lalabellaAuth') === 'true'){
+    var ov = document.getElementById('lala-lock-overlay');
+    if(ov) ov.style.display = 'none';
+    return;
+  }
+  function tryUnlock(){
+    var val = document.getElementById('lala-lock-input').value;
+    if(val === CORRECT){
+      localStorage.setItem('lalabellaAuth', 'true');
+      document.getElementById('lala-lock-overlay').style.display = 'none';
+    } else {
+      document.getElementById('lala-lock-error').style.display = 'block';
+      document.getElementById('lala-lock-input').value = '';
+    }
+  }
+  document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
+  document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
+})();
+</script>
+
+</body>
+</html>

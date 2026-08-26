@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 100px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'🌹'; position:absolute; font-size:64px; opacity:0.08; left:-12px; top:-16px; transform:rotate(-16deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 6px; }
+  .card-sub{ font-size:12px; color:var(--ink-dim); margin-bottom:12px; }
+
+  .search-row{ margin-bottom:12px; }
+  .search-row input{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; font-size:14px; color:var(--ink); outline:none;
+  }
+
+  .flower-row{
+    border-top:1px solid var(--blush-2); padding:9px 0; display:flex; align-items:center; gap:10px;
+  }
+  .flower-row:first-child{ border-top:none; }
+  .flower-info{ flex:1; min-width:0; }
+  .flower-name{ font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .flower-meta{ font-size:10.5px; color:var(--ink-dim); }
+  .flower-row input{
+    width:72px; padding:7px 9px; font-size:13px; text-align:center; border:1px solid var(--line);
+    border-radius:8px; background:var(--blush); color:var(--ink); outline:none;
+  }
+  .flower-row input.changed{ border-color:var(--gold); background:#fff8ea; }
+  .flower-row input.not-configured{ color:#c0392b; }
+  .flower-row input::placeholder{ color:#c0392b; opacity:0.6; }
+
+  .list-scroll{ max-height:56vh; overflow-y:auto; }
+
+  .save-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:#fff; border-top:1px solid var(--line); box-shadow:0 -8px 24px rgba(0,0,0,0.08);
+    padding:12px 18px; display:flex; align-items:center; gap:12px;
+  }
+  .save-bar-count{ font-size:12.5px; color:var(--ink-dim); flex:1; }
+  .save-btn{
+    padding:11px 22px; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer;
+    background:linear-gradient(135deg, var(--leaf), #3f6b45); color:#fff;
+  }
+  .save-btn:disabled{ opacity:0.4; pointer-events:none; }
+  .loading, .empty-note{ text-align:center; padding:20px 0; color:var(--ink-dim); font-size:13px; }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:760px; padding:34px 30px 100px; }
+  }
+</style>
+<style id="chocoSharedNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid rgba(255,255,255,0.15);
+  background:rgba(20,10,7,0.85); color:#f1d38c; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(5,2,3,0.55); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
+  background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
+  border-right:1px solid rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  font-family:Arial,sans-serif;
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:#f1e4d8; text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
+.choco-drawer .choco-drawer-title{
+  color:#f1d38c; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.choco-drawer .choco-music-box{
+  margin-top:10px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+}
+.choco-drawer .choco-music-box input{
+  width:100%; padding:9px 10px; border:1px solid rgba(255,255,255,0.14); border-radius:9px;
+  background:rgba(255,255,255,0.05); color:#f1e4d8; font-size:12px; outline:none; margin-bottom:8px;
+  box-sizing:border-box;
+}
+.choco-drawer .choco-music-box button{
+  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
+  background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
+}
+.choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
+/* hamburger stays visible on mobile too now */
+/* The fixed hamburger button sits at top:16px, extending to about
+   60px tall — without extra clearance it was sitting on top of (and
+   hiding) each page's own title/back-link in that same corner. */
+.wrap{ padding-top:76px !important; }
+</style>
+
+<style>
+#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0,#f6e0da);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;}
+#lala-lock-box{background:#fff;border-radius:18px;padding:32px 28px;box-shadow:0 12px 40px rgba(158,47,74,.18);text-align:center;max-width:300px;width:90%;}
+#lala-lock-box h2{font-family:'Great Vibes',cursive;color:#9e2f4a;font-size:2.2rem;margin:0 0 6px;}
+#lala-lock-box p{color:#8a7078;font-size:12.5px;margin:0 0 18px;}
+#lala-lock-input{width:100%;padding:12px;border:1px solid #f0d9d9;border-radius:10px;font-size:20px;text-align:center;letter-spacing:6px;margin-bottom:12px;box-sizing:border-box;font-family:inherit;}
+#lala-lock-input:focus{outline:none;border-color:#c9506b;}
+#lala-lock-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+#lala-lock-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;}
+</style>
+</head>
+<body>
+<div id="lala-lock-overlay">
+  <div id="lala-lock-box">
+    <h2>Lalabella</h2>
+    <p>I-type ang password para magpatuloy</p>
+    <div id="lala-lock-quote" style="font-size:11.5px;color:#c9506b;font-style:italic;margin-bottom:16px;line-height:1.5;"></div>
+    <input type="password" id="lala-lock-input" inputmode="numeric" maxlength="10" placeholder="••••••" autocomplete="off">
+    <button id="lala-lock-btn">Unlock</button>
+    <div id="lala-lock-error">Maling password, subukan ulit.</div>
+  </div>
+</div>
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-drawer-title">Quick Tools</div>
+  <a href="#" id="chocoHomeLink">🏠 Home</a>
+  <a href="notes.html?from=flower-tools">📝 Notes</a>
+  <a href="order-form.html?from=flower-tools">🧾 Order Form</a>
+  <a href="card-print.html?from=flower-tools">💌 Card Print</a>
+  <div class="choco-music-box">
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
+    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
+    <button id="chocoMusicToggleBtn">♫ Music</button>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
+      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
+    </div>
+    <div class="choco-music-now" id="chocoMusicNow"></div>
+  </div>
+</nav>
+<audio id="chocoAudioPlayer" loop></audio>
+<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+<div class="wrap">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <a class="back-link" href="flower-dashboard.html" style="float:right;">🌷 Dashboard &rarr;</a>
+  <header>
+    <div class="eyebrow">Lalabella Flowers</div>
+    <h1>Flower Catalog</h1>
+  </header>
+
+  <div class="card">
+    <div class="card-title">📏 Min Stock per Flower</div>
+    <div class="card-sub">Kailangan ito para gumana ang Low Stock Monitoring sa Dashboard. Pulang text = wala pang naka-set na Min Stock.</div>
+
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Hanapin ang flower…" autocomplete="off" />
+    </div>
+
+    <div class="list-scroll" id="flowerList"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<div class="save-bar">
+  <div class="save-bar-count" id="saveCount">Walang binago pa.</div>
+  <button class="save-btn" id="saveBtn" disabled>Save Changes</button>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec';
+
+  let CATALOG = [];
+  let changes = {}; // row -> new minStock value
+
+  async function loadCatalog(){
+    try{
+      CATALOG = await fetch(API_URL + '?action=getFlowerCatalogWithMinStock&_ts=' + Date.now()).then(r=>r.json());
+      renderList(CATALOG);
+    }catch(e){
+      document.getElementById('flowerList').innerHTML = '<div class="empty-note">Hindi ma-load ang catalog.</div>';
+      console.error(e);
+    }
+  }
+
+  function renderList(list){
+    const el = document.getElementById('flowerList');
+    if(!list || list.length === 0){
+      el.innerHTML = '<div class="empty-note">Walang flowers.</div>';
+      return;
+    }
+    el.innerHTML = list.map(f => {
+      const val = changes.hasOwnProperty(f.row) ? changes[f.row] : f.minStock;
+      const isChanged = changes.hasOwnProperty(f.row);
+      const isNotConfigured = (val === null || val === '');
+      return `
+        <div class="flower-row">
+          <div class="flower-info">
+            <div class="flower-name">${f.name}</div>
+            <div class="flower-meta">Legacy: ${f.rate.toFixed(3)} BD</div>
+          </div>
+          <input
+            type="number" min="0" step="1"
+            class="${isChanged ? 'changed' : ''} ${isNotConfigured ? 'not-configured' : ''}"
+            placeholder="Not set"
+            value="${val === null ? '' : val}"
+            data-row="${f.row}"
+          />
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = q ? CATALOG.filter(f => f.name.toLowerCase().includes(q)) : CATALOG;
+    renderList(filtered);
+  });
+
+  document.getElementById('flowerList').addEventListener('input', (e)=>{
+    const input = e.target;
+    if(input.tagName !== 'INPUT') return;
+    const row = Number(input.dataset.row);
+    const value = input.value.trim();
+    changes[row] = value === '' ? '' : Number(value);
+    input.classList.add('changed');
+    input.classList.toggle('not-configured', value === '');
+    updateSaveBar();
+  });
+
+  function updateSaveBar(){
+    const count = Object.keys(changes).length;
+    document.getElementById('saveCount').textContent = count === 0
+      ? 'Walang binago pa.'
+      : count + ' flower' + (count > 1 ? 's' : '') + ' binago, hindi pa na-save.';
+    document.getElementById('saveBtn').disabled = count === 0;
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    const updates = Object.keys(changes).map(row => ({ row: Number(row), minStock: changes[row] }));
+    if(updates.length === 0) return;
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try{
+      const params = new URLSearchParams({ action: 'setMinStockBulk', updates: JSON.stringify(updates) });
+      const res = await fetch(API_URL + '?' + params.toString());
+      const result = await res.json();
+      if(result.error){
+        alert(result.error);
+      } else {
+        changes = {};
+        await loadCatalog();
+        updateSaveBar();
+        alert('Na-save ang Min Stock ng ' + result.updated + ' flowers!');
+      }
+    }catch(e){
+      alert('Hindi na-save. I-check ang connection mo.');
+    }
+    btn.textContent = 'Save Changes';
+    updateSaveBar();
+  });
+
+  loadCatalog();
+</script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+
+  // Smart Home — goes to the Flower hub from a flower page, or the
+  // Chocolate hub from a chocolate page.
+  const homeLink=document.getElementById('chocoHomeLink');
+  if(homeLink){
+    const isFlowerPage = 'flower' === 'flower';
+    homeLink.href = isFlowerPage ? 'flower-tools.html' : 'index.html';
+    homeLink.textContent = isFlowerPage ? '🏠 Flower Tools' : '🏠 Chocolate Home';
+  }
+})();
+
+// ---------- Shared music player (same saved sound as the rest of
+// Lalabella on THIS device — set it once anywhere, it follows you
+// across every page on this same browser/phone). ----------
+(function(){
+  const audio = document.getElementById('chocoAudioPlayer');
+  const musicBtn = document.getElementById('chocoMusicToggleBtn');
+  const urlInput = document.getElementById('chocoMusicUrlInput');
+  const nowText = document.getElementById('chocoMusicNow');
+  const searchInput = document.getElementById('chocoMusicSearchInput');
+  const searchBtn = document.getElementById('chocoMusicSearchBtn');
+  if(!audio || !musicBtn) return;
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+  function playYouTube(id){
+    document.getElementById('chocoYtPlayerWrap').innerHTML =
+      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      urlInput.value = savedUrl;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+      } else {
+        audio.src = savedUrl;
+      }
+      // sessionStorage clears itself the moment the browser tab/window
+      // closes — exactly the reset point we want. If this session has
+      // already pressed ♫ once (on any page), every other page picks
+      // right back up automatically; otherwise it stays silent until
+      // tapped, same as a first-ever visit.
+      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
+      if(sessionPlaying){
+        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
+        isPlaying = true;
+        musicBtn.textContent = '♫ Playing';
+        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
+      } else {
+        isPlaying = false;
+        musicBtn.textContent = '♫ Music';
+        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
+      }
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  function applyUrl(url){
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      nowText.textContent = 'Now playing YouTube track';
+      isPlaying = true; musicBtn.textContent = '♫ Playing';
+      saveSoundChoice(url, true);
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    } else {
+      ytVideoId = null; stopYouTube();
+      audio.src = url;
+      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
+      saveSoundChoice(url, false);
+      audio.play().then(()=>{
+        isPlaying = true; musicBtn.textContent = '♫ Playing';
+        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    }
+  }
+
+  musicBtn.addEventListener('click', ()=>{
+    const url = urlInput.value.trim();
+    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
+      applyUrl(url);
+      return;
+    }
+    // No new URL typed — just toggle play/pause of whatever's loaded.
+    if(!audio.src && !ytVideoId) return;
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      musicBtn.textContent = '♫ Music'; isPlaying = false;
+      // Pausing here means "stop following me" — the next page won't
+      // resume on its own until ♫ is pressed again.
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      musicBtn.textContent = '♫ Playing'; isPlaying = true;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    }
+  });
+
+  // "Search" doesn't auto-pick a video (no API key set up) — it opens
+  // YouTube's own search in a new tab so you can pick the exact one,
+  // then paste that video's link back into the URL box above.
+  if(searchBtn && searchInput){
+    searchBtn.addEventListener('click', ()=>{
+      const q = searchInput.value.trim();
+      if(!q) return;
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+    });
+    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+  }
+})();
+</script>
+
+<script>
+(function(){
+  var CORRECT = '525304';
+  var QUOTES = [{"text": "The only way to do great work is to love what you do.", "author": "Steve Jobs"}, {"text": "Success is not final, failure is not fatal: it is the courage to continue that counts.", "author": "Winston Churchill"}, {"text": "Believe you can and you're halfway there.", "author": "Theodore Roosevelt"}, {"text": "It always seems impossible until it's done.", "author": "Nelson Mandela"}, {"text": "The future belongs to those who believe in the beauty of their dreams.", "author": "Eleanor Roosevelt"}, {"text": "Don't watch the clock; do what it does. Keep going.", "author": "Sam Levenson"}, {"text": "Every flower must grow through dirt.", "author": "Unknown"}, {"text": "Small steps every day lead to big results.", "author": "Unknown"}, {"text": "Great things never come from comfort zones.", "author": "Unknown"}, {"text": "Push yourself, because no one else is going to do it for you.", "author": "Unknown"}, {"text": "Dream it. Wish it. Do it.", "author": "Unknown"}, {"text": "Success doesn't just find you. You have to go out and get it.", "author": "Unknown"}, {"text": "The harder you work for something, the greater you'll feel when you achieve it.", "author": "Unknown"}, {"text": "Wake up with determination. Go to bed with satisfaction.", "author": "Unknown"}, {"text": "Do something today that your future self will thank you for.", "author": "Unknown"}, {"text": "Little things make big days.", "author": "Unknown"}, {"text": "It's going to be hard, but hard does not mean impossible.", "author": "Unknown"}, {"text": "Don't wait for opportunity. Create it.", "author": "Unknown"}, {"text": "Sometimes we're tested not to show our weaknesses, but to discover our strengths.", "author": "Unknown"}, {"text": "The key to success is to focus on goals, not obstacles.", "author": "Unknown"}];
+  var q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var qEl = document.getElementById('lala-lock-quote');
+  if(qEl) qEl.textContent = '"' + q.text + '" — ' + q.author;
+
+  if(localStorage.getItem('lalabellaAuth') === 'true'){
+    var ov = document.getElementById('lala-lock-overlay');
+    if(ov) ov.style.display = 'none';
+    return;
+  }
+  function tryUnlock(){
+    var val = document.getElementById('lala-lock-input').value;
+    if(val === CORRECT){
+      localStorage.setItem('lalabellaAuth', 'true');
+      document.getElementById('lala-lock-overlay').style.display = 'none';
+    } else {
+      document.getElementById('lala-lock-error').style.display = 'block';
+      document.getElementById('lala-lock-input').value = '';
+    }
+  }
+  document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
+  document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stock Adjustment Approval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --gold:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 18px 60px; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+    transition:color .12s ease;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+  header{ text-align:center; margin-bottom:24px; position:relative; }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .megaphone{
+    font-size:34px; display:inline-block; margin-bottom:6px;
+  }
+  .megaphone.alert{ animation: megaphonePulse 1s ease-in-out infinite; }
+  @keyframes megaphonePulse{
+    0%,100%{ transform:scale(1) rotate(0deg); }
+    50%{ transform:scale(1.15) rotate(-6deg); }
+  }
+
+  .refresh-link{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:7px 12px; border-radius:3px; cursor:pointer; margin-bottom:14px;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:4px;
+    padding:20px; margin-bottom:18px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px;
+    margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .pending-card{ border:2px solid var(--rust); }
+
+  .pending-row{
+    border-top:1px solid var(--line); padding:14px 0;
+  }
+  .pending-row:first-child{ border-top:none; }
+  .pending-top{ display:flex; justify-content:space-between; align-items:baseline; font-weight:600; font-size:14px; }
+  .pending-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:3px; }
+  .variance-amt{ font-family:'Space Mono',monospace; font-weight:700; }
+  .variance-pos{ color:var(--ok); }
+  .variance-neg{ color:var(--rust); }
+
+  .action-row{ display:flex; gap:8px; margin-top:12px; }
+  .action-btn{
+    flex:1; padding:10px 0; border-radius:3px; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;
+    cursor:pointer; border:1px solid; position:relative; overflow:hidden;
+  }
+  .action-btn.approve{ background:transparent; border-color:var(--ok); color:var(--ok); }
+  .action-btn.reject{ background:transparent; border-color:var(--rust); color:var(--rust); }
+  .action-btn.recount{ background:transparent; border-color:var(--gold); color:var(--gold); }
+
+  @keyframes stampIn{
+    0%{ opacity:0; transform:scale(2.2) rotate(-15deg); }
+    60%{ opacity:1; transform:scale(0.9) rotate(-8deg); }
+    100%{ opacity:1; transform:scale(1) rotate(-8deg); }
+  }
+  .stamp-overlay{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Space Mono',monospace; font-weight:700; font-size:42px;
+    letter-spacing:0.1em; padding:14px 28px; border:5px solid;
+    border-radius:8px; z-index:999; pointer-events:none;
+    animation: stampIn .4s cubic-bezier(.2,1.6,.4,1) forwards, stampFade .3s ease 1s forwards;
+  }
+  .stamp-overlay.approved{ color:var(--ok); border-color:var(--ok); background:rgba(61,122,79,0.08); }
+  .stamp-overlay.rejected{ color:var(--rust); border-color:var(--rust); background:rgba(176,68,46,0.08); }
+  @keyframes stampFade{ to{ opacity:0; } }
+
+  @keyframes shakeCard{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(6px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(4px); }
+  }
+  .shake{ animation: shakeCard .5s ease; }
+
+  .hist-row{ border-top:1px solid var(--line); padding:12px 0; font-size:13px; }
+  .hist-row:first-child{ border-top:none; }
+  .hist-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-weight:600; }
+  .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
+</style>
+<style>
+#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0,#f6e0da);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;}
+#lala-lock-box{background:#fff;border-radius:18px;padding:32px 28px;box-shadow:0 12px 40px rgba(158,47,74,.18);text-align:center;max-width:300px;width:90%;}
+#lala-lock-box h2{font-family:'Great Vibes',cursive;color:#9e2f4a;font-size:2.2rem;margin:0 0 6px;}
+#lala-lock-box p{color:#8a7078;font-size:12.5px;margin:0 0 18px;}
+#lala-lock-input{width:100%;padding:12px;border:1px solid #f0d9d9;border-radius:10px;font-size:20px;text-align:center;letter-spacing:6px;margin-bottom:12px;box-sizing:border-box;font-family:inherit;}
+#lala-lock-input:focus{outline:none;border-color:#c9506b;}
+#lala-lock-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+#lala-lock-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;}
+</style>
+</head>
+<body>
+<div id="lala-lock-overlay">
+  <div id="lala-lock-box">
+    <h2>Lalabella</h2>
+    <p>I-type ang password para magpatuloy</p>
+    <div id="lala-lock-quote" style="font-size:11.5px;color:#c9506b;font-style:italic;margin-bottom:16px;line-height:1.5;"></div>
+    <input type="password" id="lala-lock-input" inputmode="numeric" maxlength="10" placeholder="••••••" autocomplete="off">
+    <button id="lala-lock-btn">Unlock</button>
+    <div id="lala-lock-error">Maling password, subukan ulit.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="megaphone" id="megaphone">📢</div>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Stock Approval</h1>
+    <p class="sub">Review counts with a variance</p>
+  </header>
+
+  <button class="refresh-link" id="refreshBtn">↻ Refresh Data</button>
+
+  <div class="card pending-card">
+    <div class="card-title">Pending Approvals <span id="pendingCount" style="color:var(--rust); font-family:'Space Mono',monospace;"></span></div>
+    <div id="pendingList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Adjustment History</div>
+    <div id="adjustmentHistory"></div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec';
+
+  let pending = [];
+
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d);
+    if(isNaN(dt)) return String(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  /* ---------- Soft two-tone siren (announcement-style, quiet) ---------- */
+  function playSoftSiren(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      const now = ctx.currentTime;
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.linearRampToValueAtTime(550, now + 0.35);
+      osc.frequency.linearRampToValueAtTime(440, now + 0.7);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.06, now + 0.08);
+      gain.gain.linearRampToValueAtTime(0.06, now + 0.6);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.8);
+    }catch(e){}
+  }
+
+  function playStampSound(positive){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const freqs = positive ? [523.25, 659.25, 783.99] : [349.23, 293.66];
+      freqs.forEach((f,i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = f;
+        const start = ctx.currentTime + i*0.06;
+        gain.gain.setValueAtTime(0.1, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start); osc.stop(start + 0.32);
+      });
+    }catch(e){}
+  }
+
+  function playJazzClose(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const chord = [261.63, 329.63, 392.00, 493.88];
+      chord.forEach((freq, i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.05;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.08, start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.1);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start); osc.stop(start + 1.2);
+      });
+    }catch(e){}
+  }
+
+  function showStamp(label, cls){
+    const el = document.createElement('div');
+    el.className = 'stamp-overlay ' + cls;
+    el.textContent = label;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1300);
+  }
+
+  let alarmInterval = null;
+
+  async function loadData(){
+    const t = Date.now();
+    const [pendingRes, adjHistory] = await Promise.all([
+      fetch(API_URL + '?action=getPendingApprovals&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; }),
+      fetch(API_URL + '?action=getAdjustmentHistory&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; })
+    ]);
+    pending = pendingRes;
+
+    const megaphone = document.getElementById('megaphone');
+    if(pending.length > 0){
+      megaphone.classList.add('alert');
+      if(!alarmInterval){
+        playSoftSiren();
+        alarmInterval = setInterval(playSoftSiren, 4500);
+      }
+    } else {
+      megaphone.classList.remove('alert');
+      if(alarmInterval){
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+    }
+
+    renderPending();
+    renderAdjustmentHistory(adjHistory);
+  }
+
+  function renderAdjustmentHistory(adjHistory){
+    const el = document.getElementById('adjustmentHistory');
+    if(!adjHistory || adjHistory.length === 0){
+      el.innerHTML = '<div class="empty-note">No adjustments approved yet.</div>';
+      return;
+    }
+    const sorted = [...adjHistory].sort((a,b) => new Date(b['Date']) - new Date(a['Date']));
+    el.innerHTML = sorted.slice(0, 40).map(a => {
+      const qty = Number(a['Adjustment Qty']);
+      const varCls = qty >= 0 ? 'variance-pos' : 'variance-neg';
+      const sign = qty > 0 ? '+' : '';
+      return `
+        <div class="hist-row">
+          <div class="hist-top">
+            <span>${a['Chocolate'] || '—'}</span>
+            <span class="variance-amt ${varCls}">${sign}${qty}</span>
+          </div>
+          <div class="hist-meta">${a['Branch'] || '—'} · ${fmtDate(a['Date'])} · Reason: ${a['Reason'] || '—'} · By: ${a['Approved By'] || '—'}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderPending(){
+    const el = document.getElementById('pendingList');
+    document.getElementById('pendingCount').textContent = pending.length > 0 ? `(${pending.length})` : '';
+    if(pending.length === 0){
+      el.innerHTML = '<div class="empty-note">No pending approvals right now.</div>';
+      return;
+    }
+    el.innerHTML = pending.map(p => {
+      const variance = Number(p['Variance']);
+      const varCls = variance >= 0 ? 'variance-pos' : 'variance-neg';
+      const varSign = variance > 0 ? '+' : '';
+      return `
+        <div class="pending-row" data-count-id="${p['Count ID']}">
+          <div class="pending-top">
+            <span>${p['Chocolate'] || '—'}</span>
+            <span class="variance-amt ${varCls}">${varSign}${variance}</span>
+          </div>
+          <div class="pending-meta">${p['Branch'] || '—'} · ${fmtDate(p['Date'])} · Batch: ${p['Batch No'] || '—'}</div>
+          <div class="pending-meta">System: ${p['System Stock']} · Physical: ${p['Physical Count']} · Reason: ${p['Variance Reason'] || '—'}</div>
+          <div class="pending-meta">Counted by: ${p['Counted By'] || '—'}</div>
+          <div class="action-row">
+            <button class="action-btn approve" data-action="approve">Approve</button>
+            <button class="action-btn reject" data-action="reject">Reject</button>
+            <button class="action-btn recount" data-action="recount">Recount</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.action-btn').forEach(btn=>{
+      btn.addEventListener('click', handleAction);
+    });
+  }
+
+  async function handleAction(e){
+    const btn = e.currentTarget;
+    const row = btn.closest('.pending-row');
+    const countId = row.dataset.countId;
+    const action = btn.dataset.action;
+
+    row.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
+
+    try{
+      if(action === 'approve'){
+        await fetch(`${API_URL}?action=approveCount&countId=${encodeURIComponent(countId)}&approvedBy=`);
+        showStamp('APPROVED', 'approved');
+        playStampSound(true);
+      } else if(action === 'reject'){
+        await fetch(`${API_URL}?action=rejectCount&countId=${encodeURIComponent(countId)}`);
+        showStamp('REJECTED', 'rejected');
+        playStampSound(false);
+      } else if(action === 'recount'){
+        await fetch(`${API_URL}?action=requestRecount&countId=${encodeURIComponent(countId)}`);
+        row.classList.add('shake');
+      }
+      setTimeout(()=> loadData(), 700);
+    }catch(e){
+      alert('Could not complete that action. Check your connection and try again.');
+      row.querySelectorAll('.action-btn').forEach(b => b.disabled = false);
+    }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = 'Refreshing...';
+    await loadData();
+    btn.textContent = '↻ Refresh Data';
+    playJazzClose();
+  });
+
+  loadData();
+</script>
+<script>
+(function(){
+  var CORRECT = '525304';
+  var QUOTES = [{"text": "The only way to do great work is to love what you do.", "author": "Steve Jobs"}, {"text": "Success is not final, failure is not fatal: it is the courage to continue that counts.", "author": "Winston Churchill"}, {"text": "Believe you can and you're halfway there.", "author": "Theodore Roosevelt"}, {"text": "It always seems impossible until it's done.", "author": "Nelson Mandela"}, {"text": "The future belongs to those who believe in the beauty of their dreams.", "author": "Eleanor Roosevelt"}, {"text": "Don't watch the clock; do what it does. Keep going.", "author": "Sam Levenson"}, {"text": "Every flower must grow through dirt.", "author": "Unknown"}, {"text": "Small steps every day lead to big results.", "author": "Unknown"}, {"text": "Great things never come from comfort zones.", "author": "Unknown"}, {"text": "Push yourself, because no one else is going to do it for you.", "author": "Unknown"}, {"text": "Dream it. Wish it. Do it.", "author": "Unknown"}, {"text": "Success doesn't just find you. You have to go out and get it.", "author": "Unknown"}, {"text": "The harder you work for something, the greater you'll feel when you achieve it.", "author": "Unknown"}, {"text": "Wake up with determination. Go to bed with satisfaction.", "author": "Unknown"}, {"text": "Do something today that your future self will thank you for.", "author": "Unknown"}, {"text": "Little things make big days.", "author": "Unknown"}, {"text": "It's going to be hard, but hard does not mean impossible.", "author": "Unknown"}, {"text": "Don't wait for opportunity. Create it.", "author": "Unknown"}, {"text": "Sometimes we're tested not to show our weaknesses, but to discover our strengths.", "author": "Unknown"}, {"text": "The key to success is to focus on goals, not obstacles.", "author": "Unknown"}];
+  var q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var qEl = document.getElementById('lala-lock-quote');
+  if(qEl) qEl.textContent = '"' + q.text + '" — ' + q.author;
+
+  if(localStorage.getItem('lalabellaAuth') === 'true'){
+    var ov = document.getElementById('lala-lock-overlay');
+    if(ov) ov.style.display = 'none';
+    return;
+  }
+  function tryUnlock(){
+    var val = document.getElementById('lala-lock-input').value;
+    if(val === CORRECT){
+      localStorage.setItem('lalabellaAuth', 'true');
+      document.getElementById('lala-lock-overlay').style.display = 'none';
+    } else {
+      document.getElementById('lala-lock-error').style.display = 'block';
+      document.getElementById('lala-lock-input').value = '';
+    }
+  }
+  document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
+  document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
+})();
+</script>
+
+</body>
+</html>

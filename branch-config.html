@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Branch Config</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
+  .sub{ color:var(--ink-dim); font-size:13px; margin-top:14px; line-height:1.6; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px; }
+  .branch{ border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; position:relative; }
+  .branch .remove-branch{ position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%; background:var(--blush); border:none; color:#c0392b; cursor:pointer; font-size:12px; }
+  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field.full{ grid-column:1/-1; }
+  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
+  input, select{ border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px; color:var(--ink); font-family:inherit; background:#fff; outline:none; }
+  select{ cursor:pointer; }
+  input:focus{ border-color:var(--rose); }
+  .hint{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
+
+  .add-branch{ background:none; border:1px dashed var(--rose); color:var(--rose-deep); border-radius:10px; padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .btn{ padding:11px 18px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn:disabled{ opacity:0.6; cursor:default; }
+  .saved-msg{ display:none; margin-top:10px; color:var(--ok); font-size:12.5px; font-weight:600; }
+
+  .api-box{ background:var(--blush); border-radius:12px; padding:12px 14px; font-size:11.5px; color:var(--ink-dim); word-break:break-all; margin-top:16px; }
+  .api-box b{ color:var(--rose-deep); }
+</style>
+<style>
+#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0,#f6e0da);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;}
+#lala-lock-box{background:#fff;border-radius:18px;padding:32px 28px;box-shadow:0 12px 40px rgba(158,47,74,.18);text-align:center;max-width:300px;width:90%;}
+#lala-lock-box h2{font-family:'Great Vibes',cursive;color:#9e2f4a;font-size:2.2rem;margin:0 0 6px;}
+#lala-lock-box p{color:#8a7078;font-size:12.5px;margin:0 0 18px;}
+#lala-lock-input{width:100%;padding:12px;border:1px solid #f0d9d9;border-radius:10px;font-size:20px;text-align:center;letter-spacing:6px;margin-bottom:12px;box-sizing:border-box;font-family:inherit;}
+#lala-lock-input:focus{outline:none;border-color:#c9506b;}
+#lala-lock-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+#lala-lock-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;}
+</style>
+</head>
+<body>
+<div id="lala-lock-overlay">
+  <div id="lala-lock-box">
+    <h2>Lalabella</h2>
+    <p>I-type ang password para magpatuloy</p>
+    <div id="lala-lock-quote" style="font-size:11.5px;color:#c9506b;font-style:italic;margin-bottom:16px;line-height:1.5;"></div>
+    <input type="password" id="lala-lock-input" inputmode="numeric" maxlength="10" placeholder="••••••" autocomplete="off">
+    <button id="lala-lock-btn">Unlock</button>
+    <div id="lala-lock-error">Maling password, subukan ulit.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <a class="back-link" id="backLink" href="flower-tools.html">&larr; Flower Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Branch Config</h1>
+    <div class="sub">Branch locations used by the order-assignment helper — add each branch's coordinates and the area names/keywords nearby it.</div>
+  </header>
+
+  <div class="card">
+    <div id="branchesList"></div>
+    <button class="add-branch" id="addBranchBtn">＋ Add Branch</button>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="saveBtn">💾 Save Branches</button>
+    </div>
+    <div class="saved-msg" id="savedMsg">✓ Branch list saved.</div>
+
+    <div class="api-box">
+      <b>For the Tampermonkey script:</b> it fetches this list from
+      <span id="apiUrlText">…</span>?action=getBranchConfig
+    </div>
+  </div>
+</div>
+
+<script>
+const FLOWER_API = 'https://script.google.com/macros/s/AKfycbyD9RV8ATs0uLjjkyCVcRiM4aYZPttDredD3BZsE1vbv61gER6A3oT00_BkMUR5FPE/exec';
+document.getElementById('apiUrlText').textContent = FLOWER_API;
+const API_NOT_SET = FLOWER_API.indexOf('PASTE_YOUR') === 0;
+if(API_NOT_SET){
+  const warn = document.createElement('p');
+  warn.style.cssText = 'color:#c0392b; font-size:13px; line-height:1.6; background:#fdecec; border-radius:10px; padding:12px 14px;';
+  warn.innerHTML = '⚠️ Hindi pa naka-set ang bagong Order Assign API URL. Hanapin ang <code>FLOWER_API</code> sa simula ng script sa file na ito, at palitan ng bagong deployed Web App URL mula sa hiwalay mong Google Sheet + Apps Script.';
+  document.querySelector('.card').prepend(warn);
+  document.getElementById('saveBtn').disabled = true;
+}
+
+// Smart back — same pattern as Notes/Order Form/Card Print.
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let cameFrom = params.get('from');
+  if(cameFrom){ localStorage.setItem('lalabellaBackFrom', cameFrom); }
+  else{ cameFrom = localStorage.getItem('lalabellaBackFrom'); }
+  const backLink = document.getElementById('backLink');
+  if(cameFrom === 'index'){
+    backLink.href = 'index.html';
+    backLink.innerHTML = '&larr; Chocolate Home';
+  } else {
+    backLink.href = 'flower-tools.html';
+    backLink.innerHTML = '&larr; Flower Tools';
+  }
+})();
+
+let branches = [];
+let branchIdSeq = 1;
+
+function addBranch(name = '', lat = '', lng = '', keywords = ''){
+  branches.push({ id: branchIdSeq++, name, lat, lng, keywords });
+  renderBranches();
+}
+
+function renderBranches(){
+  const list = document.getElementById('branchesList');
+  list.innerHTML = branches.map(b => `
+    <div class="branch" data-id="${b.id}">
+      ${branches.length > 1 ? '<button class="remove-branch" title="Remove">✕</button>' : ''}
+      <div class="fields">
+        <div class="field full">
+          <label>Branch Name</label>
+          <select class="b-name">
+            <option value="">— Select branch —</option>
+            <option value="Qalali" ${b.name === 'Qalali' ? 'selected' : ''}>Qalali</option>
+            <option value="Moda Mall" ${b.name === 'Moda Mall' ? 'selected' : ''}>Moda Mall</option>
+            <option value="Hamala" ${b.name === 'Hamala' ? 'selected' : ''}>Hamala</option>
+          </select>
+        </div>
+        <div class="field"><label>Latitude</label><input class="b-lat" value="${b.lat}" placeholder="e.g. 26.2285" inputmode="decimal"></div>
+        <div class="field"><label>Longitude</label><input class="b-lng" value="${b.lng}" placeholder="e.g. 50.5860" inputmode="decimal"></div>
+        <div class="field full">
+          <label>Nearby Area Keywords</label>
+          <input class="b-keywords" value="${b.keywords}" placeholder="e.g. Seef, Juffair, Adliya (comma-separated)">
+          <div class="hint">Used as a text-match backup if exact coordinates aren't available for an order.</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.branch').forEach(el=>{
+    const id = Number(el.dataset.id);
+    const b = branches.find(x => x.id === id);
+    el.querySelector('.b-name').addEventListener('change', e=> b.name = e.target.value);
+    el.querySelector('.b-lat').addEventListener('input', e=> b.lat = e.target.value);
+    el.querySelector('.b-lng').addEventListener('input', e=> b.lng = e.target.value);
+    el.querySelector('.b-keywords').addEventListener('input', e=> b.keywords = e.target.value);
+    const removeBtn = el.querySelector('.remove-branch');
+    if(removeBtn){
+      removeBtn.addEventListener('click', ()=>{
+        branches = branches.filter(x => x.id !== id);
+        renderBranches();
+      });
+    }
+  });
+}
+
+document.getElementById('addBranchBtn').addEventListener('click', ()=> addBranch());
+
+function loadBranches(){
+  if(API_NOT_SET){
+    branches = [{ id: branchIdSeq++, name: '', lat: '', lng: '', keywords: '' }];
+    renderBranches();
+    return;
+  }
+  fetch(FLOWER_API + '?action=getBranchConfig')
+    .then(r => r.json())
+    .then(data => {
+      if(Array.isArray(data) && data.length){
+        branches = data.map(d => ({
+          id: branchIdSeq++, name: d.Name || '', lat: d.Latitude || '', lng: d.Longitude || '', keywords: d.Keywords || ''
+        }));
+      } else {
+        branches = [{ id: branchIdSeq++, name: '', lat: '', lng: '', keywords: '' }];
+      }
+      renderBranches();
+    })
+    .catch(()=>{
+      branches = [{ id: branchIdSeq++, name: '', lat: '', lng: '', keywords: '' }];
+      renderBranches();
+    });
+}
+loadBranches();
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const cleaned = branches
+    .filter(b => b.name.trim())
+    .map(b => ({ name: b.name.trim(), lat: b.lat, lng: b.lng, keywords: b.keywords }));
+
+  // Show exactly what's about to be saved — catches a blank Lat/Long/
+  // Keywords field BEFORE it overwrites the sheet, instead of finding
+  // out only after the fact.
+  const preview = cleaned.map(b =>
+    `${b.name}\n  Lat: ${b.lat || '(blangko)'}\n  Long: ${b.lng || '(blangko)'}\n  Keywords: ${b.keywords || '(blangko)'}`
+  ).join('\n\n');
+  const confirmed = confirm('Ito ang ise-save:\n\n' + preview + '\n\nTama ba ito?');
+  if(!confirmed) return;
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const body = new URLSearchParams({ action: 'saveBranchConfig', branches: JSON.stringify(cleaned) });
+
+  fetch(FLOWER_API, { method: 'POST', body })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Branches';
+      if(res.error || !res.success){
+        alert('Hindi na-save: ' + (res.error || 'Unknown error'));
+        return;
+      }
+      const msg = document.getElementById('savedMsg');
+      msg.style.display = 'block';
+      setTimeout(()=>{ msg.style.display = 'none'; }, 3000);
+    })
+    .catch(()=>{
+      btn.disabled = false;
+      btn.textContent = '💾 Save Branches';
+      alert('Hindi na-save — check ang internet connection mo.');
+    });
+});
+</script>
+<script>
+(function(){
+  var CORRECT = '525304';
+  var QUOTES = [{"text": "The only way to do great work is to love what you do.", "author": "Steve Jobs"}, {"text": "Success is not final, failure is not fatal: it is the courage to continue that counts.", "author": "Winston Churchill"}, {"text": "Believe you can and you're halfway there.", "author": "Theodore Roosevelt"}, {"text": "It always seems impossible until it's done.", "author": "Nelson Mandela"}, {"text": "The future belongs to those who believe in the beauty of their dreams.", "author": "Eleanor Roosevelt"}, {"text": "Don't watch the clock; do what it does. Keep going.", "author": "Sam Levenson"}, {"text": "Every flower must grow through dirt.", "author": "Unknown"}, {"text": "Small steps every day lead to big results.", "author": "Unknown"}, {"text": "Great things never come from comfort zones.", "author": "Unknown"}, {"text": "Push yourself, because no one else is going to do it for you.", "author": "Unknown"}, {"text": "Dream it. Wish it. Do it.", "author": "Unknown"}, {"text": "Success doesn't just find you. You have to go out and get it.", "author": "Unknown"}, {"text": "The harder you work for something, the greater you'll feel when you achieve it.", "author": "Unknown"}, {"text": "Wake up with determination. Go to bed with satisfaction.", "author": "Unknown"}, {"text": "Do something today that your future self will thank you for.", "author": "Unknown"}, {"text": "Little things make big days.", "author": "Unknown"}, {"text": "It's going to be hard, but hard does not mean impossible.", "author": "Unknown"}, {"text": "Don't wait for opportunity. Create it.", "author": "Unknown"}, {"text": "Sometimes we're tested not to show our weaknesses, but to discover our strengths.", "author": "Unknown"}, {"text": "The key to success is to focus on goals, not obstacles.", "author": "Unknown"}];
+  var q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var qEl = document.getElementById('lala-lock-quote');
+  if(qEl) qEl.textContent = '"' + q.text + '" — ' + q.author;
+
+  if(localStorage.getItem('lalabellaAuth') === 'true'){
+    var ov = document.getElementById('lala-lock-overlay');
+    if(ov) ov.style.display = 'none';
+    return;
+  }
+  function tryUnlock(){
+    var val = document.getElementById('lala-lock-input').value;
+    if(val === CORRECT){
+      localStorage.setItem('lalabellaAuth', 'true');
+      document.getElementById('lala-lock-overlay').style.display = 'none';
+    } else {
+      document.getElementById('lala-lock-error').style.display = 'block';
+      document.getElementById('lala-lock-input').value = '';
+    }
+  }
+  document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
+  document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
+})();
+</script>
+
+</body>
+</html>
