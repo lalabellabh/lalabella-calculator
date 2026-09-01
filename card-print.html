@@ -1,0 +1,1813 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaLaBella • Card Print</title>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#3a2835;--pink:#f6dfe3;--cream:#fbf7f1;--line:#ead6da;--accent:#a34f72}
+body{margin:0;color:var(--ink);font-family:Arial,sans-serif;background:
+  radial-gradient(circle at 8% 8%, rgba(163,79,114,0.10), transparent 42%),
+  radial-gradient(circle at 94% 16%, rgba(95,143,99,0.10), transparent 42%),
+  linear-gradient(135deg,#f9e9eb 0%,#faf8f3 48%,#eef3ec 100%);min-height:100vh}
+.top{padding:26px 18px 16px;text-align:center;position:relative;overflow:hidden}
+.top::before{content:'💌';position:absolute;font-size:56px;opacity:0.10;left:calc(50% - 220px);top:6px;transform:rotate(-14deg);}
+.top::after{content:'🌸';position:absolute;font-size:52px;opacity:0.10;left:calc(50% + 180px);top:10px;transform:rotate(12deg);}
+.kicker{letter-spacing:4px;font-size:11px;color:#a85b78;font-weight:700}
+h1{font-family:"Baskerville Old Face",Baskerville,Georgia,serif;font-size:42px;line-height:.95;margin:8px 0 5px}
+.sub{color:#806f78;font-size:13px}
+.panel{max-width:1100px;margin:0 auto 18px;background:#fffdfbde;border:1px solid #eadde0;border-radius:20px;padding:12px;box-shadow:0 10px 30px #6b43521c;backdrop-filter:blur(8px)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+button,select,input{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;font-size:14px;color:var(--ink)}
+button{cursor:pointer}button:hover{background:#fff5f7}#backTools{font-weight:700}.primary{background:#8f3f61;color:#fff;border-color:#8f3f61}
+[data-align].active,[data-dir].active{background:#f7dfe3;color:var(--accent);border-color:var(--accent);font-weight:800}
+.group{display:flex;gap:5px;align-items:center}.label{font-size:12px;color:#806f78}
+.stage{padding:0;display:flex;justify-content:center;align-self:start;}
+.card{width:4.33in;height:4.33in;background:#fff;position:relative;overflow:hidden;border:1px solid #e1d7d8;box-shadow:0 18px 45px #49333c20}
+.card-deco-leaf{position:absolute;right:-6px;bottom:-10px;font-size:64px;opacity:.08;transform:rotate(18deg);pointer-events:none;z-index:1;user-select:none;}
+.card.small .card-deco-leaf{font-size:46px;}
+.card.circle10 .card-deco-leaf{font-size:52px;right:4px;bottom:0;}
+.card.small{width:2in;height:2in}
+.card.circle10{width:100mm;height:100mm;border-radius:50%;}
+.card.a4{width:210mm;height:297mm;}
+.card.circle10 .textArea{inset:14mm;}
+.textArea{position:absolute;inset:.28in;z-index:2;outline:none;white-space:pre-wrap;overflow-wrap:anywhere;font-family:"Baskerville Old Face",Baskerville,Georgia,serif;font-size:16px;line-height:1.35;direction:auto;text-align:center;unicode-bidi:plaintext}
+.card.small .textArea{inset:.20in;font-size:13px}
+.placeholder{color:#aaa}
+.card .image-item{position:absolute;left:12px;top:12px;width:120px;height:auto;z-index:4;cursor:move;user-select:none;touch-action:none}
+.image-item img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.image-item.fill-cover img{object-fit:cover;}
+.image-item.selected{outline:1px dashed #a34f72}
+.resize-handle{display:none;position:absolute;width:12px;height:12px;right:-6px;bottom:-6px;background:#a34f72;border:2px solid white;border-radius:50%;cursor:nwse-resize;touch-action:none}
+.image-item.selected .resize-handle{display:block}
+.delete-handle{display:none;position:absolute;width:22px;height:22px;right:-11px;top:-11px;background:#c0392b;border:2px solid white;border-radius:50%;cursor:pointer;touch-action:none;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;line-height:1;}
+.image-item.selected .delete-handle{display:flex;}
+.empty-tip{font-size:12px;color:#8b7b83;margin-top:8px;text-align:center}
+@media(max-width:600px){h1{font-size:34px}.stage{padding:8px 8px 40px;overflow-x:auto}.panel{margin-left:8px;margin-right:8px}.toolbar{justify-content:flex-start}.sub{font-size:12px}.top::before,.top::after{display:none}button,select,input{padding:11px 12px;font-size:15px}}
+@media print{
+ @page{size:auto;margin:0}
+ html,body{margin:0!important;padding:0!important;background:#fff!important}
+ .top,.panel,.empty-tip{display:none!important}
+ .art-panel,.notes-panel,.notes-teaser{display:none!important}
+ .message-workspace{display:block!important;max-width:none!important;padding:0!important;margin:0!important;}
+ .stage{display:block!important;margin:0!important;padding:0!important}
+ .stage-with-rulers{display:block!important}
+ .ruler-top,.ruler-left,.ruler-corner{display:none!important}
+ .card{margin:0;border:0;box-shadow:none;break-after:page;page-break-after:always;transform:translate(var(--printOffsetX,0mm),var(--printOffsetY,0mm))}
+ .card:last-child{break-after:auto;page-break-after:auto}
+ .image-item,.image-item.selected{outline:0!important}
+ .resize-handle,.delete-handle,#centerGuideV,.userGuideH,#imageToolbar,#highlightToolbar{display:none!important}
+ #printSheet{display:none!important}
+ body.printing-circle #printSheet{display:grid!important;position:relative!important;width:210mm!important;height:297mm!important;margin:0!important;padding:0!important;grid-template-columns:100mm 100mm!important;grid-template-rows:100mm 100mm!important;align-content:start!important;justify-content:start!important}
+ body.printing-circle #printSheet .card{display:block!important;width:100mm!important;height:100mm!important;border-radius:50%!important;margin:0!important;transform:none!important;break-after:auto!important;page-break-after:auto!important;overflow:hidden!important}
+ body.printing-circle .message-workspace{display:none!important}
+ body.printing-circle .stage{display:none!important}
+}
+#centerGuideV{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#3ecf5c;transform:translateX(-1px);z-index:400;display:none;pointer-events:none;}
+#centerGuideV.show{display:block;}
+
+/* Rulers along the top and left of the card, showing inches — purely
+   an on-screen placement aid, never part of the printed output. */
+.stage-with-rulers{display:inline-flex;flex-direction:column;align-items:flex-start;}
+.ruler-row{display:flex;align-items:flex-start;}
+.ruler-corner{flex-shrink:0;}
+.ruler-top{position:relative;height:20px;background:#faf5f5;border-bottom:1px solid var(--line);box-sizing:border-box;}
+.ruler-left{position:relative;width:20px;background:#faf5f5;border-right:1px solid var(--line);box-sizing:border-box;flex-shrink:0;}
+.ruler-tick{position:absolute;background:#b89aa0;}
+.ruler-top .ruler-tick{bottom:0;width:1px;}
+.ruler-left .ruler-tick{right:0;height:1px;}
+.ruler-tick.major{background:#8a6068;}
+.ruler-label{position:absolute;font-size:8.5px;color:#8a6068;font-family:sans-serif;user-select:none;}
+.ruler-top .ruler-label{bottom:2px;transform:translateX(-50%);}
+.ruler-left .ruler-label{right:3px;transform:translateY(-50%) rotate(0deg);}
+
+/* User-placed horizontal guide lines — visible only while editing,
+   same hide-on-print treatment as the center guide above. */
+.userGuideH{position:absolute;left:0;right:0;height:0;border-top:1px dashed #3d7ea6;z-index:399;cursor:pointer;}
+.userGuideH:hover{border-top-color:#c0392b;}
+.userGuideH .guideLabel{position:absolute;left:2px;top:-16px;font-size:9px;background:#3d7ea6;color:#fff;padding:1px 5px;border-radius:3px;white-space:nowrap;}
+.userGuideH:hover .guideLabel{background:#c0392b;}
+
+/* ===== LaLaBella Arts / Envelope Notes UI ===== */
+body{
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.45;
+  background-image:
+    radial-gradient(circle at 12% 28%, transparent 0 22px, #c98da21c 23px 24px, transparent 25px),
+    radial-gradient(circle at 88% 72%, transparent 0 30px, #7fa88418 31px 32px, transparent 33px),
+    linear-gradient(120deg, transparent 0 48%, #c98da20c 49% 50%, transparent 51% 100%);
+}
+.art-leaf{
+  position:fixed; pointer-events:none; opacity:.16; font-size:70px; z-index:-1;
+  filter:grayscale(.1);
+}
+.art-leaf.a{left:2%;top:18%;transform:rotate(-25deg)}
+.art-leaf.b{right:2%;bottom:12%;transform:rotate(28deg)}
+.message-workspace{
+  max-width:1400px;margin:0 auto 20px;padding:0 18px;
+  display:grid;grid-template-columns:minmax(220px,.7fr) auto minmax(260px,.85fr);gap:18px;align-items:start;justify-content:center;
+}
+.art-panel{
+  min-height:360px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,#fffdfb,#f8eeef);
+  border:1px solid #eadde0;border-radius:22px;box-shadow:0 12px 30px #6b435218;
+  position:relative;overflow:visible;padding-top:60px;
+}
+.art-panel:before,.art-panel:after{
+  content:"";position:absolute;border:1px solid #c98da230;border-radius:50%;z-index:0;
+}
+.art-panel:before{width:220px;height:220px;left:-105px;top:-100px}
+.art-panel:after{width:170px;height:170px;right:-80px;bottom:-80px}
+.envelope{
+  width:260px;height:175px;position:relative;cursor:pointer;
+  filter:drop-shadow(0 18px 18px #4d313b22);
+  transition:transform .35s ease;
+}
+.envelope:hover{transform:translateY(-5px) rotate(-1deg)}
+.env-body{
+  position:absolute;inset:0;border-radius:8px;
+  background:linear-gradient(145deg,#fff9f6,#f0d9dc);
+  border:1px solid #dcbfc4;overflow:hidden;z-index:3;
+}
+.env-body:before,.env-body:after{
+  content:"";position:absolute;bottom:-70px;width:190px;height:190px;
+  background:#f7e5e6;border:1px solid #dfc6ca;
+}
+.env-body:before{left:-95px;transform:rotate(45deg)}
+.env-body:after{right:-95px;transform:rotate(45deg)}
+.env-flap{
+  position:absolute;left:0;top:0;width:0;height:0;
+  border-left:130px solid transparent;border-right:130px solid transparent;
+  border-top:90px solid #e9cbd0;z-index:4;
+  transform-origin:50% 0;
+  transition:transform .65s cubic-bezier(.2,.8,.2,1),z-index .1s;
+  filter:drop-shadow(0 2px 2px #6b435215);
+}
+.envelope.open .env-flap{transform:rotateX(180deg);z-index:1}
+.env-seal{
+  position:absolute;left:50%;top:77px;transform:translateX(-50%);
+  width:44px;height:44px;border-radius:50%;background:#a34f72;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:20px;z-index:5;
+  box-shadow:0 5px 12px #6b435230;transition:.3s;
+}
+.envelope.open .env-seal{opacity:0;transform:translateX(-50%) scale(.6)}
+.hidden-card{
+  position:absolute;left:34px;top:27px;width:192px;height:132px;border-radius:5px;
+  background:linear-gradient(145deg,#fffdfb,#fff4f5);border:1px solid #dfcfd2;z-index:2;
+  box-shadow:0 9px 18px #4d313b25;padding:17px 18px;text-align:center;
+  transition:transform .65s cubic-bezier(.2,.8,.2,1);
+  overflow:hidden;
+}
+.hidden-card:before{
+  content:"";position:absolute;inset:9px;border:1px solid #ead6da;border-radius:3px;
+}
+.hidden-card:after{
+  content:"🌸";position:absolute;right:7px;bottom:4px;font-size:20px;opacity:.35;
+}
+.hidden-card .mini-title,.hidden-card .mini-text{position:relative;z-index:2}
+.envelope.open .hidden-card{
+  z-index:5;
+  transform:translateY(-118px) rotate(-2deg) scale(1.03);
+  box-shadow:0 16px 28px #4d313b30;
+}
+.hidden-card .mini-title{font:700 16px Georgia,serif;color:#8f3f61}
+.hidden-card .mini-text{font:11px/1.35 Georgia,serif;color:#66545c;margin-top:7px}
+.envelope-label{
+  position:absolute;bottom:16px;left:0;right:0;text-align:center;z-index:8;
+  font-size:10px;letter-spacing:1.2px;color:#8f3f61;font-weight:700;
+}
+
+/* Design / Plain / Sleeve toggles below the envelope */
+.sticker-toggles{display:flex;gap:6px;margin-top:14px;justify-content:center;flex-wrap:wrap;}
+.voice-picker{position:absolute;right:-48px;top:50%;transform:translateY(-50%);display:flex;align-items:center;margin:0;z-index:20;}
+#voiceMuteBtn{width:38px;height:38px;padding:0;border:1px solid #ead6da;border-radius:50%;background:#fff;color:#8f3f61;cursor:pointer;font-size:17px;box-shadow:0 5px 14px #4d313b18;}
+#voiceMuteBtn.muted{background:#eee;opacity:.65;}
+.stickerToggleBtn{
+  font-size:11px;padding:7px 11px;border:1px solid #ead6da;border-radius:20px;
+  background:#fff;color:#8f3f61;cursor:pointer;font-weight:600;
+}
+.stickerToggleBtn.active{background:#9e2f4a;color:#fff;border-color:#9e2f4a;}
+.sticker-drawer{
+  display:none;margin-top:10px;padding:12px;border:1px solid #ead6da;border-radius:14px;
+  background:#fffaf8;max-height:450px;overflow-y:auto;
+}
+.sticker-drawer.show{display:block;}
+.sticker-drawer-title{font-size:11px;color:#8a7078;margin-bottom:8px;}
+.sticker-drawer-empty{font-size:12px;color:#b89aa0;text-align:center;padding:16px 8px;}
+.sticker-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.sticker-thumb{
+  border:1px solid #ead6da;border-radius:10px;background:#fff;cursor:pointer;padding:6px;
+  transition:.15s;
+}
+.sticker-thumb:hover{border-color:#9e2f4a;transform:scale(1.04);}
+.sticker-thumb img{width:100%;aspect-ratio:1;object-fit:contain;display:block;}
+.stickerUseBtn{
+  width:100%;padding:10px;border:1px solid #ead6da;border-radius:10px;background:#fff;
+  color:#8f3f61;font-weight:700;cursor:pointer;font-size:12px;
+}
+.plain-sticker-list{display:flex;flex-direction:column;gap:12px;}
+.plain-sticker-row{border:1px solid #ead6da;border-radius:12px;padding:8px;background:#fff;}
+.plain-sticker-preview{
+  width:100%;aspect-ratio:2.2;border-radius:8px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;padding:6px;background:#fdfaf9;
+}
+.plain-sticker-preview img{max-width:100%;max-height:100%;object-fit:contain;}
+.plain-color-swatches{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:6px;flex-wrap:wrap;}
+.plain-color-swatch{
+  display:inline-block;width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid #fff;
+  box-shadow:0 0 0 1px #ccc;padding:0;
+}
+.plain-color-swatch.active{box-shadow:0 0 0 2px #9e2f4a;}
+.plainCustomColor{width:22px;height:22px;padding:0;border:none;cursor:pointer;border-radius:50%;overflow:hidden;}
+
+.notes-panel{display:none;min-width:0;opacity:0;}
+.notes-panel .panel{margin:0;height:100%}
+.notes-panel.revealed{display:block;animation:notesFadeIn .4s ease forwards;}
+@keyframes notesFadeIn{from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:translateX(0);}}
+/* ===== Desktop layout: envelope (left) + fixed-center printable card
+   + notes (right). One clean rule set — earlier iterative patches
+   here conflicted with each other and let the opened envelope's
+   popup card escape above the section on desktop. ===== */
+@media (max-width:760px){
+  .message-workspace .art-panel{position:relative;}
+  .message-workspace .voice-picker{right:-44px;top:50%;}
+}
+
+@media (min-width:761px){
+  .message-workspace{
+    position:relative;
+    display:block;
+    width:min(1400px,100%);
+    max-width:1400px;
+    min-height:360px;
+    margin:0 auto 20px;
+    padding:0 18px;
+  }
+  .message-workspace > .art-panel{
+    position:absolute;left:18px;top:0;width:245px;height:360px;
+    min-height:0;margin:0;padding:0;display:block;
+    background:transparent;border:0;box-shadow:none;
+  }
+  .message-workspace > .art-panel:before,
+  .message-workspace > .art-panel:after{ display:none; }
+  .message-workspace .envelope{
+    position:absolute;left:12px;top:150px;width:205px;height:138px;margin:0;
+  }
+  .message-workspace .envelope:hover{ transform:none; }
+  .message-workspace .envelope .hidden-card{
+    /* Scaled down to fit the smaller 205x138 envelope used on desktop
+       (the base .hidden-card size is tuned for the bigger mobile
+       envelope) — without this it stuck out past the envelope's own
+       right edge even while closed. */
+    left:27px;top:21px;width:151px;height:104px;padding:12px 13px;
+  }
+  .message-workspace .envelope .hidden-card .mini-title{font-size:13px;}
+  .message-workspace .envelope .hidden-card .mini-text{font-size:9.5px;}
+  .message-workspace .envelope .env-flap{
+    /* The flap is a CSS border-triangle sized for the original 260px
+       envelope (130+130 border-width). Scaled down to match the
+       smaller 205px desktop envelope (205/260 ≈ 0.79 ratio) so it no
+       longer overhangs past the envelope's own edges. */
+    border-left-width:102px;border-right-width:102px;border-top-width:71px;
+  }
+  .message-workspace .envelope:not(.open) .hidden-card{ transform:none; }
+  .message-workspace .envelope.open .hidden-card{
+    /* With the envelope now starting 150px down, this same -118px
+       lift keeps the popup's top a comfortable 59px inside the panel
+       (150+27-118 = +59px) instead of crowding the toolbar above. */
+    transform:translateY(-118px) rotate(-2deg) scale(1.03);
+  }
+  .message-workspace .voice-picker{
+    position:absolute;left:auto;right:-46px;top:50%;width:auto;margin:0;justify-content:center;transform:translateY(-50%);
+  }
+  .message-workspace .sticker-toggles{
+    position:absolute;left:12px;top:324px;width:225px;margin:0;justify-content:flex-start;
+  }
+  .message-workspace .sticker-drawer{
+    position:absolute;left:12px;top:358px;width:225px;z-index:15;
+  }
+  .message-workspace > .stage{
+    position:absolute;left:50%;top:0;transform:translateX(-50%);
+    margin:0;padding:0;z-index:20;
+  }
+  .message-workspace > .notes-panel{
+    position:absolute;right:18px;top:0;width:285px;min-width:0;
+    margin:0;padding:0;background:transparent;border:0;box-shadow:none;z-index:5;
+  }
+  .message-workspace > .notes-panel .panel{
+    background:transparent;border:0;box-shadow:none;
+  }
+  .message-workspace > .notes-teaser{
+    position:absolute;right:18px;top:0;width:120px;
+    background:transparent;border:0;box-shadow:none;
+  }
+  .message-workspace.notes-hidden{ grid-template-columns:none; }
+}
+
+.notes-teaser{
+  display:none;min-height:200px;border:1px dashed #dfc6ca;border-radius:22px;
+  background:linear-gradient(145deg,#fffdfb,#faf1f2);
+  align-items:center;justify-content:center;padding:20px 14px;
+}
+.message-workspace.notes-hidden .notes-teaser{display:flex;}
+.notes-teaser-card{width:100%;max-width:120px;position:relative;height:80px;}
+.notes-teaser-pencil{position:absolute;font-size:20px;left:0;animation:teaserPencilMove 3.4s ease-in-out infinite;}
+@keyframes teaserPencilMove{
+  0%{left:0;top:14px;transform:rotate(-8deg);}
+  22%{left:70%;top:14px;transform:rotate(-8deg);}
+  25%{left:70%;top:34px;transform:rotate(-8deg);}
+  47%{left:0;top:34px;transform:rotate(-8deg);}
+  50%{left:0;top:54px;transform:rotate(-8deg);}
+  72%{left:55%;top:54px;transform:rotate(-8deg);}
+  75%,100%{left:55%;top:54px;transform:rotate(-8deg);}
+}
+.notes-teaser-line{position:absolute;height:2px;background:#dcb6bd;border-radius:2px;opacity:0;}
+.notes-teaser-line.l1{top:18px;left:0;width:0;animation:teaserLineDraw 3.4s ease-out infinite;}
+.notes-teaser-line.l2{top:38px;left:0;width:0;animation:teaserLineDraw 3.4s ease-out infinite .8s;}
+.notes-teaser-line.l3{top:58px;left:0;width:0;animation:teaserLineDraw 3.4s ease-out infinite 1.6s;}
+@keyframes teaserLineDraw{
+  0%{width:0;opacity:0;}
+  8%{opacity:.9;}
+  20%{width:65px;opacity:.9;}
+  85%{width:65px;opacity:.9;}
+  100%{width:65px;opacity:0;}
+}
+.notes-teaser-label{position:absolute;bottom:-24px;left:0;right:0;text-align:center;font-size:10px;color:#a85b78;letter-spacing:.5px;}
+.note-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:300px;overflow:auto;padding:2px}
+.note-card{
+  border:1px solid #ead6da;border-radius:14px;background:#fff;cursor:pointer;
+  padding:12px;text-align:left;transition:.2s;min-height:92px;
+}
+.note-card:hover,.note-card.active{border-color:#a34f72;box-shadow:0 6px 16px #6b435214;transform:translateY(-2px)}
+.note-card strong{display:block;color:#8f3f61;font:700 14px Georgia,serif;margin-bottom:5px}
+.note-card span{display:block;color:#6c5b62;font:12px/1.35 Georgia,serif}
+.notes-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.note-editor{margin-top:12px;padding-top:12px;border-top:1px solid #ead6da;display:grid;gap:8px}
+.note-editor label{font-size:11px;font-weight:700;color:#806f78}
+.note-editor input,.note-editor textarea{width:100%;border:1px solid #ead6da;border-radius:9px;padding:9px 10px}
+.note-editor textarea{min-height:85px;resize:vertical}
+@media(max-width:760px){
+  .message-workspace{display:flex!important;flex-direction:column!important;align-items:center!important;gap:16px!important;min-height:0!important;padding:0 8px!important;}
+  .message-workspace .art-panel{position:relative!important;left:auto!important;top:auto!important;width:100%!important;max-width:360px!important;height:320px!important;}
+  .message-workspace .stage{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:100%!important;display:flex!important;justify-content:center!important;}
+  .message-workspace .notes-panel{position:relative!important;right:auto!important;top:auto!important;width:100%!important;}
+  .message-workspace.notes-hidden .notes-panel{display:none!important;}
+  .notes-teaser{display:none!important;}
+  .note-grid{grid-template-columns:1fr}
+}
+
+
+/* MOBILE: keep the responsive behavior */
+@media (max-width:760px){
+  .message-workspace{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    gap:8px !important;
+    padding:0 8px !important;
+  }
+  .message-workspace > .art-panel{
+    position:relative !important;
+    left:auto !important;
+    top:auto !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:190px !important;
+    padding:0 !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+  }
+  .message-workspace > .stage{
+    position:relative !important;
+    left:auto !important;
+    top:auto !important;
+    transform:none !important;
+    margin:0 auto !important;
+  }
+  .message-workspace > .notes-panel{
+    position:relative !important;
+    right:auto !important;
+    top:auto !important;
+    width:100% !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+  }
+}
+
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="art-leaf a">🌿</div><div class="art-leaf b">🌿</div>
+
+
+
+<header class="top">
+  <div class="kicker">LALABELLA FLOWERS</div>
+  <h1>Card Print</h1>
+  <div class="sub">A simple card message tool — paste, type, space and print.</div>
+</header>
+
+<section class="panel">
+  <div class="toolbar">
+    <div class="group" style="width:100%; justify-content:center; padding-bottom:8px; margin-bottom:6px; border-bottom:1px solid var(--line);">
+      <span class="label">TEXT DIRECTION</span>
+      <button data-dir="ltr" title="Left to Right (English/Tagalog)" class="active">LTR →</button>
+      <button data-dir="rtl" title="Right to Left (Arabic)">← RTL</button>
+    </div>
+    <button id="backTools" title="Back to Flower Tools">← Flower Tools</button>
+    <div class="group"><span class="label">CARD</span>
+      <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2 × 2 in</option><option value="circle10">CIRCLE • 10 × 10 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option></select>
+    </div>
+    <div class="group"><span class="label">ALIGN</span>
+      <button data-align="left" title="Left">◀</button><button data-align="center" title="Center" class="active">☰</button><button data-align="right" title="Right">▶</button>
+    </div>
+    <div class="group"><span class="label">FONT</span>
+      <select id="font"><option value="bask">Baskerville Old Face</option><option value="arabic">Arabic / Naskh</option></select>
+      <input id="fontSize" type="number" min="8" max="40" value="16" title="Font size" style="width:64px">
+    </div>
+    <div class="group"><span class="label">COLUMNS</span>
+      <select id="cols"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+    </div>
+    <div class="group"><span class="label">GUIDE (mm mula sa taas)</span>
+      <input type="number" id="guideInput" step="1" min="0" placeholder="hal. 20" style="width:70px;">
+      <button id="addGuideBtn">+ Add</button>
+    </div>
+    <button id="addImage">🖼️ Add Image</button>
+    <button id="addQrBtn">🔗 Add QR Code</button>
+    <button id="clear">Clear</button>
+    <button id="saveCard">💾 Save</button>
+    <button id="loadCard">📂 Load</button>
+    <button class="primary" id="print">🖨️ Print Card</button>
+    <input id="fileImage" type="file" accept="image/*,application/pdf" hidden>
+    <input id="fileLoad" type="file" accept="application/json" hidden>
+  </div>
+
+  <div class="group" style="margin:0 auto 10px; width:fit-content;">
+    <span class="label">PRINT POSITION</span>
+    <div id="printOffsetBox" tabindex="0" title="Click here, then use the arrow keys to nudge the print position"
+      style="width:70px;height:70px;border:1.5px dashed var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;background:#fff;">
+      ✛
+    </div>
+    <span id="printOffsetLabel" style="font-family:'Space Mono',monospace;font-size:12px;color:#8a7078;">X: 0.0mm&nbsp; Y: 0.0mm</span>
+    <button id="printOffsetReset" title="Reset to center">Reset</button>
+  </div>
+
+  <div id="stickerSlotsPanel" style="display:none;max-width:360px;margin:0 auto 12px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:#fffaf8;">
+    <div class="group" style="justify-content:center;">
+      <span class="label" style="font-weight:800;">🏷️ Sticker — I-print:</span>
+      <select id="stickerPrintCount"><option value="2">2 pcs</option><option value="4" selected>4 pcs</option></select>
+      <span class="label">sa isang A4 sticker paper</span>
+    </div>
+  </div>
+
+  <div class="empty-tip">Paste text from WhatsApp or paste a screenshot from Snipping Tool. Click an image to drag it; use its corner handle to resize. Print opens the exact card-size page.</div>
+</section>
+
+
+<div id="printSheet" aria-hidden="true"></div>
+
+<section class="message-workspace">
+  <div class="art-panel">
+    <div class="envelope" id="messageEnvelope" role="button" tabindex="0" aria-label="Open message envelope">
+      <div class="hidden-card">
+        <div class="mini-title" id="miniTitle">Happy Birthday!</div>
+        <div class="mini-text" id="miniText">Wishing you a beautiful day filled with happiness and love.</div>
+      </div>
+      <div class="env-body"></div>
+      <div class="env-flap"></div>
+      <div class="env-seal">✿</div>
+      <div class="envelope-label">💌 CLICK TO OPEN CARD</div>
+    </div>
+
+    <div class="voice-picker" id="voicePicker">
+      <button type="button" id="voiceMuteBtn" title="I-mute/unmute ang card voice" aria-label="I-mute/unmute ang card voice">🔈</button>
+    </div>
+
+    <div class="sticker-toggles">
+      <button type="button" class="stickerToggleBtn" data-panel="designDrawer">🎨 Design</button>
+      <button type="button" class="stickerToggleBtn" data-panel="plainDrawer">⬜ Plain</button>
+      <button type="button" class="stickerToggleBtn" data-panel="sleeveDrawer">🍫 Sleeve</button>
+    </div>
+
+    <div class="sticker-drawer" id="designDrawer">
+      <div class="sticker-drawer-title">Piliin ang design — awtomatikong ilalagay sa card</div>
+      <div class="sticker-grid" id="designStickerGrid"></div>
+    </div>
+
+    <div class="sticker-drawer" id="plainDrawer">
+      <div class="sticker-drawer-title">Piliin ang kulay, tapos i-click ang design — awtomatikong ilalagay sa card</div>
+      <div class="plain-sticker-list" id="plainStickerList"></div>
+      <button type="button" id="usePlainBtn" class="stickerUseBtn" style="margin-top:10px;">⬜ Gamitin ang Blangkong Card</button>
+    </div>
+
+    <div class="sticker-drawer" id="sleeveDrawer">
+      <div class="sticker-drawer-title">🍫 Chocolate Sleeve</div>
+      <div class="sticker-drawer-empty">Wala pang laman dito — idadagdag ang design at sizes (Big/Small) kapag ready na.</div>
+    </div>
+  </div>
+
+  <main class="stage">
+    <div class="stage-with-rulers">
+      <div class="ruler-row">
+        <div class="ruler-corner" id="rulerCorner"></div>
+        <div class="ruler-top" id="rulerTop"></div>
+      </div>
+      <div class="ruler-row">
+        <div class="ruler-left" id="rulerLeft"></div>
+        <div id="card" class="card">
+          <div id="textArea" class="textArea" contenteditable="true" dir="ltr" spellcheck="false">Type or paste your message here…</div>
+          <div id="centerGuideV"></div>
+          <div id="userGuidesLayer"></div>
+          <div class="card-deco-leaf">🌿</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="notes-teaser" aria-hidden="true">
+    <div class="notes-teaser-card">
+      <span class="notes-teaser-pencil">✏️</span>
+      <span class="notes-teaser-line l1"></span>
+      <span class="notes-teaser-line l2"></span>
+      <span class="notes-teaser-line l3"></span>
+      <span class="notes-teaser-label">💌 Notes</span>
+    </div>
+  </div>
+
+  <div class="notes-panel" id="notesPanel">
+    <section class="panel">
+      <div class="section-title" style="font-weight:800;font-size:15px;">💌 Card Messages</div>
+      <div class="section-sub" style="font-size:12px;color:#806f78;margin:4px 0 12px;">
+        Open the envelope, then choose a note. Edit it before placing the message on the printable card.
+      </div>
+
+      <div class="note-grid" id="noteGrid"></div>
+
+      <div class="notes-actions">
+        <button id="newNoteBtn" type="button">＋ New Note</button>
+        <button id="copyNoteBtn" type="button">📋 Copy</button>
+        <button id="useNoteBtn" type="button" class="primary">✉️ Use on Card</button>
+      </div>
+
+      <div class="note-editor">
+        <label for="noteTitleInput">TITLE</label>
+        <input id="noteTitleInput" maxlength="80" value="Happy Birthday!">
+        <label for="noteMessageInput">MESSAGE</label>
+        <textarea id="noteMessageInput" maxlength="800">Wishing you a beautiful day filled with happiness and love.</textarea>
+        <div class="notes-actions">
+          <button id="saveNoteBtn" type="button" class="primary">💾 Save Note</button>
+          <button id="deleteNoteBtn" type="button">🗑 Delete</button>
+        </div>
+        <div id="noteStatus" style="font-size:11px;color:#5f8f63;min-height:15px;"></div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<div id="qrModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fffaf6;border-radius:18px;max-width:360px;width:100%;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative;">
+    <button id="qrModalClose" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:18px;color:#8a7078;cursor:pointer;">✕</button>
+    <div style="font-family:'Fraunces',Georgia,serif;font-size:17px;color:#9e2f4a;margin-bottom:6px;">🔗 Gumawa ng QR Code</div>
+    <div style="font-size:12px;color:#8a7078;margin-bottom:12px;">I-paste ang link — YouTube video, kanta, o kahit anong URL. I-scan ito ng customer para buksan.</div>
+    <input type="text" id="qrUrlInput" placeholder="https://youtube.com/watch?v=..." style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;box-sizing:border-box;margin-bottom:10px;">
+    <button id="qrGenerateBtn" style="width:100%;padding:10px;border:none;border-radius:10px;background:#9e2f4a;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Gawin ang QR Code</button>
+    <div id="qrPreviewArea" style="margin-top:14px;text-align:center;"></div>
+  </div>
+</div>
+<div id="qrCanvasHolder" style="display:none;"></div>
+
+<div id="imageToolbar" style="display:none;position:fixed;z-index:500;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px 8px;align-items:center;gap:6px;">
+  <button id="removeBgBtn" style="font-size:12px;padding:6px 10px;" title="Alisin ang puti/light na background">🎨 Remove BG</button>
+  <button id="fitCircleBtn" style="font-size:12px;padding:6px 10px;" title="I-fit sa loob ng bilog">⭕ Fit Circle</button>
+  <span id="imgColorSwatches" style="display:none;align-items:center;gap:4px;padding-left:4px;border-left:1px solid var(--line);"></span>
+</div>
+
+<div id="highlightToolbar" style="display:none;position:fixed;z-index:500;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 10px;align-items:center;gap:8px;">
+  <button id="hlSmaller" title="Smaller" style="width:28px;height:28px;padding:0;font-size:14px;">A-</button>
+  <button id="hlBigger" title="Bigger" style="width:28px;height:28px;padding:0;font-size:16px;">A+</button>
+  <span style="width:1px;height:20px;background:var(--line);"></span>
+  <span data-hlcolor="#3a2530" title="Ink" style="width:20px;height:20px;border-radius:50%;background:#3a2530;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <span data-hlcolor="#c9506b" title="Rose" style="width:20px;height:20px;border-radius:50%;background:#c9506b;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <span data-hlcolor="#9e2f4a" title="Rose Deep" style="width:20px;height:20px;border-radius:50%;background:#9e2f4a;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <span data-hlcolor="#d9a441" title="Gold" style="width:20px;height:20px;border-radius:50%;background:#d9a441;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <span data-hlcolor="#5f8f63" title="Leaf" style="width:20px;height:20px;border-radius:50%;background:#5f8f63;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <span data-hlcolor="#3d6ea5" title="Blue" style="width:20px;height:20px;border-radius:50%;background:#3d6ea5;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;"></span>
+  <input type="color" id="hlCustomColor" title="Custom color" style="width:26px;height:26px;padding:0;border:none;cursor:pointer;">
+</div>
+
+<script>
+// Smart back — remembers whether you opened this from Flower Tools or
+// from the Chocolate home page, same pattern as Notes.
+let backTarget = 'flower-tools.html';
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let cameFrom = params.get('from');
+  if(cameFrom){ localStorage.setItem('lalabellaBackFrom', cameFrom); }
+  else{ cameFrom = localStorage.getItem('lalabellaBackFrom'); }
+  const btn = document.getElementById('backTools');
+  if(cameFrom === 'index'){
+    backTarget = 'index.html';
+    if(btn) btn.textContent = '← Chocolate Home';
+  } else {
+    backTarget = 'flower-tools.html';
+    if(btn) btn.textContent = '← Flower Tools';
+  }
+})();
+
+function playClick(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 660;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    o.connect(g).connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.25);
+  }catch(e){}
+}
+function playAdd(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 783.99].forEach((freq,i)=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      const start = ctx.currentTime + i*0.06;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.05, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      o.connect(g).connect(ctx.destination);
+      o.start(start); o.stop(start + 0.25);
+    });
+  }catch(e){}
+}
+
+const card=document.getElementById('card');
+const textArea=document.getElementById('textArea');
+const size=document.getElementById('size');
+const cols=document.getElementById('cols');
+const font=document.getElementById('font');
+const fontSize=document.getElementById('fontSize');
+const fileImage=document.getElementById('fileImage');
+let selectedImage=null;
+
+function updatePrintSize(){
+  // The Epson driver enforces a minimum paper height (around 127mm)
+  // even for a square card — so the @page height is padded up to
+  // that, while the actual card content stays at its true 110mm (or
+  // 50.8mm) size, anchored to the top. The extra height below is
+  // just feed allowance the printer needs; nothing prints there.
+  // CIRCLE stickers print differently: 4 copies on a full A4 sheet.
+  // A4 itself just prints at its own real size, no padding needed.
+  let s=document.getElementById('dynamicPrint');
+  if(!s){s=document.createElement('style');s.id='dynamicPrint';document.head.appendChild(s)}
+  if(size.value === 'circle10'){
+    s.textContent='@media print{@page{size:210mm 297mm;margin:0}}';
+    return;
+  }
+  if(size.value === 'a4'){
+    s.textContent='@media print{@page{size:210mm 297mm;margin:0}}';
+    return;
+  }
+  const w = size.value==='small' ? '50.8mm' : '110mm';
+  const h = '127mm';
+  s.textContent='@media print{@page{size:'+w+' '+h+';margin:0}}';
+}
+size.addEventListener('change',()=>{
+  card.classList.toggle('small',size.value==='small');
+  card.classList.toggle('circle10',size.value==='circle10');
+  card.classList.toggle('a4',size.value==='a4');
+  document.getElementById('stickerSlotsPanel').style.display = size.value==='circle10' ? 'block' : 'none';
+  updatePrintSize();buildRulers();renderUserGuides();
+});
+
+// ---------- Rulers + user-placed guide lines ----------
+// Card size is 110mm (regular) or 50.8mm (small), per the print
+// sizing above — the rulers use the same real-world unit (mm) so a
+// measurement typed for a guide lines up with what actually prints.
+let userGuides = []; // array of mm-from-top values
+
+function cardSizeMm(){
+  if(card.classList.contains('circle10')) return { w: 100, h: 100 };
+  if(card.classList.contains('a4')) return { w: 210, h: 297 };
+  if(card.classList.contains('small')) return { w: 50.8, h: 50.8 };
+  return { w: 110, h: 110 };
+}
+
+function buildRulers(){
+  const { w: sizeMmW, h: sizeMmH } = cardSizeMm();
+  const cardRect = card.getBoundingClientRect();
+  const pxPerMmW = cardRect.width / sizeMmW; // actual on-screen scale, since the card is CSS-sized in mm but rendered in px
+  const pxPerMmH = cardRect.height / sizeMmH;
+
+  const rulerTop = document.getElementById('rulerTop');
+  const rulerLeft = document.getElementById('rulerLeft');
+  const rulerCorner = document.getElementById('rulerCorner');
+  rulerTop.style.width = cardRect.width + 'px';
+  rulerLeft.style.height = cardRect.height + 'px';
+  rulerCorner.style.width = '20px';
+  rulerCorner.style.height = '20px';
+
+  let topHtml = '', leftHtml = '';
+  for(let mm = 0; mm <= sizeMmW; mm += 5){
+    const px = mm * pxPerMmW;
+    const isMajor = mm % 10 === 0;
+    topHtml += `<div class="ruler-tick${isMajor?' major':''}" style="left:${px}px;height:${isMajor?'10px':'6px'};"></div>`;
+    if(isMajor){
+      topHtml += `<div class="ruler-label" style="left:${px}px;">${mm}</div>`;
+    }
+  }
+  for(let mm = 0; mm <= sizeMmH; mm += 5){
+    const px = mm * pxPerMmH;
+    const isMajor = mm % 10 === 0;
+    leftHtml += `<div class="ruler-tick${isMajor?' major':''}" style="top:${px}px;width:${isMajor?'10px':'6px'};"></div>`;
+    if(isMajor){
+      leftHtml += `<div class="ruler-label" style="top:${px}px;">${mm}</div>`;
+    }
+  }
+  rulerTop.innerHTML = topHtml;
+  rulerLeft.innerHTML = leftHtml;
+}
+
+function renderUserGuides(){
+  const { h: sizeMmH } = cardSizeMm();
+  const cardRect = card.getBoundingClientRect();
+  const pxPerMm = cardRect.height / sizeMmH; // guides measure top-offset, so this uses the height-based scale
+  const layer = document.getElementById('userGuidesLayer');
+  layer.innerHTML = userGuides.map((mm, idx) => `
+    <div class="userGuideH" data-idx="${idx}" style="top:${mm * pxPerMm}px;" title="I-click para tanggalin">
+      <span class="guideLabel">${mm}mm</span>
+    </div>
+  `).join('');
+  layer.querySelectorAll('.userGuideH').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = Number(el.dataset.idx);
+      userGuides.splice(idx, 1);
+      renderUserGuides();
+    });
+  });
+}
+
+document.getElementById('addGuideBtn').addEventListener('click', () => {
+  const input = document.getElementById('guideInput');
+  const mm = parseFloat(input.value);
+  if(isNaN(mm) || mm < 0) return;
+  userGuides.push(mm);
+  userGuides.sort((a,b) => a-b);
+  renderUserGuides();
+  input.value = '';
+});
+
+// Rebuild on load and on window resize (the card's on-screen pixel
+// size can change with viewport width even though its mm size doesn't).
+window.addEventListener('resize', () => { buildRulers(); renderUserGuides(); });
+buildRulers();
+
+// ---------- Design / Plain / Sleeve toggles ----------
+const STICKER_DESIGNS = [
+  { name: 'Congrats', src: 'stickers/congrats.png' },
+  { name: 'Congratulations', src: 'stickers/congratulations.png' },
+  { name: 'Happy Birthday', src: 'stickers/happy-birthday.png' },
+  { name: 'Eid Mubarak', src: 'stickers/eid-mubarak.png' },
+  { name: 'Eid Mubarak (Arabic)', src: 'stickers/eid-mubarak-arabic.png' },
+  { name: 'Graduation (Arabic)', src: 'stickers/graduation-arabic.png' },
+];
+
+const designGrid = document.getElementById('designStickerGrid');
+designGrid.innerHTML = STICKER_DESIGNS.map(d => `
+  <button type="button" class="sticker-thumb" data-src="${d.src}" title="${d.name}">
+    <img src="${d.src}" alt="${d.name}" loading="lazy">
+  </button>
+`).join('');
+
+designGrid.querySelectorAll('.sticker-thumb').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const box = addImage(btn.dataset.src);
+    // Circle stickers should default to filling the whole shape —
+    // same as clicking "Fit Circle" manually after adding an image.
+    if(size.value === 'circle10'){
+      const imgEl = box.querySelector('img');
+      try{ await imgEl.decode(); }catch(err){} // make sure naturalWidth/Height are populated before Fit Circle reads them
+      document.getElementById('fitCircleBtn').click();
+    }
+    playClick();
+  });
+});
+
+document.querySelectorAll('.stickerToggleBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.panel;
+    const isAlreadyOpen = document.getElementById(targetId).classList.contains('show');
+    document.querySelectorAll('.sticker-drawer').forEach(d => d.classList.remove('show'));
+    document.querySelectorAll('.stickerToggleBtn').forEach(b => b.classList.remove('active'));
+    if(!isAlreadyOpen){
+      document.getElementById(targetId).classList.add('show');
+      btn.classList.add('active');
+    }
+    playClick();
+  });
+});
+
+// Plain (text-only) designs with color choices — pick a color first,
+// then click the design to apply that colored version to the card.
+const PLAIN_DESIGNS = [
+  { name: 'Congrats', src: 'stickers/plain/congrats-plain-gold.png' },
+  { name: 'Congratulations', src: 'stickers/plain/congratulations-plain-gold.png' },
+  { name: 'Happy Birthday', src: 'stickers/plain/happy-birthday-plain-gold.png' },
+  { name: 'Eid Mubarak', src: 'stickers/plain/eid-mubarak-plain-gold.png' },
+  { name: 'Eid Mubarak (Arabic)', src: 'stickers/plain/eid-mubarak-arabic-plain-gold.png' },
+  { name: 'Graduation (Arabic)', src: 'stickers/plain/graduation-arabic-plain-gold.png' },
+];
+const PLAIN_PRESETS = [
+  { hex: '#c59a3a', title: 'Gold' },
+  { hex: '#ffffff', title: 'White' },
+  { hex: '#a8aeb5', title: 'Silver' },
+  { hex: '#466eaf', title: 'Blue' },
+  { hex: '#d65b82', title: 'Pink' },
+  { hex: '#3a2530', title: 'Ink' },
+];
+const GOLD_SRC_COLOR = '#c59a3a'; // the source PNGs are already this exact gold — picking it needs no recoloring
+const plainSelectedColor = {}; // design name -> currently chosen color
+const recolorCache = {}; // "src|color" -> data URL, so the same recolor isn't redone every click
+
+// Recolors a gold PNG on the fly: keeps its alpha (shape/shading) exactly
+// as-is, flattens the fill to a solid target color — same technique as
+// generating separate color files, just done live in the browser so we
+// only need to ship ONE (gold) file per design instead of one per color.
+function recolorPlainImage(src, hexColor){
+  const cacheKey = src + '|' + hexColor;
+  if(recolorCache[cacheKey]) return Promise.resolve(recolorCache[cacheKey]);
+  if(hexColor.toLowerCase() === GOLD_SRC_COLOR) return Promise.resolve(src); // no recoloring needed — this IS the gold source file
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const cr = parseInt(hexColor.slice(1,3), 16), cg = parseInt(hexColor.slice(3,5), 16), cb = parseInt(hexColor.slice(5,7), 16);
+      const px = data.data;
+      for(let i = 0; i < px.length; i += 4){
+        if(px[i+3] > 0){ px[i] = cr; px[i+1] = cg; px[i+2] = cb; } // keep alpha, flatten RGB to the target color
+      }
+      ctx.putImageData(data, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      recolorCache[cacheKey] = dataUrl;
+      resolve(dataUrl);
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+const plainList = document.getElementById('plainStickerList');
+plainList.innerHTML = PLAIN_DESIGNS.map((d, di) => {
+  plainSelectedColor[d.name] = GOLD_SRC_COLOR;
+  return `
+    <div class="plain-sticker-row" data-name="${d.name}" data-src="${d.src}">
+      <div class="plain-sticker-preview" title="I-click para ilagay sa card">
+        <img src="${d.src}" alt="${d.name}">
+      </div>
+      <div class="plain-color-swatches">
+        ${PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${p.hex===GOLD_SRC_COLOR?' active':''}" data-color="${p.hex}" style="background:${p.hex};" title="${p.title}"></span>`).join('')}
+        <input type="color" class="plainCustomColor" id="plainCustom${di}" value="${GOLD_SRC_COLOR}" title="Custom color">
+      </div>
+    </div>
+  `;
+}).join('');
+
+plainList.querySelectorAll('.plain-sticker-row').forEach(row => {
+  const name = row.dataset.name;
+  const src = row.dataset.src;
+  const img = row.querySelector('.plain-sticker-preview img');
+
+  async function setPlainColor(hex){
+    plainSelectedColor[name] = hex;
+    img.src = await recolorPlainImage(src, hex);
+    row.querySelectorAll('.plain-color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === hex));
+    row.querySelector('.plainCustomColor').value = hex;
+  }
+
+  row.querySelectorAll('.plain-color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', async () => {
+      await setPlainColor(swatch.dataset.color);
+      playClick();
+    });
+  });
+  row.querySelector('.plainCustomColor').addEventListener('input', async (e) => {
+    await setPlainColor(e.target.value);
+  });
+
+  row.querySelector('.plain-sticker-preview').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const color = plainSelectedColor[name];
+    const dataUrl = await recolorPlainImage(src, color);
+    const box = addImage(dataUrl);
+    box.dataset.plainSrc = src; // remembers the gold source, so its color can still be changed after placing it
+    box.dataset.plainColor = color;
+    showImageToolbar(box); // refresh — addImage() already showed the toolbar before the dataset above was set
+    if(size.value === 'circle10'){
+      const imgEl = box.querySelector('img');
+      try{ await imgEl.decode(); }catch(err){} // make sure naturalWidth/Height are populated before Fit Circle reads them
+      document.getElementById('fitCircleBtn').click();
+    }
+    playClick();
+  });
+});
+
+document.getElementById('usePlainBtn').addEventListener('click', () => {
+  document.querySelectorAll('.image-item').forEach(x => x.remove());
+  document.getElementById('plainDrawer').classList.remove('show');
+  document.querySelectorAll('.stickerToggleBtn').forEach(b => b.classList.remove('active'));
+  playClick();
+});
+
+
+font.addEventListener('change',()=>{
+ textArea.style.fontFamily=font.value==='arabic'?'"Noto Naskh Arabic","Amiri","Traditional Arabic",serif':'"Baskerville Old Face",Baskerville,Georgia,serif';
+});
+fontSize.addEventListener('input',()=>textArea.style.fontSize=Math.max(8,Math.min(40,+fontSize.value||16))+'px');
+
+// ---------- Highlight toolbar: resize/recolor just the selected text ----------
+const hlToolbar = document.getElementById('highlightToolbar');
+let savedRange = null;
+
+function showHighlightToolbar(){
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || sel.rangeCount === 0){
+    hlToolbar.style.display = 'none';
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  // Only react to selections actually inside the message area.
+  if(!textArea.contains(range.commonAncestorContainer)){
+    hlToolbar.style.display = 'none';
+    return;
+  }
+  savedRange = range.cloneRange();
+  const rect = range.getBoundingClientRect();
+  hlToolbar.style.display = 'flex';
+  const top = Math.max(8, rect.top - hlToolbar.offsetHeight - 10);
+  const left = Math.min(window.innerWidth - hlToolbar.offsetWidth - 8, Math.max(8, rect.left + rect.width/2 - hlToolbar.offsetWidth/2));
+  hlToolbar.style.top = top + 'px';
+  hlToolbar.style.left = left + 'px';
+}
+
+document.addEventListener('selectionchange', ()=>{
+  // Only respond while the selection is actually within our card text.
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount > 0 && textArea.contains(sel.getRangeAt(0).commonAncestorContainer)){
+    showHighlightToolbar();
+  } else if(!hlToolbar.matches(':hover')){
+    hlToolbar.style.display = 'none';
+  }
+});
+
+// Wraps the currently-selected text in a <span> so we can size/color
+// just that piece without touching the rest of the message.
+function wrapSelectionInSpan(){
+  if(!savedRange) return null;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(savedRange);
+
+  const span = document.createElement('span');
+  try{
+    savedRange.surroundContents(span);
+  }catch(e){
+    // Selection spans multiple elements (e.g. crosses an earlier
+    // highlight) — extract and re-insert works even then.
+    const contents = savedRange.extractContents();
+    span.appendChild(contents);
+    savedRange.insertNode(span);
+  }
+  // Keep the selection visually on the text so repeated clicks (e.g.
+  // bigger, then a color) keep applying to the same piece.
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+  savedRange = newRange.cloneRange();
+  return span;
+}
+
+function currentSelectionSpan(){
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount === 0) return null;
+  let node = sel.getRangeAt(0).commonAncestorContainer;
+  if(node.nodeType === 3) node = node.parentElement; // text node -> its element
+  return node && node.tagName === 'SPAN' && textArea.contains(node) ? node : null;
+}
+
+function adjustHighlightSize(delta){
+  let span = currentSelectionSpan();
+  if(!span) span = wrapSelectionInSpan();
+  if(!span) return;
+  const current = parseFloat(getComputedStyle(span).fontSize) || 16;
+  const next = Math.max(8, Math.min(72, current + delta));
+  span.style.fontSize = next + 'px';
+}
+
+function applyHighlightColor(color){
+  let span = currentSelectionSpan();
+  if(!span) span = wrapSelectionInSpan();
+  if(!span) return;
+  span.style.color = color;
+}
+
+document.getElementById('hlBigger').addEventListener('click', ()=> adjustHighlightSize(2));
+document.getElementById('hlSmaller').addEventListener('click', ()=> adjustHighlightSize(-2));
+document.querySelectorAll('#highlightToolbar span[data-hlcolor]').forEach(dot=>{
+  dot.addEventListener('click', ()=> applyHighlightColor(dot.dataset.hlcolor));
+});
+document.getElementById('hlCustomColor').addEventListener('input', (e)=> applyHighlightColor(e.target.value));
+
+cols.addEventListener('change',()=>{textArea.style.columnCount=cols.value;textArea.style.columnGap='14px'});
+document.querySelectorAll('[data-align]').forEach(b=>b.addEventListener('click',()=>{
+  playClick();
+  document.querySelectorAll('[data-align]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  textArea.style.textAlign=b.dataset.align;
+  // Alignment only controls visual position now — direction is its
+  // own separate manual control above (TEXT DIRECTION buttons).
+}));
+document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>{
+  playClick();
+  document.querySelectorAll('[data-dir]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  textArea.dir=b.dataset.dir;
+}));
+textArea.addEventListener('focus',()=>{if(textArea.textContent.trim()==='Type or paste your message here…'){textArea.innerHTML='';textArea.classList.remove('placeholder')}});
+
+function selectImage(el){
+ document.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+ selectedImage=el;el.classList.add('selected');
+ showImageToolbar(el);
+}
+
+function showImageToolbar(el){
+  const bar = document.getElementById('imageToolbar');
+  const swatchSpan = document.getElementById('imgColorSwatches');
+  if(el.dataset.plainSrc){
+    swatchSpan.style.display = 'flex';
+    swatchSpan.innerHTML = PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${el.dataset.plainColor===p.hex?' active':''}" data-color="${p.hex}" style="width:16px;height:16px;background:${p.hex};" title="${p.title}"></span>`).join('')
+      + `<input type="color" class="plainCustomColor" id="imgToolbarCustomColor" value="${el.dataset.plainColor||GOLD_SRC_COLOR}" title="Custom color" style="width:18px;height:18px;padding:0;border:none;cursor:pointer;">`;
+
+    async function applyToolbarColor(hex){
+      el.querySelector('img').src = await recolorPlainImage(el.dataset.plainSrc, hex);
+      el.dataset.plainColor = hex;
+      swatchSpan.querySelectorAll('.plain-color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === hex));
+      swatchSpan.querySelector('.plainCustomColor').value = hex;
+    }
+    swatchSpan.querySelectorAll('.plain-color-swatch').forEach(sw => {
+      sw.addEventListener('click', async () => { await applyToolbarColor(sw.dataset.color); playClick(); });
+    });
+    swatchSpan.querySelector('.plainCustomColor').addEventListener('input', async (e) => { await applyToolbarColor(e.target.value); });
+  } else {
+    swatchSpan.style.display = 'none';
+    swatchSpan.innerHTML = '';
+  }
+  const rect = el.getBoundingClientRect();
+  bar.style.display = 'flex';
+  bar.style.top = Math.max(8, rect.top - bar.offsetHeight - 10) + 'px';
+  bar.style.left = Math.min(window.innerWidth - bar.offsetWidth - 8, Math.max(8, rect.left)) + 'px';
+}
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.image-item') && !e.target.closest('#imageToolbar')){
+    document.getElementById('imageToolbar').style.display = 'none';
+  }
+});
+
+// Samples the image's own corner pixel as the assumed background
+// color, then makes any similarly-colored pixel transparent — works
+// well for logos on a plain white/light background (the common case),
+// though not a full AI cutout for busy/photographic backgrounds.
+document.getElementById('removeBgBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if(!selectedImage) return;
+  const img = selectedImage.querySelector('img');
+  const canvas = document.createElement('canvas');
+  const tempImg = new Image();
+  tempImg.crossOrigin = 'anonymous';
+  tempImg.onload = () => {
+    canvas.width = tempImg.naturalWidth;
+    canvas.height = tempImg.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(tempImg, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const px = data.data;
+    // Sample the background color from the four corners and average them.
+    const corners = [0, (canvas.width-1)*4, (canvas.height-1)*canvas.width*4, ((canvas.height-1)*canvas.width + canvas.width-1)*4];
+    let br=0,bg=0,bb=0;
+    corners.forEach(i => { br+=px[i]; bg+=px[i+1]; bb+=px[i+2]; });
+    br/=4; bg/=4; bb/=4;
+    const tolerance = 38;
+    for(let i = 0; i < px.length; i += 4){
+      const dr = px[i]-br, dg = px[i+1]-bg, db = px[i+2]-bb;
+      if(Math.sqrt(dr*dr+dg*dg+db*db) < tolerance){
+        px[i+3] = 0;
+      }
+    }
+    ctx.putImageData(data, 0, 0);
+    img.src = canvas.toDataURL('image/png');
+  };
+  tempImg.src = img.src;
+  playClick();
+});
+
+// Resizes + centers the selected image to fully cover the circular
+// card area, matching how a sticker logo is usually meant to fill it.
+document.getElementById('fitCircleBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if(!selectedImage) return;
+  const cardRect = card.getBoundingClientRect();
+  const baseSize = Math.min(cardRect.width, cardRect.height);
+  const imgEl = selectedImage.querySelector('img');
+  const naturalRatio = (imgEl && imgEl.naturalWidth) ? imgEl.naturalWidth / imgEl.naturalHeight : 1;
+  // Wide/landscape sources (text banners like "Congrats") get cropped
+  // badly if forced to fully COVER a square — "contain" (show the
+  // whole design, centered, a little empty space at top/bottom) looks
+  // far better for those. Roughly square/photo logos still use
+  // "cover" so they fill the circle edge-to-edge for acrylic printing.
+  const isWide = naturalRatio > 1.6 || naturalRatio < 0.625;
+
+  if(isWide){
+    selectedImage.classList.remove('fill-cover');
+    const size = baseSize * 0.92; // sits inside the circle with a small margin, not touching the edge
+    selectedImage.style.width = size + 'px';
+    selectedImage.style.height = size + 'px';
+    selectedImage.style.left = ((cardRect.width - size) / 2) + 'px';
+    selectedImage.style.top = ((cardRect.height - size) / 2) + 'px';
+  } else {
+    // Slightly larger than the card (not an exact match) so there's
+    // still room left to drag/pan the image afterward — an exact match
+    // leaves zero slack, which locks dragging at (0,0).
+    const size = baseSize * 1.06;
+    selectedImage.classList.add('fill-cover'); // fills the full circle edge-to-edge instead of shrinking to fit inside it — this is for acrylic printing, no empty space allowed
+    selectedImage.style.width = size + 'px';
+    selectedImage.style.height = size + 'px';
+    selectedImage.style.left = ((cardRect.width - size) / 2) + 'px';
+    selectedImage.style.top = ((cardRect.height - size) / 2) + 'px';
+  }
+  playClick();
+});
+
+function addDeleteHandle(box){
+  const del=document.createElement('div');
+  del.className='delete-handle';
+  del.textContent='✕';
+  del.title='Remove image';
+  del.addEventListener('pointerdown',e=>{ e.stopPropagation(); });
+  del.addEventListener('click',e=>{
+    e.stopPropagation();
+    playClick();
+    if(selectedImage===box) selectedImage=null;
+    box.remove();
+  });
+  box.appendChild(del);
+}
+function addImage(src){
+  playAdd();
+ const box=document.createElement('div');box.className='image-item';box.style.left='12px';box.style.top='12px';box.style.width='120px';
+ const img=document.createElement('img');img.src=src;box.appendChild(img);
+ const handle=document.createElement('div');handle.className='resize-handle';box.appendChild(handle);
+ addDeleteHandle(box);
+ card.appendChild(box);selectImage(box);enableDrag(box);enableResize(box,handle);
+ return box;
+}
+function enableDrag(box){
+ let sx=0,sy=0,sl=0,st=0,drag=false;
+ box.addEventListener('pointerdown',e=>{
+   if(e.target.classList.contains('resize-handle'))return;
+   drag=true;box.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;sl=box.offsetLeft;st=box.offsetTop;selectImage(box);e.preventDefault();
+ });
+ box.addEventListener('pointermove',e=>{
+   if(!drag)return;
+   const r=card.getBoundingClientRect();
+   // Clamp between 0 and (card size - image size) — works whether the
+   // image is smaller than the card (normal case, positive range) or
+   // larger (e.g. after Fit Circle's oversized pannable image, where
+   // that difference is negative and 0 must be the upper bound instead
+   // of the lower one).
+   const minLeft=Math.min(0, r.width-box.offsetWidth), maxLeft=Math.max(0, r.width-box.offsetWidth);
+   const minTop=Math.min(0, r.height-box.offsetHeight), maxTop=Math.max(0, r.height-box.offsetHeight);
+   let newLeft=Math.max(minLeft,Math.min(maxLeft,sl+e.clientX-sx));
+   const newTop=Math.max(minTop,Math.min(maxTop,st+e.clientY-sy));
+
+   // Snap to horizontal center — this only checks the X position, so
+   // the image can be anywhere top-to-bottom and still show/snap to
+   // the guide the moment it's centered left-to-right.
+   const guide=document.getElementById('centerGuideV');
+   const boxCenterX=newLeft+box.offsetWidth/2;
+   const cardCenterX=r.width/2;
+   if(Math.abs(boxCenterX-cardCenterX)<6){
+     newLeft=cardCenterX-box.offsetWidth/2;
+     guide.classList.add('show');
+   }else{
+     guide.classList.remove('show');
+   }
+
+   box.style.left=newLeft+'px';
+   box.style.top=newTop+'px';
+ });
+ box.addEventListener('pointerup',()=>{drag=false;document.getElementById('centerGuideV').classList.remove('show');});
+ box.addEventListener('pointercancel',()=>{drag=false;document.getElementById('centerGuideV').classList.remove('show');});
+}
+function enableResize(box,handle){
+ let sx=0,sy=0,sw=0,drag=false;
+ handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;sw=box.offsetWidth;selectImage(box);e.preventDefault();e.stopPropagation()});
+ handle.addEventListener('pointermove',e=>{
+   if(!drag)return;
+   const delta=Math.max(e.clientX-sx,e.clientY-sy);const max=card.clientWidth-box.offsetLeft;
+   box.style.width=Math.max(30,Math.min(max,sw+delta))+'px';box.style.height='auto';
+ });
+ handle.addEventListener('pointerup',()=>drag=false);handle.addEventListener('pointercancel',()=>drag=false);
+}
+card.addEventListener('pointerdown',e=>{if(!e.target.closest('.image-item')){document.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));selectedImage=null}});
+
+// Delete/Backspace removes the currently-selected image — only when
+// an image is actually selected and you're not typing in the message
+// (so normal text editing with Backspace is never affected).
+document.addEventListener('keydown', e=>{
+  if((e.key==='Delete'||e.key==='Backspace') && selectedImage && document.activeElement!==textArea){
+    e.preventDefault();
+    playClick();
+    selectedImage.remove();
+    selectedImage=null;
+  }
+});
+
+document.getElementById('addImage').onclick=()=>fileImage.click();
+
+// ---------- QR Code generator: paste a link (YouTube, song, any URL),
+// generates a scannable code that can be added to the card like any
+// other image. ----------
+const qrModal = document.getElementById('qrModal');
+const qrUrlInput = document.getElementById('qrUrlInput');
+const qrPreviewArea = document.getElementById('qrPreviewArea');
+let lastQrDataUrl = null;
+
+document.getElementById('addQrBtn').addEventListener('click', () => {
+  qrUrlInput.value = '';
+  qrPreviewArea.innerHTML = '';
+  lastQrDataUrl = null;
+  qrModal.style.display = 'flex';
+  qrUrlInput.focus();
+});
+document.getElementById('qrModalClose').addEventListener('click', () => { qrModal.style.display = 'none'; });
+qrModal.addEventListener('click', (e) => { if(e.target === qrModal) qrModal.style.display = 'none'; });
+
+document.getElementById('qrGenerateBtn').addEventListener('click', () => {
+  const url = qrUrlInput.value.trim();
+  if(!url){ qrUrlInput.focus(); return; }
+  playClick();
+
+  const holder = document.getElementById('qrCanvasHolder');
+  holder.innerHTML = ''; // clear any previous QR render
+  new QRCode(holder, { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M });
+
+  // QRCode.js renders async-ish onto a canvas (or img fallback) inside
+  // holder — give it a tick to finish before reading the result out.
+  setTimeout(() => {
+    const canvas = holder.querySelector('canvas');
+    const dataUrl = canvas ? canvas.toDataURL('image/png') : (holder.querySelector('img') ? holder.querySelector('img').src : null);
+    if(!dataUrl) return;
+    lastQrDataUrl = dataUrl;
+    qrPreviewArea.innerHTML = `
+      <img src="${dataUrl}" style="width:140px;height:140px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;">
+      <button id="qrAddToCardBtn" style="display:block;width:100%;padding:9px;border:none;border-radius:10px;background:#5f8f63;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">✓ Idagdag sa Card</button>
+    `;
+    document.getElementById('qrAddToCardBtn').addEventListener('click', () => {
+      addImage(lastQrDataUrl);
+      qrModal.style.display = 'none';
+      playAdd();
+    });
+  }, 80);
+});
+
+async function renderPdfFirstPageToDataUrl(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const page = await pdf.getPage(1);
+  const scale = 3; // render at higher resolution so it stays crisp when resized on the card
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  return canvas.toDataURL('image/png');
+}
+fileImage.onchange=async ()=>{
+  const f=fileImage.files[0];
+  if(!f)return;
+  if(f.type === 'application/pdf'){
+    try{
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const dataUrl = await renderPdfFirstPageToDataUrl(f);
+      addImage(dataUrl);
+    }catch(err){
+      alert('Hindi nabuksan ang PDF. Siguraduhing hindi ito password-protected.');
+    }
+    fileImage.value='';
+    return;
+  }
+  const r=new FileReader();r.onload=e=>addImage(e.target.result);r.readAsDataURL(f);fileImage.value=''
+};
+
+textArea.addEventListener('paste',e=>{
+ const items=e.clipboardData?.items||[];
+ for(const item of items){
+  if(item.type.startsWith('image/')){e.preventDefault();const file=item.getAsFile();const r=new FileReader();r.onload=ev=>addImage(ev.target.result);r.readAsDataURL(file);return;}
+ }
+ e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));
+});
+
+document.getElementById('clear').onclick=()=>{playClick();textArea.innerHTML='';document.querySelectorAll('.image-item').forEach(x=>x.remove());textArea.focus()};
+document.getElementById('backTools').onclick=()=>{ playClick(); window.location.href=backTarget; };
+// ---------- Print position offset ----------
+// Nudges the whole card left/right/up/down for print only — the
+// on-screen editor never moves. This is for calibrating against a
+// printer that consistently prints slightly off-center, so once you
+// find the right offset it's remembered for next time.
+let printOffsetX = parseFloat(localStorage.getItem('lalabellaPrintOffsetX') || '0');
+let printOffsetY = parseFloat(localStorage.getItem('lalabellaPrintOffsetY') || '0');
+
+function applyPrintOffset(){
+  document.documentElement.style.setProperty('--printOffsetX', printOffsetX + 'mm');
+  document.documentElement.style.setProperty('--printOffsetY', printOffsetY + 'mm');
+  document.getElementById('printOffsetLabel').textContent =
+    'X: ' + printOffsetX.toFixed(1) + 'mm\u00A0\u00A0Y: ' + printOffsetY.toFixed(1) + 'mm';
+  localStorage.setItem('lalabellaPrintOffsetX', printOffsetX);
+  localStorage.setItem('lalabellaPrintOffsetY', printOffsetY);
+}
+applyPrintOffset();
+
+document.getElementById('printOffsetBox').addEventListener('keydown', e=>{
+  const step = e.shiftKey ? 0.2 : 1; // hold Shift for fine 0.2mm adjustments
+  let moved = true;
+  if(e.key==='ArrowLeft') printOffsetX -= step;
+  else if(e.key==='ArrowRight') printOffsetX += step;
+  else if(e.key==='ArrowUp') printOffsetY -= step;
+  else if(e.key==='ArrowDown') printOffsetY += step;
+  else moved = false;
+  if(moved){ e.preventDefault(); playClick(); applyPrintOffset(); }
+});
+document.getElementById('printOffsetReset').addEventListener('click', ()=>{
+  playClick();
+  printOffsetX = 0; printOffsetY = 0;
+  applyPrintOffset();
+});
+
+function mmToTwips(mm){ return Math.round(mm / 25.4 * 1440); }
+function mmToEmu(mm){ return Math.round(mm / 25.4 * 914400); }
+
+function floatingPicXml(rId, idNum, xEmu, yEmu, sizeEmu){
+  // CIRCLE PRINT FIX: keep the Word picture square and lock its aspect ratio.
+  return `<w:p><w:r><w:drawing>
+<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${idNum}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
+<wp:simplePos x="0" y="0"/>
+<wp:positionH relativeFrom="page"><wp:posOffset>${xEmu}</wp:posOffset></wp:positionH>
+<wp:positionV relativeFrom="page"><wp:posOffset>${yEmu}</wp:posOffset></wp:positionV>
+<wp:extent cx="${sizeEmu}" cy="${sizeEmu}"/>
+<wp:wrapNone/>
+<wp:docPr id="${idNum}" name="Card${idNum}"/>
+<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:pic><pic:nvPicPr><pic:cNvPr id="${idNum}" name="Card${idNum}"/><pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr></pic:nvPicPr>
+<pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>
+<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${sizeEmu}" cy="${sizeEmu}"/></a:xfrm><a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom></pic:spPr>
+</pic:pic></a:graphicData></a:graphic>
+</wp:anchor></w:drawing></w:r></w:p>`;
+}
+
+function printCardExact(){
+  playClick();
+  document.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+  selectedImage=null;
+  document.getElementById('imageToolbar').style.display='none';
+
+  const btn=document.getElementById('print');
+  const oldLabel=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='🖨️ Printing…';
+
+  const cleanup=()=>{
+    document.body.classList.remove('printing-circle');
+    document.getElementById('printSheet').innerHTML='';
+    btn.disabled=false;
+    btn.textContent=oldLabel;
+  };
+
+  if(size.value==='circle10'){
+    const sheet=document.getElementById('printSheet');
+    sheet.innerHTML='';
+    const count=Number(document.getElementById('stickerPrintCount').value)||4;
+    for(let i=0;i<count;i++){
+      const copy=card.cloneNode(true);
+      copy.removeAttribute('id');
+      copy.querySelectorAll('.resize-handle,.delete-handle,#centerGuideV,.userGuideH').forEach(x=>x.remove());
+      copy.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+      sheet.appendChild(copy);
+    }
+    document.body.classList.add('printing-circle');
+  }else{
+    updatePrintSize();
+  }
+
+  window.addEventListener('afterprint',cleanup,{once:true});
+  setTimeout(()=>window.print(),100);
+}
+
+document.getElementById('print').onclick=printCardExact;
+
+// ---------- Save / Load: lets you build a card on your phone, save
+// it as a file, then open that same file later on a desktop to
+// print — since printing usually needs to happen from the desktop
+// where the printer is connected. ----------
+function saveCard(){
+  playClick();
+  const images = [...document.querySelectorAll('.image-item')].map(box => ({
+    src: box.querySelector('img').src,
+    left: box.style.left, top: box.style.top, width: box.style.width
+  }));
+  const data = {
+    textHtml: textArea.innerHTML,
+    textDir: textArea.dir,
+    textAlign: textArea.style.textAlign || 'center',
+    size: size.value,
+    cols: cols.value,
+    font: font.value,
+    fontSize: fontSize.value,
+    images
+  };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lalabella-card-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('saveCard').onclick = saveCard;
+
+document.getElementById('loadCard').onclick = ()=> document.getElementById('fileLoad').click();
+document.getElementById('fileLoad').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      playClick();
+
+      // Clear the card first, same as the Clear button.
+      textArea.innerHTML = '';
+      document.querySelectorAll('.image-item').forEach(x => x.remove());
+
+      textArea.innerHTML = data.textHtml || '';
+      textArea.dir = data.textDir || 'ltr';
+      document.querySelectorAll('[data-dir]').forEach(x => x.classList.toggle('active', x.dataset.dir === textArea.dir));
+      textArea.style.textAlign = data.textAlign || 'center';
+      document.querySelectorAll('[data-align]').forEach(x => x.classList.toggle('active', x.dataset.align === data.textAlign));
+
+      size.value = data.size || 'big';
+      card.classList.toggle('small', size.value === 'small');
+      cols.value = data.cols || '1';
+      textArea.style.columnCount = cols.value;
+      textArea.style.columnGap = '14px';
+      font.value = data.font || 'bask';
+      textArea.style.fontFamily = font.value === 'arabic'
+        ? '"Noto Naskh Arabic","Amiri","Traditional Arabic",serif'
+        : '"Baskerville Old Face",Baskerville,Georgia,serif';
+      fontSize.value = data.fontSize || 16;
+      textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
+      updatePrintSize();
+
+      (data.images || []).forEach(imgData => {
+        const box=document.createElement('div');box.className='image-item';
+        box.style.left=imgData.left||'12px';box.style.top=imgData.top||'12px';box.style.width=imgData.width||'120px';
+        const img=document.createElement('img');img.src=imgData.src;box.appendChild(img);
+        const handle=document.createElement('div');handle.className='resize-handle';box.appendChild(handle);
+        addDeleteHandle(box);
+        card.appendChild(box);enableDrag(box);enableResize(box,handle);
+      });
+    }catch(err){
+      alert('Hindi na-load ang file. Siguraduhing tamang Lalabella card file ito.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+updatePrintSize();
+
+// ===== Card Message Envelope =====
+(function(){
+  const NOTES_API = 'https://script.google.com/macros/s/AKfycbxlbXl4V2PPYKVp7rjbJaGG7lYX_7Bc28MhkzOcUoSoEhLfTIu3c3BH0gxwFZf5AE2x/exec';
+  const envelope = document.getElementById('messageEnvelope');
+  const grid = document.getElementById('noteGrid');
+  const titleInput = document.getElementById('noteTitleInput');
+  const messageInput = document.getElementById('noteMessageInput');
+  const miniTitle = document.getElementById('miniTitle');
+  const miniText = document.getElementById('miniText');
+  const status = document.getElementById('noteStatus');
+
+  // Samples stay as always-available starting ideas (no `row` — never
+  // saved to the Sheet themselves). Notes fetched from Card Notes each
+  // carry their own `row`, so we know whether Save should add or update.
+  let notes = [
+    {title:'Happy Birthday!',message:'Wishing you a beautiful day filled with happiness and love.'},
+    {title:'I Love You',message:'A little reminder that you are loved, appreciated, and always special.'},
+    {title:'Thank You',message:'Thank you for being such a wonderful part of my life.'},
+    {title:'Congratulations',message:'Congratulations! Wishing you more success, happiness, and beautiful moments.'},
+    {title:'Get Well Soon',message:'Sending warm wishes and positive thoughts. Feel better soon!'},
+    {title:'Just Because',message:'No special reason — just wanted to send something beautiful to make you smile today.'}
+  ];
+  let selected = 0;
+
+  async function loadCardNotesFromSheet(){
+    try{
+      const res = await fetch(NOTES_API + '?action=getCardNotes').then(r => r.json());
+      if(Array.isArray(res)){
+        res.forEach(n => notes.push({ title: n.title, message: n.message, row: n.row }));
+        renderNotes();
+      }
+    }catch(e){ /* offline or not configured yet — samples still work */ }
+  }
+  loadCardNotesFromSheet();
+
+  function renderNotes(){
+    grid.innerHTML = '';
+    notes.forEach((n,i)=>{
+      const b = document.createElement('button');
+      b.type='button';
+      b.className='note-card'+(i===selected?' active':'');
+      const strong=document.createElement('strong');
+      const span=document.createElement('span');
+      strong.textContent=n.title; span.textContent=n.message;
+      b.append(strong,span);
+      b.addEventListener('click',()=>selectNote(i));
+      grid.appendChild(b);
+    });
+  }
+
+  function selectNote(i){
+    if(!notes[i]) return;
+    selected=i;
+    titleInput.value=notes[i].title;
+    messageInput.value=notes[i].message;
+    miniTitle.textContent=notes[i].title || 'Your Card';
+    miniText.textContent=notes[i].message || 'Your message';
+    status.textContent='';
+    renderNotes();
+    if(envelope.classList.contains('open')) speakCardMessage(); // envelope's already open — read the newly-picked note too
+  }
+
+  // ---------- Text-to-speech: reads the card message aloud when the
+  // envelope opens, with a choice of two voices. ----------
+  let availableVoices = [];
+  let voiceMuted = false;
+
+  // Common name patterns TTS engines use for each gender — the Web
+  // Speech API doesn't expose gender directly, so this is a best-effort
+  // guess from the voice's name.
+  const FEMALE_NAME_HINTS = ['female','woman','zira','samantha','victoria','susan','karen','moira','tessa','fiona','amira','laila','salma','hoda','fatima','layla','maryam','noura','zahra'];
+  const MALE_NAME_HINTS = ['male','man','david','mark','daniel','fred','alex','tarik','hamed','majed','yousef','khalid','naayf','omar','ahmed','ali'];
+
+  function guessGender(voice){
+    const n = (voice.name || '').toLowerCase();
+    if(FEMALE_NAME_HINTS.some(h => n.includes(h))) return 'female';
+    if(MALE_NAME_HINTS.some(h => n.includes(h))) return 'male';
+    return null;
+  }
+
+  function pickTwoVoices(voices){
+    // Prefer one female + one male voice. If the message being read
+    // needs Arabic, prioritize an Arabic-capable voice within each
+    // gender group — this gets re-picked per-message in
+    // speakCardMessage, but this initial pick is used for showing a
+    // sensible default in the Boses 1/2 buttons.
+    const arabicVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+    const femaleVoices = voices.filter(v => guessGender(v) === 'female');
+    const maleVoices = voices.filter(v => guessGender(v) === 'male');
+
+    const female = (arabicVoices.find(v => guessGender(v) === 'female')) || femaleVoices[0] || voices[0] || null;
+    const male = (arabicVoices.find(v => guessGender(v) === 'male')) || maleVoices[0] || voices.find(v => v !== female) || female;
+    return [female, male];
+  }
+
+  function isArabicText(text){
+    return /[\u0600-\u06FF]/.test(text);
+  }
+
+  // Finds the best voice for THIS specific message: keeps the chosen
+  // gender slot (female/male) but swaps to an Arabic-capable voice of
+  // that same gender if the text itself is in Arabic and the
+  // currently-picked voice can't read Arabic.
+  function resolveVoiceForText(text){
+    const allVoices = window.speechSynthesis.getVoices();
+    if(!allVoices.length) return null;
+
+    const arabic = isArabicText(text);
+    const preferredLangs = arabic
+      ? ['ar-SA','ar-BH','ar-AE','ar','en-US','en-GB','en']
+      : ['en-US','en-GB','en','ar-SA','ar-BH','ar'];
+
+    // Prefer the closest language available on this device/browser.
+    for(const lang of preferredLangs){
+      const exact = allVoices.find(v => (v.lang || '').toLowerCase() === lang.toLowerCase());
+      if(exact) return exact;
+    }
+    for(const lang of preferredLangs){
+      const family = lang.split('-')[0].toLowerCase();
+      const sameFamily = allVoices.find(v => (v.lang || '').toLowerCase().startsWith(family));
+      if(sameFamily) return sameFamily;
+    }
+    return allVoices[0] || null;
+  }
+
+  function loadVoices(){
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if(voices.length === 0) return; // not loaded yet — voiceschanged will fire loadVoices again
+    availableVoices = pickTwoVoices(voices);
+  }
+  if(window.speechSynthesis){
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  // Voice is automatic: choose the best available voice for the message language.
+const muteBtn = document.getElementById('voiceMuteBtn');
+  muteBtn.addEventListener('click', () => {
+    voiceMuted = !voiceMuted;
+    muteBtn.classList.toggle('muted', voiceMuted);
+    muteBtn.textContent = voiceMuted ? '🔇' : '🔈';
+    if(voiceMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    playClick();
+  });
+
+  function speakCardMessage(){
+    if(voiceMuted || !window.speechSynthesis) return;
+    const title = document.getElementById('miniTitle').textContent || '';
+    const text = document.getElementById('miniText').textContent || '';
+    const full = (title + '. ' + text).trim();
+    if(!full) return;
+    window.speechSynthesis.cancel(); // stop any previous reading before starting a new one
+    const utter = new SpeechSynthesisUtterance(full);
+    const voice = resolveVoiceForText(full); // swaps to an Arabic voice (same gender) automatically if the message is in Arabic
+    if(voice){
+      utter.voice = voice;
+      utter.lang = voice.lang;
+    } else if(isArabicText(full)){
+      utter.lang = 'ar-SA'; // no matching voice found, but at least hint the language so pronunciation isn't totally wrong
+    }
+    utter.rate = 0.95;
+    window.speechSynthesis.speak(utter);
+  }
+
+  function playChime(){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const notes = [660, 880, 1320]; // a bright little ascending "for you" chime
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.11;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    }catch(e){ /* audio not available — silently skip, opening still works */ }
+  }
+
+  function toggleEnvelope(){
+    envelope.classList.toggle('open');
+    const np=document.getElementById('notesPanel');
+    const workspace=document.querySelector('.message-workspace');
+    if(envelope.classList.contains('open')){
+      playChime();
+      speakCardMessage();
+      np.classList.add('revealed');
+      workspace.classList.remove('notes-hidden');
+      renderNotes();
+    }else{
+      np.classList.remove('revealed');
+      workspace.classList.add('notes-hidden');
+      if(window.speechSynthesis) window.speechSynthesis.cancel(); // stop reading if they close the envelope mid-sentence
+    }
+  }
+  document.querySelector('.message-workspace').classList.add('notes-hidden');
+  envelope.addEventListener('click',toggleEnvelope);
+  envelope.addEventListener('keydown',e=>{
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleEnvelope();}
+  });
+
+  document.getElementById('saveNoteBtn').addEventListener('click',async ()=>{
+    const t=titleInput.value.trim(), m=messageInput.value.trim();
+    if(!t||!m){status.textContent='Please enter both title and message.';return;}
+    const current = notes[selected];
+    current.title=t; current.message=m;
+    selectNote(selected);
+    status.textContent='Sinasave…';
+    try{
+      if(current.row){
+        await fetch(NOTES_API, { method:'POST', body:new URLSearchParams({ action:'updateCardNote', row:current.row, title:t, message:m }) });
+      } else {
+        const res = await fetch(NOTES_API, { method:'POST', body:new URLSearchParams({ action:'addCardNote', title:t, message:m }) }).then(r=>r.json());
+        if(res && res.row) current.row = res.row; // now saved — future edits will update this same row
+      }
+      status.textContent='✓ Note saved.';
+    }catch(e){
+      status.textContent='⚠ Na-save lokal lang — walang connection sa Sheet.';
+    }
+  });
+
+  document.getElementById('newNoteBtn').addEventListener('click',()=>{
+    notes.push({title:'New Note',message:'Type your message here…'});
+    selectNote(notes.length-1);
+    titleInput.focus(); titleInput.select();
+  });
+
+  document.getElementById('deleteNoteBtn').addEventListener('click',async ()=>{
+    if(notes.length===1){status.textContent='Keep at least one note.';return;}
+    const current = notes[selected];
+    notes.splice(selected,1);
+    selected=Math.max(0,selected-1);
+    selectNote(selected);
+    status.textContent='Note deleted.';
+    if(current.row){
+      try{ await fetch(NOTES_API, { method:'POST', body:new URLSearchParams({ action:'deleteCardNote', row:current.row }) }); }
+      catch(e){ /* local removal already happened; Sheet will just keep the stale row until next successful delete */ }
+    }
+  });
+
+  document.getElementById('copyNoteBtn').addEventListener('click',()=>{
+    const text=notes[selected].title+'\n\n'+notes[selected].message;
+    const fallback=()=>{
+      const ta=document.createElement('textarea');
+      ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');status.textContent='✓ Note copied.';}
+      catch(e){status.textContent='Copy unavailable on this browser.'}
+      ta.remove();
+    };
+    if(navigator.clipboard && window.isSecureContext)
+      navigator.clipboard.writeText(text).then(()=>status.textContent='✓ Note copied.').catch(fallback);
+    else fallback();
+  });
+
+  document.getElementById('useNoteBtn').addEventListener('click',()=>{
+    const n=notes[selected];
+    const clean=n.title+'\n\n'+n.message;
+    // Put the selected note into the existing printable card editor.
+    if(typeof textArea!=='undefined'){
+      textArea.innerHTML='';
+      const titleEl=document.createElement('div');
+      titleEl.style.fontWeight='700';
+      titleEl.style.marginBottom='10px';
+      titleEl.textContent=n.title;
+      const msgEl=document.createElement('div');
+      msgEl.textContent=n.message;
+      textArea.append(titleEl,msgEl);
+      textArea.focus();
+      status.textContent='✓ Message placed on printable card.';
+    }else{
+      status.textContent=clean;
+    }
+  });
+
+  selectNote(0);
+})();
+
+</script>
+
+</body>
+</html>
