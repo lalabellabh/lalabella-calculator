@@ -706,7 +706,7 @@ body{background:
       // breakdown for something like a tin of truffles. Use it as-is
       // rather than multiplying by a weight that was never meant to
       // apply to this kind of item.
-      const isWholePackagedItem = String(selectedBatch.Unit||'').trim().toLowerCase() === 'piece';
+      const isWholePackagedItem = String(selectedBatch.PackagingType||'Piece').trim().toLowerCase() !== 'piece';
       const pricePerKg = Number(selectedBatch.PricePerKg) || 0;
       if(isWholePackagedItem){
         price = pricePerKg;
