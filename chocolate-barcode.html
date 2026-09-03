@@ -424,6 +424,8 @@
         <button class="preset-btn active" data-mode="piece">Per Piece</button>
         <button class="preset-btn" data-mode="gram">Per Gram</button>
         <button class="preset-btn" data-mode="kg">Per Kg</button>
+        <button class="preset-btn" data-mode="box">Per Box</button>
+        <button class="preset-btn" data-mode="can">Per Can</button>
       </div>
       <label id="unitAmountLabel">How many pieces per label?</label>
       <input type="number" id="fUnitAmount" min="0" step="0.01" placeholder="e.g. 1" value="1" />
@@ -625,7 +627,9 @@
     const label = document.getElementById('unitAmountLabel');
     if(unitMode === 'piece') label.textContent = 'How many pieces per label?';
     else if(unitMode === 'gram') label.textContent = 'How many grams per label?';
-    else label.textContent = 'How many kg per label?';
+    else if(unitMode === 'kg') label.textContent = 'How many kg per label?';
+    else if(unitMode === 'box') label.textContent = 'How many boxes per label?';
+    else label.textContent = 'How many cans per label?';
     if(selectedItem) showPreview(selectedItem);
   });
 
@@ -639,18 +643,38 @@
     if(n <= 0) return null;
     const pricePerKg = Number(String(selectedItem['Standard Price / Kg']).replace(/[^0-9.]/g,'')) || 0;
     const weightPerPiece = Number(selectedItem['Grams']) || 0;
-    let kg, label;
-    if(unitMode === 'piece'){
-      kg = (n * weightPerPiece) / 1000;
+    const isWholePackagedItem = String(selectedItem['Unit']||'').trim().toLowerCase() === 'piece';
+    let kg, label, total;
+    if(unitMode === 'box' || unitMode === 'can'){
+      // Boxes and cans are sold as a sealed, complete unit — nothing
+      // to weigh per piece. The price entered for this item (in
+      // "Standard Price / Kg") is already the real per-box/per-can
+      // price, so it's used directly rather than being multiplied by
+      // any weight.
+      label = n + (n != 1 ? (unitMode === 'box' ? ' boxes' : ' cans') : (unitMode === 'box' ? ' box' : ' can'));
+      total = n * pricePerKg;
+    } else if(unitMode === 'piece'){
       label = n + (n != 1 ? ' pcs' : ' pc');
+      if(isWholePackagedItem){
+        // Items received/stocked as whole units (a sealed can, box,
+        // tin — nothing to weigh per piece) store their real
+        // per-can/per-box price directly in "Price / Kg" even though
+        // that field name says otherwise. Use it as-is instead of
+        // multiplying by a weight that was never meant to apply here.
+        total = n * pricePerKg;
+      } else {
+        kg = (n * weightPerPiece) / 1000;
+        total = kg * pricePerKg;
+      }
     } else if(unitMode === 'gram'){
       kg = n / 1000;
       label = n + ' g';
+      total = kg * pricePerKg;
     } else {
       kg = n;
       label = n + ' kg';
+      total = kg * pricePerKg;
     }
-    const total = kg * pricePerKg;
     return { total, label };
   }
 
