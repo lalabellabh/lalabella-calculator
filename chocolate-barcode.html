@@ -438,6 +438,12 @@
         <button class="preset-btn" data-qty="30">Full Sheet (30)</button>
       </div>
 
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;text-transform:none;">
+        <input type="checkbox" id="fUseManualPrice" style="width:auto;">
+        <span style="font-size:12.5px;color:var(--ink);">Use a manual price instead</span>
+      </label>
+      <input type="number" id="fManualPrice" min="0" step="0.001" placeholder="e.g. 5.000" style="display:none;margin-top:6px;">
+
       <div class="preview-label" id="previewLabel" style="display:none;">
         <div class="p-name" id="pvName"></div>
         <div class="p-price" id="pvPrice"></div>
@@ -446,6 +452,7 @@
       </div>
 
       <button class="gen-btn" id="addToCartBtn">Add to Print List</button>
+      <button class="print-page-btn show" id="addAllBtn" style="margin-top:10px;">🍫 Add Every Chocolate to Print List</button>
     </div>
 
     <div class="card" id="labelCartCard" style="display:none;">
@@ -637,10 +644,25 @@
     if(selectedItem) showPreview(selectedItem);
   });
 
+  document.getElementById('fUseManualPrice').addEventListener('change', function(){
+    document.getElementById('fManualPrice').style.display = this.checked ? 'block' : 'none';
+    if(selectedItem) showPreview(selectedItem);
+  });
+  document.getElementById('fManualPrice').addEventListener('input', ()=>{
+    if(selectedItem) showPreview(selectedItem);
+  });
+
   function computeLabelPrice(){
     if(!selectedItem) return null;
     const n = parseFloat(document.getElementById('fUnitAmount').value) || 0;
     if(n <= 0) return null;
+    const manualCk = document.getElementById('fUseManualPrice');
+    if(manualCk && manualCk.checked){
+      const manualPrice = parseFloat(document.getElementById('fManualPrice').value);
+      if(isNaN(manualPrice)) return null;
+      const label = n + (n != 1 ? (unitMode === 'piece' ? ' pcs' : unitMode === 'box' ? ' boxes' : unitMode === 'can' ? ' cans' : ' ' + unitMode) : (unitMode === 'piece' ? ' pc' : unitMode === 'box' ? ' box' : unitMode === 'can' ? ' can' : ' ' + unitMode));
+      return { total: n * manualPrice, label };
+    }
     const pricePerKg = Number(String(selectedItem['Standard Price / Kg']).replace(/[^0-9.]/g,'')) || 0;
     const weightPerPiece = Number(selectedItem['Grams']) || 0;
     const isWholePackagedItem = String(selectedItem['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
@@ -742,6 +764,35 @@
     document.getElementById('previewLabel').style.display = 'none';
     document.getElementById('fQty').value = '';
     document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(b => b.classList.remove('active'));
+  });
+
+  // ---- Add Every Chocolate ----
+  // Bulk-adds one label of every catalogued chocolate that has a
+  // Product Code, using whichever pricing mode/manual price is
+  // currently set — for printing a full shelf-label refresh in one
+  // click instead of searching and adding each item by hand.
+  document.getElementById('addAllBtn').addEventListener('click', ()=>{
+    const eligible = items.filter(it => it['Product Code']);
+    if(eligible.length === 0){ alert('Walang laman ang catalog. Subukan i-refresh ang page.'); return; }
+    const savedSelected = selectedItem;
+    const savedAmount = document.getElementById('fUnitAmount').value;
+    document.getElementById('fUnitAmount').value = savedAmount || 1;
+
+    eligible.forEach(it => {
+      selectedItem = it;
+      const priceResult = computeLabelPrice();
+      if(priceResult){
+        labelCart.push({
+          chocolateName: it['Chocolate Name'],
+          productCode: it['Product Code'],
+          priceLine: priceResult.label + ' — ' + fmtBD(priceResult.total),
+          qty: 1
+        });
+      }
+    });
+
+    selectedItem = savedSelected;
+    renderLabelCart();
   });
 
   function renderLabelCart(){
