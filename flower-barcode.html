@@ -151,17 +151,11 @@
   background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
 }
 .choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
-/* hamburger stays visible on mobile too now */
-/* The fixed hamburger button sits at top:16px, extending to about
-   60px tall — without extra clearance it was sitting on top of (and
-   hiding) each page's own title/back-link in that same corner. */
 .wrap{ padding-top:76px !important; }
 </style>
 
-
 </head>
 <body>
-
 
 <button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
 <div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
@@ -214,6 +208,12 @@
         <button class="preset-btn" data-qty="30">Full Sheet (30)</button>
       </div>
 
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <input type="checkbox" id="fUseManualPrice" style="width:auto;margin:0;">
+        <span style="text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink);">Use a manual price instead</span>
+      </label>
+      <input type="number" id="fManualPrice" min="0" step="0.001" placeholder="e.g. 5.000" style="display:none;margin-top:6px;">
+
       <div class="preview-label" id="previewLabel">
         <div class="p-name" id="pvName"></div>
         <div class="p-price" id="pvPrice"></div>
@@ -222,6 +222,7 @@
       </div>
 
       <button class="btn btn-primary" id="addToCartBtn" disabled>Add to Print List</button>
+      <button class="btn btn-outline show" id="addAllBtn" style="border-color:var(--leaf);color:var(--leaf);">🌸 Add Every Flower to Print List</button>
     </div>
 
     <div class="card" id="labelCartCard" style="display:none;">
@@ -345,12 +346,29 @@
   });
   document.getElementById('fQty').addEventListener('input', updatePreview);
 
+  // ---- Manual price override ----
+  const useManualPriceCk = document.getElementById('fUseManualPrice');
+  const manualPriceInput = document.getElementById('fManualPrice');
+  useManualPriceCk.addEventListener('change', ()=>{
+    manualPriceInput.style.display = useManualPriceCk.checked ? 'block' : 'none';
+    updatePreview();
+  });
+  manualPriceInput.addEventListener('input', updatePreview);
+
+  function currentRate(){
+    if(useManualPriceCk.checked){
+      const v = parseFloat(manualPriceInput.value);
+      return isNaN(v) ? 0 : v;
+    }
+    return selected ? selected.rate : 0;
+  }
+
   function updatePreview(){
     if(!selected) return;
     const pv = document.getElementById('previewLabel');
     pv.classList.add('show');
     document.getElementById('pvName').textContent = selected.name + ' (' + selected.origin + ')';
-    document.getElementById('pvPrice').textContent = fmtBD(selected.rate);
+    document.getElementById('pvPrice').textContent = fmtBD(currentRate());
     document.getElementById('pvCode').textContent = selected.itemCode;
     try{
       JsBarcode("#pvBarcode", String(selected.itemCode || '000000'), { format: "CODE128", width: 1.3, height: 32, displayValue: false });
@@ -361,13 +379,28 @@
   document.getElementById('addToCartBtn').addEventListener('click', ()=>{
     if(!selected) return;
     const qty = parseInt(document.getElementById('fQty').value) || 1;
-    cart.push({ ...selected, qty });
+    cart.push({ ...selected, rate: currentRate(), qty });
     selected = null;
     searchInput.value = '';
     document.getElementById('fQty').value = 1;
+    useManualPriceCk.checked = false;
+    manualPriceInput.style.display = 'none';
+    manualPriceInput.value = '';
     document.getElementById('previewLabel').classList.remove('show');
     document.getElementById('addToCartBtn').disabled = true;
     document.querySelectorAll('#labelQtyPresets .preset-btn').forEach(b => b.classList.remove('active'));
+    renderCart();
+  });
+
+  // ---- Add Every Flower ----
+  // Bulk-adds one label of every catalogued flower in a single click,
+  // for printing a full restock/refresh of every shelf label at once
+  // rather than searching and adding each one by hand.
+  document.getElementById('addAllBtn').addEventListener('click', ()=>{
+    if(CATALOG.length === 0){ alert('Walang laman ang catalog. Subukan i-refresh ang page.'); return; }
+    CATALOG.forEach(f => {
+      cart.push({ name: f.name, origin: f.origin, rate: f.rate, itemCode: f.itemCode, qty: 1 });
+    });
     renderCart();
   });
 
@@ -506,8 +539,6 @@
   btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
   backdrop.addEventListener('click', closeDrawer);
 
-  // Smart Home — goes to the Flower hub from a flower page, or the
-  // Chocolate hub from a chocolate page.
   const homeLink=document.getElementById('chocoHomeLink');
   if(homeLink){
     const isFlowerPage = 'flower' === 'flower';
@@ -516,9 +547,6 @@
   }
 })();
 
-// ---------- Shared music player (same saved sound as the rest of
-// Lalabella on THIS device — set it once anywhere, it follows you
-// across every page on this same browser/phone). ----------
 (function(){
   const audio = document.getElementById('chocoAudioPlayer');
   const musicBtn = document.getElementById('chocoMusicToggleBtn');
@@ -564,11 +592,6 @@
       } else {
         audio.src = savedUrl;
       }
-      // sessionStorage clears itself the moment the browser tab/window
-      // closes — exactly the reset point we want. If this session has
-      // already pressed ♫ once (on any page), every other page picks
-      // right back up automatically; otherwise it stays silent until
-      // tapped, same as a first-ever visit.
       const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
       if(sessionPlaying){
         if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
@@ -611,13 +634,10 @@
       applyUrl(url);
       return;
     }
-    // No new URL typed — just toggle play/pause of whatever's loaded.
     if(!audio.src && !ytVideoId) return;
     if(isPlaying){
       if(ytVideoId) stopYouTube(); else audio.pause();
       musicBtn.textContent = '♫ Music'; isPlaying = false;
-      // Pausing here means "stop following me" — the next page won't
-      // resume on its own until ♫ is pressed again.
       sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
     } else {
       if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
@@ -626,9 +646,6 @@
     }
   });
 
-  // "Search" doesn't auto-pick a video (no API key set up) — it opens
-  // YouTube's own search in a new tab so you can pick the exact one,
-  // then paste that video's link back into the URL box above.
   if(searchBtn && searchInput){
     searchBtn.addEventListener('click', ()=>{
       const q = searchInput.value.trim();
@@ -639,7 +656,6 @@
   }
 })();
 </script>
-
 
 </body>
 </html>
