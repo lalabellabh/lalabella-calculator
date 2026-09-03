@@ -643,7 +643,7 @@
     if(n <= 0) return null;
     const pricePerKg = Number(String(selectedItem['Standard Price / Kg']).replace(/[^0-9.]/g,'')) || 0;
     const weightPerPiece = Number(selectedItem['Grams']) || 0;
-    const isWholePackagedItem = String(selectedItem['Unit']||'').trim().toLowerCase() === 'piece';
+    const isWholePackagedItem = String(selectedItem['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
     let kg, label, total;
     if(unitMode === 'box' || unitMode === 'can'){
       // Boxes and cans are sold as a sealed, complete unit — nothing
