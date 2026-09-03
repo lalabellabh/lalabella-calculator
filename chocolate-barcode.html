@@ -78,7 +78,7 @@
     padding:11px 12px; font-family:'Space Grotesk',sans-serif; font-size:14px;
     color:var(--ink); outline:none;
   }
-  input[type=text]{ text-transform:uppercase; }
+  input[type=text]{ }
   input:focus{ border-color:var(--ink); }
 
   .category-pills{
@@ -597,7 +597,11 @@
   }
 
   document.getElementById('fSearch').addEventListener('input', function(){
-    const match = items.find(it => it['Chocolate Name'] === this.value);
+    // Case/whitespace-tolerant match, same fix applied in Release —
+    // a name typed slightly differently from the catalog used to
+    // silently fail here, leaving no Product Code selectable.
+    const typed = this.value.trim().toLowerCase();
+    const match = items.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed);
     if(match){
       selectedItem = match;
       showPreview(match);
@@ -907,7 +911,8 @@ function populateDisplayItemList(){
 }
 
 document.getElementById('displaySearch').addEventListener('input', function(){
-  const match = items.find(it => it['Chocolate Name'] === this.value);
+  const typed = this.value.trim().toLowerCase();
+  const match = items.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed);
   if(match){
     const priceKg = Number(match['Standard Price / Kg']) || 0;
     const gramsPerPiece = Number(match['Grams']) || 0;
