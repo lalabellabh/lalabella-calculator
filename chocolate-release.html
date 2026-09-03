@@ -699,26 +699,38 @@ body{background:
       price = Number(selectedBatch.PricePerKg) || 0;
       total = qty * price;
     } else {
-      // Match the same conversion the Price Calculator uses: a piece
-      // isn't a whole kilogram, so its price has to come from the
-      // item's actual weight-per-piece — (grams ÷ 1000) × Price/Kg —
-      // not the Kg price applied directly per piece (which was wildly
-      // overcharging, since most pieces weigh 15-25g, not 1000g).
-      // The weight-based calculation is preferred FIRST, even over a
-      // stored "Price Per Piece" value — that stored value has turned
-      // out to sometimes be stale/incorrect, while grams × Price/Kg is
-      // always derived fresh from the same numbers Calc trusts.
-      const explicitPiecePrice = Number(selectedBatch.PricePerPiece) || 0;
-      const weightPerPieceG = Number(selectedBatch.WeightPerPiece) || 0;
+      // Items received/stocked as whole packaged units (a sealed can,
+      // box, tin — Unit = "Piece" from the start) store their real
+      // per-can/per-box price directly in Price/Kg, even though that
+      // field name says otherwise — there's no meaningful "per kg"
+      // breakdown for something like a tin of truffles. Use it as-is
+      // rather than multiplying by a weight that was never meant to
+      // apply to this kind of item.
+      const isWholePackagedItem = String(selectedBatch.Unit||'').trim().toLowerCase() === 'piece';
       const pricePerKg = Number(selectedBatch.PricePerKg) || 0;
-      if(weightPerPieceG > 0 && pricePerKg > 0){
-        price = (weightPerPieceG / 1000) * pricePerKg;
-      } else if(explicitPiecePrice > 0){
-        price = explicitPiecePrice;
-      } else {
-        // Last resort when neither a weight nor a per-piece price is on
-        // record for this batch — better than showing 0.00, but flag it.
+      if(isWholePackagedItem){
         price = pricePerKg;
+      } else {
+        // Match the same conversion the Price Calculator uses: a piece
+        // isn't a whole kilogram, so its price has to come from the
+        // item's actual weight-per-piece — (grams ÷ 1000) × Price/Kg —
+        // not the Kg price applied directly per piece (which was wildly
+        // overcharging, since most pieces weigh 15-25g, not 1000g).
+        // The weight-based calculation is preferred FIRST, even over a
+        // stored "Price Per Piece" value — that stored value has turned
+        // out to sometimes be stale/incorrect, while grams × Price/Kg is
+        // always derived fresh from the same numbers Calc trusts.
+        const explicitPiecePrice = Number(selectedBatch.PricePerPiece) || 0;
+        const weightPerPieceG = Number(selectedBatch.WeightPerPiece) || 0;
+        if(weightPerPieceG > 0 && pricePerKg > 0){
+          price = (weightPerPieceG / 1000) * pricePerKg;
+        } else if(explicitPiecePrice > 0){
+          price = explicitPiecePrice;
+        } else {
+          // Last resort when neither a weight nor a per-piece price is on
+          // record for this batch — better than showing 0.00, but flag it.
+          price = pricePerKg;
+        }
       }
       total = qty * price;
     }
