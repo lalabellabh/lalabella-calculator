@@ -414,6 +414,8 @@ body{background:
         <select id="fReleaseUnit">
           <option value="Kg">Kg</option>
           <option value="Piece">Piece</option>
+          <option value="Box">Box</option>
+          <option value="Can">Can</option>
         </select>
       </div>
     </div>
@@ -695,19 +697,26 @@ body{background:
     const qty = parseFloat(document.getElementById('fQty').value) || 0;
     const unit = document.getElementById('fReleaseUnit').value;
     let price, total;
+    const pricePerKg = Number(selectedBatch.PricePerKg) || 0;
     if(unit === 'Kg'){
-      price = Number(selectedBatch.PricePerKg) || 0;
+      price = pricePerKg;
+      total = qty * price;
+    } else if(unit === 'Box' || unit === 'Can'){
+      // A box or can is a sealed, complete unit — the price stored for
+      // this item (in Price/Kg) IS the real per-box/per-can price, no
+      // weight conversion involved. Selecting Box/Can here is an
+      // explicit choice, so it's honored directly regardless of what
+      // the catalog's own Packaging Type says.
+      price = pricePerKg;
       total = qty * price;
     } else {
-      // Items received/stocked as whole packaged units (a sealed can,
-      // box, tin — Unit = "Piece" from the start) store their real
+      // Items catalogued as Box/Can Packaging Type store their real
       // per-can/per-box price directly in Price/Kg, even though that
       // field name says otherwise — there's no meaningful "per kg"
       // breakdown for something like a tin of truffles. Use it as-is
       // rather than multiplying by a weight that was never meant to
       // apply to this kind of item.
       const isWholePackagedItem = String(selectedBatch.PackagingType||'Piece').trim().toLowerCase() !== 'piece';
-      const pricePerKg = Number(selectedBatch.PricePerKg) || 0;
       if(isWholePackagedItem){
         price = pricePerKg;
       } else {
