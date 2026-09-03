@@ -991,7 +991,10 @@ document.getElementById('displaySearch').addEventListener('input', function(){
   if(match){
     const priceKg = Number(match['Standard Price / Kg']) || 0;
     const gramsPerPiece = Number(match['Grams']) || 0;
-    const pricePerPiece = gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : 0;
+    const isWholePackagedItem = String(match['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
+    const pricePerPiece = isWholePackagedItem
+      ? priceKg
+      : (gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : 0);
     document.getElementById('displayPrice').value = pricePerPiece.toFixed(3);
   }
 });
@@ -1114,7 +1117,15 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
     .map(it => {
       const priceKg = Number(it['Standard Price / Kg']) || 0;
       const gramsPerPiece = Number(it['Grams']) || 0;
-      const pricePerPiece = gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : priceKg;
+      // Same rule as everywhere else: a Box/Can item's "Standard
+      // Price / Kg" IS already its real per-unit sale price — never
+      // multiply it by a weight that doesn't apply to a sealed
+      // package. Only a genuine loose/weighed Piece item converts
+      // through its Grams.
+      const isWholePackagedItem = String(it['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
+      const pricePerPiece = isWholePackagedItem
+        ? priceKg
+        : (gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : priceKg);
       return [it['Chocolate Name'], it['Product Code'], pricePerPiece.toFixed(3), ''];
     });
 
