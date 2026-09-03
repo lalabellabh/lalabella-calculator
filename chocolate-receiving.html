@@ -968,6 +968,19 @@
     saveBtn.textContent = 'Save Changes';
   });
 
+  // A box or can is always counted whole, never weighed — auto-lock
+  // the Unit to "Piece" so it can't be mismatched (e.g. "Can" +
+  // "Kg", which wouldn't make sense to receive by weight).
+  document.getElementById('fPackagingType').addEventListener('change', function(){
+    const unitSelect = document.getElementById('fUnit');
+    if(this.value === 'Box' || this.value === 'Can'){
+      unitSelect.value = 'Piece';
+      unitSelect.disabled = true;
+    } else {
+      unitSelect.disabled = false;
+    }
+  });
+
   document.getElementById('logBtn').addEventListener('click', async ()=>{
     const chocolateName = document.getElementById('fSearch').value.trim();
     const receiveDate = document.getElementById('fDate').value;
