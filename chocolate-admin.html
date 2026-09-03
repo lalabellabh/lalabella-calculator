@@ -190,6 +190,31 @@
       <button class="btn chocolate" id="backfillBtn">Scan &amp; Add Missing Items</button>
       <div class="result" id="backfillResult"></div>
     </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">✏️ Fix an Existing Catalog Item</div>
+      <p style="font-size:13px;color:#8a7078;margin:0 0 12px;">
+        Search for a chocolate already in the catalog to fill in or
+        correct its Grams (weight per piece), price, category, or
+        Product Code — most useful for items that were auto-added
+        without a weight, which is why "Per Piece" pricing shows 0
+        for them on the Barcode page until this is filled in.
+      </p>
+      <div class="field"><label>Chocolate Name</label>
+        <input id="editItemName" type="text" list="editItemDatalist" placeholder="Start typing to search…">
+        <datalist id="editItemDatalist"></datalist>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Category</label><input id="editItemCategory" type="text"></div>
+        <div class="field"><label>Brand</label><input id="editItemBrand" type="text"></div>
+        <div class="field"><label>Grams (per piece)</label><input id="editItemGrams" type="number" min="0" step="0.1"></div>
+        <div class="field"><label>Standard Price / Kg (BHD)</label><input id="editItemPrice" type="number" min="0" step="0.001"></div>
+        <div class="field"><label>Min Stock</label><input id="editItemMinStock" type="number" min="0"></div>
+        <div class="field"><label>Product Code</label><input id="editItemCode" type="text"></div>
+      </div>
+      <button class="btn chocolate" id="saveEditItemBtn">Save Changes</button>
+      <div class="result" id="editItemResult"></div>
+    </div>
   </div>
 </div>
 
@@ -291,6 +316,71 @@ document.getElementById('backfillBtn').addEventListener('click', ()=>{
     })
     .catch(err => {
       btn.disabled = false; btn.textContent = 'Scan & Add Missing Items';
+      resultBox.className = 'result err';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    });
+});
+
+// ---------- Fix an Existing Catalog Item ----------
+let editableItems = [];
+(async function loadEditableItems(){
+  try{
+    editableItems = await (await fetch(CHOCOLATE_API + '?action=getItems&_ts=' + Date.now())).json();
+    document.getElementById('editItemDatalist').innerHTML =
+      editableItems.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+  }catch(e){ console.error(e); }
+})();
+
+document.getElementById('editItemName').addEventListener('input', function(){
+  const typed = this.value.trim().toLowerCase();
+  const match = editableItems.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed);
+  if(match){
+    document.getElementById('editItemCategory').value = match['Category'] || '';
+    document.getElementById('editItemBrand').value = match['Brand'] || '';
+    document.getElementById('editItemGrams').value = match['Grams'] || '';
+    document.getElementById('editItemPrice').value = match['Standard Price / Kg'] || '';
+    document.getElementById('editItemMinStock').value = match['Min Stock'] || '';
+    document.getElementById('editItemCode').value = match['Product Code'] || '';
+  }
+});
+
+document.getElementById('saveEditItemBtn').addEventListener('click', ()=>{
+  const btn = document.getElementById('saveEditItemBtn');
+  const resultBox = document.getElementById('editItemResult');
+  const name = document.getElementById('editItemName').value.trim();
+  if(!name){
+    resultBox.className = 'result err';
+    resultBox.textContent = 'Type or pick a chocolate name first.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  resultBox.className = 'result'; resultBox.textContent = '';
+
+  const params = new URLSearchParams({
+    action: 'updateChocolateItem',
+    chocolateName: name,
+    category: document.getElementById('editItemCategory').value,
+    brand: document.getElementById('editItemBrand').value,
+    grams: document.getElementById('editItemGrams').value,
+    pricePerKg: document.getElementById('editItemPrice').value,
+    minStock: document.getElementById('editItemMinStock').value,
+    productCode: document.getElementById('editItemCode').value
+  });
+
+  fetch(CHOCOLATE_API + '?' + params.toString())
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      if(res.error){
+        resultBox.className = 'result err';
+        resultBox.textContent = 'Error: ' + res.error;
+        return;
+      }
+      resultBox.className = 'result ok';
+      resultBox.textContent = '✓ Saved — ' + name + ' updated.';
+    })
+    .catch(err => {
+      btn.disabled = false; btn.textContent = 'Save Changes';
       resultBox.className = 'result err';
       resultBox.textContent = 'Could not reach the server. Check your connection.';
     });
