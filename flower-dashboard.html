@@ -613,9 +613,9 @@
           style="width:100%;padding:9px 12px;border:1px solid var(--line,#f0d9d9);border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;">
         <div id="stockLevelList" style="max-height:280px; overflow-y:auto;">
           ${!list || list.length === 0 ? '<div class="empty-note">No stock data yet.</div>' : list.map(item => `
-            <div class="lowstock-row" data-name="${(item.name||'').toLowerCase()}">
-              <div><b>${item.name}</b></div>
-              <div class="lowstock-deficit">${fmtNum(item.stock)} ${item.unit||''}</div>
+            <div class="lowstock-row" data-name="${(item.name||'').toLowerCase()}" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+              <div style="min-width:0;overflow-wrap:break-word;"><b>${item.name}</b></div>
+              <div class="lowstock-deficit" style="white-space:nowrap;flex-shrink:0;">${fmtNum(item.stock)} ${item.unit||''}</div>
             </div>
           `).join('')}
         </div>
