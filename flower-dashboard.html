@@ -605,6 +605,24 @@
     `;
   }
 
+  function renderItemStockLevels(list){
+    return `
+      <div class="card">
+        <div class="card-title">🔎 Live Stock Levels</div>
+        <input type="text" id="stockLevelSearch" placeholder="Type a flower name (e.g. Rose)…"
+          style="width:100%;padding:9px 12px;border:1px solid var(--line,#f0d9d9);border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;">
+        <div id="stockLevelList" style="max-height:280px; overflow-y:auto;">
+          ${!list || list.length === 0 ? '<div class="empty-note">No stock data yet.</div>' : list.map(item => `
+            <div class="lowstock-row" data-name="${(item.name||'').toLowerCase()}">
+              <div><b>${item.name}</b></div>
+              <div class="lowstock-deficit">${fmtNum(item.stock)} ${item.unit||''}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function render(){
     if(!data) return;
     const el = document.getElementById('dashboardContent');
@@ -623,6 +641,7 @@
           ${renderLastActivity(data.lastActivity || {})}
           ${renderBranchSummary(data.branchSummary || [])}
           ${renderLowStock(data.lowStockList || [])}
+          ${renderItemStockLevels(data.itemStockLevels || [])}
           ${renderRateHistory(rateHistory)}
           <div class="card">
             <div class="card-title">🌸 Flower Catalog</div>
@@ -640,6 +659,16 @@
         </div>
       </div>
     `;
+
+    const searchBox = document.getElementById('stockLevelSearch');
+    if(searchBox){
+      searchBox.addEventListener('input', function(){
+        const q = this.value.trim().toLowerCase();
+        document.querySelectorAll('#stockLevelList [data-name]').forEach(row => {
+          row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+        });
+      });
+    }
   }
 
   let rateHistory = [];
