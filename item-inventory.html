@@ -180,7 +180,17 @@
       </div>
 
       <label>Category</label>
-      <input type="text" id="addItemCategory" placeholder="e.g. Packaging, Furniture">
+      <select id="addItemCategory">
+        <option value="">— Select —</option>
+        <option>Packaging</option>
+        <option>Ribbon</option>
+        <option>Vase</option>
+        <option>Card &amp; Paper</option>
+        <option>Furniture</option>
+        <option>Display</option>
+        <option>Tools &amp; Equipment</option>
+        <option>Other</option>
+      </select>
 
       <label>Starting Qty</label>
       <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
@@ -206,11 +216,17 @@
       <div id="addItemPastezone" tabindex="0" style="margin-top:8px; padding:10px; border:1.5px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:text; background:var(--blush);">
         Or click here and paste (Ctrl+V) a screenshot / Snipping Tool capture
       </div>
-      <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
+      <div style="position:relative;display:inline-block;">
+        <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
+        <button type="button" id="addItemPhotoClearBtn" style="display:none;align-items:center;justify-content:center;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);">✕</button>
+      </div>
       <div class="photo-hint" id="addItemPhotoHint"></div>
 
       <label>Notes</label>
       <textarea id="addItemNotes" rows="2" placeholder="Optional"></textarea>
+
+      <label>Entered By</label>
+      <input type="text" id="addItemEnteredBy" list="staffNameList" placeholder="Your name" autocomplete="off">
 
       <button class="btn" id="addItemBtn">Add Item</button>
       <div class="result" id="addItemResult"></div>
@@ -233,6 +249,12 @@
       <label>Qty Received</label>
       <input type="number" id="receiveQty" min="0" step="1" placeholder="0">
 
+      <label>Date</label>
+      <input type="text" id="receiveDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Received By</label>
+      <input type="text" id="receiveBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
       <button class="btn" id="receiveBtn">Receive Stock</button>
       <div class="result" id="receiveResult"></div>
     </div>
@@ -254,11 +276,14 @@
       <label>Qty to Release</label>
       <input type="number" id="releaseQty" min="0" step="1" placeholder="0">
 
+      <label>Date</label>
+      <input type="text" id="releaseDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
       <label>Reason / Event</label>
       <input type="text" id="releaseReason" placeholder="e.g. Valentine's display setup">
 
       <label>Released By</label>
-      <input type="text" id="releaseBy" placeholder="Your name">
+      <input type="text" id="releaseBy" list="staffNameList" placeholder="Your name" autocomplete="off">
 
       <button class="btn" id="releaseBtn">Release</button>
       <div class="result" id="releaseResult"></div>
@@ -434,6 +459,7 @@
       const preview = document.getElementById('addItemPhotoPreview');
       preview.src = compressed;
       preview.classList.add('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'flex';
       const approxKB = Math.round((compressed.length * 0.75) / 1024);
       hint.textContent = 'Compressed to ~' + approxKB + ' KB';
     }catch(e){
@@ -459,6 +485,18 @@
         break;
       }
     }
+  });
+
+  // ---------- Remove selected photo (the "X" button) ----------
+  document.getElementById('addItemPhotoClearBtn').addEventListener('click', function(){
+    addItemPhotoData = null;
+    const preview = document.getElementById('addItemPhotoPreview');
+    preview.src = '';
+    preview.classList.remove('show');
+    this.style.display = 'none';
+    document.getElementById('addItemPhotoHint').textContent = '';
+    document.getElementById('addItemPhoto').value = '';
+    document.getElementById('addItemPhotoCamera').value = '';
   });
 
   // ---------- Item Type toggle ----------
@@ -494,7 +532,8 @@
       price: document.getElementById('addItemPrice').value || 0,
       minStock: document.getElementById('addItemMinStock').value,
       notes: document.getElementById('addItemNotes').value,
-      photoBase64: addItemPhotoData || ''
+      photoBase64: addItemPhotoData || '',
+      enteredBy: document.getElementById('addItemEnteredBy').value
     });
 
     try{
@@ -517,6 +556,7 @@
       document.getElementById('addItemPhoto').value = '';
       document.getElementById('addItemPhotoCamera').value = '';
       document.getElementById('addItemPhotoPreview').classList.remove('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'none';
       document.getElementById('addItemPhotoHint').textContent = '';
       addItemPhotoData = null;
     }catch(e){
@@ -573,7 +613,11 @@
     btn.disabled = true; btn.textContent = 'Saving…';
     resultBox.className = 'result';
 
-    const params = new URLSearchParams({ action:'receiveItem', itemName, qty });
+    const params = new URLSearchParams({
+      action:'receiveItem', itemName, qty,
+      date: document.getElementById('receiveDate').value,
+      receivedBy: document.getElementById('receiveBy').value
+    });
     try{
       const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
       btn.disabled = false; btn.textContent = 'Receive Stock';
@@ -607,6 +651,7 @@
 
     const params = new URLSearchParams({
       action:'releaseItem', itemName, qty,
+      date: document.getElementById('releaseDate').value,
       reason: document.getElementById('releaseReason').value,
       releasedBy: document.getElementById('releaseBy').value
     });
@@ -628,7 +673,16 @@
     }
   });
 
+  async function loadStaffNames(){
+    try{
+      const names = await (await fetch(API_URL + '?action=getItemStaff&_ts=' + Date.now())).json();
+      document.getElementById('staffNameList').innerHTML =
+        (names || []).map(n => `<option value="${n}"></option>`).join('');
+    }catch(e){ console.error(e); }
+  }
+
   loadItems();
+  loadStaffNames();
 </script>
 <script>
 (function(){
@@ -641,7 +695,9 @@
   btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
   backdrop.addEventListener('click', closeDrawer);
 })();
+</script>
 
+<datalist id="staffNameList"></datalist>
 
 </body>
 </html>
