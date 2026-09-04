@@ -252,6 +252,10 @@
     .garden-right{right:-4px;bottom:20%}
     .garden-top{right:7%;top:10%;font-size:20px}
     .garden-vine{font-size:32px;opacity:.35}
+    /* Side-by-side columns get too cramped on a phone-width screen —
+       stack them into one natural reading order instead. */
+    .layout{ flex-direction:column; }
+    .col-side{ position:static; }
   }
 
 </style>
@@ -636,13 +640,8 @@
         <div class="col-main">
           ${renderTopSummary(s, budget)}
           ${renderQuickStats(q)}
-        </div>
-        <div class="col-side">
           ${renderLastActivity(data.lastActivity || {})}
           ${renderBranchSummary(data.branchSummary || [])}
-          ${renderLowStock(data.lowStockList || [])}
-          ${renderItemStockLevels(data.itemStockLevels || [])}
-          ${renderRateHistory(rateHistory)}
           <div class="card">
             <div class="card-title">🌸 Flower Catalog</div>
             <div class="kpi-cell">
@@ -650,6 +649,11 @@
               <div class="kpi-value">${fmtNum(combinedDistinctFlowerCount !== null ? combinedDistinctFlowerCount : data.distinctFlowerCount)}</div>
             </div>
           </div>
+        </div>
+        <div class="col-side">
+          ${renderLowStock(data.lowStockList || [])}
+          ${renderItemStockLevels(data.itemStockLevels || [])}
+          ${renderRateHistory(rateHistory)}
           <div class="card">
             <div class="card-title">📋 Recent Receiving</div>
             <div id="recentReceivingList" style="max-height:280px; overflow-y:auto;">
