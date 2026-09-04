@@ -221,6 +221,7 @@ window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded
   <a href="branch-config.html?from=index">📍 Branch Config</a>
   <a href="https://web.whatsapp.com/" target="_blank">💬 WhatsApp Web</a>
   <a href="chocolate-odoo-import.html?from=index">📥 Odoo Price Import</a>
+  <a href="item-inventory.html?from=index">📦 Item Inventory</a>
   <div class="choco-music-box">
     <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
     <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
@@ -302,6 +303,7 @@ window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded
 <a class="card" href="chocolate-barcode.html" data-card-key="chocolate-barcode.html"><div class="card-icon">🏷️</div><div class="card-kicker">Tools</div><h3 data-edit-key="card-barcode-title">Chocolate Barcode</h3><p data-edit-key="card-barcode-desc">Create and manage barcode labels for stock.</p><span class="open">Open →</span></a>
 <a class="card" href="chocolate-admin.html" data-card-key="chocolate-admin.html"><div class="card-icon">🔐</div><div class="card-kicker">Admin</div><h3 data-edit-key="card-admin-title">Chocolate Admin</h3><p data-edit-key="card-admin-desc">Add new chocolate items with auto-generated product codes.</p><span class="open">Open →</span></a>
 <a class="card" href="notes.html?from=index" data-card-key="notes.html"><div class="card-icon">📝</div><div class="card-kicker">Reminders</div><h3 data-edit-key="card-notes-title">Notes</h3><p data-edit-key="card-notes-desc">Quick notes and reminders for the team.</p><span class="open">Open →</span></a>
+<a class="card" href="item-inventory.html?from=index" data-card-key="item-inventory.html"><div class="card-icon">📦</div><div class="card-kicker">Supplies</div><h3 data-edit-key="card-iteminv-title">Item Inventory</h3><p data-edit-key="card-iteminv-desc">Ribbon, vase, supplies and fixed assets — with barcodes.</p><span class="open">Open →</span></a>
 </div>
 </section>
 </main>
@@ -426,19 +428,14 @@ function move(e){if(!dragging)return;e.preventDefault();const q=p(e),s=stage.get
   lastMoveX=q.clientX;lastMoveY=q.clientY;lastMoveTime=now;
   let x=q.clientX-ox-s.left,y=q.clientY-oy-s.top;x=Math.max(-r.width*.25,Math.min(x,s.width-r.width*.75));y=Math.max(-r.height*.25,Math.min(y,s.height-r.height*.75));rose.style.position='absolute';rose.style.left=x+'px';rose.style.top=y+'px';rose.style.margin='0';const a=c(rose),b=c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=Math.max(70,Math.min(circle.getBoundingClientRect().width*.62,110));const wasReady=hint.classList.contains('ready');const isReady=d<t;hint.classList.toggle('ready',isReady);if(isReady&&!wasReady)startReadyLoop();if(!isReady&&wasReady)stopReadyLoop()}
 function end(e){if(!dragging)return;e.preventDefault();dragging=false;rose.classList.remove('dragging');stopReadyLoop();const a=c(rose),b=c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=Math.max(70,Math.min(circle.getBoundingClientRect().width*.62,110));const MIN_DRAG=40;if(d<t&&maxDragDist>=MIN_DRAG){hint.classList.add('ready');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');playSuccessTing();setTimeout(()=>location.href='flower-tools.html',950)}else{
-  // Hand back off to the bounce loop from wherever it was dropped —
-  // using the ACTUAL fling speed from the last bit of drag movement,
-  // so a slow release stays gentle and a fast flick actually flies.
   const s=stage.getBoundingClientRect();
   bx=a.x-(s.left+s.width/2); by=a.y-(s.top+s.height/2);
   const flingSpeed=Math.hypot(flingVx,flingVy);
   if(flingSpeed>0.03){
-    // flingVx/Vy are px/ms from the last move — scale to our per-frame units, clamped to a sane max.
     const scale=Math.min(6,Math.max(1,flingSpeed*40));
     const nx=flingVx/flingSpeed,ny=flingVy/flingSpeed;
     bvx=nx*0.75*scale; bvy=ny*0.55*scale;
   }else{
-    // Dropped without any real flick — resume the same gentle default speed, just a fresh direction.
     const ang=Math.random()*Math.PI*2;
     bvx=Math.cos(ang)*0.75; bvy=Math.sin(ang)*0.55;
   }
@@ -446,18 +443,12 @@ function end(e){if(!dragging)return;e.preventDefault();dragging=false;rose.class
 }}
 rose.addEventListener('pointerdown',begin,{passive:false});window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',end,{passive:false});window.addEventListener('pointercancel',end,{passive:false});
 
-// ---------- Bounce the rose inside the circle when not being dragged,
-// lighting up the 6 small target dots whenever it grazes one. ----------
 const bounceTargets=Array.from(document.querySelectorAll('.bounce-target'));
 const orbitDots=Array.from(document.querySelectorAll('.orbit-dot'));
 const targetColors=['#f1a6b8','#f4d06f','#e77994','#a6c8f4','#f4906f','#c9a6f4'];
 let bx=0,by=0,bvx=0.75,bvy=0.55,boundsReady=false;
 
 function positionTargets(s){
-  // Beads sitting ON TOP of the ring track — measured directly from
-  // where an orbit-dot ACTUALLY sits (not assumed from the orbit
-  // box's own size), since the dots' own left/top% offsets don't
-  // land exactly on the visual ring's outer edge.
   if(orbitDots.length===0)return;
   const dr=orbitDots[0].getBoundingClientRect();
   const dCenter={x:dr.left+dr.width/2,y:dr.top+dr.height/2};
@@ -493,7 +484,6 @@ function bounceStep(){
   bounceTargets.forEach((tEl,i)=>{
     const tr=tEl.getBoundingClientRect(),tCenter={x:tr.left+tr.width/2,y:tr.top+tr.height/2};
     let hit=Math.hypot(roseCenter.x-tCenter.x,roseCenter.y-tCenter.y)<roseR*0.9+14;
-    // Also light up if one of the small orbiting dots is passing by.
     if(!hit){
       hit=orbitDots.some(dEl=>{
         const dr=dEl.getBoundingClientRect(),dCenter={x:dr.left+dr.width/2,y:dr.top+dr.height/2};
@@ -520,7 +510,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   const grid = document.getElementById('toolsGrid');
   const cards = grid ? Array.from(grid.querySelectorAll('.card[data-card-key]')) : [];
 
-  /* ---------- Restore saved text edits ---------- */
   function loadEdits(){
     try{
       const saved = JSON.parse(localStorage.getItem(EDIT_KEY) || '{}');
@@ -539,7 +528,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     }catch(e){}
   }
 
-  /* ---------- Restore saved card order ---------- */
   function loadOrder(){
     if(!grid) return;
     try{
@@ -563,7 +551,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   loadOrder();
   loadEdits();
 
-  /* ---------- Edit Mode toggle ---------- */
   const editToolbar = document.getElementById('editToolbar');
   const doneEditBtn = document.getElementById('doneEditBtn');
   const resetEditsBtn = document.getElementById('resetEditsBtn');
@@ -620,14 +607,12 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     el.addEventListener('blur', ()=> saveEdit(el));
   });
 
-  /* While in edit mode, tapping a card should place the cursor, not navigate away */
   if(grid){
     grid.addEventListener('click', (e)=>{
       if(editMode) e.preventDefault();
     });
   }
 
-  /* ---------- Long-press to reorder cards ---------- */
   if(grid && cards.length){
     grid.addEventListener('dragstart', (e)=> e.preventDefault());
     grid.addEventListener('contextmenu', (e)=> e.preventDefault());
@@ -712,8 +697,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     const rect=btn.getBoundingClientRect();
     const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
 
-    // A quick burst of red flowers from the button before navigating —
-    // same spirit as the tool-open glow in Flower Tools.
     const petals=['🌹','❤️','🌺'];
     for(let i=0;i<10;i++){
       const p=document.createElement('span');
@@ -745,8 +728,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
   backdrop.addEventListener('click', closeDrawer);
 
-  // Smart Home — goes to the Flower hub from a flower page, or the
-  // Chocolate hub from a chocolate page.
   const homeLink=document.getElementById('chocoHomeLink');
   if(homeLink){
     const isFlowerPage = 'chocolate' === 'flower';
@@ -755,9 +736,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   }
 })();
 
-// ---------- Shared music player (same saved sound as the rest of
-// Lalabella on THIS device — set it once anywhere, it follows you
-// across every page on this same browser/phone). ----------
 (function(){
   const audio = document.getElementById('chocoAudioPlayer');
   const musicBtn = document.getElementById('chocoMusicToggleBtn');
@@ -803,11 +781,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       } else {
         audio.src = savedUrl;
       }
-      // sessionStorage clears itself the moment the browser tab/window
-      // closes — exactly the reset point we want. If this session has
-      // already pressed ♫ once (on any page), every other page picks
-      // right back up automatically; otherwise it stays silent until
-      // tapped, same as a first-ever visit.
       const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
       if(sessionPlaying){
         if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
@@ -850,13 +823,10 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       applyUrl(url);
       return;
     }
-    // No new URL typed — just toggle play/pause of whatever's loaded.
     if(!audio.src && !ytVideoId) return;
     if(isPlaying){
       if(ytVideoId) stopYouTube(); else audio.pause();
       musicBtn.textContent = '♫ Music'; isPlaying = false;
-      // Pausing here means "stop following me" — the next page won't
-      // resume on its own until ♫ is pressed again.
       sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
     } else {
       if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
@@ -865,9 +835,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     }
   });
 
-  // "Search" doesn't auto-pick a video (no API key set up) — it opens
-  // YouTube's own search in a new tab so you can pick the exact one,
-  // then paste that video's link back into the URL box above.
   if(searchBtn && searchInput){
     searchBtn.addEventListener('click', ()=>{
       const q = searchInput.value.trim();
@@ -979,13 +946,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
   document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
 
-  // Re-lock only for an ACTUAL tab-switch or minimize — never for
-  // simply navigating to another page on this same site. The
-  // difference: switching tabs/apps leaves this exact script still
-  // running in the background, so we see it go hidden and then
-  // visible again on the SAME instance. Navigating away destroys
-  // this script entirely (a fresh one runs on the next page), so
-  // this code never gets the chance to fire a false re-lock there.
   var wasHidden = false;
   document.addEventListener('visibilitychange', function(){
     if(document.hidden){
@@ -995,9 +955,6 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       showLock();
     }
   });
-
-  // FUTURE: replace this single shared password with real per-person
-  // accounts (name + password) and an activity log of who did what.
 })();
 </script>
 
