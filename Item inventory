@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Item Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --paper:#f3ede0; --paper-2:#e9e0c8; --ink:#1c2b45; --ink-dim:#5c6a83;
+    --rust:#b0442e; --gold:#c68a1f; --line:#c9bfa0; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--paper); color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh; }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  header{ text-align:center; margin-bottom:20px; }
+  .eyebrow{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:20px; background:var(--paper-2); padding:5px; border-radius:10px; }
+  .tab{ padding:11px 4px; text-align:center; background:transparent; border:none; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:8px; }
+  .tab.active{ background:var(--ink); color:var(--paper); }
+  .panel{ display:none; } .panel.active{ display:block; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number], select, textarea{
+    width:100%; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--ink); }
+
+  .photo-preview{ width:100px; height:100px; border-radius:10px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
+  .photo-preview.show{ display:block; }
+  .photo-hint{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
+
+  .btn{ width:100%; margin-top:18px; padding:13px 0; background:var(--ink); color:var(--paper); border:none; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; }
+  .btn:disabled{ background:var(--line); cursor:not-allowed; }
+  .btn-outline{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); }
+
+  .result{ margin-top:14px; padding:12px; border-radius:8px; font-size:13px; display:none; }
+  .result.show{ display:block; }
+  .result.ok{ background:#e8f5ea; color:var(--ok); border:1px solid var(--ok); }
+  .result.err{ background:#fbeae7; color:var(--rust); border:1px solid var(--rust); }
+
+  .item-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--paper-2); }
+  .item-row:first-child{ border-top:none; }
+  .item-thumb{ width:44px; height:44px; border-radius:8px; object-fit:cover; background:var(--paper-2); flex-shrink:0; }
+  .item-info{ flex:1; min-width:0; }
+  .item-name{ font-weight:600; font-size:13.5px; }
+  .item-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .item-qty{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; white-space:nowrap; }
+  .item-qty.low{ color:var(--rust); }
+
+  .search-box{ position:relative; }
+  #itemSearchResults{ display:none; position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:8px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 10px 24px rgba(0,0,0,0.12); }
+  #itemSearchResults.show{ display:block; }
+  .search-result-item{ padding:10px 12px; cursor:pointer; border-top:1px solid var(--paper-2); font-size:13px; }
+  .search-result-item:first-child{ border-top:none; }
+  .search-result-item:hover{ background:var(--paper); }
+
+  .preview-label{ border:1.5px dashed var(--line); border-radius:8px; padding:14px; margin-top:16px; text-align:center; background:var(--paper); display:none; }
+  .preview-label.show{ display:block; }
+  .preview-label svg{ margin-top:8px; }
+
+  .type-toggle{ display:flex; gap:8px; margin-top:6px; }
+  .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--paper); border-radius:8px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
+  .type-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Item Inventory</h1>
+    <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="add">+ New Item</button>
+    <button class="tab" data-tab="receive">Receiving</button>
+    <button class="tab" data-tab="release">Release</button>
+    <button class="tab" data-tab="view">View / Barcode</button>
+  </div>
+
+  <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
+  <div class="panel active" id="panelAdd">
+    <div class="card">
+      <div class="card-title">📦 Add New Item</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">
+        For an item that's never been in the system before. Whatever Qty you enter here becomes its starting (baseline) quantity. If the item already exists, use "Receiving" instead to add more.
+      </div>
+
+      <label>Item Name</label>
+      <input type="text" id="addItemName" placeholder="e.g. Red Satin Ribbon 2cm">
+
+      <label>Item Type</label>
+      <div class="type-toggle" id="addItemTypeToggle">
+        <button type="button" class="type-btn active" data-type="Consumable">Consumable</button>
+        <button type="button" class="type-btn" data-type="Fixed Asset">Fixed Asset</button>
+      </div>
+
+      <label>Category</label>
+      <input type="text" id="addItemCategory" placeholder="e.g. Packaging, Furniture">
+
+      <label>Starting Qty</label>
+      <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
+
+      <label>Unit</label>
+      <select id="addItemUnit">
+        <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
+      </select>
+
+      <label>Price (BHD)</label>
+      <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
+
+      <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
+      <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
+
+      <label>Photo <span style="text-transform:none;">(optional — auto-compressed before upload)</span></label>
+      <input type="file" id="addItemPhoto" accept="image/*">
+      <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
+      <div class="photo-hint" id="addItemPhotoHint"></div>
+
+      <label>Notes</label>
+      <textarea id="addItemNotes" rows="2" placeholder="Optional"></textarea>
+
+      <button class="btn" id="addItemBtn">Add Item</button>
+      <div class="result" id="addItemResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== RECEIVING ===================== -->
+  <div class="panel" id="panelReceive">
+    <div class="card">
+      <div class="card-title">📥 Receiving</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Adds to an item's existing quantity.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="receiveSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="itemSearchResults"></div>
+      </div>
+      <div class="photo-hint" id="receiveCurrentQty"></div>
+
+      <label>Qty Received</label>
+      <input type="number" id="receiveQty" min="0" step="1" placeholder="0">
+
+      <button class="btn" id="receiveBtn">Receive Stock</button>
+      <div class="result" id="receiveResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== RELEASE ===================== -->
+  <div class="panel" id="panelRelease">
+    <div class="card">
+      <div class="card-title">📤 Release / Use</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Subtracts from an item's quantity — for an event, an order, or general use.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="releaseSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="releaseSearchResults"></div>
+      </div>
+      <div class="photo-hint" id="releaseCurrentQty"></div>
+
+      <label>Qty to Release</label>
+      <input type="number" id="releaseQty" min="0" step="1" placeholder="0">
+
+      <label>Reason / Event</label>
+      <input type="text" id="releaseReason" placeholder="e.g. Valentine's display setup">
+
+      <label>Released By</label>
+      <input type="text" id="releaseBy" placeholder="Your name">
+
+      <button class="btn" id="releaseBtn">Release</button>
+      <div class="result" id="releaseResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== VIEW / BARCODE ===================== -->
+  <div class="panel" id="panelView">
+    <div class="card">
+      <div class="card-title">🔎 All Items</div>
+      <input type="text" id="viewSearch" placeholder="Filter by name…" style="margin-bottom:10px;">
+      <div id="itemListContainer" style="max-height:400px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="card" id="barcodeCard" style="display:none;">
+      <div class="card-title">🏷️ Barcode</div>
+      <div class="preview-label show" id="barcodePreview">
+        <div id="bcName" style="font-weight:700;font-size:13px;"></div>
+        <div id="bcPrice" style="font-size:12px;color:var(--ink-dim);margin-top:2px;"></div>
+        <svg id="bcBarcode"></svg>
+        <div id="bcCode" style="font-size:10px;color:var(--ink-dim);"></div>
+      </div>
+      <button class="btn btn-outline" id="printBarcodeBtn">🖨️ Print This Label</button>
+    </div>
+  </div>
+</div>
+
+<div id="labelPrintArea" style="display:none;">
+  <div style="text-align:center;padding:20px;">
+    <div id="printName" style="font-weight:bold;font-size:14px;"></div>
+    <div id="printPrice" style="font-size:12px;"></div>
+    <svg id="printBarcode"></svg>
+    <div id="printCode" style="font-size:10px;"></div>
+  </div>
+</div>
+<style>
+  @media print{
+    body *{ visibility:hidden; }
+    #labelPrintArea.printing, #labelPrintArea.printing *{ visibility:visible; }
+    #labelPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; }
+  }
+</style>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
+
+  let ITEMS = [];
+
+  function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', view:'panelView' };
+      document.getElementById(map[tab.dataset.tab]).classList.add('active');
+      if(tab.dataset.tab === 'view') loadItems();
+    });
+  });
+
+  // ---------- Load items ----------
+  async function loadItems(){
+    try{
+      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&_ts=' + Date.now())).json();
+      renderItemList(document.getElementById('viewSearch').value);
+    }catch(e){ console.error(e); }
+  }
+
+  function renderItemList(filterText){
+    const q = (filterText||'').trim().toLowerCase();
+    const filtered = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q));
+    const el = document.getElementById('itemListContainer');
+    if(filtered.length === 0){
+      el.innerHTML = '<div style="color:var(--ink-dim);font-size:13px;text-align:center;padding:16px 0;">No items found.</div>';
+      return;
+    }
+    el.innerHTML = filtered.map(it => {
+      const qty = Number(it['Qty']) || 0;
+      const minStock = it['Min Stock'];
+      const isLow = minStock !== '' && minStock !== undefined && qty < Number(minStock);
+      const photo = it['Photo Link (Drive)'] || '';
+      return `
+        <div class="item-row" data-code="${it['Item Code']}">
+          ${photo ? `<img class="item-thumb" src="${photo}" alt="">` : `<div class="item-thumb"></div>`}
+          <div class="item-info">
+            <div class="item-name">${it['Item Name']}</div>
+            <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
+          </div>
+          <div class="item-qty ${isLow?'low':''}">${qty} ${it['Unit']||''}</div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.item-row').forEach(row=>{
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', ()=>{
+        const item = ITEMS.find(it => it['Item Code'] === row.dataset.code);
+        if(item) showBarcode(item);
+      });
+    });
+  }
+
+  document.getElementById('viewSearch').addEventListener('input', function(){
+    renderItemList(this.value);
+  });
+
+  let selectedBarcodeItem = null;
+  function showBarcode(item){
+    selectedBarcodeItem = item;
+    document.getElementById('barcodeCard').style.display = 'block';
+    document.getElementById('bcName').textContent = item['Item Name'];
+    document.getElementById('bcPrice').textContent = fmtBD(item['Price (BHD)']);
+    document.getElementById('bcCode').textContent = item['Item Code'];
+    document.getElementById('bcBarcode').innerHTML = '';
+    try{
+      JsBarcode('#bcBarcode', String(item['Item Code']||'000000'), { format:'CODE128', width:1.3, height:32, displayValue:false });
+    }catch(e){}
+    document.getElementById('barcodeCard').scrollIntoView({behavior:'smooth'});
+  }
+
+  document.getElementById('printBarcodeBtn').addEventListener('click', ()=>{
+    if(!selectedBarcodeItem) return;
+    document.getElementById('printName').textContent = selectedBarcodeItem['Item Name'];
+    document.getElementById('printPrice').textContent = fmtBD(selectedBarcodeItem['Price (BHD)']);
+    document.getElementById('printCode').textContent = selectedBarcodeItem['Item Code'];
+    document.getElementById('printBarcode').innerHTML = '';
+    try{
+      JsBarcode('#printBarcode', String(selectedBarcodeItem['Item Code']||'000000'), { format:'CODE128', width:1, height:26, displayValue:false });
+    }catch(e){}
+    document.getElementById('labelPrintArea').classList.add('printing');
+    window.print();
+    setTimeout(()=>document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  });
+
+  // ---------- Photo: client-side compression ----------
+  // Resizes to at most 150x150 and re-encodes as JPEG at reduced
+  // quality, so every photo lands well under ~30KB before it's ever
+  // sent to Apps Script / saved to Drive.
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxDim = 150;
+          let w = img.width, h = img.height;
+          if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+          else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let addItemPhotoData = null;
+  document.getElementById('addItemPhoto').addEventListener('change', async function(){
+    const file = this.files[0];
+    if(!file) return;
+    const hint = document.getElementById('addItemPhotoHint');
+    hint.textContent = 'Compressing…';
+    try{
+      const compressed = await compressImage(file);
+      addItemPhotoData = compressed;
+      const preview = document.getElementById('addItemPhotoPreview');
+      preview.src = compressed;
+      preview.classList.add('show');
+      const approxKB = Math.round((compressed.length * 0.75) / 1024);
+      hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+    }catch(e){
+      hint.textContent = 'Could not process this image.';
+      addItemPhotoData = null;
+    }
+  });
+
+  // ---------- Item Type toggle ----------
+  let selectedItemType = 'Consumable';
+  document.getElementById('addItemTypeToggle').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.type-btn');
+    if(!btn) return;
+    document.querySelectorAll('#addItemTypeToggle .type-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedItemType = btn.dataset.type;
+  });
+
+  // ---------- Add New Item ----------
+  document.getElementById('addItemBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('addItemBtn');
+    const resultBox = document.getElementById('addItemResult');
+    const itemName = document.getElementById('addItemName').value.trim();
+    if(!itemName){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Item name is required.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action: 'addNewItem',
+      itemName,
+      itemType: selectedItemType,
+      category: document.getElementById('addItemCategory').value,
+      qty: document.getElementById('addItemQty').value || 0,
+      unit: document.getElementById('addItemUnit').value,
+      price: document.getElementById('addItemPrice').value || 0,
+      minStock: document.getElementById('addItemMinStock').value,
+      notes: document.getElementById('addItemNotes').value,
+      photoBase64: addItemPhotoData || ''
+    });
+
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Add Item';
+      if(res.error){
+        resultBox.className = 'result err show';
+        resultBox.textContent = res.error;
+        return;
+      }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode;
+      // Reset form
+      document.getElementById('addItemName').value = '';
+      document.getElementById('addItemCategory').value = '';
+      document.getElementById('addItemQty').value = '';
+      document.getElementById('addItemPrice').value = '';
+      document.getElementById('addItemMinStock').value = '';
+      document.getElementById('addItemNotes').value = '';
+      document.getElementById('addItemPhoto').value = '';
+      document.getElementById('addItemPhotoPreview').classList.remove('show');
+      document.getElementById('addItemPhotoHint').textContent = '';
+      addItemPhotoData = null;
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Add Item';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Item search (shared pattern for Receiving + Release) ----------
+  function setupItemSearch(inputId, resultsId, onSelect){
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    input.addEventListener('input', async ()=>{
+      if(ITEMS.length === 0) await loadItems();
+      const q = input.value.trim().toLowerCase();
+      if(!q){ results.classList.remove('show'); return; }
+      const matches = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q)).slice(0, 10);
+      results.innerHTML = matches.map(it => `<div class="search-result-item" data-name="${it['Item Name']}">${it['Item Name']} <span style="color:var(--ink-dim);">(${it['Qty']} ${it['Unit']||''})</span></div>`).join('');
+      results.classList.toggle('show', matches.length > 0);
+    });
+    results.addEventListener('click', (e)=>{
+      const item = e.target.closest('.search-result-item');
+      if(!item) return;
+      input.value = item.dataset.name;
+      results.classList.remove('show');
+      onSelect(item.dataset.name);
+    });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('.search-box')) results.classList.remove('show');
+    });
+  }
+
+  setupItemSearch('receiveSearch', 'itemSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('receiveCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+  setupItemSearch('releaseSearch', 'releaseSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('releaseCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+
+  // ---------- Receiving ----------
+  document.getElementById('receiveBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('receiveBtn');
+    const resultBox = document.getElementById('receiveResult');
+    const itemName = document.getElementById('receiveSearch').value.trim();
+    const qty = document.getElementById('receiveQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({ action:'receiveItem', itemName, qty });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      document.getElementById('receiveSearch').value = '';
+      document.getElementById('receiveQty').value = '';
+      document.getElementById('receiveCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Release ----------
+  document.getElementById('releaseBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('releaseBtn');
+    const resultBox = document.getElementById('releaseResult');
+    const itemName = document.getElementById('releaseSearch').value.trim();
+    const qty = document.getElementById('releaseQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'releaseItem', itemName, qty,
+      reason: document.getElementById('releaseReason').value,
+      releasedBy: document.getElementById('releaseBy').value
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Release';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      document.getElementById('releaseSearch').value = '';
+      document.getElementById('releaseQty').value = '';
+      document.getElementById('releaseReason').value = '';
+      document.getElementById('releaseCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Release';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  loadItems();
+</script>
+
+</body>
+</html>
