@@ -751,11 +751,11 @@
         <div class="card-title">🔎 Live Stock Levels</div>
         <input type="text" id="stockLevelSearch" placeholder="Type a chocolate name (e.g. Rocher)…"
           style="width:100%;padding:9px 12px;border:1px solid var(--line,#ddd);border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;">
-        <div id="stockLevelList">
+        <div id="stockLevelList" style="max-height:280px; overflow-y:auto;">
           ${renderList(data.itemStockLevels, item => `
-            <div class="list-row" data-name="${(item.name||'').toLowerCase()}">
-              <div><strong>${item.name}</strong></div>
-              <div style="text-align:right;">${item.stock} ${item.unit||''}</div>
+            <div class="list-row" data-name="${(item.name||'').toLowerCase()}" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+              <div style="min-width:0;overflow-wrap:break-word;"><strong>${item.name}</strong></div>
+              <div style="text-align:right;white-space:nowrap;flex-shrink:0;">${item.stock} ${item.unit||''}</div>
             </div>
           `, 'No stock data yet.')}
         </div>
