@@ -822,8 +822,6 @@ kbd{
   .stats-wrap.collapsed .stats{display:none}
   .stats-wrap.collapsed .stats-toggle{transform:translateY(-50%) rotate(180deg)}
   .stats-toggle{backdrop-filter:blur(10px)}
-  /* Mobile carousel: all tools remain real DOM items; compact spacing keeps the
-     complete set reachable while the active one stays centered. */
   .carousel-shell{min-height:150px;height:150px}
   .carousel{min-height:150px;height:150px;padding:0;overflow:hidden}
   .tool{width:82px;min-height:105px;padding:2px 0}
@@ -833,7 +831,6 @@ kbd{
 </style>
 
 <style id="carousel-interaction-fix">
-/* Keep each tool as one stable icon + label unit while moving. */
 .carousel{
   user-select:none;
   -webkit-user-select:none;
@@ -1013,6 +1010,7 @@ kbd{
       <a href="https://web.whatsapp.com/" target="_blank"><span class="nav-icon">💬</span>WhatsApp Web</a>
       <a href="chocolate-guide.html?from=flower-tools"><span class="nav-icon">🍫</span>Chocolate Guide</a>
       <a href="branch-config.html?from=flower-tools"><span class="nav-icon">📍</span>Branch Config</a>
+      <a href="item-inventory.html?from=flower-tools"><span class="nav-icon">📦</span>Item Inventory</a>
     </nav>
 
     <div class="side-bottom" style="margin-bottom:12px;">
@@ -1132,6 +1130,9 @@ kbd{
             <a class="tool" href="order-form.html?from=flower-tools" data-title="Order Form">
               <div class="tool-circle">🧾</div><h3>Order Form</h3>
             </a>
+            <a class="tool" href="item-inventory.html?from=flower-tools" data-title="Item Inventory">
+              <div class="tool-circle">📦</div><h3>Item Inventory</h3>
+            </a>
           </div>
         </div>
       </section>
@@ -1169,7 +1170,6 @@ function shortestOffset(i, active, count){
 }
 
 function getStep(){
-  /* Keep enough horizontal space for the icon + label to remain one unit. */
   if(window.matchMedia("(max-width:900px)").matches){
     return Math.max(96, Math.min(112, carousel.clientWidth/3.15));
   }
@@ -1211,12 +1211,9 @@ function playToolTone(freq1, freq2){
   }catch(_){}
 }
 
-// A little "lub-dub" heartbeat — low thumps instead of a chime, since
-// the tool circles are heart-shaped now.
 function playHeartbeat(){
   try{
     if(!toolsAudioCtx) toolsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // A compressor lets the thumps hit hard without clipping/distorting.
     const comp = toolsAudioCtx.createDynamicsCompressor();
     comp.threshold.value = -24; comp.knee.value = 12; comp.ratio.value = 8;
     comp.attack.value = 0.002; comp.release.value = 0.15;
@@ -1235,13 +1232,10 @@ function playHeartbeat(){
   }catch(_){}
 }
 
-// A soft piano-like note for general buttons (sidebar links, quick
-// cards, toolbar buttons) — distinct from the heartbeat used on the
-// tool carousel and the hero flower.
 function playPianoTone(){
   try{
     if(!toolsAudioCtx) toolsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const notes=[523.25, 659.25, 783.99]; // C5, E5, G5 — a simple bright chord-ish pluck
+    const notes=[523.25, 659.25, 783.99];
     const freq=notes[Math.floor(Math.random()*notes.length)];
     const o = toolsAudioCtx.createOscillator(), g = toolsAudioCtx.createGain();
     o.type = 'triangle'; o.frequency.value = freq;
@@ -1292,13 +1286,6 @@ function tryOpenTool(i){
 }
 
 allTools.forEach((tool,i)=>{
-  // Local mouse-down/up tracking, kept completely independent of the
-  // shared carousel drag state. A little natural cursor jitter between
-  // mousedown and mouseup was enough to mark the SHARED drag flag as
-  // "moved" and silently cancel the click — this local check only
-  // looks at this one tool's own down/up positions, so a genuine
-  // mouse click always opens it, regardless of what happened
-  // elsewhere on the carousel a moment earlier.
   let downX=0, downY=0, isDown=false;
   tool.addEventListener('mousedown', e=>{
     isDown=true; downX=e.clientX; downY=e.clientY;
@@ -1313,25 +1300,19 @@ allTools.forEach((tool,i)=>{
     e.preventDefault();
     e.stopPropagation();
     if(e.detail===0){
-      // Keyboard-triggered activation (Enter/Space on a focused tool).
       tryOpenTool(i);
       return;
     }
     if(matchMedia('(pointer:coarse)').matches){
-      // Touch tap — the carousel's own swipe tracking already tells us
-      // whether this was a genuine tap or part of a drag.
       if(dragMoved){ dragMoved=false; return; }
       tryOpenTool(i);
     }
-    // Real mouse clicks are already opened via mousedown/mouseup above.
   });
 
-  // Never allow a long-press context menu or native image/anchor drag.
   tool.addEventListener('contextmenu',e=>e.preventDefault());
   tool.addEventListener('dragstart',e=>e.preventDefault());
 });
 
-// Mouse wheel / trackpad: move the carousel without requiring keyboard focus.
 carousel.addEventListener('wheel',e=>{
   const amount=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
   if(Math.abs(amount)<4 || wheelLock)return;
@@ -1353,7 +1334,6 @@ function handleCarouselKey(e){
 }
 document.addEventListener("keydown",handleCarouselKey);
 
-// Mouse/touch drag: both desktop mouse and mobile finger can move the same carousel.
 carousel.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse' && e.button!==0)return;
   pointerId=e.pointerId;
@@ -1361,19 +1341,8 @@ carousel.addEventListener('pointerdown',e=>{
   dragMoved=false;
   carousel.classList.add('dragging');
   if(e.pointerType!=='mouse'){
-    // Touch/pen: capture right away, same as before — this is what
-    // makes swipe tracking reliable once the finger moves off the
-    // carousel's own bounds. The mouse-click bug this file works
-    // around only ever affected real mouse pointers.
     carousel.setPointerCapture?.(e.pointerId);
   }
-  // For a MOUSE pointer specifically, capture is deliberately NOT
-  // acquired here yet. Capturing immediately — even for a click that
-  // never moves — was hijacking the mouse's own click/mouseup events
-  // at their normal target, which is exactly what silently broke
-  // mouse clicks on a tool. Capture only kicks in once real movement
-  // confirms this is an actual drag (see pointermove below), so a
-  // plain mouse click on a tool is left completely alone.
 });
 
 carousel.addEventListener('pointermove',e=>{
@@ -1381,8 +1350,6 @@ carousel.addEventListener('pointermove',e=>{
   const dx=e.clientX-dragStartX;
   if(Math.abs(dx)>10 && !dragMoved){
     dragMoved=true;
-    // Real movement confirmed — now it's safe to capture the pointer
-    // for a smooth continued drag, without having blocked a plain click.
     carousel.setPointerCapture?.(e.pointerId);
   }
   if(Math.abs(dx)>42){
@@ -1398,8 +1365,6 @@ function endCarouselPointer(e){
   try{ if(pointerId!==null) carousel.releasePointerCapture?.(pointerId); }catch(_){}
   pointerId=null;
   setTimeout(()=>dragMoved=false,60);
-  // The mobile address bar can finish hiding/showing slightly after
-  // the swipe itself ends — re-check the layout a moment later too.
   setTimeout(()=>renderCarousel(false),250);
 }
 carousel.addEventListener('pointerup',endCarouselPointer);
@@ -1410,16 +1375,10 @@ carousel.addEventListener('lostpointercapture',()=>{
   setTimeout(()=>dragMoved=false,60);
 });
 
-// Prevent browser text selection / long-press selection while interacting with tools.
 carousel.addEventListener('selectstart',e=>e.preventDefault());
 
 window.addEventListener('resize',()=>renderCarousel(false));
 
-// Mobile browsers resize the visible viewport (address bar hiding or
-// showing) whenever you scroll or swipe — and .app is sized with
-// 100dvh, which tracks that. Re-run the carousel layout whenever the
-// actual visible viewport changes size, so tool positions don't end
-// up anchored to a stale height until the next full page reload.
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize',()=>renderCarousel(false));
 }
@@ -1444,16 +1403,11 @@ if(statsToggle){
 const heroFlower=document.querySelector(".hero-flower");
 if(heroFlower){
   heroFlower.addEventListener("click",()=>{
-    // Restart the glow every click (not just toggle on/off), matching
-    // how the tool-circle glow already re-triggers on each open.
     heroFlower.classList.remove("glow-on");
     void heroFlower.offsetWidth;
     heroFlower.classList.add("glow-on");
     playHeartbeat();
   });
-  // Without this, rapid repeated clicks could leave "glow-on" applied
-  // forever (nothing else ever removed it) — the flower would stay
-  // enlarged/glowing even after you stop touching it.
   heroFlower.addEventListener("animationend",()=>{
     heroFlower.classList.remove("glow-on");
   });
@@ -1526,8 +1480,6 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
     document.body.classList.remove('nav-open');
     btn.textContent='☰'; btn.setAttribute('aria-expanded','false');
   }
-  // Sidebar starts hidden — tap the ☰ button to reveal it, on both
-  // desktop and mobile.
   if(!mobile()){
     document.body.classList.add('nav-collapsed');
   }
@@ -1546,17 +1498,12 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
   addEventListener('resize',()=>{if(!mobile())document.body.classList.remove('nav-open');});
 })();
 
-// Soft piano-tone click sound for general navigation buttons — the
-// tool carousel and the hero flower keep their own heartbeat sound.
 document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar').forEach(el=>{
   el.addEventListener('click', ()=>playPianoTone());
 });
 </script>
 
 <script>
-// ---------- Shared music player (same saved sound as the rest of
-// Lalabella on THIS device — set it once anywhere, it follows you
-// across every page on this same browser/phone). ----------
 (function(){
   const audio = document.getElementById('chocoAudioPlayer');
   const musicBtn = document.getElementById('chocoMusicToggleBtn');
@@ -1644,7 +1591,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
       applyUrl(url);
       return;
     }
-    // No new URL typed — just toggle play/pause of whatever's loaded.
     if(!audio.src && !ytVideoId) return;
     if(isPlaying){
       if(ytVideoId) stopYouTube(); else audio.pause();
@@ -1657,9 +1603,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
     }
   });
 
-  // "Search" doesn't auto-pick a video (no API key set up) — it opens
-  // YouTube's own search in a new tab so you can pick the exact one,
-  // then paste that video's link back into the URL box above.
   if(searchBtn && searchInput){
     searchBtn.addEventListener('click', ()=>{
       const q = searchInput.value.trim();
@@ -1771,13 +1714,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
   document.getElementById('lala-lock-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryUnlock(); });
   document.getElementById('lala-lock-btn').addEventListener('click', tryUnlock);
 
-  // Re-lock only for an ACTUAL tab-switch or minimize — never for
-  // simply navigating to another page on this same site. The
-  // difference: switching tabs/apps leaves this exact script still
-  // running in the background, so we see it go hidden and then
-  // visible again on the SAME instance. Navigating away destroys
-  // this script entirely (a fresh one runs on the next page), so
-  // this code never gets the chance to fire a false re-lock there.
   var wasHidden = false;
   document.addEventListener('visibilitychange', function(){
     if(document.hidden){
@@ -1787,9 +1723,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
       showLock();
     }
   });
-
-  // FUTURE: replace this single shared password with real per-person
-  // accounts (name + password) and an activity log of who did what.
 })();
 </script>
 
