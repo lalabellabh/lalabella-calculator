@@ -5,53 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Item Inventory</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
-    --paper:#f3ede0; --paper-2:#e9e0c8; --ink:#1c2b45; --ink-dim:#5c6a83;
-    --rust:#b0442e; --gold:#c68a1f; --line:#c9bfa0; --ok:#3d7a4f;
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+    --paper:#fdf1f0; --paper-2:#f6e0da; --rust:#c0392b;
   }
   *{box-sizing:border-box;}
-  body{ margin:0; background:var(--paper); color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 8% 18%, rgba(255,190,210,.22), transparent 22%),
+      radial-gradient(circle at 92% 28%, rgba(217,164,65,.16), transparent 22%),
+      radial-gradient(circle at 18% 82%, rgba(190,145,255,.14), transparent 24%),
+      linear-gradient(145deg, #fdf1f0 0%, #f6e0da 60%, #eaf3ec 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
   .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
-  header{ text-align:center; margin-bottom:20px; }
-  .eyebrow{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
-  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; }
-  .sub{ color:var(--ink-dim); font-size:13px; }
+  header{
+    text-align:center; margin-bottom:22px; padding:26px 18px;
+    background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%);
+    border-radius:18px; border:1px solid var(--line);
+    box-shadow:0 8px 26px rgba(158,47,74,0.08);
+    position:relative; overflow:hidden;
+  }
+  header::before{
+    content:'🎀'; position:absolute; font-size:60px; opacity:0.09;
+    left:-10px; top:-14px; transform:rotate(-16deg);
+  }
+  header::after{
+    content:'📦'; position:absolute; font-size:52px; opacity:0.10;
+    right:-6px; bottom:-12px; transform:rotate(12deg);
+  }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; font-weight:600; position:relative; z-index:1; }
+  h1{
+    font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep);
+    font-size:clamp(2.1rem,8vw,2.8rem); margin:0 0 4px; line-height:1;
+    position:relative; z-index:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; position:relative; z-index:1; }
 
-  .tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:20px; background:var(--paper-2); padding:5px; border-radius:10px; }
-  .tab{ padding:11px 4px; text-align:center; background:transparent; border:none; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:8px; }
-  .tab.active{ background:var(--ink); color:var(--paper); }
+  .tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:20px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .tab{ padding:11px 4px; text-align:center; background:transparent; border:none; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; transition:all .2s ease; }
+  .tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; box-shadow:0 3px 10px rgba(158,47,74,0.25); }
   .panel{ display:none; } .panel.active{ display:block; }
 
-  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; }
-  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
 
   label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
   label:first-child{ margin-top:0; }
   input[type=text], input[type=number], select, textarea{
-    width:100%; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
     font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
   }
-  input:focus, select:focus{ border-color:var(--ink); }
+  input:focus, select:focus{ border-color:var(--rose-deep); }
 
-  .photo-preview{ width:100px; height:100px; border-radius:10px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
+  .photo-preview{ width:100px; height:100px; border-radius:12px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
   .photo-preview.show{ display:block; }
   .photo-hint{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
 
-  .btn{ width:100%; margin-top:18px; padding:13px 0; background:var(--ink); color:var(--paper); border:none; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; }
-  .btn:disabled{ background:var(--line); cursor:not-allowed; }
-  .btn-outline{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); }
+  .btn{ width:100%; margin-top:18px; padding:13px 0; background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(158,47,74,0.2); }
+  .btn:disabled{ background:var(--line); box-shadow:none; cursor:not-allowed; }
+  .btn-outline{ background:#fff; color:var(--rose-deep); border:1.5px solid var(--rose-deep); box-shadow:none; }
 
-  .result{ margin-top:14px; padding:12px; border-radius:8px; font-size:13px; display:none; }
+  .result{ margin-top:14px; padding:12px; border-radius:10px; font-size:13px; display:none; }
   .result.show{ display:block; }
   .result.ok{ background:#e8f5ea; color:var(--ok); border:1px solid var(--ok); }
   .result.err{ background:#fbeae7; color:var(--rust); border:1px solid var(--rust); }
 
-  .item-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--paper-2); }
+  .item-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--blush-2); }
   .item-row:first-child{ border-top:none; }
-  .item-thumb{ width:44px; height:44px; border-radius:8px; object-fit:cover; background:var(--paper-2); flex-shrink:0; }
+  .item-thumb{ width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--blush-2); flex-shrink:0; }
   .item-info{ flex:1; min-width:0; }
   .item-name{ font-weight:600; font-size:13.5px; }
   .item-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
@@ -59,19 +87,19 @@
   .item-qty.low{ color:var(--rust); }
 
   .search-box{ position:relative; }
-  #itemSearchResults{ display:none; position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:8px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 10px 24px rgba(0,0,0,0.12); }
-  #itemSearchResults.show{ display:block; }
-  .search-result-item{ padding:10px 12px; cursor:pointer; border-top:1px solid var(--paper-2); font-size:13px; }
+  #itemSearchResults, #releaseSearchResults{ display:none; position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 12px 28px rgba(0,0,0,0.12); }
+  #itemSearchResults.show, #releaseSearchResults.show{ display:block; }
+  .search-result-item{ padding:11px 14px; cursor:pointer; border-top:1px solid var(--blush-2); font-size:13px; }
   .search-result-item:first-child{ border-top:none; }
-  .search-result-item:hover{ background:var(--paper); }
+  .search-result-item:hover{ background:var(--blush); }
 
-  .preview-label{ border:1.5px dashed var(--line); border-radius:8px; padding:14px; margin-top:16px; text-align:center; background:var(--paper); display:none; }
+  .preview-label{ border:1.5px dashed var(--line); border-radius:10px; padding:14px; margin-top:16px; text-align:center; background:var(--blush); display:none; }
   .preview-label.show{ display:block; }
   .preview-label svg{ margin-top:8px; }
 
   .type-toggle{ display:flex; gap:8px; margin-top:6px; }
-  .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--paper); border-radius:8px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
-  .type-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--blush); border-radius:10px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
+  .type-btn.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
 </style>
 </head>
 <body>
@@ -125,7 +153,15 @@
       <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
 
       <label>Photo <span style="text-transform:none;">(optional — auto-compressed before upload)</span></label>
-      <input type="file" id="addItemPhoto" accept="image/*">
+      <div style="display:flex; gap:8px;">
+        <label for="addItemPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="addItemPhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="addItemPhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="addItemPhoto" accept="image/*" style="display:none;">
+      <div id="addItemPastezone" tabindex="0" style="margin-top:8px; padding:10px; border:1.5px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:text; background:var(--blush);">
+        Or click here and paste (Ctrl+V) a screenshot / Snipping Tool capture
+      </div>
       <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
       <div class="photo-hint" id="addItemPhotoHint"></div>
 
@@ -344,8 +380,7 @@
   }
 
   let addItemPhotoData = null;
-  document.getElementById('addItemPhoto').addEventListener('change', async function(){
-    const file = this.files[0];
+  async function handleItemPhotoFile(file){
     if(!file) return;
     const hint = document.getElementById('addItemPhotoHint');
     hint.textContent = 'Compressing…';
@@ -360,6 +395,25 @@
     }catch(e){
       hint.textContent = 'Could not process this image.';
       addItemPhotoData = null;
+    }
+  }
+  document.getElementById('addItemPhoto').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  document.getElementById('addItemPhotoCamera').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  // Desktop workflow: Snipping Tool copies an image straight to the
+  // clipboard — clicking this zone then pressing Ctrl+V picks it up
+  // without ever needing to save a temp file first.
+  document.getElementById('addItemPastezone').addEventListener('paste', function(e){
+    const items = (e.clipboardData || window.clipboardData).items;
+    for(let i = 0; i < items.length; i++){
+      if(items[i].type.indexOf('image') !== -1){
+        const file = items[i].getAsFile();
+        handleItemPhotoFile(file);
+        break;
+      }
     }
   });
 
@@ -417,6 +471,7 @@
       document.getElementById('addItemMinStock').value = '';
       document.getElementById('addItemNotes').value = '';
       document.getElementById('addItemPhoto').value = '';
+      document.getElementById('addItemPhotoCamera').value = '';
       document.getElementById('addItemPhotoPreview').classList.remove('show');
       document.getElementById('addItemPhotoHint').textContent = '';
       addItemPhotoData = null;
