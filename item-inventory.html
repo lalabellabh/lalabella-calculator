@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
@@ -393,6 +394,13 @@
 
       <button class="btn" id="addItemBtn">Add Item</button>
       <div class="result" id="addItemResult"></div>
+      <div class="receipt-card" id="addItemReceiptCard">
+        <div class="receipt-card-text" id="addItemReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printAddItemBtn">🖨️ Print</button>
+          <button type="button" id="waAddItemBtn">📤 WhatsApp</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -431,6 +439,13 @@
 
       <button class="btn" id="receiveBtn">Receive Stock</button>
       <div class="result" id="receiveResult"></div>
+      <div class="receipt-card" id="receiveReceiptCard">
+        <div class="receipt-card-text" id="receiveReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printReceiveBtn">🖨️ Print</button>
+          <button type="button" id="waReceiveBtn">📤 WhatsApp</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -472,6 +487,13 @@
 
       <button class="btn" id="releaseBtn">Release</button>
       <div class="result" id="releaseResult"></div>
+      <div class="receipt-card" id="releaseReceiptCard">
+        <div class="receipt-card-text" id="releaseReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printReleaseBtn">🖨️ Print</button>
+          <button type="button" id="waReleaseBtn">📤 WhatsApp</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -549,8 +571,25 @@
     body *{ visibility:hidden; }
     #labelPrintArea.printing, #labelPrintArea.printing *{ visibility:visible; }
     #labelPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; }
+    #receiptPrintArea.printing, #receiptPrintArea.printing *{ visibility:visible; }
+    #receiptPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; padding:24px; text-align:center; }
+  }
+  .receipt-card{
+    display:none; margin-top:14px; padding:14px; border:1.5px dashed var(--line); border-radius:10px;
+    background:var(--blush); text-align:center;
+  }
+  .receipt-card.show{ display:block; }
+  .receipt-card-text{ font-size:13px; line-height:1.7; margin-bottom:10px; text-align:left; }
+  .receipt-actions{ display:flex; gap:8px; }
+  .receipt-actions button{
+    flex:1; padding:9px 0; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;
+    border:1px solid var(--rose-deep); background:#fff; color:var(--rose-deep);
   }
 </style>
+<div id="receiptPrintArea" style="display:none;">
+  <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:900;">Lalabella Item Inventory</div>
+  <div id="receiptPrintBody" style="margin-top:14px;font-size:14px;line-height:1.8;"></div>
+</div>
 
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
@@ -818,6 +857,13 @@
       }
       resultBox.className = 'result ok show';
       resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode;
+      showReceipt('addItemReceiptCard', 'addItemReceiptText', lastAddItemReceipt = [
+        'NEW ITEM ADDED',
+        'Item: ' + itemName,
+        'Code: ' + res.itemCode,
+        'Branch: ' + currentBranch,
+        'Starting Qty: ' + (document.getElementById('addItemQty').value || 0)
+      ]);
       // Reset form
       document.getElementById('addItemName').value = '';
       document.getElementById('addItemCode').value = '';
@@ -903,6 +949,13 @@
       if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
       resultBox.className = 'result ok show';
       resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      showReceipt('receiveReceiptCard', 'receiveReceiptText', lastReceiveReceipt = [
+        'RECEIVING RECEIPT',
+        'Item: ' + res.itemName,
+        'Branch: ' + res.branch,
+        'Qty Received: +' + qty,
+        'New Total: ' + res.newQty
+      ]);
       document.getElementById('receiveSearch').value = '';
       document.getElementById('receiveQty').value = '';
       document.getElementById('receiveCurrentQty').textContent = '';
@@ -946,6 +999,13 @@
       if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
       resultBox.className = 'result ok show';
       resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      showReceipt('releaseReceiptCard', 'releaseReceiptText', lastReleaseReceipt = [
+        'RELEASE RECEIPT',
+        'Item: ' + res.itemName,
+        'Branch: ' + res.branch,
+        'Qty Released: -' + qty,
+        'New Total: ' + res.newQty
+      ]);
       document.getElementById('releaseSearch').value = '';
       document.getElementById('releaseQty').value = '';
       document.getElementById('releaseReason').value = '';
@@ -1014,6 +1074,13 @@
   }
 
   loadItems();
+  document.getElementById('printAddItemBtn').addEventListener('click', ()=> printReceipt(lastAddItemReceipt));
+  document.getElementById('waAddItemBtn').addEventListener('click', ()=> shareReceipt(lastAddItemReceipt));
+  document.getElementById('printReceiveBtn').addEventListener('click', ()=> printReceipt(lastReceiveReceipt));
+  document.getElementById('waReceiveBtn').addEventListener('click', ()=> shareReceipt(lastReceiveReceipt));
+  document.getElementById('printReleaseBtn').addEventListener('click', ()=> printReceipt(lastReleaseReceipt));
+  document.getElementById('waReleaseBtn').addEventListener('click', ()=> shareReceipt(lastReleaseReceipt));
+
   loadStaffNames();
 
   // Soft piano-like note on hover/click for the carousel and hero
@@ -1096,6 +1163,40 @@
         modal.style.display = 'none';
       }
     };
+  }
+
+  // ---------- Print / WhatsApp receipt (shared by New Item, Receiving, Release) ----------
+  let lastAddItemReceipt = [], lastReceiveReceipt = [], lastReleaseReceipt = [];
+  function showReceipt(cardId, textId, lines){
+    document.getElementById(cardId).classList.add('show');
+    document.getElementById(textId).innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+  }
+
+  function printReceipt(lines){
+    document.getElementById('receiptPrintBody').innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+    const el = document.getElementById('receiptPrintArea');
+    el.style.display = 'block';
+    el.classList.add('printing');
+    window.print();
+    setTimeout(()=>{ el.style.display = 'none'; el.classList.remove('printing'); }, 400);
+  }
+
+  async function shareReceipt(lines){
+    if(!navigator.share){ alert('Hindi supported ang sharing sa browser na ito.'); return; }
+    document.getElementById('receiptPrintBody').innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+    const el = document.getElementById('receiptPrintArea');
+    el.style.display = 'block';
+    try{
+      const canvas = await html2canvas(el, { backgroundColor:'#ffffff', scale:2 });
+      el.style.display = 'none';
+      canvas.toBlob(async (blob)=>{
+        const file = new File([blob], 'lalabella-item-receipt.png', { type:'image/png' });
+        try{ await navigator.share({ files:[file], title:'Lalabella Item Receipt' }); }catch(e){}
+      }, 'image/png');
+    }catch(e){
+      el.style.display = 'none';
+      alert('Hindi na-generate ang larawan.');
+    }
   }
 
   function findItemByCode(scannedCode){
