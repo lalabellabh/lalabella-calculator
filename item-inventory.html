@@ -58,6 +58,7 @@
 
   label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
   label:first-child{ margin-top:0; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   input[type=text], input[type=number], select, textarea{
     width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
     font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
@@ -166,6 +167,35 @@
   @media(max-width:420px){ .tools-grid{ grid-template-columns:1fr 1fr; gap:8px; } .tool-card{ padding:12px; } .tool-card-icon{ font-size:22px; } .tool-card h3{ font-size:14px; } }
   @keyframes heroPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
 
+  /* ---------- Carousel tool selector, matching Flower Tools' style ---------- */
+  .carousel-shell{ position:relative; margin-bottom:20px; }
+  .tool-carousel{
+    display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x proximity;
+    padding:10px 30vw 14px; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  }
+  .tool-carousel::-webkit-scrollbar{ display:none; }
+  .carousel-item{
+    flex:0 0 auto; scroll-snap-align:center; width:88px; text-align:center;
+    background:none; border:none; cursor:pointer; text-decoration:none;
+    opacity:.55; transition:opacity .25s ease, transform .25s ease;
+  }
+  .carousel-item.active{ opacity:1; transform:scale(1.08); }
+  .carousel-circle{
+    width:64px; height:64px; margin:0 auto 8px; border-radius:50%;
+    display:grid; place-items:center; font-size:28px;
+    background:linear-gradient(145deg,#fff,var(--blush-2));
+    border:3px solid rgba(201,80,107,.16); box-shadow:0 10px 22px rgba(158,47,74,.12);
+    transition:box-shadow .25s ease;
+  }
+  .carousel-item.active .carousel-circle{
+    box-shadow:0 0 0 4px rgba(201,79,107,.18), 0 12px 26px rgba(201,79,107,.2);
+    border-color:var(--rose-deep);
+  }
+  .carousel-item h3{ font-family:'Fraunces',serif; font-size:12.5px; margin:0; color:var(--ink); line-height:1.15; }
+  @media(min-width:900px){
+    .tool-carousel{ padding-left:calc(50% - 44px); padding-right:calc(50% - 44px); justify-content:flex-start; }
+  }
+
   @media (min-width:900px){
     .wrap{ max-width:980px; }
     header{ padding:32px 40px; }
@@ -245,39 +275,29 @@
     </div>
   </header>
 
-  <div class="tools-grid" id="toolsGrid">
-    <button class="tool-card active" data-tab="add">
-      <div class="tool-card-icon">🆕</div>
-      <div class="tool-card-kicker">Baseline</div>
-      <h3>New Item</h3>
-      <p>Add a brand-new item to the catalog.</p>
-    </button>
-    <button class="tool-card" data-tab="receive">
-      <div class="tool-card-icon">📥</div>
-      <div class="tool-card-kicker">Restock</div>
-      <h3>Receiving</h3>
-      <p>Add more quantity to an existing item.</p>
-    </button>
-    <button class="tool-card" data-tab="release">
-      <div class="tool-card-icon">📤</div>
-      <div class="tool-card-kicker">Use / Event</div>
-      <h3>Release</h3>
-      <p>Subtract quantity for an event or order.</p>
-    </button>
-    <button class="tool-card" data-tab="view">
-      <div class="tool-card-icon">🔎</div>
-      <div class="tool-card-kicker">Catalog</div>
-      <h3>View / Barcode</h3>
-      <p>Browse items and print barcode labels.</p>
-    </button>
-    <a class="tool-card" href="item-admin.html" style="grid-column:1 / -1;text-decoration:none;display:flex;align-items:center;gap:12px;">
-      <div class="tool-card-icon" style="margin:0;">🔐</div>
-      <div>
-        <div class="tool-card-kicker">Manage</div>
-        <h3 style="margin:2px 0;">Admin</h3>
-        <p>Edit existing items — fix Category, Price, Photo, and more.</p>
-      </div>
-    </a>
+  <div class="carousel-shell">
+    <div class="tool-carousel" id="toolCarousel">
+      <button class="carousel-item active" data-tab="add">
+        <div class="carousel-circle">🆕</div>
+        <h3>New Item</h3>
+      </button>
+      <button class="carousel-item" data-tab="receive">
+        <div class="carousel-circle">📥</div>
+        <h3>Receiving</h3>
+      </button>
+      <button class="carousel-item" data-tab="release">
+        <div class="carousel-circle">📤</div>
+        <h3>Release</h3>
+      </button>
+      <button class="carousel-item" data-tab="view">
+        <div class="carousel-circle">🔎</div>
+        <h3>View / Barcode</h3>
+      </button>
+      <a class="carousel-item" href="item-admin.html" style="text-decoration:none;">
+        <div class="carousel-circle">🔐</div>
+        <h3>Admin</h3>
+      </a>
+    </div>
   </div>
 
   <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
@@ -303,29 +323,39 @@
         <button type="button" class="type-btn" data-type="Fixed Asset">Fixed Asset</button>
       </div>
 
-      <label>Category</label>
-      <select id="addItemCategory">
-        <option value="">— Select —</option>
-        <option>Packaging</option>
-        <option>Ribbon</option>
-        <option>Vase</option>
-        <option>Card &amp; Paper</option>
-        <option>Furniture</option>
-        <option>Display</option>
-        <option>Tools &amp; Equipment</option>
-        <option>Other</option>
-      </select>
+      <div class="grid-2">
+        <div>
+          <label>Category</label>
+          <select id="addItemCategory">
+            <option value="">— Select —</option>
+            <option>Packaging</option>
+            <option>Ribbon</option>
+            <option>Vase</option>
+            <option>Card &amp; Paper</option>
+            <option>Furniture</option>
+            <option>Display</option>
+            <option>Tools &amp; Equipment</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Unit</label>
+          <select id="addItemUnit">
+            <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
+          </select>
+        </div>
+      </div>
 
-      <label>Starting Qty</label>
-      <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
-
-      <label>Unit</label>
-      <select id="addItemUnit">
-        <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
-      </select>
-
-      <label>Price (BHD)</label>
-      <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
+      <div class="grid-2">
+        <div>
+          <label>Starting Qty</label>
+          <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
+        </div>
+        <div>
+          <label>Price (BHD)</label>
+          <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
+        </div>
+      </div>
 
       <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
       <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
@@ -461,11 +491,12 @@
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
 
   // ---------- Tabs ----------
-  document.querySelectorAll('.tool-card').forEach(tab=>{
+  document.querySelectorAll('.carousel-item[data-tab]').forEach(tab=>{
     tab.addEventListener('click', ()=>{
-      document.querySelectorAll('.tool-card').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.carousel-item').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       tab.classList.add('active');
+      tab.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
       const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', view:'panelView' };
       document.getElementById(map[tab.dataset.tab]).classList.add('active');
       if(tab.dataset.tab === 'view') loadItems();
