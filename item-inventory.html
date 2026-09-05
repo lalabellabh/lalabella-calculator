@@ -169,6 +169,12 @@
 </head>
 <body>
 
+<div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <video id="scannerVideo" autoplay playsinline muted style="width:100%;max-width:400px;border-radius:10px;"></video>
+  <div style="color:#fff;font-size:12px;margin-top:10px;text-align:center;">Point the camera at the item's barcode</div>
+  <button type="button" id="closeScanBtn" style="margin-top:16px;background:var(--rust);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;">Cancel</button>
+</div>
+
 <style id="itemInvNavStyles">
 .choco-nav-toggle{
   position:fixed; top:16px; left:16px; z-index:9210;
@@ -266,6 +272,12 @@
       <label>Item Name</label>
       <input type="text" id="addItemName" placeholder="e.g. Red Satin Ribbon 2cm">
 
+      <label>Product Code <span style="text-transform:none;">(optional — leave blank to auto-generate)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="addItemCode" placeholder="Auto-generated if blank" style="flex:1;">
+        <button type="button" id="scanNewItemBtn" style="flex-shrink:0;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--blush);cursor:pointer;font-size:16px;">📷</button>
+      </div>
+
       <label>Item Type</label>
       <div class="type-toggle" id="addItemTypeToggle">
         <button type="button" class="type-btn active" data-type="Consumable">Consumable</button>
@@ -337,6 +349,7 @@
         <input type="text" id="receiveSearch" placeholder="Type an item name…" autocomplete="off">
         <div id="itemSearchResults"></div>
       </div>
+      <button type="button" class="btn btn-outline" id="scanReceiveBtn" style="margin-top:8px;">📷 Scan Barcode</button>
       <div class="photo-hint" id="receiveCurrentQty"></div>
 
       <label>Qty Received</label>
@@ -364,6 +377,7 @@
         <input type="text" id="releaseSearch" placeholder="Type an item name…" autocomplete="off">
         <div id="releaseSearchResults"></div>
       </div>
+      <button type="button" class="btn btn-outline" id="scanReleaseBtn" style="margin-top:8px;">📷 Scan Barcode</button>
       <div class="photo-hint" id="releaseCurrentQty"></div>
 
       <label>Qty to Release</label>
@@ -618,6 +632,7 @@
     const params = new URLSearchParams({
       action: 'addNewItem',
       itemName,
+      itemCode: document.getElementById('addItemCode').value.trim(),
       itemType: selectedItemType,
       category: document.getElementById('addItemCategory').value,
       qty: document.getElementById('addItemQty').value || 0,
@@ -641,6 +656,7 @@
       resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode;
       // Reset form
       document.getElementById('addItemName').value = '';
+      document.getElementById('addItemCode').value = '';
       document.getElementById('addItemCategory').value = '';
       document.getElementById('addItemQty').value = '';
       document.getElementById('addItemPrice').value = '';
@@ -787,6 +803,98 @@
       setTimeout(()=>{ heroBox.style.transform = 'scale(1) rotate(0deg)'; }, 350);
     });
   }
+
+  // ---------- Scan Barcode (Receiving) ----------
+  // Matches the scanned Item Code against the loaded catalog and, if
+  // found, fills the search box the same way picking it from the
+  // dropdown would — so scanning is just a faster path to the exact
+  // same "select this item" step, not a separate flow.
+  let scanStream = null;
+  let scanLoopActive = false;
+
+  // Generic scanner opener — takes a callback that receives the raw
+  // scanned code string, so New Item, Receiving, and Release can each
+  // decide what to do with it (fill a code field vs. look up an
+  // existing item) without duplicating the camera/detector plumbing.
+  function openBarcodeScanner(onScanned){
+    return async ()=>{
+      if(!('BarcodeDetector' in window)){
+        alert('Hindi supported ang barcode scanning sa browser na ito. I-type na lang.');
+        return;
+      }
+      if(ITEMS.length === 0) await loadItems();
+      const modal = document.getElementById('scannerModal');
+      const video = document.getElementById('scannerVideo');
+      modal.style.display = 'flex';
+      try{
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = scanStream;
+        scanLoopActive = true;
+        const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+        const scanLoop = async ()=>{
+          if(!scanLoopActive) return;
+          try{
+            const codes = await detector.detect(video);
+            if(codes.length > 0){
+              const scannedCode = codes[0].rawValue;
+              stopScanner();
+              onScanned(scannedCode);
+              return;
+            }
+          }catch(e){}
+          requestAnimationFrame(scanLoop);
+        };
+        scanLoop();
+      }catch(e){
+        alert('Hindi ma-access ang camera. I-check ang permissions.');
+        modal.style.display = 'none';
+      }
+    };
+  }
+
+  function findItemByCode(scannedCode){
+    return ITEMS.find(it => String(it['Item Code']||'').trim().toLowerCase() === scannedCode.trim().toLowerCase());
+  }
+
+  document.getElementById('scanReceiveBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('receiveSearch').value = match['Item Name'];
+      document.getElementById('receiveCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('receiveQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  document.getElementById('scanReleaseBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('releaseSearch').value = match['Item Name'];
+      document.getElementById('releaseCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('releaseQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  // New Item's scan is different on purpose: there's no existing item
+  // to look up yet — this scans a code already printed on the
+  // physical product/box (e.g. a supplier barcode) and uses it AS the
+  // new item's own Product Code, instead of auto-generating one.
+  document.getElementById('scanNewItemBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    document.getElementById('addItemCode').value = scannedCode;
+  }));
+
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    document.getElementById('scannerModal').style.display = 'none';
+  }
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
 </script>
 <script>
 (function(){
@@ -802,6 +910,7 @@
 </script>
 
 <datalist id="staffNameList"></datalist>
+
 
 </body>
 </html>
