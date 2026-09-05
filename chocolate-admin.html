@@ -200,6 +200,15 @@
     </div>
 
     <div class="card" style="margin-top:16px;">
+      <div class="card-title">🔧 Check &amp; Fix Barcodes</div>
+      <p style="font-size:13px;color:#8a7078;margin:0 0 12px;">
+        Scans every chocolate for a missing Product Code, or a duplicate one shared by more than one item (e.g. all 5 Stick colors sharing "1147" — a barcode scan can't tell them apart). Missing codes get a fresh auto-generated one; duplicates keep the first item's code as-is and give each later item a "-Variant" suffix built from its own name, so it stays traceable back to the family it came from.
+      </p>
+      <button class="btn chocolate" id="checkBarcodesBtn">Scan &amp; Fix Barcodes</button>
+      <div class="result" id="checkBarcodesResult"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
       <div class="card-title">✏️ Fix an Existing Catalog Item</div>
       <p style="font-size:13px;color:#8a7078;margin:0 0 12px;">
         Search for a chocolate already in the catalog to fill in or
@@ -333,6 +342,36 @@ document.getElementById('backfillBtn').addEventListener('click', ()=>{
     })
     .catch(err => {
       btn.disabled = false; btn.textContent = 'Scan & Add Missing Items';
+      resultBox.className = 'result err';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    });
+});
+
+document.getElementById('checkBarcodesBtn').addEventListener('click', ()=>{
+  const btn = document.getElementById('checkBarcodesBtn');
+  const resultBox = document.getElementById('checkBarcodesResult');
+  btn.disabled = true; btn.textContent = 'Scanning…';
+  resultBox.className = 'result';
+
+  fetch(CHOCOLATE_API + '?action=checkFixBarcodes&_ts=' + Date.now())
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false; btn.textContent = 'Scan & Fix Barcodes';
+      if(res.error){
+        resultBox.className = 'result err';
+        resultBox.textContent = 'Error: ' + res.error;
+        return;
+      }
+      resultBox.className = 'result ok';
+      if(res.missingFixed === 0 && res.duplicatesFixed === 0){
+        resultBox.textContent = '✓ Malinis na — walang nakitang missing o duplicate na barcode.';
+      } else {
+        resultBox.textContent = '✓ Naayos: ' + res.missingFixed + ' walang barcode, ' + res.duplicatesFixed + ' duplicate. ' +
+          res.details.map(d => d.name + ' → ' + d.newCode).join(', ');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false; btn.textContent = 'Scan & Fix Barcodes';
       resultBox.className = 'result err';
       resultBox.textContent = 'Could not reach the server. Check your connection.';
     });
