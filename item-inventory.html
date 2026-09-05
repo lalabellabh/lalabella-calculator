@@ -406,6 +406,16 @@
       <label>Received By</label>
       <input type="text" id="receiveBy" list="staffNameList" placeholder="Your name" autocomplete="off">
 
+      <label>Photo <span style="text-transform:none;">(optional — e.g. proof of delivery)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="receivePhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="receivePhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="receivePhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="receivePhoto" accept="image/*" style="display:none;">
+      <img id="receivePhotoPreview" class="photo-preview" alt="Preview">
+      <div class="photo-hint" id="receivePhotoHint"></div>
+
       <button class="btn" id="receiveBtn">Receive Stock</button>
       <div class="result" id="receiveResult"></div>
     </div>
@@ -436,6 +446,16 @@
 
       <label>Released By</label>
       <input type="text" id="releaseBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <label>Photo <span style="text-transform:none;">(optional — e.g. the event/display it's for)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="releasePhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="releasePhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="releasePhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="releasePhoto" accept="image/*" style="display:none;">
+      <img id="releasePhotoPreview" class="photo-preview" alt="Preview">
+      <div class="photo-hint" id="releasePhotoHint"></div>
 
       <button class="btn" id="releaseBtn">Release</button>
       <div class="result" id="releaseResult"></div>
@@ -652,6 +672,35 @@
     document.getElementById('addItemPhotoCamera').value = '';
   });
 
+  // ---------- Receiving & Release photo capture (proof shots) ----------
+  // Same compression pipeline as New Item, wired up generically so
+  // both tabs can share one small helper instead of duplicating it.
+  let receivePhotoData = null;
+  let releasePhotoData = null;
+  function wirePhotoCapture(prefix, setVar){
+    async function handle(file){
+      if(!file) return;
+      const hint = document.getElementById(prefix + 'PhotoHint');
+      hint.textContent = 'Compressing…';
+      try{
+        const compressed = await compressImage(file);
+        setVar(compressed);
+        const preview = document.getElementById(prefix + 'PhotoPreview');
+        preview.src = compressed;
+        preview.classList.add('show');
+        const approxKB = Math.round((compressed.length * 0.75) / 1024);
+        hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+      }catch(e){
+        hint.textContent = 'Could not process this image.';
+        setVar(null);
+      }
+    }
+    document.getElementById(prefix + 'Photo').addEventListener('change', function(){ handle(this.files[0]); });
+    document.getElementById(prefix + 'PhotoCamera').addEventListener('change', function(){ handle(this.files[0]); });
+  }
+  wirePhotoCapture('receive', (v)=>{ receivePhotoData = v; });
+  wirePhotoCapture('release', (v)=>{ releasePhotoData = v; });
+
   // ---------- Item Type toggle ----------
   let selectedItemType = 'Consumable';
   document.getElementById('addItemTypeToggle').addEventListener('click', (e)=>{
@@ -771,7 +820,8 @@
     const params = new URLSearchParams({
       action:'receiveItem', itemName, qty,
       date: document.getElementById('receiveDate').value,
-      receivedBy: document.getElementById('receiveBy').value
+      receivedBy: document.getElementById('receiveBy').value,
+      photoBase64: receivePhotoData || ''
     });
     try{
       const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
@@ -782,6 +832,11 @@
       document.getElementById('receiveSearch').value = '';
       document.getElementById('receiveQty').value = '';
       document.getElementById('receiveCurrentQty').textContent = '';
+      document.getElementById('receivePhoto').value = '';
+      document.getElementById('receivePhotoCamera').value = '';
+      document.getElementById('receivePhotoPreview').classList.remove('show');
+      document.getElementById('receivePhotoHint').textContent = '';
+      receivePhotoData = null;
       ITEMS = [];
     }catch(e){
       btn.disabled = false; btn.textContent = 'Receive Stock';
@@ -808,7 +863,8 @@
       action:'releaseItem', itemName, qty,
       date: document.getElementById('releaseDate').value,
       reason: document.getElementById('releaseReason').value,
-      releasedBy: document.getElementById('releaseBy').value
+      releasedBy: document.getElementById('releaseBy').value,
+      photoBase64: releasePhotoData || ''
     });
     try{
       const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
@@ -820,6 +876,11 @@
       document.getElementById('releaseQty').value = '';
       document.getElementById('releaseReason').value = '';
       document.getElementById('releaseCurrentQty').textContent = '';
+      document.getElementById('releasePhoto').value = '';
+      document.getElementById('releasePhotoCamera').value = '';
+      document.getElementById('releasePhotoPreview').classList.remove('show');
+      document.getElementById('releasePhotoHint').textContent = '';
+      releasePhotoData = null;
       ITEMS = [];
     }catch(e){
       btn.disabled = false; btn.textContent = 'Release';
