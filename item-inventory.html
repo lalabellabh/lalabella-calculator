@@ -100,6 +100,38 @@
   .type-toggle{ display:flex; gap:8px; margin-top:6px; }
   .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--blush); border-radius:10px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
   .type-btn.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
+
+  /* ---------- Themed hero, matching the Index/Flower Tools style ---------- */
+  .hero-art{ min-height:180px; display:grid; place-items:center; position:relative; margin:4px 0 8px; }
+  .orbit-garden{ position:relative; width:200px; height:200px; display:grid; place-items:center; }
+  .orbit-garden::before{
+    content:''; position:absolute; width:140px; height:140px; border-radius:50%;
+    background:radial-gradient(circle, rgba(247,205,213,.65), rgba(247,205,213,0) 70%); filter:blur(2px);
+  }
+  .orbit-ring{
+    position:absolute; left:50%; top:50%; border:1px dashed rgba(201,79,107,.22);
+    border-radius:50%; transform:translate(-50%,-50%); animation:orbitSpin linear infinite; pointer-events:none;
+  }
+  .orbit-1{ width:92px; height:92px; animation-duration:7s; }
+  .orbit-2{ width:140px; height:140px; animation-duration:11s; animation-direction:reverse; }
+  .orbit-3{ width:188px; height:188px; animation-duration:15s; }
+  .orbit-icon{
+    position:absolute; left:50%; top:-13px; transform:translateX(-50%); font-size:19px;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.12)); animation:orbitCounter linear infinite;
+  }
+  .orbit-1 .orbit-icon{ animation-duration:7s; }
+  .orbit-2 .orbit-icon{ animation-duration:11s; animation-direction:reverse; }
+  .orbit-3 .orbit-icon{ animation-duration:15s; }
+  @keyframes orbitSpin{ from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
+  @keyframes orbitCounter{ from{transform:translateX(-50%) rotate(0deg)} to{transform:translateX(-50%) rotate(-360deg)} }
+  .hero-center{
+    position:relative; z-index:3; width:96px; height:96px; border-radius:50%;
+    display:grid; place-items:center; font-size:46px;
+    background:radial-gradient(circle at 35% 28%, #fff9d9, #efc04d 47%, #c88935);
+    border:6px solid rgba(224,180,88,.35); box-shadow:0 18px 38px rgba(0,0,0,.35);
+    animation:heroPulse 3.2s ease-in-out infinite; cursor:pointer;
+  }
+  @keyframes heroPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
 </style>
 </head>
 <body>
@@ -153,6 +185,14 @@
     <div class="eyebrow">Lalabella</div>
     <h1>Item Inventory</h1>
     <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets</p>
+    <div class="hero-art">
+      <div class="orbit-garden">
+        <div class="orbit-ring orbit-1"><span class="orbit-icon">🎀</span></div>
+        <div class="orbit-ring orbit-2"><span class="orbit-icon">🏺</span></div>
+        <div class="orbit-ring orbit-3"><span class="orbit-icon">🪑</span></div>
+        <div class="hero-center" id="heroBox">📦</div>
+      </div>
+    </div>
   </header>
 
   <div class="tabs">
@@ -683,6 +723,17 @@
 
   loadItems();
   loadStaffNames();
+
+  // Small playful touch matching the hero flower on Index/Flower Tools —
+  // a quick bounce + rotation on tap, purely decorative.
+  const heroBox = document.getElementById('heroBox');
+  if(heroBox){
+    heroBox.addEventListener('click', ()=>{
+      heroBox.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      heroBox.style.transform = 'scale(1.25) rotate(-10deg)';
+      setTimeout(()=>{ heroBox.style.transform = 'scale(1) rotate(0deg)'; }, 350);
+    });
+  }
 </script>
 <script>
 (function(){
