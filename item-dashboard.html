@@ -6,6 +6,7 @@
 <title>Item Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
@@ -46,7 +47,7 @@
 
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
   .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
-  input[type=text]{ width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); outline:none; margin-bottom:10px; box-sizing:border-box; }
+  input[type=text], input[type=number]{ width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); outline:none; margin-bottom:10px; box-sizing:border-box; }
 
   .row{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:9px 0; border-top:1px solid var(--blush-2); }
   .row:first-child{ border-top:none; }
@@ -56,6 +57,34 @@
   .row-val.low{ color:var(--rust); }
   .scroll-list{ max-height:280px; overflow-y:auto; }
   .empty{ color:var(--ink-dim); font-size:12.5px; text-align:center; padding:16px 0; }
+
+  .hist-row{ border-top:1px solid var(--blush-2); padding:10px 0; }
+  .hist-row:first-child{ border-top:none; }
+  .hist-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .hist-badge{ font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; text-transform:uppercase; flex-shrink:0; }
+  .hist-badge.receive{ background:var(--mint); color:var(--ok); }
+  .hist-badge.release{ background:#fbeae7; color:var(--rust); }
+  .hist-actions{ display:flex; gap:6px; margin-top:6px; }
+  .hist-actions button{ font-size:11px; padding:5px 10px; border-radius:7px; border:1px solid var(--line); background:var(--blush); cursor:pointer; color:var(--ink); }
+  .hist-actions button:hover{ background:var(--blush-2); }
+
+  .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(58,37,48,.45); z-index:9400; align-items:center; justify-content:center; padding:20px; }
+  .modal-backdrop.show{ display:flex; }
+  .modal-box{ background:#fff; border-radius:16px; padding:22px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+  .modal-box h3{ font-family:'Fraunces',serif; margin:0 0 12px; }
+  .modal-box label{ display:block; font-size:11px; text-transform:uppercase; color:var(--ink-dim); margin:10px 0 4px; }
+  .modal-box label:first-of-type{ margin-top:0; }
+  .modal-btns{ display:flex; gap:8px; margin-top:16px; }
+  .modal-btns button{ flex:1; padding:10px 0; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .modal-save{ background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; }
+  .modal-cancel{ background:var(--blush); color:var(--ink); }
+
+  #printArea{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ display:block !important; position:absolute; top:0; left:0; width:100%; padding:24px; text-align:center; }
+  }
 
   .choco-nav-toggle{
     position:fixed; top:16px; left:16px; z-index:9210;
@@ -124,11 +153,37 @@
 
     <div class="col">
       <div class="card">
-        <div class="card-title">📤 Recent Releases</div>
-        <div class="scroll-list" id="releaseList"></div>
+        <div class="card-title">📋 History <span style="font-weight:400;font-size:11px;color:var(--ink-dim);">(Receiving &amp; Release)</span></div>
+        <div class="scroll-list" id="historyList" style="max-height:420px;"></div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal-box">
+    <h3 id="editModalTitle">Edit Entry</h3>
+    <label>Qty</label>
+    <input type="number" id="editQty" min="0" step="1">
+    <label>Date</label>
+    <input type="date" id="editDate">
+    <div id="editReasonWrap" style="display:none;">
+      <label>Reason / Event</label>
+      <input type="text" id="editReason">
+    </div>
+    <label id="editByLabel">By</label>
+    <input type="text" id="editBy">
+    <div class="modal-btns">
+      <button class="modal-cancel" id="editCancelBtn">Cancel</button>
+      <button class="modal-save" id="editSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea">
+  <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:900;">Lalabella Item Inventory</div>
+  <div id="printBody" style="margin-top:14px;font-size:14px;line-height:1.8;"></div>
 </div>
 
 <script>
@@ -141,25 +196,35 @@
     if(isNaN(dt)) return String(d);
     return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   }
+  function toDateInputValue(d){
+    if(!d) return '';
+    const dt = new Date(d);
+    if(isNaN(dt)) return '';
+    return dt.toISOString().slice(0,10);
+  }
 
   let ALL_ITEMS = [];
+  let ALL_HISTORY = [];
 
   async function loadDashboard(){
     try{
-      const data = await (await fetch(API_URL + '?action=getItemDashboard&_ts=' + Date.now())).json();
-      if(data.error){ console.error(data.error); return; }
+      const [dashData, histData] = await Promise.all([
+        fetch(API_URL + '?action=getItemDashboard&_ts=' + Date.now()).then(r=>r.json()),
+        fetch(API_URL + '?action=getItemHistory&_ts=' + Date.now()).then(r=>r.json())
+      ]);
+      if(dashData.error){ console.error(dashData.error); return; }
 
-      document.getElementById('kpiTotal').textContent = data.totalItems;
-      document.getElementById('kpiConsumable').textContent = data.consumableCount;
-      document.getElementById('kpiFixed').textContent = data.fixedAssetCount;
-      document.getElementById('kpiValue').textContent = fmtBD(data.totalInventoryValue);
+      document.getElementById('kpiTotal').textContent = dashData.totalItems;
+      document.getElementById('kpiConsumable').textContent = dashData.consumableCount;
+      document.getElementById('kpiFixed').textContent = dashData.fixedAssetCount;
+      document.getElementById('kpiValue').textContent = fmtBD(dashData.totalInventoryValue);
 
-      ALL_ITEMS = data.allItemsList || [];
+      ALL_ITEMS = dashData.allItemsList || [];
       renderStockList(ALL_ITEMS);
 
       const lowEl = document.getElementById('lowStockList');
-      lowEl.innerHTML = (data.lowStockList && data.lowStockList.length)
-        ? data.lowStockList.map(it => `
+      lowEl.innerHTML = (dashData.lowStockList && dashData.lowStockList.length)
+        ? dashData.lowStockList.map(it => `
             <div class="row">
               <div><div class="row-name">${it.name}</div><div class="row-meta">${it.code||''}</div></div>
               <div class="row-val low">${it.qty} / ${it.minStock} ${it.unit||''}</div>
@@ -167,15 +232,8 @@
           `).join('')
         : '<div class="empty">No low stock items right now.</div>';
 
-      const relEl = document.getElementById('releaseList');
-      relEl.innerHTML = (data.recentReleases && data.recentReleases.length)
-        ? data.recentReleases.map(r => `
-            <div class="row">
-              <div><div class="row-name">${r['Item Name']}</div><div class="row-meta">${fmtDate(r['Date'])} · ${r['Reason/Event']||'—'}</div></div>
-              <div class="row-val">-${r['Qty Released']}</div>
-            </div>
-          `).join('')
-        : '<div class="empty">No releases yet.</div>';
+      ALL_HISTORY = Array.isArray(histData) ? histData : [];
+      renderHistory();
     }catch(e){
       console.error(e);
     }
@@ -197,6 +255,125 @@
     const filtered = ALL_ITEMS.filter(it => String(it.name||'').toLowerCase().includes(q));
     renderStockList(filtered);
   });
+
+  function renderHistory(){
+    const el = document.getElementById('historyList');
+    if(!ALL_HISTORY.length){ el.innerHTML = '<div class="empty">No history yet.</div>'; return; }
+    el.innerHTML = ALL_HISTORY.map((h, i) => {
+      const isReceive = h._type === 'receive';
+      const qty = isReceive ? h['Qty Received'] : h['Qty Released'];
+      const by = isReceive ? h['Received By'] : h['Released By'];
+      const meta = isReceive
+        ? fmtDate(h['Date']) + (by ? ' · ' + by : '')
+        : fmtDate(h['Date']) + (h['Reason/Event'] ? ' · ' + h['Reason/Event'] : '') + (by ? ' · ' + by : '');
+      return `
+        <div class="hist-row">
+          <div class="hist-top">
+            <div>
+              <span class="hist-badge ${h._type}">${isReceive ? 'In' : 'Out'}</span>
+              <div class="row-name" style="display:inline;margin-left:6px;">${h['Item Name']}</div>
+              <div class="row-meta">${meta}</div>
+            </div>
+            <div class="row-val ${isReceive ? '' : 'low'}">${isReceive ? '+' : '-'}${qty}</div>
+          </div>
+          <div class="hist-actions">
+            <button data-i="${i}" class="hist-edit-btn">✏️ Edit</button>
+            <button data-i="${i}" class="hist-print-btn">🖨️ Print</button>
+            <button data-i="${i}" class="hist-wa-btn">📤 WhatsApp</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.hist-edit-btn').forEach(b => b.addEventListener('click', () => openEditModal(ALL_HISTORY[Number(b.dataset.i)])));
+    el.querySelectorAll('.hist-print-btn').forEach(b => b.addEventListener('click', () => printEntry(ALL_HISTORY[Number(b.dataset.i)])));
+    el.querySelectorAll('.hist-wa-btn').forEach(b => b.addEventListener('click', () => shareEntry(ALL_HISTORY[Number(b.dataset.i)])));
+  }
+
+  // ---------- Edit ----------
+  let editingEntry = null;
+  function openEditModal(entry){
+    editingEntry = entry;
+    const isReceive = entry._type === 'receive';
+    document.getElementById('editModalTitle').textContent = (isReceive ? 'Edit Receiving — ' : 'Edit Release — ') + entry['Item Name'];
+    document.getElementById('editQty').value = isReceive ? entry['Qty Received'] : entry['Qty Released'];
+    document.getElementById('editDate').value = toDateInputValue(entry['Date']);
+    document.getElementById('editReasonWrap').style.display = isReceive ? 'none' : 'block';
+    document.getElementById('editReason').value = isReceive ? '' : (entry['Reason/Event'] || '');
+    document.getElementById('editByLabel').textContent = isReceive ? 'Received By' : 'Released By';
+    document.getElementById('editBy').value = isReceive ? (entry['Received By']||'') : (entry['Released By']||'');
+    document.getElementById('editModal').classList.add('show');
+  }
+  document.getElementById('editCancelBtn').addEventListener('click', ()=>{
+    document.getElementById('editModal').classList.remove('show');
+  });
+  document.getElementById('editSaveBtn').addEventListener('click', async ()=>{
+    if(!editingEntry) return;
+    const isReceive = editingEntry._type === 'receive';
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const params = new URLSearchParams({
+      action: isReceive ? 'editReceivingEntry' : 'editReleaseEntry',
+      row: editingEntry._row,
+      qty: document.getElementById('editQty').value,
+      date: document.getElementById('editDate').value,
+      [isReceive ? 'receivedBy' : 'releasedBy']: document.getElementById('editBy').value
+    });
+    if(!isReceive) params.set('reason', document.getElementById('editReason').value);
+
+    try{
+      const res = await (await fetch(API_URL + '?' + params.toString())).json();
+      btn.disabled = false; btn.textContent = 'Save';
+      if(res.error){ alert(res.error); return; }
+      document.getElementById('editModal').classList.remove('show');
+      await loadDashboard();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Save';
+      alert('Could not save. Check your connection.');
+    }
+  });
+
+  // ---------- Print & WhatsApp ----------
+  function buildEntryText(entry){
+    const isReceive = entry._type === 'receive';
+    const qty = isReceive ? entry['Qty Received'] : entry['Qty Released'];
+    const by = isReceive ? entry['Received By'] : entry['Released By'];
+    let lines = [
+      (isReceive ? 'RECEIVING' : 'RELEASE') + ' RECEIPT',
+      'Item: ' + entry['Item Name'],
+      'Qty: ' + (isReceive ? '+' : '-') + qty,
+      'Date: ' + fmtDate(entry['Date'])
+    ];
+    if(!isReceive && entry['Reason/Event']) lines.push('Reason: ' + entry['Reason/Event']);
+    if(by) lines.push((isReceive ? 'Received By: ' : 'Released By: ') + by);
+    return lines;
+  }
+
+  function printEntry(entry){
+    document.getElementById('printBody').innerHTML = buildEntryText(entry).map(l => `<div>${l}</div>`).join('');
+    document.getElementById('printArea').style.display = 'block';
+    window.print();
+    setTimeout(()=> document.getElementById('printArea').style.display = 'none', 400);
+  }
+
+  async function shareEntry(entry){
+    if(!navigator.share){ alert('Hindi supported ang sharing sa browser na ito.'); return; }
+    document.getElementById('printBody').innerHTML = buildEntryText(entry).map(l => `<div>${l}</div>`).join('');
+    const el = document.getElementById('printArea');
+    el.style.display = 'block';
+    try{
+      const canvas = await html2canvas(el, { backgroundColor:'#ffffff', scale:2 });
+      el.style.display = 'none';
+      canvas.toBlob(async (blob)=>{
+        const file = new File([blob], 'lalabella-item-receipt.png', { type:'image/png' });
+        try{ await navigator.share({ files:[file], title:'Lalabella Item Receipt' }); }catch(e){}
+      }, 'image/png');
+    }catch(e){
+      el.style.display = 'none';
+      alert('Hindi na-generate ang larawan.');
+    }
+  }
 
   loadDashboard();
 </script>
