@@ -114,34 +114,9 @@
   header .eyebrow{ color:#e6c47a; }
   header h1{ font-family:'Fraunces',serif; color:#f7eee5; font-weight:900; }
   header .sub{ color:#b39a98; }
-  .hero-art{ min-height:190px; display:grid; place-items:center; position:relative; margin:8px 0 4px; }
-  .orbit-garden{ position:relative; width:210px; height:210px; display:grid; place-items:center; }
-  .orbit-garden::before{
-    content:''; position:absolute; width:150px; height:150px; border-radius:50%;
-    background:radial-gradient(circle, rgba(170,45,78,.28), rgba(170,45,78,0) 70%); filter:blur(3px);
-  }
-  .orbit-ring{
-    position:absolute; left:50%; top:50%; border:1px dashed rgba(230,196,122,.3);
-    border-radius:50%; transform:translate(-50%,-50%); animation:orbitSpin linear infinite; pointer-events:none;
-  }
-  .orbit-1{ width:96px; height:96px; animation-duration:7s; }
-  .orbit-2{ width:148px; height:148px; animation-duration:11s; animation-direction:reverse; }
-  .orbit-3{ width:198px; height:198px; animation-duration:15s; }
-  .orbit-dot{
-    position:absolute; width:6px; height:6px; margin:-3px; border-radius:50%;
-    background:#e6c47a; box-shadow:0 0 12px #e6c47a; left:50%; top:0;
-  }
-  .orbit-icon{
-    position:absolute; left:50%; top:-13px; transform:translateX(-50%); font-size:19px;
-    filter:drop-shadow(0 4px 6px rgba(0,0,0,.35)); animation:orbitCounter linear infinite;
-  }
-  .orbit-1 .orbit-icon{ animation-duration:7s; }
-  .orbit-2 .orbit-icon{ animation-duration:11s; animation-direction:reverse; }
-  .orbit-3 .orbit-icon{ animation-duration:15s; }
-  @keyframes orbitSpin{ from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
-  @keyframes orbitCounter{ from{transform:translateX(-50%) rotate(0deg)} to{transform:translateX(-50%) rotate(-360deg)} }
+  .hero-art{ min-height:150px; display:grid; place-items:center; position:relative; margin:8px 0 4px; }
   .hero-center{
-    position:relative; z-index:3; width:100px; height:100px; border-radius:50%;
+    position:relative; z-index:3; width:100px; height:100px; border-radius:22px;
     display:grid; place-items:center; font-size:48px;
     background:radial-gradient(circle at 38% 30%, #fff3d0, #d9a441 55%, #8a5a1f);
     border:1px solid rgba(230,196,122,.5); box-shadow:0 20px 42px rgba(0,0,0,.5), 0 0 0 8px rgba(230,196,122,.08);
@@ -203,7 +178,7 @@
     .tool-card[href]{ flex-direction:column; align-items:flex-start; gap:0; }
     .tool-card[href] .tool-card-icon{ margin:0 0 8px; }
     .tool-card[href] > div{ width:100%; }
-    .panel.active .card{ max-width:560px; margin-left:auto; margin-right:auto; }
+    .panel.active .card{ max-width:none; }
     #panelView.active #itemListContainer{ max-height:520px; }
   }
 </style>
@@ -266,12 +241,7 @@
     <h1>Item Inventory</h1>
     <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets</p>
     <div class="hero-art">
-      <div class="orbit-garden">
-        <div class="orbit-ring orbit-1"><span class="orbit-icon">🎀</span></div>
-        <div class="orbit-ring orbit-2"><span class="orbit-icon">🏺</span><div class="orbit-dot"></div></div>
-        <div class="orbit-ring orbit-3"><span class="orbit-icon">🪑</span></div>
-        <div class="hero-center" id="heroBox">📦</div>
-      </div>
+      <div class="hero-center" id="heroBox">📦</div>
     </div>
   </header>
 
@@ -842,6 +812,29 @@
 
   loadItems();
   loadStaffNames();
+
+  // Soft piano-like note on hover/click for the carousel and hero
+  // icon — same style as Index.html / Flower Tools' hover sound.
+  let itemAudioCtx = null;
+  function playPianoTone(){
+    try{
+      if(!itemAudioCtx) itemAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      const freq = notes[Math.floor(Math.random()*notes.length)];
+      const o = itemAudioCtx.createOscillator(), g = itemAudioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = freq;
+      const start = itemAudioCtx.currentTime;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.09, start + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.45);
+      o.connect(g).connect(itemAudioCtx.destination);
+      o.start(start); o.stop(start + 0.46);
+    }catch(_){}
+  }
+  document.querySelectorAll('.carousel-item, .tool-card').forEach(el=>{
+    el.addEventListener('mouseenter', playPianoTone);
+    el.addEventListener('click', playPianoTone);
+  });
 
   // Small playful touch matching the hero flower on Index/Flower Tools —
   // a quick bounce + rotation on tap, purely decorative.
