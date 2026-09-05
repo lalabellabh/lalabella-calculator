@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Item Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f; --rust:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 8% 18%, rgba(255,190,210,.22), transparent 22%),
+      radial-gradient(circle at 92% 28%, rgba(217,164,65,.16), transparent 22%),
+      linear-gradient(145deg, #fdf1f0 0%, #f6e0da 60%, #eaf3ec 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:76px 18px 60px; }
+  header{
+    text-align:center; margin-bottom:22px; padding:24px 18px;
+    background:
+      radial-gradient(circle at 50% 30%, rgba(170,45,78,.22), transparent 55%),
+      linear-gradient(145deg, #070405 0%, #12090b 55%, #0d0709 100%);
+    border-radius:18px; border:1px solid rgba(230,196,122,.28);
+  }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:#e6c47a; margin-bottom:8px; font-weight:600; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:clamp(1.8rem,6vw,2.4rem); margin:0 0 4px; color:#f7eee5; }
+  .sub{ color:#b39a98; font-size:13px; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 8px; }
+  .card-sub{ font-size:12.5px; color:var(--ink-dim); margin:0 0 14px; line-height:1.5; }
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number], select{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--rose-deep); }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn{ width:100%; margin-top:18px; padding:13px 0; background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .result{ margin-top:14px; padding:12px; border-radius:10px; font-size:13px; display:none; }
+  .result.show{ display:block; }
+  .result.ok{ background:#e8f5ea; color:var(--ok); border:1px solid var(--ok); }
+  .result.err{ background:#fbeae7; color:var(--rust); border:1px solid var(--rust); }
+
+  .photo-preview{ width:90px; height:90px; border-radius:12px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
+  .photo-preview.show{ display:block; }
+
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:14px; }
+  .back-link:hover{ color:var(--rose-deep); }
+</style>
+</head>
+<body style="padding-top:0;">
+
+<style>
+  .choco-nav-toggle{
+    position:fixed; top:16px; left:16px; z-index:9210;
+    width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+    background:rgba(255,255,255,.9); color:var(--rose-deep); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+    box-shadow:0 6px 16px rgba(158,47,74,.12);
+  }
+  .choco-nav-backdrop{
+    position:fixed; inset:0; z-index:9205; background:rgba(58,37,48,.35); backdrop-filter:blur(3px);
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+  .choco-drawer{
+    position:fixed; top:0; left:0; bottom:0; width:min(260px,80vw); z-index:9206;
+    background:linear-gradient(160deg,#fff,var(--blush));
+    border-right:1px solid var(--line); box-shadow:12px 0 40px rgba(158,47,74,.18);
+    transform:translateX(-100%); transition:transform .25s ease;
+    padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  }
+  .choco-drawer.show{ transform:translateX(0); }
+  .choco-drawer a{ display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px; color:var(--ink); text-decoration:none; font-size:14px; font-weight:600; }
+  .choco-drawer a:hover{ background:var(--blush-2); }
+  .choco-drawer .choco-drawer-title{ color:var(--rose-deep); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; padding:0 12px 8px; opacity:0.8; }
+</style>
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-drawer-title">Quick Menu</div>
+  <a href="index.html">🍫 Chocolate Home</a>
+  <a href="flower-tools.html">🌸 Flower Tools</a>
+  <a href="item-dashboard.html">📊 Item Dashboard</a>
+  <a href="item-inventory.html">📦 Item Inventory</a>
+  <a href="item-admin.html">🔐 Item Admin</a>
+</nav>
+
+<div class="wrap">
+  <a class="back-link" href="item-inventory.html">&larr; Item Inventory</a>
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Item Admin</h1>
+    <p class="sub">Fix an existing item's details</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">✏️ Fix an Existing Item</div>
+    <p class="card-sub">Search for an item already in the catalog to correct its Category, Price, Photo, Min Stock, or Product Code.</p>
+
+    <label>Item Name</label>
+    <input type="text" id="editItemName" list="itemNameList" placeholder="Start typing to search…" autocomplete="off">
+    <datalist id="itemNameList"></datalist>
+
+    <div class="grid-2">
+      <div>
+        <label>Item Type</label>
+        <select id="editItemType">
+          <option value="Consumable">Consumable</option>
+          <option value="Fixed Asset">Fixed Asset</option>
+        </select>
+      </div>
+      <div>
+        <label>Category</label>
+        <select id="editItemCategory">
+          <option value="">— Select —</option>
+          <option>Packaging</option>
+          <option>Ribbon</option>
+          <option>Vase</option>
+          <option>Card &amp; Paper</option>
+          <option>Furniture</option>
+          <option>Display</option>
+          <option>Tools &amp; Equipment</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Unit</label>
+        <select id="editItemUnit">
+          <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
+        </select>
+      </div>
+      <div>
+        <label>Price (BHD)</label>
+        <input type="number" id="editItemPrice" min="0" step="0.001">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Min Stock</label>
+        <input type="number" id="editItemMinStock" min="0" step="1" placeholder="Optional">
+      </div>
+      <div>
+        <label>Product Code</label>
+        <input type="text" id="editItemCode">
+      </div>
+    </div>
+
+    <label>Photo <span style="text-transform:none;">(optional — replaces the existing one if uploaded)</span></label>
+    <input type="file" id="editItemPhoto" accept="image/*">
+    <img id="editItemPhotoPreview" class="photo-preview" alt="Preview">
+    <div style="font-size:11px;color:var(--ink-dim);margin-top:4px;" id="editItemPhotoHint"></div>
+
+    <button class="btn" id="saveEditItemBtn">Save Changes</button>
+    <div class="result" id="editItemResult"></div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
+  let ITEMS = [];
+  let editItemPhotoData = null;
+
+  async function loadItems(){
+    try{
+      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&_ts=' + Date.now())).json();
+      document.getElementById('itemNameList').innerHTML =
+        ITEMS.map(it => `<option value="${it['Item Name']}"></option>`).join('');
+    }catch(e){ console.error(e); }
+  }
+  loadItems();
+
+  document.getElementById('editItemName').addEventListener('input', function(){
+    const typed = this.value.trim().toLowerCase();
+    const match = ITEMS.find(it => String(it['Item Name']||'').trim().toLowerCase() === typed);
+    if(match){
+      document.getElementById('editItemType').value = match['Item Type'] || 'Consumable';
+      document.getElementById('editItemCategory').value = match['Category'] || '';
+      document.getElementById('editItemUnit').value = match['Unit'] || 'Piece';
+      document.getElementById('editItemPrice').value = match['Price (BHD)'] || '';
+      document.getElementById('editItemMinStock').value = match['Min Stock'] || '';
+      document.getElementById('editItemCode').value = match['Item Code'] || '';
+      const preview = document.getElementById('editItemPhotoPreview');
+      if(match['Photo Link (Drive)']){
+        preview.src = match['Photo Link (Drive)'];
+        preview.classList.add('show');
+      } else {
+        preview.classList.remove('show');
+      }
+    }
+  });
+
+  // Client-side compression, same approach as item-inventory.html —
+  // resize to at most 150x150 and re-encode as JPEG at reduced quality.
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxDim = 150;
+          let w = img.width, h = img.height;
+          if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+          else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('editItemPhoto').addEventListener('change', async function(){
+    const file = this.files[0];
+    if(!file) return;
+    const hint = document.getElementById('editItemPhotoHint');
+    hint.textContent = 'Compressing…';
+    try{
+      const compressed = await compressImage(file);
+      editItemPhotoData = compressed;
+      const preview = document.getElementById('editItemPhotoPreview');
+      preview.src = compressed;
+      preview.classList.add('show');
+      const approxKB = Math.round((compressed.length * 0.75) / 1024);
+      hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+    }catch(e){
+      hint.textContent = 'Could not process this image.';
+      editItemPhotoData = null;
+    }
+  });
+
+  document.getElementById('saveEditItemBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveEditItemBtn');
+    const resultBox = document.getElementById('editItemResult');
+    const itemName = document.getElementById('editItemName').value.trim();
+    if(!itemName){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Type or pick an item name first.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action: 'updateItemInventory',
+      itemName,
+      itemType: document.getElementById('editItemType').value,
+      category: document.getElementById('editItemCategory').value,
+      unit: document.getElementById('editItemUnit').value,
+      price: document.getElementById('editItemPrice').value,
+      minStock: document.getElementById('editItemMinStock').value,
+      itemCode: document.getElementById('editItemCode').value,
+      photoBase64: editItemPhotoData || ''
+    });
+
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      if(res.error){
+        resultBox.className = 'result err show';
+        resultBox.textContent = res.error;
+        return;
+      }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Saved — ' + itemName + ' updated.';
+      editItemPhotoData = null;
+      document.getElementById('editItemPhoto').value = '';
+      await loadItems();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  (function(){
+    const btn=document.getElementById('chocoNavToggle');
+    const backdrop=document.getElementById('chocoNavBackdrop');
+    const drawer=document.getElementById('chocoDrawer');
+    if(!btn||!backdrop||!drawer) return;
+    function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+    function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+    btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+    backdrop.addEventListener('click', closeDrawer);
+  })();
+</script>
+
+</body>
+</html>

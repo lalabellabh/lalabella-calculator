@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Item Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+    --paper:#fdf1f0; --paper-2:#f6e0da; --rust:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 8% 18%, rgba(255,190,210,.22), transparent 22%),
+      radial-gradient(circle at 92% 28%, rgba(217,164,65,.16), transparent 22%),
+      radial-gradient(circle at 18% 82%, rgba(190,145,255,.14), transparent 24%),
+      linear-gradient(145deg, #fdf1f0 0%, #f6e0da 60%, #eaf3ec 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  header{
+    text-align:center; margin-bottom:22px; padding:26px 18px;
+    background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%);
+    border-radius:18px; border:1px solid var(--line);
+    box-shadow:0 8px 26px rgba(158,47,74,0.08);
+    position:relative; overflow:hidden;
+  }
+  header::before{
+    content:'🎀'; position:absolute; font-size:60px; opacity:0.09;
+    left:-10px; top:-14px; transform:rotate(-16deg);
+  }
+  header::after{
+    content:'📦'; position:absolute; font-size:52px; opacity:0.10;
+    right:-6px; bottom:-12px; transform:rotate(12deg);
+  }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; font-weight:600; position:relative; z-index:1; }
+  h1{
+    font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep);
+    font-size:clamp(2.1rem,8vw,2.8rem); margin:0 0 4px; line-height:1;
+    position:relative; z-index:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; position:relative; z-index:1; }
+
+  .tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:20px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .tab{ padding:11px 4px; text-align:center; background:transparent; border:none; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; transition:all .2s ease; }
+  .tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; box-shadow:0 3px 10px rgba(158,47,74,0.25); }
+  .panel{ display:none; } .panel.active{ display:block; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number], select, textarea{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--rose-deep); }
+
+  .photo-preview{ width:100px; height:100px; border-radius:12px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
+  .photo-preview.show{ display:block; }
+  .photo-hint{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
+
+  .btn{ width:100%; margin-top:18px; padding:13px 0; background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(158,47,74,0.2); }
+  .btn:disabled{ background:var(--line); box-shadow:none; cursor:not-allowed; }
+  .btn-outline{ background:#fff; color:var(--rose-deep); border:1.5px solid var(--rose-deep); box-shadow:none; }
+
+  .result{ margin-top:14px; padding:12px; border-radius:10px; font-size:13px; display:none; }
+  .result.show{ display:block; }
+  .result.ok{ background:#e8f5ea; color:var(--ok); border:1px solid var(--ok); }
+  .result.err{ background:#fbeae7; color:var(--rust); border:1px solid var(--rust); }
+
+  .item-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--blush-2); }
+  .item-row:first-child{ border-top:none; }
+  .item-thumb{ width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--blush-2); flex-shrink:0; }
+  .item-info{ flex:1; min-width:0; }
+  .item-name{ font-weight:600; font-size:13.5px; }
+  .item-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .item-qty{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; white-space:nowrap; }
+  .item-qty.low{ color:var(--rust); }
+
+  .search-box{ position:relative; }
+  #itemSearchResults, #releaseSearchResults{ display:none; position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 12px 28px rgba(0,0,0,0.12); }
+  #itemSearchResults.show, #releaseSearchResults.show{ display:block; }
+  .search-result-item{ padding:11px 14px; cursor:pointer; border-top:1px solid var(--blush-2); font-size:13px; }
+  .search-result-item:first-child{ border-top:none; }
+  .search-result-item:hover{ background:var(--blush); }
+
+  .preview-label{ border:1.5px dashed var(--line); border-radius:10px; padding:14px; margin-top:16px; text-align:center; background:var(--blush); display:none; }
+  .preview-label.show{ display:block; }
+  .preview-label svg{ margin-top:8px; }
+
+  .type-toggle{ display:flex; gap:8px; margin-top:6px; }
+  .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--blush); border-radius:10px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
+  .type-btn.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
+
+  /* ---------- Dark elegant hero, matching Index.html's aesthetic ---------- */
+  header{
+    background:
+      radial-gradient(circle at 50% 30%, rgba(170,45,78,.22), transparent 55%),
+      linear-gradient(145deg, #070405 0%, #12090b 55%, #0d0709 100%);
+    border:1px solid rgba(230,196,122,.28);
+  }
+  header::before{ display:none; }
+  header::after{ display:none; }
+  header .eyebrow{ color:#e6c47a; }
+  header h1{ font-family:'Fraunces',serif; color:#f7eee5; font-weight:900; }
+  header .sub{ color:#b39a98; }
+  .hero-art{ min-height:190px; display:grid; place-items:center; position:relative; margin:8px 0 4px; }
+  .orbit-garden{ position:relative; width:210px; height:210px; display:grid; place-items:center; }
+  .orbit-garden::before{
+    content:''; position:absolute; width:150px; height:150px; border-radius:50%;
+    background:radial-gradient(circle, rgba(170,45,78,.28), rgba(170,45,78,0) 70%); filter:blur(3px);
+  }
+  .orbit-ring{
+    position:absolute; left:50%; top:50%; border:1px dashed rgba(230,196,122,.3);
+    border-radius:50%; transform:translate(-50%,-50%); animation:orbitSpin linear infinite; pointer-events:none;
+  }
+  .orbit-1{ width:96px; height:96px; animation-duration:7s; }
+  .orbit-2{ width:148px; height:148px; animation-duration:11s; animation-direction:reverse; }
+  .orbit-3{ width:198px; height:198px; animation-duration:15s; }
+  .orbit-dot{
+    position:absolute; width:6px; height:6px; margin:-3px; border-radius:50%;
+    background:#e6c47a; box-shadow:0 0 12px #e6c47a; left:50%; top:0;
+  }
+  .orbit-icon{
+    position:absolute; left:50%; top:-13px; transform:translateX(-50%); font-size:19px;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.35)); animation:orbitCounter linear infinite;
+  }
+  .orbit-1 .orbit-icon{ animation-duration:7s; }
+  .orbit-2 .orbit-icon{ animation-duration:11s; animation-direction:reverse; }
+  .orbit-3 .orbit-icon{ animation-duration:15s; }
+  @keyframes orbitSpin{ from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
+  @keyframes orbitCounter{ from{transform:translateX(-50%) rotate(0deg)} to{transform:translateX(-50%) rotate(-360deg)} }
+  .hero-center{
+    position:relative; z-index:3; width:100px; height:100px; border-radius:50%;
+    display:grid; place-items:center; font-size:48px;
+    background:radial-gradient(circle at 38% 30%, #fff3d0, #d9a441 55%, #8a5a1f);
+    border:1px solid rgba(230,196,122,.5); box-shadow:0 20px 42px rgba(0,0,0,.5), 0 0 0 8px rgba(230,196,122,.08);
+    animation:heroPulse 3.2s ease-in-out infinite; cursor:pointer;
+  }
+
+  /* ---------- Icon-card menu grid, replacing the plain tab bar ---------- */
+  .tools-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:20px; }
+  .tool-card{
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px;
+    text-align:left; cursor:pointer; transition:.2s ease;
+    box-shadow:0 4px 14px rgba(158,47,74,0.05);
+  }
+  .tool-card:hover{ transform:translateY(-3px); box-shadow:0 10px 22px rgba(158,47,74,0.14); }
+  .tool-card.active{
+    background:linear-gradient(145deg, #fff, var(--blush));
+    border-color:var(--rose-deep); box-shadow:0 10px 26px rgba(158,47,74,0.18);
+  }
+  .tool-card-icon{ font-size:28px; margin-bottom:8px; }
+  .tool-card-kicker{ font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); font-weight:700; }
+  .tool-card h3{ font-family:'Fraunces',serif; font-size:16px; margin:4px 0 4px; color:var(--ink); }
+  .tool-card p{ font-size:10.5px; color:var(--ink-dim); margin:0; line-height:1.4; }
+  @media(max-width:420px){ .tools-grid{ grid-template-columns:1fr 1fr; gap:8px; } .tool-card{ padding:12px; } .tool-card-icon{ font-size:22px; } .tool-card h3{ font-size:14px; } }
+  @keyframes heroPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
+</style>
+</head>
+<body>
+
+<div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <video id="scannerVideo" autoplay playsinline muted style="width:100%;max-width:400px;border-radius:10px;"></video>
+  <div style="color:#fff;font-size:12px;margin-top:10px;text-align:center;">Point the camera at the item's barcode</div>
+  <button type="button" id="closeScanBtn" style="margin-top:16px;background:var(--rust);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;">Cancel</button>
+</div>
+
+<style id="itemInvNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+  background:rgba(255,255,255,.9); color:var(--rose-deep); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  box-shadow:0 6px 16px rgba(158,47,74,.12);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(58,37,48,.35); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(260px,80vw); z-index:9206;
+  background:linear-gradient(160deg,#fff,var(--blush));
+  border-right:1px solid var(--line); box-shadow:12px 0 40px rgba(158,47,74,.18);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:var(--ink); text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:var(--blush-2); }
+.choco-drawer .choco-drawer-title{
+  color:var(--rose-deep); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.wrap{ padding-top:76px !important; }
+</style>
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-drawer-title">Quick Menu</div>
+  <a href="index.html">🍫 Chocolate Home</a>
+  <a href="flower-tools.html">🌸 Flower Tools</a>
+  <a href="item-dashboard.html">📊 Item Dashboard</a>
+  <a href="item-inventory.html">📦 Item Inventory</a>
+</nav>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Item Inventory</h1>
+    <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets</p>
+    <div class="hero-art">
+      <div class="orbit-garden">
+        <div class="orbit-ring orbit-1"><span class="orbit-icon">🎀</span></div>
+        <div class="orbit-ring orbit-2"><span class="orbit-icon">🏺</span><div class="orbit-dot"></div></div>
+        <div class="orbit-ring orbit-3"><span class="orbit-icon">🪑</span></div>
+        <div class="hero-center" id="heroBox">📦</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="tools-grid" id="toolsGrid">
+    <button class="tool-card active" data-tab="add">
+      <div class="tool-card-icon">🆕</div>
+      <div class="tool-card-kicker">Baseline</div>
+      <h3>New Item</h3>
+      <p>Add a brand-new item to the catalog.</p>
+    </button>
+    <button class="tool-card" data-tab="receive">
+      <div class="tool-card-icon">📥</div>
+      <div class="tool-card-kicker">Restock</div>
+      <h3>Receiving</h3>
+      <p>Add more quantity to an existing item.</p>
+    </button>
+    <button class="tool-card" data-tab="release">
+      <div class="tool-card-icon">📤</div>
+      <div class="tool-card-kicker">Use / Event</div>
+      <h3>Release</h3>
+      <p>Subtract quantity for an event or order.</p>
+    </button>
+    <button class="tool-card" data-tab="view">
+      <div class="tool-card-icon">🔎</div>
+      <div class="tool-card-kicker">Catalog</div>
+      <h3>View / Barcode</h3>
+      <p>Browse items and print barcode labels.</p>
+    </button>
+    <a class="tool-card" href="item-admin.html" style="grid-column:1 / -1;text-decoration:none;display:flex;align-items:center;gap:12px;">
+      <div class="tool-card-icon" style="margin:0;">🔐</div>
+      <div>
+        <div class="tool-card-kicker">Manage</div>
+        <h3 style="margin:2px 0;">Admin</h3>
+        <p>Edit existing items — fix Category, Price, Photo, and more.</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
+  <div class="panel active" id="panelAdd">
+    <div class="card">
+      <div class="card-title">📦 Add New Item</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">
+        For an item that's never been in the system before. Whatever Qty you enter here becomes its starting (baseline) quantity. If the item already exists, use "Receiving" instead to add more.
+      </div>
+
+      <label>Item Name</label>
+      <input type="text" id="addItemName" placeholder="e.g. Red Satin Ribbon 2cm">
+
+      <label>Product Code <span style="text-transform:none;">(optional — leave blank to auto-generate)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="addItemCode" placeholder="Auto-generated if blank" style="flex:1;">
+        <button type="button" id="scanNewItemBtn" style="flex-shrink:0;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--blush);cursor:pointer;font-size:16px;">📷</button>
+      </div>
+
+      <label>Item Type</label>
+      <div class="type-toggle" id="addItemTypeToggle">
+        <button type="button" class="type-btn active" data-type="Consumable">Consumable</button>
+        <button type="button" class="type-btn" data-type="Fixed Asset">Fixed Asset</button>
+      </div>
+
+      <label>Category</label>
+      <select id="addItemCategory">
+        <option value="">— Select —</option>
+        <option>Packaging</option>
+        <option>Ribbon</option>
+        <option>Vase</option>
+        <option>Card &amp; Paper</option>
+        <option>Furniture</option>
+        <option>Display</option>
+        <option>Tools &amp; Equipment</option>
+        <option>Other</option>
+      </select>
+
+      <label>Starting Qty</label>
+      <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
+
+      <label>Unit</label>
+      <select id="addItemUnit">
+        <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
+      </select>
+
+      <label>Price (BHD)</label>
+      <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
+
+      <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
+      <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
+
+      <label>Photo <span style="text-transform:none;">(optional — auto-compressed before upload)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="addItemPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="addItemPhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="addItemPhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="addItemPhoto" accept="image/*" style="display:none;">
+      <div id="addItemPastezone" tabindex="0" style="margin-top:8px; padding:10px; border:1.5px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:text; background:var(--blush);">
+        Or click here and paste (Ctrl+V) a screenshot / Snipping Tool capture
+      </div>
+      <div style="position:relative;display:inline-block;">
+        <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
+        <button type="button" id="addItemPhotoClearBtn" style="display:none;align-items:center;justify-content:center;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);">✕</button>
+      </div>
+      <div class="photo-hint" id="addItemPhotoHint"></div>
+
+      <label>Notes</label>
+      <textarea id="addItemNotes" rows="2" placeholder="Optional"></textarea>
+
+      <label>Entered By</label>
+      <input type="text" id="addItemEnteredBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="addItemBtn">Add Item</button>
+      <div class="result" id="addItemResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== RECEIVING ===================== -->
+  <div class="panel" id="panelReceive">
+    <div class="card">
+      <div class="card-title">📥 Receiving</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Adds to an item's existing quantity.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="receiveSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="itemSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanReceiveBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="receiveCurrentQty"></div>
+
+      <label>Qty Received</label>
+      <input type="number" id="receiveQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="receiveDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Received By</label>
+      <input type="text" id="receiveBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="receiveBtn">Receive Stock</button>
+      <div class="result" id="receiveResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== RELEASE ===================== -->
+  <div class="panel" id="panelRelease">
+    <div class="card">
+      <div class="card-title">📤 Release / Use</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Subtracts from an item's quantity — for an event, an order, or general use.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="releaseSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="releaseSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanReleaseBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="releaseCurrentQty"></div>
+
+      <label>Qty to Release</label>
+      <input type="number" id="releaseQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="releaseDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Reason / Event</label>
+      <input type="text" id="releaseReason" placeholder="e.g. Valentine's display setup">
+
+      <label>Released By</label>
+      <input type="text" id="releaseBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="releaseBtn">Release</button>
+      <div class="result" id="releaseResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== VIEW / BARCODE ===================== -->
+  <div class="panel" id="panelView">
+    <div class="card">
+      <div class="card-title">🔎 All Items</div>
+      <input type="text" id="viewSearch" placeholder="Filter by name…" style="margin-bottom:10px;">
+      <div id="itemListContainer" style="max-height:400px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="card" id="barcodeCard" style="display:none;">
+      <div class="card-title">🏷️ Barcode</div>
+      <div class="preview-label show" id="barcodePreview">
+        <div id="bcName" style="font-weight:700;font-size:13px;"></div>
+        <div id="bcPrice" style="font-size:12px;color:var(--ink-dim);margin-top:2px;"></div>
+        <svg id="bcBarcode"></svg>
+        <div id="bcCode" style="font-size:10px;color:var(--ink-dim);"></div>
+      </div>
+      <button class="btn btn-outline" id="printBarcodeBtn">🖨️ Print This Label</button>
+    </div>
+  </div>
+</div>
+
+<div id="labelPrintArea" style="display:none;">
+  <div style="text-align:center;padding:20px;">
+    <div id="printName" style="font-weight:bold;font-size:14px;"></div>
+    <div id="printPrice" style="font-size:12px;"></div>
+    <svg id="printBarcode"></svg>
+    <div id="printCode" style="font-size:10px;"></div>
+  </div>
+</div>
+<style>
+  @media print{
+    body *{ visibility:hidden; }
+    #labelPrintArea.printing, #labelPrintArea.printing *{ visibility:visible; }
+    #labelPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; }
+  }
+</style>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
+
+  let ITEMS = [];
+
+  function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tool-card').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tool-card').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', view:'panelView' };
+      document.getElementById(map[tab.dataset.tab]).classList.add('active');
+      if(tab.dataset.tab === 'view') loadItems();
+    });
+  });
+
+  // ---------- Load items ----------
+  async function loadItems(){
+    try{
+      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&_ts=' + Date.now())).json();
+      renderItemList(document.getElementById('viewSearch').value);
+    }catch(e){ console.error(e); }
+  }
+
+  function renderItemList(filterText){
+    const q = (filterText||'').trim().toLowerCase();
+    const filtered = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q));
+    const el = document.getElementById('itemListContainer');
+    if(filtered.length === 0){
+      el.innerHTML = '<div style="color:var(--ink-dim);font-size:13px;text-align:center;padding:16px 0;">No items found.</div>';
+      return;
+    }
+    el.innerHTML = filtered.map(it => {
+      const qty = Number(it['Qty']) || 0;
+      const minStock = it['Min Stock'];
+      const isLow = minStock !== '' && minStock !== undefined && qty < Number(minStock);
+      const photo = it['Photo Link (Drive)'] || '';
+      return `
+        <div class="item-row" data-code="${it['Item Code']}">
+          ${photo ? `<img class="item-thumb" src="${photo}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<div class="item-thumb"></div>`}
+          <div class="item-info">
+            <div class="item-name">${it['Item Name']}</div>
+            <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
+          </div>
+          <div class="item-qty ${isLow?'low':''}">${qty} ${it['Unit']||''}</div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.item-row').forEach(row=>{
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', ()=>{
+        const item = ITEMS.find(it => it['Item Code'] === row.dataset.code);
+        if(item) showBarcode(item);
+      });
+    });
+  }
+
+  document.getElementById('viewSearch').addEventListener('input', function(){
+    renderItemList(this.value);
+  });
+
+  let selectedBarcodeItem = null;
+  function showBarcode(item){
+    selectedBarcodeItem = item;
+    document.getElementById('barcodeCard').style.display = 'block';
+    document.getElementById('bcName').textContent = item['Item Name'];
+    document.getElementById('bcPrice').textContent = fmtBD(item['Price (BHD)']);
+    document.getElementById('bcCode').textContent = item['Item Code'];
+    document.getElementById('bcBarcode').innerHTML = '';
+    try{
+      JsBarcode('#bcBarcode', String(item['Item Code']||'000000'), { format:'CODE128', width:1.3, height:32, displayValue:false });
+    }catch(e){}
+    document.getElementById('barcodeCard').scrollIntoView({behavior:'smooth'});
+  }
+
+  document.getElementById('printBarcodeBtn').addEventListener('click', ()=>{
+    if(!selectedBarcodeItem) return;
+    document.getElementById('printName').textContent = selectedBarcodeItem['Item Name'];
+    document.getElementById('printPrice').textContent = fmtBD(selectedBarcodeItem['Price (BHD)']);
+    document.getElementById('printCode').textContent = selectedBarcodeItem['Item Code'];
+    document.getElementById('printBarcode').innerHTML = '';
+    try{
+      JsBarcode('#printBarcode', String(selectedBarcodeItem['Item Code']||'000000'), { format:'CODE128', width:1, height:26, displayValue:false });
+    }catch(e){}
+    document.getElementById('labelPrintArea').classList.add('printing');
+    window.print();
+    setTimeout(()=>document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  });
+
+  // ---------- Photo: client-side compression ----------
+  // Resizes to at most 150x150 and re-encodes as JPEG at reduced
+  // quality, so every photo lands well under ~30KB before it's ever
+  // sent to Apps Script / saved to Drive.
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxDim = 150;
+          let w = img.width, h = img.height;
+          if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+          else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let addItemPhotoData = null;
+  async function handleItemPhotoFile(file){
+    if(!file) return;
+    const hint = document.getElementById('addItemPhotoHint');
+    hint.textContent = 'Compressing…';
+    try{
+      const compressed = await compressImage(file);
+      addItemPhotoData = compressed;
+      const preview = document.getElementById('addItemPhotoPreview');
+      preview.src = compressed;
+      preview.classList.add('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'flex';
+      const approxKB = Math.round((compressed.length * 0.75) / 1024);
+      hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+    }catch(e){
+      hint.textContent = 'Could not process this image.';
+      addItemPhotoData = null;
+    }
+  }
+  document.getElementById('addItemPhoto').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  document.getElementById('addItemPhotoCamera').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  // Desktop workflow: Snipping Tool copies an image straight to the
+  // clipboard — clicking this zone then pressing Ctrl+V picks it up
+  // without ever needing to save a temp file first.
+  document.getElementById('addItemPastezone').addEventListener('paste', function(e){
+    const items = (e.clipboardData || window.clipboardData).items;
+    for(let i = 0; i < items.length; i++){
+      if(items[i].type.indexOf('image') !== -1){
+        const file = items[i].getAsFile();
+        handleItemPhotoFile(file);
+        break;
+      }
+    }
+  });
+
+  // ---------- Remove selected photo (the "X" button) ----------
+  document.getElementById('addItemPhotoClearBtn').addEventListener('click', function(){
+    addItemPhotoData = null;
+    const preview = document.getElementById('addItemPhotoPreview');
+    preview.src = '';
+    preview.classList.remove('show');
+    this.style.display = 'none';
+    document.getElementById('addItemPhotoHint').textContent = '';
+    document.getElementById('addItemPhoto').value = '';
+    document.getElementById('addItemPhotoCamera').value = '';
+  });
+
+  // ---------- Item Type toggle ----------
+  let selectedItemType = 'Consumable';
+  document.getElementById('addItemTypeToggle').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.type-btn');
+    if(!btn) return;
+    document.querySelectorAll('#addItemTypeToggle .type-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedItemType = btn.dataset.type;
+  });
+
+  // ---------- Add New Item ----------
+  document.getElementById('addItemBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('addItemBtn');
+    const resultBox = document.getElementById('addItemResult');
+    const itemName = document.getElementById('addItemName').value.trim();
+    if(!itemName){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Item name is required.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action: 'addNewItem',
+      itemName,
+      itemCode: document.getElementById('addItemCode').value.trim(),
+      itemType: selectedItemType,
+      category: document.getElementById('addItemCategory').value,
+      qty: document.getElementById('addItemQty').value || 0,
+      unit: document.getElementById('addItemUnit').value,
+      price: document.getElementById('addItemPrice').value || 0,
+      minStock: document.getElementById('addItemMinStock').value,
+      notes: document.getElementById('addItemNotes').value,
+      photoBase64: addItemPhotoData || '',
+      enteredBy: document.getElementById('addItemEnteredBy').value
+    });
+
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Add Item';
+      if(res.error){
+        resultBox.className = 'result err show';
+        resultBox.textContent = res.error;
+        return;
+      }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode;
+      // Reset form
+      document.getElementById('addItemName').value = '';
+      document.getElementById('addItemCode').value = '';
+      document.getElementById('addItemCategory').value = '';
+      document.getElementById('addItemQty').value = '';
+      document.getElementById('addItemPrice').value = '';
+      document.getElementById('addItemMinStock').value = '';
+      document.getElementById('addItemNotes').value = '';
+      document.getElementById('addItemPhoto').value = '';
+      document.getElementById('addItemPhotoCamera').value = '';
+      document.getElementById('addItemPhotoPreview').classList.remove('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'none';
+      document.getElementById('addItemPhotoHint').textContent = '';
+      addItemPhotoData = null;
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Add Item';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Item search (shared pattern for Receiving + Release) ----------
+  function setupItemSearch(inputId, resultsId, onSelect){
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    input.addEventListener('input', async ()=>{
+      if(ITEMS.length === 0) await loadItems();
+      const q = input.value.trim().toLowerCase();
+      if(!q){ results.classList.remove('show'); return; }
+      const matches = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q)).slice(0, 10);
+      results.innerHTML = matches.map(it => `<div class="search-result-item" data-name="${it['Item Name']}">${it['Item Name']} <span style="color:var(--ink-dim);">(${it['Qty']} ${it['Unit']||''})</span></div>`).join('');
+      results.classList.toggle('show', matches.length > 0);
+    });
+    results.addEventListener('click', (e)=>{
+      const item = e.target.closest('.search-result-item');
+      if(!item) return;
+      input.value = item.dataset.name;
+      results.classList.remove('show');
+      onSelect(item.dataset.name);
+    });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('.search-box')) results.classList.remove('show');
+    });
+  }
+
+  setupItemSearch('receiveSearch', 'itemSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('receiveCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+  setupItemSearch('releaseSearch', 'releaseSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('releaseCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+
+  // ---------- Receiving ----------
+  document.getElementById('receiveBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('receiveBtn');
+    const resultBox = document.getElementById('receiveResult');
+    const itemName = document.getElementById('receiveSearch').value.trim();
+    const qty = document.getElementById('receiveQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'receiveItem', itemName, qty,
+      date: document.getElementById('receiveDate').value,
+      receivedBy: document.getElementById('receiveBy').value
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      document.getElementById('receiveSearch').value = '';
+      document.getElementById('receiveQty').value = '';
+      document.getElementById('receiveCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Release ----------
+  document.getElementById('releaseBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('releaseBtn');
+    const resultBox = document.getElementById('releaseResult');
+    const itemName = document.getElementById('releaseSearch').value.trim();
+    const qty = document.getElementById('releaseQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'releaseItem', itemName, qty,
+      date: document.getElementById('releaseDate').value,
+      reason: document.getElementById('releaseReason').value,
+      releasedBy: document.getElementById('releaseBy').value
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Release';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      document.getElementById('releaseSearch').value = '';
+      document.getElementById('releaseQty').value = '';
+      document.getElementById('releaseReason').value = '';
+      document.getElementById('releaseCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Release';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  async function loadStaffNames(){
+    try{
+      const names = await (await fetch(API_URL + '?action=getItemStaff&_ts=' + Date.now())).json();
+      document.getElementById('staffNameList').innerHTML =
+        (names || []).map(n => `<option value="${n}"></option>`).join('');
+    }catch(e){ console.error(e); }
+  }
+
+  loadItems();
+  loadStaffNames();
+
+  // Small playful touch matching the hero flower on Index/Flower Tools —
+  // a quick bounce + rotation on tap, purely decorative.
+  const heroBox = document.getElementById('heroBox');
+  if(heroBox){
+    heroBox.addEventListener('click', ()=>{
+      heroBox.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      heroBox.style.transform = 'scale(1.25) rotate(-10deg)';
+      setTimeout(()=>{ heroBox.style.transform = 'scale(1) rotate(0deg)'; }, 350);
+    });
+  }
+
+  // ---------- Scan Barcode (Receiving) ----------
+  // Matches the scanned Item Code against the loaded catalog and, if
+  // found, fills the search box the same way picking it from the
+  // dropdown would — so scanning is just a faster path to the exact
+  // same "select this item" step, not a separate flow.
+  let scanStream = null;
+  let scanLoopActive = false;
+
+  // Generic scanner opener — takes a callback that receives the raw
+  // scanned code string, so New Item, Receiving, and Release can each
+  // decide what to do with it (fill a code field vs. look up an
+  // existing item) without duplicating the camera/detector plumbing.
+  function openBarcodeScanner(onScanned){
+    return async ()=>{
+      if(!('BarcodeDetector' in window)){
+        alert('Hindi supported ang barcode scanning sa browser na ito. I-type na lang.');
+        return;
+      }
+      if(ITEMS.length === 0) await loadItems();
+      const modal = document.getElementById('scannerModal');
+      const video = document.getElementById('scannerVideo');
+      modal.style.display = 'flex';
+      try{
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = scanStream;
+        scanLoopActive = true;
+        const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+        const scanLoop = async ()=>{
+          if(!scanLoopActive) return;
+          try{
+            const codes = await detector.detect(video);
+            if(codes.length > 0){
+              const scannedCode = codes[0].rawValue;
+              stopScanner();
+              onScanned(scannedCode);
+              return;
+            }
+          }catch(e){}
+          requestAnimationFrame(scanLoop);
+        };
+        scanLoop();
+      }catch(e){
+        alert('Hindi ma-access ang camera. I-check ang permissions.');
+        modal.style.display = 'none';
+      }
+    };
+  }
+
+  function findItemByCode(scannedCode){
+    return ITEMS.find(it => String(it['Item Code']||'').trim().toLowerCase() === scannedCode.trim().toLowerCase());
+  }
+
+  document.getElementById('scanReceiveBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('receiveSearch').value = match['Item Name'];
+      document.getElementById('receiveCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('receiveQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  document.getElementById('scanReleaseBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('releaseSearch').value = match['Item Name'];
+      document.getElementById('releaseCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('releaseQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  // New Item's scan is different on purpose: there's no existing item
+  // to look up yet — this scans a code already printed on the
+  // physical product/box (e.g. a supplier barcode) and uses it AS the
+  // new item's own Product Code, instead of auto-generating one.
+  document.getElementById('scanNewItemBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    document.getElementById('addItemCode').value = scannedCode;
+  }));
+
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    document.getElementById('scannerModal').style.display = 'none';
+  }
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+</script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+})();
+</script>
+
+<datalist id="staffNameList"></datalist>
+
+
+</body>
+</html>
