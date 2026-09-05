@@ -45,6 +45,10 @@
   .col{ flex:1; display:flex; flex-direction:column; gap:18px; min-width:0; }
   @media(max-width:800px){ .layout{ flex-direction:column; } }
 
+  .branch-tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .branch-tab{ padding:11px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:11.5px; color:var(--ink-dim); cursor:pointer; border-radius:10px; }
+  .branch-tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  @media(max-width:500px){ .branch-tabs{ grid-template-columns:1fr 1fr; } }
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
   .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
   input[type=text], input[type=number]{ width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); outline:none; margin-bottom:10px; box-sizing:border-box; }
@@ -64,6 +68,7 @@
   .hist-badge{ font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; text-transform:uppercase; flex-shrink:0; }
   .hist-badge.receive{ background:var(--mint); color:var(--ok); }
   .hist-badge.release{ background:#fbeae7; color:var(--rust); }
+  .hist-badge.transfer{ background:#eaf1fb; color:#2f5e9e; }
   .hist-actions{ display:flex; gap:6px; margin-top:6px; }
   .hist-actions button{ font-size:11px; padding:5px 10px; border-radius:7px; border:1px solid var(--line); background:var(--blush); cursor:pointer; color:var(--ink); }
   .hist-actions button:hover{ background:var(--blush-2); }
@@ -129,6 +134,13 @@
     <h1>Item Dashboard</h1>
     <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets — overview</p>
   </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="All">All Branches</button>
+    <button class="branch-tab" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-label">Total Items</div><div class="kpi-value" id="kpiTotal">—</div></div>
@@ -205,12 +217,21 @@
 
   let ALL_ITEMS = [];
   let ALL_HISTORY = [];
+  let currentBranch = 'All';
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    loadDashboard();
+  });
 
   async function loadDashboard(){
     try{
       const [dashData, histData] = await Promise.all([
-        fetch(API_URL + '?action=getItemDashboard&_ts=' + Date.now()).then(r=>r.json()),
-        fetch(API_URL + '?action=getItemHistory&_ts=' + Date.now()).then(r=>r.json())
+        fetch(API_URL + '?action=getItemDashboard&branch=' + encodeURIComponent(currentBranch) + '&_ts=' + Date.now()).then(r=>r.json()),
+        fetch(API_URL + '?action=getItemHistory&branch=' + encodeURIComponent(currentBranch) + '&_ts=' + Date.now()).then(r=>r.json())
       ]);
       if(dashData.error){ console.error(dashData.error); return; }
 
@@ -261,23 +282,37 @@
     if(!ALL_HISTORY.length){ el.innerHTML = '<div class="empty">No history yet.</div>'; return; }
     el.innerHTML = ALL_HISTORY.map((h, i) => {
       const isReceive = h._type === 'receive';
-      const qty = isReceive ? h['Qty Received'] : h['Qty Released'];
-      const by = isReceive ? h['Received By'] : h['Released By'];
-      const meta = isReceive
-        ? fmtDate(h['Date']) + (by ? ' · ' + by : '')
-        : fmtDate(h['Date']) + (h['Reason/Event'] ? ' · ' + h['Reason/Event'] : '') + (by ? ' · ' + by : '');
+      const isTransfer = h._type === 'transfer';
+      let badgeLabel, qty, meta, isEditable;
+
+      if(isTransfer){
+        badgeLabel = 'Transfer';
+        qty = h['Qty'];
+        meta = fmtDate(h['Date']) + ' · ' + h['From Branch'] + ' → ' + h['To Branch'] + (h['Transferred By'] ? ' · ' + h['Transferred By'] : '');
+        isEditable = false; // transfers aren't edited here — do a reverse transfer instead if a mistake was made
+      } else {
+        badgeLabel = isReceive ? 'In' : 'Out';
+        qty = isReceive ? h['Qty Received'] : h['Qty Released'];
+        const by = isReceive ? h['Received By'] : h['Released By'];
+        const branchPart = h['Branch'] ? h['Branch'] + ' · ' : '';
+        meta = branchPart + fmtDate(h['Date']) +
+          (!isReceive && h['Reason/Event'] ? ' · ' + h['Reason/Event'] : '') +
+          (by ? ' · ' + by : '');
+        isEditable = true;
+      }
+
       return `
         <div class="hist-row">
           <div class="hist-top">
             <div>
-              <span class="hist-badge ${h._type}">${isReceive ? 'In' : 'Out'}</span>
+              <span class="hist-badge ${h._type}">${badgeLabel}</span>
               <div class="row-name" style="display:inline;margin-left:6px;">${h['Item Name']}</div>
               <div class="row-meta">${meta}</div>
             </div>
-            <div class="row-val ${isReceive ? '' : 'low'}">${isReceive ? '+' : '-'}${qty}</div>
+            <div class="row-val ${isReceive || isTransfer ? '' : 'low'}">${isTransfer ? '' : (isReceive ? '+' : '-')}${qty}</div>
           </div>
           <div class="hist-actions">
-            <button data-i="${i}" class="hist-edit-btn">✏️ Edit</button>
+            ${isEditable ? `<button data-i="${i}" class="hist-edit-btn">✏️ Edit</button>` : ''}
             <button data-i="${i}" class="hist-print-btn">🖨️ Print</button>
             <button data-i="${i}" class="hist-wa-btn">📤 WhatsApp</button>
           </div>
@@ -336,12 +371,25 @@
 
   // ---------- Print & WhatsApp ----------
   function buildEntryText(entry){
+    if(entry._type === 'transfer'){
+      let lines = [
+        'TRANSFER RECEIPT',
+        'Item: ' + entry['Item Name'],
+        'Qty: ' + entry['Qty'],
+        'From: ' + entry['From Branch'],
+        'To: ' + entry['To Branch'],
+        'Date: ' + fmtDate(entry['Date'])
+      ];
+      if(entry['Transferred By']) lines.push('Transferred By: ' + entry['Transferred By']);
+      return lines;
+    }
     const isReceive = entry._type === 'receive';
     const qty = isReceive ? entry['Qty Received'] : entry['Qty Released'];
     const by = isReceive ? entry['Received By'] : entry['Released By'];
     let lines = [
       (isReceive ? 'RECEIVING' : 'RELEASE') + ' RECEIPT',
       'Item: ' + entry['Item Name'],
+      'Branch: ' + (entry['Branch'] || '—'),
       'Qty: ' + (isReceive ? '+' : '-') + qty,
       'Date: ' + fmtDate(entry['Date'])
     ];
