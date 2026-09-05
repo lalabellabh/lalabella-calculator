@@ -101,23 +101,38 @@
   .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--blush); border-radius:10px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
   .type-btn.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
 
-  /* ---------- Themed hero, matching the Index/Flower Tools style ---------- */
-  .hero-art{ min-height:180px; display:grid; place-items:center; position:relative; margin:4px 0 8px; }
-  .orbit-garden{ position:relative; width:200px; height:200px; display:grid; place-items:center; }
+  /* ---------- Dark elegant hero, matching Index.html's aesthetic ---------- */
+  header{
+    background:
+      radial-gradient(circle at 50% 30%, rgba(170,45,78,.22), transparent 55%),
+      linear-gradient(145deg, #070405 0%, #12090b 55%, #0d0709 100%);
+    border:1px solid rgba(230,196,122,.28);
+  }
+  header::before{ display:none; }
+  header::after{ display:none; }
+  header .eyebrow{ color:#e6c47a; }
+  header h1{ font-family:'Fraunces',serif; color:#f7eee5; font-weight:900; }
+  header .sub{ color:#b39a98; }
+  .hero-art{ min-height:190px; display:grid; place-items:center; position:relative; margin:8px 0 4px; }
+  .orbit-garden{ position:relative; width:210px; height:210px; display:grid; place-items:center; }
   .orbit-garden::before{
-    content:''; position:absolute; width:140px; height:140px; border-radius:50%;
-    background:radial-gradient(circle, rgba(247,205,213,.65), rgba(247,205,213,0) 70%); filter:blur(2px);
+    content:''; position:absolute; width:150px; height:150px; border-radius:50%;
+    background:radial-gradient(circle, rgba(170,45,78,.28), rgba(170,45,78,0) 70%); filter:blur(3px);
   }
   .orbit-ring{
-    position:absolute; left:50%; top:50%; border:1px dashed rgba(201,79,107,.22);
+    position:absolute; left:50%; top:50%; border:1px dashed rgba(230,196,122,.3);
     border-radius:50%; transform:translate(-50%,-50%); animation:orbitSpin linear infinite; pointer-events:none;
   }
-  .orbit-1{ width:92px; height:92px; animation-duration:7s; }
-  .orbit-2{ width:140px; height:140px; animation-duration:11s; animation-direction:reverse; }
-  .orbit-3{ width:188px; height:188px; animation-duration:15s; }
+  .orbit-1{ width:96px; height:96px; animation-duration:7s; }
+  .orbit-2{ width:148px; height:148px; animation-duration:11s; animation-direction:reverse; }
+  .orbit-3{ width:198px; height:198px; animation-duration:15s; }
+  .orbit-dot{
+    position:absolute; width:6px; height:6px; margin:-3px; border-radius:50%;
+    background:#e6c47a; box-shadow:0 0 12px #e6c47a; left:50%; top:0;
+  }
   .orbit-icon{
     position:absolute; left:50%; top:-13px; transform:translateX(-50%); font-size:19px;
-    filter:drop-shadow(0 4px 6px rgba(0,0,0,.12)); animation:orbitCounter linear infinite;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.35)); animation:orbitCounter linear infinite;
   }
   .orbit-1 .orbit-icon{ animation-duration:7s; }
   .orbit-2 .orbit-icon{ animation-duration:11s; animation-direction:reverse; }
@@ -125,12 +140,30 @@
   @keyframes orbitSpin{ from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
   @keyframes orbitCounter{ from{transform:translateX(-50%) rotate(0deg)} to{transform:translateX(-50%) rotate(-360deg)} }
   .hero-center{
-    position:relative; z-index:3; width:96px; height:96px; border-radius:50%;
-    display:grid; place-items:center; font-size:46px;
-    background:radial-gradient(circle at 35% 28%, #fff9d9, #efc04d 47%, #c88935);
-    border:6px solid rgba(224,180,88,.35); box-shadow:0 18px 38px rgba(0,0,0,.35);
+    position:relative; z-index:3; width:100px; height:100px; border-radius:50%;
+    display:grid; place-items:center; font-size:48px;
+    background:radial-gradient(circle at 38% 30%, #fff3d0, #d9a441 55%, #8a5a1f);
+    border:1px solid rgba(230,196,122,.5); box-shadow:0 20px 42px rgba(0,0,0,.5), 0 0 0 8px rgba(230,196,122,.08);
     animation:heroPulse 3.2s ease-in-out infinite; cursor:pointer;
   }
+
+  /* ---------- Icon-card menu grid, replacing the plain tab bar ---------- */
+  .tools-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:20px; }
+  .tool-card{
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px;
+    text-align:left; cursor:pointer; transition:.2s ease;
+    box-shadow:0 4px 14px rgba(158,47,74,0.05);
+  }
+  .tool-card:hover{ transform:translateY(-3px); box-shadow:0 10px 22px rgba(158,47,74,0.14); }
+  .tool-card.active{
+    background:linear-gradient(145deg, #fff, var(--blush));
+    border-color:var(--rose-deep); box-shadow:0 10px 26px rgba(158,47,74,0.18);
+  }
+  .tool-card-icon{ font-size:28px; margin-bottom:8px; }
+  .tool-card-kicker{ font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); font-weight:700; }
+  .tool-card h3{ font-family:'Fraunces',serif; font-size:16px; margin:4px 0 4px; color:var(--ink); }
+  .tool-card p{ font-size:10.5px; color:var(--ink-dim); margin:0; line-height:1.4; }
+  @media(max-width:420px){ .tools-grid{ grid-template-columns:1fr 1fr; gap:8px; } .tool-card{ padding:12px; } .tool-card-icon{ font-size:22px; } .tool-card h3{ font-size:14px; } }
   @keyframes heroPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
 </style>
 </head>
@@ -188,18 +221,38 @@
     <div class="hero-art">
       <div class="orbit-garden">
         <div class="orbit-ring orbit-1"><span class="orbit-icon">🎀</span></div>
-        <div class="orbit-ring orbit-2"><span class="orbit-icon">🏺</span></div>
+        <div class="orbit-ring orbit-2"><span class="orbit-icon">🏺</span><div class="orbit-dot"></div></div>
         <div class="orbit-ring orbit-3"><span class="orbit-icon">🪑</span></div>
         <div class="hero-center" id="heroBox">📦</div>
       </div>
     </div>
   </header>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="add">+ New Item</button>
-    <button class="tab" data-tab="receive">Receiving</button>
-    <button class="tab" data-tab="release">Release</button>
-    <button class="tab" data-tab="view">View / Barcode</button>
+  <div class="tools-grid" id="toolsGrid">
+    <button class="tool-card active" data-tab="add">
+      <div class="tool-card-icon">🆕</div>
+      <div class="tool-card-kicker">Baseline</div>
+      <h3>New Item</h3>
+      <p>Add a brand-new item to the catalog.</p>
+    </button>
+    <button class="tool-card" data-tab="receive">
+      <div class="tool-card-icon">📥</div>
+      <div class="tool-card-kicker">Restock</div>
+      <h3>Receiving</h3>
+      <p>Add more quantity to an existing item.</p>
+    </button>
+    <button class="tool-card" data-tab="release">
+      <div class="tool-card-icon">📤</div>
+      <div class="tool-card-kicker">Use / Event</div>
+      <h3>Release</h3>
+      <p>Subtract quantity for an event or order.</p>
+    </button>
+    <button class="tool-card" data-tab="view">
+      <div class="tool-card-icon">🔎</div>
+      <div class="tool-card-kicker">Catalog</div>
+      <h3>View / Barcode</h3>
+      <p>Browse items and print barcode labels.</p>
+    </button>
   </div>
 
   <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
@@ -375,9 +428,9 @@
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
 
   // ---------- Tabs ----------
-  document.querySelectorAll('.tab').forEach(tab=>{
+  document.querySelectorAll('.tool-card').forEach(tab=>{
     tab.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tool-card').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       tab.classList.add('active');
       const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', view:'panelView' };
