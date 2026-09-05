@@ -120,6 +120,7 @@
     <label>Item Name</label>
     <input type="text" id="editItemName" list="itemNameList" placeholder="Start typing to search…" autocomplete="off">
     <datalist id="itemNameList"></datalist>
+    <div id="branchStockBreakdown" style="display:none;margin-top:8px;padding:10px 12px;background:var(--blush);border-radius:10px;font-size:12px;"></div>
 
     <div class="grid-2">
       <div>
@@ -206,8 +207,11 @@
   async function loadItems(){
     try{
       ITEMS = await (await fetch(API_URL + '?action=getItemInventory&_ts=' + Date.now())).json();
+      // Same Item Name can now appear once per branch — dedupe for the
+      // datalist so the dropdown doesn't show the same name 3 times.
+      const uniqueNames = [...new Set(ITEMS.map(it => it['Item Name']))];
       document.getElementById('itemNameList').innerHTML =
-        ITEMS.map(it => `<option value="${it['Item Name']}"></option>`).join('');
+        uniqueNames.map(n => `<option value="${n}"></option>`).join('');
     }catch(e){ console.error(e); }
   }
   loadItems();
@@ -216,6 +220,17 @@
     const typed = this.value.trim().toLowerCase();
     const match = ITEMS.find(it => String(it['Item Name']||'').trim().toLowerCase() === typed);
     if(match){
+      // All rows sharing this Item Name — one per branch that stocks it.
+      const branchRows = ITEMS.filter(it => String(it['Item Name']||'').trim().toLowerCase() === typed);
+      const breakdown = document.getElementById('branchStockBreakdown');
+      if(branchRows.length > 0){
+        breakdown.style.display = 'block';
+        breakdown.innerHTML = '<b>Stock by Branch:</b> ' +
+          branchRows.map(r => (r['Branch']||'—') + ': ' + (r['Qty']||0) + ' ' + (r['Unit']||'')).join(' &nbsp;|&nbsp; ');
+      } else {
+        breakdown.style.display = 'none';
+      }
+
       document.getElementById('editItemType').value = match['Item Type'] || 'Consumable';
       document.getElementById('editItemCategory').value = match['Category'] || '';
       document.getElementById('editItemUnit').value = match['Unit'] || 'Piece';
