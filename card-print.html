@@ -31,7 +31,7 @@ button{cursor:pointer}button:hover{background:#fff5f7}#backTools{font-weight:700
 .card.circle2in .card-deco-leaf{font-size:26px;right:10px;bottom:9px;}
 body.hide-watermark .card-deco-leaf{display:none;}
 .card.small{width:2.95in;height:2.95in}
-.card.circle10{width:100mm;height:100mm;border-radius:50%;}
+.card.circle10{width:99mm;height:99mm;border-radius:50%;}
 .card.circle2in{width:2in;height:2in;border-radius:50%;}
 .card.a4{width:210mm;height:297mm;}
 .card.circle10 .textArea{inset:14mm;}
@@ -67,7 +67,7 @@ body.hide-watermark .card-deco-leaf{display:none;}
  body.printing-card .message-workspace{display:none!important}
  body.printing-card #printSheet{display:flex!important;position:relative!important;width:100%!important;height:100vh!important;margin:0!important;padding:0!important;align-items:flex-start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-card #printSheet .card{display:block!important;margin:0!important;transform:translate(var(--printOffsetX,0mm),var(--printOffsetY,0mm))!important;break-after:auto!important;page-break-after:auto!important;box-shadow:none!important;box-sizing:border-box!important;flex:0 0 auto!important}
- body.printing-circle #printSheet{display:grid!important;position:relative!important;width:210mm!important;height:297mm!important;margin:0!important;padding:0!important;align-content:center!important;justify-content:center!important;place-content:center!important;box-sizing:border-box!important}
+ body.printing-circle #printSheet{display:grid!important;position:relative!important;width:210mm!important;height:297mm!important;margin:0!important;padding:6mm 0 0!important;align-content:start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-circle #printSheet .card{display:block!important;border-radius:50%!important;margin:0!important;transform:none!important;break-after:auto!important;page-break-after:auto!important;overflow:hidden!important;border:1px dashed #999!important;box-sizing:border-box!important}
  /* Cutting guide: visible circle outline, not the editor guide/ruler. */
  body.printing-circle #printSheet .card::after{content:''!important;position:absolute!important;inset:0!important;border:1px dashed #999!important;border-radius:50%!important;pointer-events:none!important;z-index:999!important;box-sizing:border-box!important}
@@ -444,7 +444,7 @@ body::before{
     </div>
     <button id="backTools" title="Back to Flower Tools">← Flower Tools</button>
     <div class="group"><span class="label">CARD</span>
-      <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 10 × 10 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option></select>
+      <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 9.9 × 9.9 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option></select>
     </div>
     <div class="group"><span class="label">ALIGN</span>
       <button data-align="left" title="Left">◀</button><button data-align="center" title="Center" class="active">☰</button><button data-align="right" title="Right">▶</button>
@@ -477,6 +477,11 @@ body::before{
     <button id="watermarkToggleBtn" title="Show/hide the small leaf watermark on the card" style="background:#eaf7ec;">🌿 Watermark: ON</button>
     <button id="saveCard">💾 Save</button>
     <button id="loadCard">📂 Load</button>
+    <div class="group" title="Increase this if your printed cards come out too faint/light">
+      <span class="label">CONTRAST</span>
+      <input type="range" id="printContrast" min="100" max="200" value="100" step="5" style="width:90px;">
+      <span id="printContrastValue" style="font-size:11px;min-width:34px;display:inline-block;">100%</span>
+    </div>
     <button class="primary" id="print">🖨️ Print Card</button>
     <input id="fileImage" type="file" accept="image/*,application/pdf" hidden>
     <input id="fileLoad" type="file" accept="application/json" hidden>
@@ -786,7 +791,7 @@ updateStickerCountOptions(); // populate correctly for whatever size is selected
 let userGuides = []; // array of mm-from-top values
 
 function cardSizeMm(){
-  if(card.classList.contains('circle10')) return { w: 100, h: 100 };
+  if(card.classList.contains('circle10')) return { w: 99, h: 99 };
   if(card.classList.contains('circle2in')) return { w: 50.8, h: 50.8 };
   if(card.classList.contains('a4')) return { w: 210, h: 297 };
   if(card.classList.contains('small')) return { w: 74.93, h: 74.93 };
@@ -1670,6 +1675,8 @@ function printCardExact(){
   btn.disabled=true;
   btn.textContent='🖨️ Printing…';
   const sheet=document.getElementById('printSheet');
+  const contrastPct = document.getElementById('printContrast').value;
+  sheet.style.filter = contrastPct != 100 ? `contrast(${contrastPct}%)` : '';
 
   // Snapshot the live editor state. Printing must never alter its size,
   // position, classes or inline styles.
@@ -1682,6 +1689,7 @@ function printCardExact(){
     cleaned=true;
     document.body.classList.remove('printing-card','printing-circle');
     sheet.innerHTML='';
+    sheet.style.filter='';
     if(card.className!==liveClass) card.className=liveClass;
     if(liveStyle===null) card.removeAttribute('style'); else card.setAttribute('style',liveStyle);
     btn.disabled=false;
@@ -1696,7 +1704,7 @@ function printCardExact(){
   if(size.value==='circle10' || size.value==='circle2in'){
     sheet.innerHTML='';
     const count=Number(document.getElementById('stickerPrintCount').value)||4;
-    const circleMm = size.value==='circle10' ? 100 : 50.8;
+    const circleMm = size.value==='circle10' ? 99 : 50.8;
     // A visible gap between circles so there's real scissors/cutter
     // clearance — without this, adjacent circles print edge-to-edge
     // and the dashed cutting guides touch or cross each other.
@@ -1712,11 +1720,11 @@ function printCardExact(){
       else break;
     }
     const sideMarginMm = Math.max(3, (210 - (cols*circleMm + (cols-1)*gapMm)) / 2);
-    // Center the ENTIRE sticker grid on the A4 page. Do not use fixed
-    // top/side padding here: that made 2x2in and 10x10cm sheets start
-    // at a different vertical position and made the group look off-center.
-    // CSS place-content:center handles every copy identically.
-    sheet.style.padding='0';
+    // Top-aligned (not centered) on purpose: this leaves the unused
+    // lower portion of the sheet blank, so that same physical paper
+    // can be fed through the printer again for the next batch instead
+    // of wasting it.
+    sheet.style.padding='6mm 0 0';
     sheet.style.gap=gapMm+'mm';
     sheet.style.gridTemplateColumns=`repeat(${cols}, ${circleMm}mm)`;
     sheet.style.gridTemplateRows=`repeat(${rows}, ${circleMm}mm)`;
@@ -1748,6 +1756,9 @@ function printCardExact(){
   setTimeout(cleanup,15000);
 }
 document.getElementById('print').addEventListener('click', printCardExact);
+document.getElementById('printContrast').addEventListener('input', function(){
+  document.getElementById('printContrastValue').textContent = this.value + '%';
+});
 
 // ---------- Save / Load: lets you build a card on your phone, save
 // it as a file, then open that same file later on a desktop to
