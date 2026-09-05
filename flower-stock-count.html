@@ -137,10 +137,6 @@
   background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
 }
 .choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
-/* hamburger stays visible on mobile too now */
-/* The fixed hamburger button sits at top:16px, extending to about
-   60px tall — without extra clearance it was sitting on top of (and
-   hiding) each page's own title/back-link in that same corner. */
 .wrap{ padding-top:76px !important; }
 </style>
 
@@ -624,7 +620,35 @@
     }
   });
 
-  document.getElementById('countDate').value = new Date().toISOString().slice(0,10);
+  // Sets the Count Date field to today's actual date — split into its
+  // own function so it can be re-run later, not just once at load.
+  function setDateToToday(){
+    document.getElementById('countDate').value = new Date().toISOString().slice(0,10);
+  }
+  setDateToToday();
+
+  // If this same browser tab is left open across midnight (very
+  // common — people don't close their phone browser between shifts),
+  // the date field would otherwise stay frozen on whatever day the
+  // page originally loaded, silently saving every new count under
+  // yesterday's date. Re-check whenever the tab becomes visible again
+  // and whenever the OS clock rolls over a day, but only touch the
+  // field if the user hasn't already picked a date on purpose (a
+  // fresh, unedited session) — an in-progress or recalled count is
+  // never silently changed out from under someone.
+  let lastKnownDay = new Date().toDateString();
+  function refreshDateIfNewDay(){
+    const today = new Date().toDateString();
+    if(today === lastKnownDay) return;
+    lastKnownDay = today;
+    if(!hasBeenEdited && backing.length === 0){
+      setDateToToday();
+    }
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden) refreshDateIfNewDay();
+  });
+  setInterval(refreshDateIfNewDay, 60 * 1000);
 </script>
 <script>
 (function(){
@@ -637,8 +661,6 @@
   btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
   backdrop.addEventListener('click', closeDrawer);
 
-  // Smart Home — goes to the Flower hub from a flower page, or the
-  // Chocolate hub from a chocolate page.
   const homeLink=document.getElementById('chocoHomeLink');
   if(homeLink){
     const isFlowerPage = 'flower' === 'flower';
@@ -647,9 +669,6 @@
   }
 })();
 
-// ---------- Shared music player (same saved sound as the rest of
-// Lalabella on THIS device — set it once anywhere, it follows you
-// across every page on this same browser/phone). ----------
 (function(){
   const audio = document.getElementById('chocoAudioPlayer');
   const musicBtn = document.getElementById('chocoMusicToggleBtn');
@@ -695,11 +714,6 @@
       } else {
         audio.src = savedUrl;
       }
-      // sessionStorage clears itself the moment the browser tab/window
-      // closes — exactly the reset point we want. If this session has
-      // already pressed ♫ once (on any page), every other page picks
-      // right back up automatically; otherwise it stays silent until
-      // tapped, same as a first-ever visit.
       const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
       if(sessionPlaying){
         if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
@@ -742,13 +756,10 @@
       applyUrl(url);
       return;
     }
-    // No new URL typed — just toggle play/pause of whatever's loaded.
     if(!audio.src && !ytVideoId) return;
     if(isPlaying){
       if(ytVideoId) stopYouTube(); else audio.pause();
       musicBtn.textContent = '♫ Music'; isPlaying = false;
-      // Pausing here means "stop following me" — the next page won't
-      // resume on its own until ♫ is pressed again.
       sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
     } else {
       if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
@@ -757,9 +768,6 @@
     }
   });
 
-  // "Search" doesn't auto-pick a video (no API key set up) — it opens
-  // YouTube's own search in a new tab so you can pick the exact one,
-  // then paste that video's link back into the URL box above.
   if(searchBtn && searchInput){
     searchBtn.addEventListener('click', ()=>{
       const q = searchInput.value.trim();
