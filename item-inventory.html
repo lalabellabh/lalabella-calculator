@@ -59,6 +59,9 @@
   label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
   label:first-child{ margin-top:0; }
   .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .branch-tabs{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .branch-tab{ padding:11px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; }
+  .branch-tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
   input[type=text], input[type=number], select, textarea{
     width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
     font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
@@ -271,6 +274,12 @@
     </div>
   </header>
 
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
   <div class="carousel-shell">
     <div class="tool-carousel" id="toolCarousel">
       <button class="carousel-item active" data-tab="add">
@@ -284,6 +293,10 @@
       <button class="carousel-item" data-tab="release">
         <div class="carousel-circle">📤</div>
         <h3>Release</h3>
+      </button>
+      <button class="carousel-item" data-tab="transfer">
+        <div class="carousel-circle">🔄</div>
+        <h3>Transfer</h3>
       </button>
       <button class="carousel-item" data-tab="view">
         <div class="carousel-circle">🔎</div>
@@ -462,6 +475,46 @@
     </div>
   </div>
 
+  <!-- ===================== TRANSFER ===================== -->
+  <div class="panel" id="panelTransfer">
+    <div class="card">
+      <div class="card-title">🔄 Transfer Between Branches</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">
+        Moves stock from one branch to another. Deducts from the From Branch and adds it to the To Branch (creating it there if it's never been stocked at that branch before).
+      </div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="transferSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="transferSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanTransferBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="transferCurrentQty"></div>
+
+      <label>From Branch</label>
+      <select id="transferFromBranch">
+        <option>ModaMall</option><option>Hamala</option><option>Galali</option>
+      </select>
+
+      <label>To Branch</label>
+      <select id="transferToBranch">
+        <option>Hamala</option><option>ModaMall</option><option>Galali</option>
+      </select>
+
+      <label>Qty to Transfer</label>
+      <input type="number" id="transferQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="transferDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Transferred By</label>
+      <input type="text" id="transferBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="transferBtn">Transfer</button>
+      <div class="result" id="transferResult"></div>
+    </div>
+  </div>
+
   <!-- ===================== VIEW / BARCODE ===================== -->
   <div class="panel" id="panelView">
     <div class="card">
@@ -503,6 +556,21 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
 
   let ITEMS = [];
+  let currentBranch = 'ModaMall';
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    // From Branch on the Transfer tab should always reflect wherever
+    // you're currently standing — switching branch elsewhere in the
+    // app keeps that in sync too.
+    const fromSel = document.getElementById('transferFromBranch');
+    if(fromSel) fromSel.value = currentBranch;
+    ITEMS = [];
+    loadItems();
+  });
 
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
 
@@ -513,7 +581,7 @@
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       tab.classList.add('active');
       tab.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
-      const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', view:'panelView' };
+      const map = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', transfer:'panelTransfer', view:'panelView' };
       document.getElementById(map[tab.dataset.tab]).classList.add('active');
       if(tab.dataset.tab === 'view') loadItems();
     });
@@ -522,7 +590,7 @@
   // ---------- Load items ----------
   async function loadItems(){
     try{
-      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&_ts=' + Date.now())).json();
+      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&branch=' + encodeURIComponent(currentBranch) + '&_ts=' + Date.now())).json();
       renderItemList(document.getElementById('viewSearch').value);
     }catch(e){ console.error(e); }
   }
@@ -727,6 +795,7 @@
     const params = new URLSearchParams({
       action: 'addNewItem',
       itemName,
+      branch: currentBranch,
       itemCode: document.getElementById('addItemCode').value.trim(),
       itemType: selectedItemType,
       category: document.getElementById('addItemCategory').value,
@@ -803,6 +872,11 @@
     document.getElementById('releaseCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
   });
 
+  setupItemSearch('transferSearch', 'transferSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('transferCurrentQty').textContent = item ? ('Current stock at ' + currentBranch + ': ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+
   // ---------- Receiving ----------
   document.getElementById('receiveBtn').addEventListener('click', async ()=>{
     const btn = document.getElementById('receiveBtn');
@@ -818,7 +892,7 @@
     resultBox.className = 'result';
 
     const params = new URLSearchParams({
-      action:'receiveItem', itemName, qty,
+      action:'receiveItem', itemName, qty, branch: currentBranch,
       date: document.getElementById('receiveDate').value,
       receivedBy: document.getElementById('receiveBy').value,
       photoBase64: receivePhotoData || ''
@@ -860,7 +934,7 @@
     resultBox.className = 'result';
 
     const params = new URLSearchParams({
-      action:'releaseItem', itemName, qty,
+      action:'releaseItem', itemName, qty, branch: currentBranch,
       date: document.getElementById('releaseDate').value,
       reason: document.getElementById('releaseReason').value,
       releasedBy: document.getElementById('releaseBy').value,
@@ -884,6 +958,48 @@
       ITEMS = [];
     }catch(e){
       btn.disabled = false; btn.textContent = 'Release';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  document.getElementById('transferBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('transferBtn');
+    const resultBox = document.getElementById('transferResult');
+    const itemName = document.getElementById('transferSearch').value.trim();
+    const qty = document.getElementById('transferQty').value;
+    const fromBranch = document.getElementById('transferFromBranch').value;
+    const toBranch = document.getElementById('transferToBranch').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    if(fromBranch === toBranch){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'From Branch and To Branch cannot be the same.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Transferring…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'transferItem', itemName, qty, fromBranch, toBranch,
+      date: document.getElementById('transferDate').value,
+      transferredBy: document.getElementById('transferBy').value
+    });
+    try{
+      const res = await (await fetch(API_URL + '?' + params.toString())).json();
+      btn.disabled = false; btn.textContent = 'Transfer';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Na-transfer: ' + res.qty + ' ' + res.itemName + ' (' + res.fromBranch + ' → ' + res.toBranch + ')';
+      document.getElementById('transferSearch').value = '';
+      document.getElementById('transferQty').value = '';
+      document.getElementById('transferCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Transfer';
       resultBox.className = 'result err show';
       resultBox.textContent = 'Could not reach the server. Check your connection.';
     }
@@ -1003,6 +1119,17 @@
       document.getElementById('releaseSearch').value = match['Item Name'];
       document.getElementById('releaseCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
       document.getElementById('releaseQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  document.getElementById('scanTransferBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('transferSearch').value = match['Item Name'];
+      document.getElementById('transferCurrentQty').textContent = 'Current stock at ' + currentBranch + ': ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('transferQty').focus();
     } else {
       alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
     }
