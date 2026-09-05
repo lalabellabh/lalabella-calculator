@@ -369,7 +369,7 @@
       const photo = it['Photo Link (Drive)'] || '';
       return `
         <div class="item-row" data-code="${it['Item Code']}">
-          ${photo ? `<img class="item-thumb" src="${photo}" alt="">` : `<div class="item-thumb"></div>`}
+          ${photo ? `<img class="item-thumb" src="${photo}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<div class="item-thumb"></div>`}
           <div class="item-info">
             <div class="item-name">${it['Item Name']}</div>
             <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
