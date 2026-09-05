@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Item Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+    --paper:#fdf1f0; --paper-2:#f6e0da; --rust:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 8% 18%, rgba(255,190,210,.22), transparent 22%),
+      radial-gradient(circle at 92% 28%, rgba(217,164,65,.16), transparent 22%),
+      radial-gradient(circle at 18% 82%, rgba(190,145,255,.14), transparent 24%),
+      linear-gradient(145deg, #fdf1f0 0%, #f6e0da 60%, #eaf3ec 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  header{
+    text-align:center; margin-bottom:22px; padding:26px 18px;
+    background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%);
+    border-radius:18px; border:1px solid var(--line);
+    box-shadow:0 8px 26px rgba(158,47,74,0.08);
+    position:relative; overflow:hidden;
+  }
+  header::before{
+    content:'🎀'; position:absolute; font-size:60px; opacity:0.09;
+    left:-10px; top:-14px; transform:rotate(-16deg);
+  }
+  header::after{
+    content:'📦'; position:absolute; font-size:52px; opacity:0.10;
+    right:-6px; bottom:-12px; transform:rotate(12deg);
+  }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; font-weight:600; position:relative; z-index:1; }
+  h1{
+    font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep);
+    font-size:clamp(2.1rem,8vw,2.8rem); margin:0 0 4px; line-height:1;
+    position:relative; z-index:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; position:relative; z-index:1; }
+
+  .tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:20px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .tab{ padding:11px 4px; text-align:center; background:transparent; border:none; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; transition:all .2s ease; }
+  .tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; box-shadow:0 3px 10px rgba(158,47,74,0.25); }
+  .panel{ display:none; } .panel.active{ display:block; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:14px; }
+  label:first-child{ margin-top:0; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .branch-tabs{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .branch-tab{ padding:11px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:12px; color:var(--ink-dim); cursor:pointer; border-radius:10px; }
+  .branch-tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  input[type=text], input[type=number], select, textarea{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--rose-deep); }
+
+  .photo-preview{ width:100px; height:100px; border-radius:12px; object-fit:cover; border:1.5px dashed var(--line); margin-top:8px; display:none; }
+  .photo-preview.show{ display:block; }
+  .photo-hint{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
+
+  .btn{ width:100%; margin-top:18px; padding:13px 0; background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(158,47,74,0.2); }
+  .btn:disabled{ background:var(--line); box-shadow:none; cursor:not-allowed; }
+  .btn-outline{ background:#fff; color:var(--rose-deep); border:1.5px solid var(--rose-deep); box-shadow:none; }
+
+  .result{ margin-top:14px; padding:12px; border-radius:10px; font-size:13px; display:none; }
+  .result.show{ display:block; }
+  .result.ok{ background:#e8f5ea; color:var(--ok); border:1px solid var(--ok); }
+  .result.err{ background:#fbeae7; color:var(--rust); border:1px solid var(--rust); }
+
+  .item-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--blush-2); }
+  .item-row:first-child{ border-top:none; }
+  .item-thumb{ width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--blush-2); flex-shrink:0; }
+  .item-info{ flex:1; min-width:0; }
+  .item-name{ font-weight:600; font-size:13.5px; }
+  .item-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .item-qty{ font-family:'Space Mono',monospace; font-size:13px; font-weight:700; white-space:nowrap; }
+  .item-qty.low{ color:var(--rust); }
+
+  .search-box{ position:relative; }
+  #itemSearchResults, #releaseSearchResults{ display:none; position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:0 12px 28px rgba(0,0,0,0.12); }
+  #itemSearchResults.show, #releaseSearchResults.show{ display:block; }
+  .search-result-item{ padding:11px 14px; cursor:pointer; border-top:1px solid var(--blush-2); font-size:13px; }
+  .search-result-item:first-child{ border-top:none; }
+  .search-result-item:hover{ background:var(--blush); }
+
+  .preview-label{ border:1.5px dashed var(--line); border-radius:10px; padding:14px; margin-top:16px; text-align:center; background:var(--blush); display:none; }
+  .preview-label.show{ display:block; }
+  .preview-label svg{ margin-top:8px; }
+
+  .type-toggle{ display:flex; gap:8px; margin-top:6px; }
+  .type-btn{ flex:1; padding:10px 0; border:1px solid var(--line); background:var(--blush); border-radius:10px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
+  .type-btn.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
+
+  /* ---------- Dark elegant hero, matching Index.html's aesthetic ---------- */
+  header{
+    background:
+      radial-gradient(circle at 50% 30%, rgba(170,45,78,.22), transparent 55%),
+      linear-gradient(145deg, #070405 0%, #12090b 55%, #0d0709 100%);
+    border:1px solid rgba(230,196,122,.28);
+  }
+  header::before{ display:none; }
+  header::after{ display:none; }
+  header .eyebrow{ color:#e6c47a; }
+  header h1{ font-family:'Fraunces',serif; color:#f7eee5; font-weight:900; }
+  header .sub{ color:#b39a98; }
+  .hero-art{ min-height:150px; display:grid; place-items:center; position:relative; margin:8px 0 4px; }
+  .hero-center{
+    position:relative; z-index:3; width:100px; height:100px; border-radius:22px;
+    display:grid; place-items:center; font-size:48px;
+    background:radial-gradient(circle at 38% 30%, #fff3d0, #d9a441 55%, #8a5a1f);
+    border:1px solid rgba(230,196,122,.5); box-shadow:0 20px 42px rgba(0,0,0,.5), 0 0 0 8px rgba(230,196,122,.08);
+    animation:heroPulse 3.2s ease-in-out infinite; cursor:pointer;
+  }
+
+  /* ---------- Icon-card menu grid, replacing the plain tab bar ---------- */
+  .tools-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:20px; }
+  .tool-card{
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px;
+    text-align:left; cursor:pointer; transition:.2s ease;
+    box-shadow:0 4px 14px rgba(158,47,74,0.05);
+  }
+  .tool-card:hover{ transform:translateY(-3px); box-shadow:0 10px 22px rgba(158,47,74,0.14); }
+  .tool-card.active{
+    background:linear-gradient(145deg, #fff, var(--blush));
+    border-color:var(--rose-deep); box-shadow:0 10px 26px rgba(158,47,74,0.18);
+  }
+  .tool-card-icon{ font-size:28px; margin-bottom:8px; }
+  .tool-card-kicker{ font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); font-weight:700; }
+  .tool-card h3{ font-family:'Fraunces',serif; font-size:16px; margin:4px 0 4px; color:var(--ink); }
+  .tool-card p{ font-size:10.5px; color:var(--ink-dim); margin:0; line-height:1.4; }
+  @media(max-width:420px){ .tools-grid{ grid-template-columns:1fr 1fr; gap:8px; } .tool-card{ padding:12px; } .tool-card-icon{ font-size:22px; } .tool-card h3{ font-size:14px; } }
+  @keyframes heroPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
+
+  /* ---------- Continuous-rotation carousel, matching Flower Tools' style ---------- */
+  .carousel-shell{
+    position:relative; flex:1 1 auto; min-height:150px; height:165px;
+    display:flex; align-items:center; min-width:0; margin-bottom:20px;
+  }
+  .tool-carousel{
+    position:relative; width:100%; height:100%; min-height:150px;
+    overflow:hidden; outline:none; touch-action:pan-y; cursor:grab;
+  }
+  .tool-carousel.dragging{ cursor:grabbing; }
+  .carousel-item{
+    position:absolute; left:50%; top:50%;
+    width:100px; min-height:120px; padding:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    background:none; border:none; cursor:pointer; text-decoration:none;
+    opacity:.55; transform-origin:center center;
+    transition:transform .28s ease, opacity .28s ease;
+    will-change:transform, opacity;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  .carousel-item.active{ opacity:1; }
+  .carousel-circle{
+    width:64px; height:64px; margin:0 auto 8px; border-radius:50%; flex:0 0 auto;
+    display:grid; place-items:center; font-size:28px;
+    background:linear-gradient(145deg,#fff,var(--blush-2));
+    border:3px solid rgba(201,80,107,.16); box-shadow:0 10px 22px rgba(158,47,74,.12);
+    transition:box-shadow .25s ease;
+  }
+  .carousel-item.active .carousel-circle{
+    box-shadow:0 0 0 4px rgba(201,79,107,.18), 0 12px 26px rgba(201,79,107,.2);
+    border-color:var(--rose-deep);
+  }
+  .carousel-item h3{
+    width:100%; min-height:2.2em; margin:0; font-family:'Fraunces',serif; font-size:12.5px;
+    color:var(--ink); line-height:1.15; text-align:center; white-space:normal;
+  }
+  @media (min-width:900px){
+    .wrap{ max-width:980px; }
+    header{ padding:32px 40px; }
+    .tools-grid{ grid-template-columns:repeat(5, 1fr); }
+    .tool-card[href]{ flex-direction:column; align-items:flex-start; gap:0; }
+    .tool-card[href] .tool-card-icon{ margin:0 0 8px; }
+    .tool-card[href] > div{ width:100%; }
+    .panel.active .card{ max-width:none; }
+    #panelView.active #itemListContainer{ max-height:520px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <video id="scannerVideo" autoplay playsinline muted style="width:100%;max-width:400px;border-radius:10px;"></video>
+  <div style="color:#fff;font-size:12px;margin-top:10px;text-align:center;">Point the camera at the item's barcode</div>
+  <button type="button" id="closeScanBtn" style="margin-top:16px;background:var(--rust);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;">Cancel</button>
+</div>
+
+<style id="itemInvNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+  background:rgba(255,255,255,.9); color:var(--rose-deep); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  box-shadow:0 6px 16px rgba(158,47,74,.12);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(58,37,48,.35); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(260px,80vw); z-index:9206;
+  background:linear-gradient(160deg,#fff,var(--blush));
+  border-right:1px solid var(--line); box-shadow:12px 0 40px rgba(158,47,74,.18);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.choco-hub-grid a{
+  flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
+  font-size:10.5px; background:#fff; border:1px solid var(--line);
+}
+.choco-hub-grid a span.hub-icon{ font-size:20px; }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:var(--ink); text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:var(--blush-2); }
+.choco-drawer .choco-drawer-title{
+  color:var(--rose-deep); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.choco-drawer .choco-music-box{
+  margin-top:10px; padding:12px; border-radius:12px; background:var(--blush);
+  border:1px solid var(--line);
+}
+.choco-drawer .choco-music-box input{
+  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+  background:#fff; color:var(--ink); font-size:12px; outline:none; margin-bottom:8px;
+  box-sizing:border-box;
+}
+.choco-drawer .choco-music-box button{
+  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
+  background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff;
+}
+.choco-drawer .choco-music-now{ font-size:10.5px; color:var(--ink-dim); margin-top:8px; word-break:break-all; line-height:1.4; }
+.wrap{ padding-top:76px !important; }
+</style>
+
+<style>
+.lala-bell-dock{ position:fixed; top:16px; right:70px; z-index:9300; }
+.lala-bell-btn{
+  width:44px; height:44px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#d9a441,#b8860b); color:#2a1a0a; font-size:20px;
+  display:flex; align-items:center; justify-content:center; position:relative;
+  box-shadow:0 6px 16px rgba(0,0,0,.2);
+}
+.lala-bell-badge{
+  position:absolute; top:-4px; right:-4px; background:#c0392b; color:#fff;
+  font-size:10px; font-weight:700; border-radius:10px; min-width:18px; height:18px;
+  display:none; align-items:center; justify-content:center; padding:0 4px;
+}
+.lala-bell-badge.show{ display:flex; }
+.lala-bell-btn.ring{ animation:lalaBellRing .5s ease 2; }
+@keyframes lalaBellRing{ 0%,100%{ transform:rotate(0); } 25%{ transform:rotate(-15deg); } 75%{ transform:rotate(15deg); } }
+.lala-bell-panel{
+  position:fixed; top:66px; right:16px; z-index:9300; width:min(280px, calc(100vw - 32px));
+  background:#fff; border:1px solid #f0d9d9; border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.2);
+  padding:14px; display:none; font-family:'Space Grotesk',sans-serif;
+}
+.lala-bell-panel.show{ display:block; }
+.lala-bell-panel h4{ margin:0 0 8px; font-size:13px; color:#9e2f4a; }
+.lala-bell-order{ font-size:12.5px; padding:6px 0; border-bottom:1px solid #f6e0da; }
+.lala-bell-empty{ font-size:12px; color:#8a7078; text-align:center; padding:10px 0; }
+.lala-bell-link{
+  display:block; text-align:center; margin-top:10px; padding:9px 0; border-radius:8px;
+  background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; text-decoration:none;
+  font-size:12.5px; font-weight:700;
+}
+.lala-chat-btn{
+  position:fixed; top:16px; right:16px; z-index:9300;
+  width:44px; height:44px; border-radius:50%; border:1px solid var(--line);
+  background:#fff; color:var(--rose-deep); font-size:19px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; text-decoration:none;
+  box-shadow:0 6px 16px rgba(158,47,74,.14);
+}
+#msgBadge{
+  display:none; position:absolute; top:-4px; right:-4px; background:var(--rose-deep,#c9506b); color:#fff;
+  font-size:9px; font-weight:800; min-width:15px; height:15px; border-radius:8px;
+  align-items:center; justify-content:center; padding:0 3px;
+}
+@media (max-width:640px){ .lala-bell-dock, .lala-bell-panel{ right:8px; } .lala-chat-btn{ right:8px; } .lala-bell-dock{ right:62px; } }
+</style>
+
+<div class="lala-bell-dock">
+  <button class="lala-bell-btn" id="lalaBellBtn">🔔<span class="lala-bell-badge" id="lalaBellBadge">0</span></button>
+</div>
+<div class="lala-bell-panel" id="lalaBellPanel">
+  <h4>📦 Unassigned Orders</h4>
+  <div id="lalaBellList"></div>
+  <a class="lala-bell-link" href="https://lalabella.web.app/" target="_blank">Buksan ang lalabella.web.app →</a>
+</div>
+<a class="lala-chat-btn" id="chatBtn" href="chatbox.html?from=item-inventory" aria-label="Messages">
+  💬<span id="msgBadge">0</span>
+</a>
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-hub-grid">
+    <a href="index.html"><span class="hub-icon">🍫</span>Chocolate</a>
+    <a href="flower-tools.html"><span class="hub-icon">🌸</span>Flower</a>
+    <a href="item-inventory.html"><span class="hub-icon">📦</span>Item Inv.</a>
+  </div>
+  <div class="choco-drawer-title">Quick Menu</div>
+  <a href="item-dashboard.html">📊 Item Dashboard</a>
+  <a href="card-print.html?from=item-inventory">💌 Card Print</a>
+  <a href="flower-calc.html">🧮 Flower Calculator</a>
+  <a href="chocolate-calc.html">🍫 Chocolate Calculator</a>
+  <a href="order-form.html?from=item-inventory">🧾 Order Form</a>
+  <div class="choco-music-box">
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose-deep);margin-bottom:6px;">Music</label>
+    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
+    <button id="chocoMusicToggleBtn">♫ Music</button>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
+      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
+    </div>
+    <div class="choco-music-now" id="chocoMusicNow"></div>
+  </div>
+</nav>
+<audio id="chocoAudioPlayer" loop></audio>
+<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Lalabella</div>
+    <h1>Item Inventory</h1>
+    <p class="sub">Ribbon, Vase, Supplies &amp; Fixed Assets</p>
+    <div class="hero-art">
+      <div class="hero-center" id="heroBox">📦</div>
+    </div>
+  </header>
+
+  <div class="branch-tabs" id="branchTabs">
+    <button class="branch-tab active" data-branch="ModaMall">ModaMall</button>
+    <button class="branch-tab" data-branch="Hamala">Hamala</button>
+    <button class="branch-tab" data-branch="Galali">Galali</button>
+  </div>
+
+  <div class="carousel-shell">
+    <div class="tool-carousel" id="toolCarousel">
+      <button class="carousel-item active" data-tab="add">
+        <div class="carousel-circle">🆕</div>
+        <h3>New Item</h3>
+      </button>
+      <button class="carousel-item" data-tab="receive">
+        <div class="carousel-circle">📥</div>
+        <h3>Receiving</h3>
+      </button>
+      <button class="carousel-item" data-tab="release">
+        <div class="carousel-circle">📤</div>
+        <h3>Release</h3>
+      </button>
+      <button class="carousel-item" data-tab="transfer">
+        <div class="carousel-circle">🔄</div>
+        <h3>Transfer</h3>
+      </button>
+      <button class="carousel-item" data-tab="view">
+        <div class="carousel-circle">🔎</div>
+        <h3>View / Barcode</h3>
+      </button>
+      <a class="carousel-item" href="item-admin.html" style="text-decoration:none;">
+        <div class="carousel-circle">🔐</div>
+        <h3>Admin</h3>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
+  <div class="panel active" id="panelAdd">
+    <div class="card">
+      <div class="card-title">📦 Add New Item</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">
+        For an item that's never been in the system before. Whatever Qty you enter here becomes its starting (baseline) quantity. If the item already exists, use "Receiving" instead to add more.
+      </div>
+
+      <label>Item Name</label>
+      <input type="text" id="addItemName" placeholder="e.g. Red Satin Ribbon 2cm">
+
+      <label>Product Code <span style="text-transform:none;">(optional — leave blank to auto-generate)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="addItemCode" placeholder="Auto-generated if blank" style="flex:1;">
+        <button type="button" id="scanNewItemBtn" style="flex-shrink:0;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--blush);cursor:pointer;font-size:16px;">📷</button>
+      </div>
+
+      <label>Item Type</label>
+      <div class="type-toggle" id="addItemTypeToggle">
+        <button type="button" class="type-btn active" data-type="Consumable">Consumable</button>
+        <button type="button" class="type-btn" data-type="Fixed Asset">Fixed Asset</button>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>Category</label>
+          <select id="addItemCategory">
+            <option value="">— Select —</option>
+            <option>Packaging</option>
+            <option>Ribbon</option>
+            <option>Vase</option>
+            <option>Card &amp; Paper</option>
+            <option>Furniture</option>
+            <option>Display</option>
+            <option>Tools &amp; Equipment</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Unit</label>
+          <select id="addItemUnit">
+            <option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>Starting Qty</label>
+          <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
+        </div>
+        <div>
+          <label>Price (BHD)</label>
+          <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
+        </div>
+      </div>
+
+      <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
+      <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
+
+      <label>Photo <span style="text-transform:none;">(optional — auto-compressed before upload)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="addItemPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="addItemPhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="addItemPhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="addItemPhoto" accept="image/*" style="display:none;">
+      <div id="addItemPastezone" tabindex="0" style="margin-top:8px; padding:10px; border:1.5px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:text; background:var(--blush);">
+        Or click here and paste (Ctrl+V) a screenshot / Snipping Tool capture
+      </div>
+      <div style="position:relative;display:inline-block;">
+        <img id="addItemPhotoPreview" class="photo-preview" alt="Preview">
+        <button type="button" id="addItemPhotoClearBtn" style="display:none;align-items:center;justify-content:center;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);">✕</button>
+      </div>
+      <div class="photo-hint" id="addItemPhotoHint"></div>
+
+      <label>Notes</label>
+      <textarea id="addItemNotes" rows="2" placeholder="Optional"></textarea>
+
+      <label>Entered By</label>
+      <input type="text" id="addItemEnteredBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="addItemBtn">Add Item</button>
+      <div class="result" id="addItemResult"></div>
+      <div class="receipt-card" id="addItemReceiptCard">
+        <div class="receipt-card-text" id="addItemReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printAddItemBtn">🖨️ Print</button>
+          <button type="button" id="waAddItemBtn">📤 WhatsApp</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RECEIVING ===================== -->
+  <div class="panel" id="panelReceive">
+    <div class="card">
+      <div class="card-title">📥 Receiving</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Adds to an item's existing quantity.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="receiveSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="itemSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanReceiveBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="receiveCurrentQty"></div>
+
+      <label>Qty Received</label>
+      <input type="number" id="receiveQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="receiveDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Received By</label>
+      <input type="text" id="receiveBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <label>Photo <span style="text-transform:none;">(optional — e.g. proof of delivery)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="receivePhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="receivePhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="receivePhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="receivePhoto" accept="image/*" style="display:none;">
+      <img id="receivePhotoPreview" class="photo-preview" alt="Preview">
+      <div class="photo-hint" id="receivePhotoHint"></div>
+
+      <button class="btn" id="receiveBtn">Receive Stock</button>
+      <div class="result" id="receiveResult"></div>
+      <div class="receipt-card" id="receiveReceiptCard">
+        <div class="receipt-card-text" id="receiveReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printReceiveBtn">🖨️ Print</button>
+          <button type="button" id="waReceiveBtn">📤 WhatsApp</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RELEASE ===================== -->
+  <div class="panel" id="panelRelease">
+    <div class="card">
+      <div class="card-title">📤 Release / Use</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Subtracts from an item's quantity — for an event, an order, or general use.</div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="releaseSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="releaseSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanReleaseBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="releaseCurrentQty"></div>
+
+      <label>Qty to Release</label>
+      <input type="number" id="releaseQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="releaseDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Reason / Event</label>
+      <input type="text" id="releaseReason" placeholder="e.g. Valentine's display setup">
+
+      <label>Released By</label>
+      <input type="text" id="releaseBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <label>Photo <span style="text-transform:none;">(optional — e.g. the event/display it's for)</span></label>
+      <div style="display:flex; gap:8px;">
+        <label for="releasePhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+        <label for="releasePhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+      </div>
+      <input type="file" id="releasePhotoCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="releasePhoto" accept="image/*" style="display:none;">
+      <img id="releasePhotoPreview" class="photo-preview" alt="Preview">
+      <div class="photo-hint" id="releasePhotoHint"></div>
+
+      <button class="btn" id="releaseBtn">Release</button>
+      <div class="result" id="releaseResult"></div>
+      <div class="receipt-card" id="releaseReceiptCard">
+        <div class="receipt-card-text" id="releaseReceiptText"></div>
+        <div class="receipt-actions">
+          <button type="button" id="printReleaseBtn">🖨️ Print</button>
+          <button type="button" id="waReleaseBtn">📤 WhatsApp</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TRANSFER ===================== -->
+  <div class="panel" id="panelTransfer">
+    <div class="card">
+      <div class="card-title">🔄 Transfer Between Branches</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">
+        Moves stock from one branch to another. Deducts from the From Branch and adds it to the To Branch (creating it there if it's never been stocked at that branch before).
+      </div>
+
+      <label>Item</label>
+      <div class="search-box">
+        <input type="text" id="transferSearch" placeholder="Type an item name…" autocomplete="off">
+        <div id="transferSearchResults"></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="scanTransferBtn" style="margin-top:8px;">📷 Scan Barcode</button>
+      <div class="photo-hint" id="transferCurrentQty"></div>
+
+      <label>From Branch</label>
+      <select id="transferFromBranch">
+        <option>ModaMall</option><option>Hamala</option><option>Galali</option>
+      </select>
+
+      <label>To Branch</label>
+      <select id="transferToBranch">
+        <option>Hamala</option><option>ModaMall</option><option>Galali</option>
+      </select>
+
+      <label>Qty to Transfer</label>
+      <input type="number" id="transferQty" min="0" step="1" placeholder="0">
+
+      <label>Date</label>
+      <input type="text" id="transferDate" placeholder="yyyy-mm-dd" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+
+      <label>Transferred By</label>
+      <input type="text" id="transferBy" list="staffNameList" placeholder="Your name" autocomplete="off">
+
+      <button class="btn" id="transferBtn">Transfer</button>
+      <div class="result" id="transferResult"></div>
+    </div>
+  </div>
+
+  <!-- ===================== VIEW / BARCODE ===================== -->
+  <div class="panel" id="panelView">
+    <div class="card">
+      <div class="card-title">🔎 All Items</div>
+      <input type="text" id="viewSearch" placeholder="Filter by name…" style="margin-bottom:10px;">
+      <div id="itemListContainer" style="max-height:400px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="card" id="barcodeCard" style="display:none;">
+      <div class="card-title">🏷️ Barcode</div>
+      <div class="preview-label show" id="barcodePreview">
+        <div id="bcName" style="font-weight:700;font-size:13px;"></div>
+        <div id="bcPrice" style="font-size:12px;color:var(--ink-dim);margin-top:2px;"></div>
+        <svg id="bcBarcode"></svg>
+        <div id="bcCode" style="font-size:10px;color:var(--ink-dim);"></div>
+      </div>
+      <button class="btn btn-outline" id="printBarcodeBtn">🖨️ Print This Label</button>
+    </div>
+  </div>
+</div>
+
+<div id="labelPrintArea" style="display:none;">
+  <div style="text-align:center;padding:20px;">
+    <div id="printName" style="font-weight:bold;font-size:14px;"></div>
+    <div id="printPrice" style="font-size:12px;"></div>
+    <svg id="printBarcode"></svg>
+    <div id="printCode" style="font-size:10px;"></div>
+  </div>
+</div>
+<style>
+  @media print{
+    body *{ visibility:hidden; }
+    #labelPrintArea.printing, #labelPrintArea.printing *{ visibility:visible; }
+    #labelPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; }
+    #receiptPrintArea.printing, #receiptPrintArea.printing *{ visibility:visible; }
+    #receiptPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:100%; padding:24px; text-align:center; }
+  }
+  .receipt-card{
+    display:none; margin-top:14px; padding:14px; border:1.5px dashed var(--line); border-radius:10px;
+    background:var(--blush); text-align:center;
+  }
+  .receipt-card.show{ display:block; }
+  .receipt-card-text{ font-size:13px; line-height:1.7; margin-bottom:10px; text-align:left; }
+  .receipt-actions{ display:flex; gap:8px; }
+  .receipt-actions button{
+    flex:1; padding:9px 0; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;
+    border:1px solid var(--rose-deep); background:#fff; color:var(--rose-deep);
+  }
+
+/* ===== INVENTORY MOTION + DESKTOP PORTRAIT ===== */
+header,.branch-tabs,.carousel-shell,.panel,.section-card,.card,.summary-card,.table-wrap{will-change:transform;}
+header{animation:invFloat 5.5s ease-in-out infinite;}
+@keyframes invFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.tool-card{animation:invCard 4.8s ease-in-out infinite; transition:transform .25s ease,box-shadow .25s ease;}
+.tool-card:nth-child(2){animation-delay:-.7s}.tool-card:nth-child(3){animation-delay:-1.4s}.tool-card:nth-child(4){animation-delay:-2.1s}.tool-card:nth-child(5){animation-delay:-2.8s}.tool-card:nth-child(6){animation-delay:-3.5s}
+@keyframes invCard{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(.25deg)}}
+.tool-card-icon{display:inline-block;animation:invIcon 3.2s ease-in-out infinite;transform-origin:50% 70%;}
+.tool-card:nth-child(2) .tool-card-icon{animation-delay:-.5s}.tool-card:nth-child(3) .tool-card-icon{animation-delay:-1s}.tool-card:nth-child(4) .tool-card-icon{animation-delay:-1.5s}.tool-card:nth-child(5) .tool-card-icon{animation-delay:-2s}.tool-card:nth-child(6) .tool-card-icon{animation-delay:-2.5s}
+@keyframes invIcon{0%,100%{transform:translateY(0) rotate(0) scale(1)}50%{transform:translateY(-5px) rotate(5deg) scale(1.06)}}
+.hero-center{animation:heroPulse 3.2s ease-in-out infinite,invBox 4.5s ease-in-out infinite;}
+@keyframes invBox{0%,100%{box-shadow:0 20px 42px rgba(0,0,0,.5),0 0 0 8px rgba(230,196,122,.08)}50%{box-shadow:0 24px 48px rgba(0,0,0,.55),0 0 0 14px rgba(230,196,122,.12)}}
+@media(min-width:901px){
+ .wrap{max-width:720px;padding-left:28px;padding-right:28px;}
+ header{max-width:620px;margin-left:auto;margin-right:auto;}
+ .tools-grid{max-width:620px;margin-left:auto;margin-right:auto;grid-template-columns:repeat(2,minmax(0,1fr));}
+ .carousel-shell{max-width:680px;margin-left:auto;margin-right:auto;}
+ .panel,.section-card,.card,.summary-card,.table-wrap{max-width:620px;margin-left:auto;margin-right:auto;}
+}
+@media(prefers-reduced-motion:reduce){header,.tool-card,.tool-card-icon,.hero-center{animation:none!important}}
+</style>
+<div id="receiptPrintArea" style="display:none;">
+  <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:900;">Lalabella Item Inventory</div>
+  <div id="receiptPrintBody" style="margin-top:14px;font-size:14px;line-height:1.8;"></div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec';
+
+  let ITEMS = [];
+  let currentBranch = 'ModaMall';
+
+  document.getElementById('branchTabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.branch-tab');
+    if(!btn) return;
+    currentBranch = btn.dataset.branch;
+    document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
+    // From Branch on the Transfer tab should always reflect wherever
+    // you're currently standing — switching branch elsewhere in the
+    // app keeps that in sync too.
+    const fromSel = document.getElementById('transferFromBranch');
+    if(fromSel) fromSel.value = currentBranch;
+    ITEMS = [];
+    loadItems();
+  });
+
+  function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
+
+  // ---------- Tab switching (called by the carousel below) ----------
+  const TAB_MAP = { add:'panelAdd', receive:'panelReceive', release:'panelRelease', transfer:'panelTransfer', view:'panelView' };
+  function switchToTab(tabName){
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById(TAB_MAP[tabName]).classList.add('active');
+    if(tabName === 'view') loadItems();
+  }
+
+  // ---------- Continuous-rotation carousel (same physics as Flower Tools) ----------
+  const carousel = document.getElementById('toolCarousel');
+  const allTools = [...carousel.querySelectorAll('.carousel-item')];
+  let activeIndex = allTools.findIndex(t => t.classList.contains('active'));
+  if(activeIndex < 0) activeIndex = 0;
+  let dragStartX = 0;
+  let dragMoved = false;
+  let wheelLock = false;
+  let pointerId = null;
+
+  function shortestOffset(i, active, count){
+    let d = i - active;
+    if(d > count/2) d -= count;
+    if(d < -count/2) d += count;
+    return d;
+  }
+  function getStep(){
+    if(window.matchMedia("(max-width:900px)").matches){
+      return Math.max(96, Math.min(112, carousel.clientWidth/3.15));
+    }
+    return Math.min(180, Math.max(150, carousel.clientWidth/3.6));
+  }
+  function renderCarousel(animate=true){
+    const count = allTools.length;
+    if(!count) return;
+    const step = getStep();
+    allTools.forEach((tool,i)=>{
+      const d = shortestOffset(i, activeIndex, count);
+      const distance = Math.abs(d);
+      const scale = d===0 ? 1.05 : (distance===1 ? .96 : .88);
+      const opacity = d===0 ? 1 : (distance<=2 ? .68 : .28);
+      tool.classList.toggle("active", d===0);
+      tool.style.transition = animate ? "" : "none";
+      tool.style.transform = `translate(-50%,-50%) translateX(${d*step}px) scale(${scale})`;
+      tool.style.opacity = opacity;
+      tool.style.zIndex = 20 - distance;
+      tool.setAttribute("aria-hidden", d===0 ? "false" : "true");
+    });
+  }
+
+  let toolsAudioCtx = null;
+  function glowActiveTool(){
+    const activeCircle = allTools[activeIndex]?.querySelector('.carousel-circle');
+    if(!activeCircle) return;
+    activeCircle.style.transition = 'box-shadow .6s ease';
+  }
+
+  function move(delta){
+    if(!allTools.length) return;
+    activeIndex = (activeIndex + delta + allTools.length) % allTools.length;
+    renderCarousel(true);
+    playPianoTone();
+    glowActiveTool();
+  }
+
+  function activateTool(i){
+    activeIndex = i;
+    renderCarousel(true);
+    playPianoTone();
+    const tool = allTools[i];
+    if(tool.dataset.tab){
+      switchToTab(tool.dataset.tab);
+    } else if(tool.getAttribute('href')){
+      window.location.href = tool.getAttribute('href');
+    }
+  }
+  let toolOpenLock = false;
+  function tryActivateTool(i){
+    if(toolOpenLock) return;
+    toolOpenLock = true;
+    setTimeout(()=>toolOpenLock=false, 300);
+    activateTool(i);
+  }
+
+  allTools.forEach((tool,i)=>{
+    let downX=0, downY=0, isDown=false;
+    tool.addEventListener('mousedown', e=>{ isDown=true; downX=e.clientX; downY=e.clientY; });
+    tool.addEventListener('mouseup', e=>{
+      if(!isDown) return;
+      isDown=false;
+      if(Math.abs(e.clientX-downX)<12 && Math.abs(e.clientY-downY)<12) tryActivateTool(i);
+    });
+    tool.addEventListener('click', e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.detail===0){ tryActivateTool(i); return; }
+      if(matchMedia('(pointer:coarse)').matches){
+        if(dragMoved){ dragMoved=false; return; }
+        tryActivateTool(i);
+      }
+    });
+    tool.addEventListener('contextmenu', e=>e.preventDefault());
+    tool.addEventListener('dragstart', e=>e.preventDefault());
+  });
+
+  carousel.addEventListener('wheel', e=>{
+    const amount = Math.abs(e.deltaX)>Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if(Math.abs(amount)<4 || wheelLock) return;
+    e.preventDefault();
+    wheelLock = true;
+    move(amount>0?1:-1);
+    setTimeout(()=>wheelLock=false, 180);
+  }, {passive:false});
+
+  carousel.setAttribute('tabindex','0');
+  carousel.addEventListener('keydown', e=>{
+    if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)) return;
+    if(e.key==="ArrowRight"){ e.preventDefault(); move(1); }
+    else if(e.key==="ArrowLeft"){ e.preventDefault(); move(-1); }
+    else if(e.key==="Enter"){ e.preventDefault(); tryActivateTool(activeIndex); }
+  });
+
+  carousel.addEventListener('pointerdown', e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    pointerId = e.pointerId;
+    dragStartX = e.clientX;
+    dragMoved = false;
+    carousel.classList.add('dragging');
+    if(e.pointerType!=='mouse'){ carousel.setPointerCapture?.(e.pointerId); }
+  });
+  carousel.addEventListener('pointermove', e=>{
+    if(!carousel.classList.contains('dragging') || (pointerId!==null && e.pointerId!==pointerId)) return;
+    const dx = e.clientX - dragStartX;
+    if(Math.abs(dx)>10 && !dragMoved){
+      dragMoved = true;
+      carousel.setPointerCapture?.(e.pointerId);
+    }
+    if(Math.abs(dx)>42){
+      e.preventDefault();
+      move(dx<0?1:-1);
+      dragStartX = e.clientX;
+    }
+  });
+  function endCarouselPointer(e){
+    if(pointerId!==null && e?.pointerId!==undefined && e.pointerId!==pointerId) return;
+    carousel.classList.remove('dragging');
+    try{ if(pointerId!==null) carousel.releasePointerCapture?.(pointerId); }catch(_){}
+    pointerId = null;
+    setTimeout(()=>dragMoved=false, 60);
+    setTimeout(()=>renderCarousel(false), 250);
+  }
+  carousel.addEventListener('pointerup', endCarouselPointer);
+  carousel.addEventListener('pointercancel', endCarouselPointer);
+  carousel.addEventListener('lostpointercapture', ()=>{
+    carousel.classList.remove('dragging');
+    pointerId = null;
+    setTimeout(()=>dragMoved=false, 60);
+  });
+  carousel.addEventListener('selectstart', e=>e.preventDefault());
+
+  window.addEventListener('resize', ()=>renderCarousel(false));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', ()=>renderCarousel(false));
+  }
+  renderCarousel(false);
+
+  // ---------- Load items ----------
+  async function loadItems(){
+    try{
+      ITEMS = await (await fetch(API_URL + '?action=getItemInventory&branch=' + encodeURIComponent(currentBranch) + '&_ts=' + Date.now())).json();
+      renderItemList(document.getElementById('viewSearch').value);
+    }catch(e){ console.error(e); }
+  }
+
+  function renderItemList(filterText){
+    const q = (filterText||'').trim().toLowerCase();
+    const filtered = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q));
+    const el = document.getElementById('itemListContainer');
+    if(filtered.length === 0){
+      el.innerHTML = '<div style="color:var(--ink-dim);font-size:13px;text-align:center;padding:16px 0;">No items found.</div>';
+      return;
+    }
+    el.innerHTML = filtered.map(it => {
+      const qty = Number(it['Qty']) || 0;
+      const minStock = it['Min Stock'];
+      const isLow = minStock !== '' && minStock !== undefined && qty < Number(minStock);
+      const photo = it['Photo Link (Drive)'] || '';
+      return `
+        <div class="item-row" data-code="${it['Item Code']}">
+          ${photo ? `<img class="item-thumb" src="${photo}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<div class="item-thumb"></div>`}
+          <div class="item-info">
+            <div class="item-name">${it['Item Name']}</div>
+            <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
+          </div>
+          <div class="item-qty ${isLow?'low':''}">${qty} ${it['Unit']||''}</div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.item-row').forEach(row=>{
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', ()=>{
+        const item = ITEMS.find(it => it['Item Code'] === row.dataset.code);
+        if(item) showBarcode(item);
+      });
+    });
+  }
+
+  document.getElementById('viewSearch').addEventListener('input', function(){
+    renderItemList(this.value);
+  });
+
+  let selectedBarcodeItem = null;
+  function showBarcode(item){
+    selectedBarcodeItem = item;
+    document.getElementById('barcodeCard').style.display = 'block';
+    document.getElementById('bcName').textContent = item['Item Name'];
+    document.getElementById('bcPrice').textContent = fmtBD(item['Price (BHD)']);
+    document.getElementById('bcCode').textContent = item['Item Code'];
+    document.getElementById('bcBarcode').innerHTML = '';
+    try{
+      JsBarcode('#bcBarcode', String(item['Item Code']||'000000'), { format:'CODE128', width:1.3, height:32, displayValue:false });
+    }catch(e){}
+    document.getElementById('barcodeCard').scrollIntoView({behavior:'smooth'});
+  }
+
+  document.getElementById('printBarcodeBtn').addEventListener('click', ()=>{
+    if(!selectedBarcodeItem) return;
+    document.getElementById('printName').textContent = selectedBarcodeItem['Item Name'];
+    document.getElementById('printPrice').textContent = fmtBD(selectedBarcodeItem['Price (BHD)']);
+    document.getElementById('printCode').textContent = selectedBarcodeItem['Item Code'];
+    document.getElementById('printBarcode').innerHTML = '';
+    try{
+      JsBarcode('#printBarcode', String(selectedBarcodeItem['Item Code']||'000000'), { format:'CODE128', width:1, height:26, displayValue:false });
+    }catch(e){}
+    document.getElementById('labelPrintArea').classList.add('printing');
+    window.print();
+    setTimeout(()=>document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  });
+
+  // ---------- Photo: client-side compression ----------
+  // Resizes to at most 150x150 and re-encodes as JPEG at reduced
+  // quality, so every photo lands well under ~30KB before it's ever
+  // sent to Apps Script / saved to Drive.
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxDim = 150;
+          let w = img.width, h = img.height;
+          if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+          else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let addItemPhotoData = null;
+  async function handleItemPhotoFile(file){
+    if(!file) return;
+    const hint = document.getElementById('addItemPhotoHint');
+    hint.textContent = 'Compressing…';
+    try{
+      const compressed = await compressImage(file);
+      addItemPhotoData = compressed;
+      const preview = document.getElementById('addItemPhotoPreview');
+      preview.src = compressed;
+      preview.classList.add('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'flex';
+      const approxKB = Math.round((compressed.length * 0.75) / 1024);
+      hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+    }catch(e){
+      hint.textContent = 'Could not process this image.';
+      addItemPhotoData = null;
+    }
+  }
+  document.getElementById('addItemPhoto').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  document.getElementById('addItemPhotoCamera').addEventListener('change', function(){
+    handleItemPhotoFile(this.files[0]);
+  });
+  // Desktop workflow: Snipping Tool copies an image straight to the
+  // clipboard — clicking this zone then pressing Ctrl+V picks it up
+  // without ever needing to save a temp file first.
+  document.getElementById('addItemPastezone').addEventListener('paste', function(e){
+    const items = (e.clipboardData || window.clipboardData).items;
+    for(let i = 0; i < items.length; i++){
+      if(items[i].type.indexOf('image') !== -1){
+        const file = items[i].getAsFile();
+        handleItemPhotoFile(file);
+        break;
+      }
+    }
+  });
+
+  // ---------- Remove selected photo (the "X" button) ----------
+  document.getElementById('addItemPhotoClearBtn').addEventListener('click', function(){
+    addItemPhotoData = null;
+    const preview = document.getElementById('addItemPhotoPreview');
+    preview.src = '';
+    preview.classList.remove('show');
+    this.style.display = 'none';
+    document.getElementById('addItemPhotoHint').textContent = '';
+    document.getElementById('addItemPhoto').value = '';
+    document.getElementById('addItemPhotoCamera').value = '';
+  });
+
+  // ---------- Receiving & Release photo capture (proof shots) ----------
+  // Same compression pipeline as New Item, wired up generically so
+  // both tabs can share one small helper instead of duplicating it.
+  let receivePhotoData = null;
+  let releasePhotoData = null;
+  function wirePhotoCapture(prefix, setVar){
+    async function handle(file){
+      if(!file) return;
+      const hint = document.getElementById(prefix + 'PhotoHint');
+      hint.textContent = 'Compressing…';
+      try{
+        const compressed = await compressImage(file);
+        setVar(compressed);
+        const preview = document.getElementById(prefix + 'PhotoPreview');
+        preview.src = compressed;
+        preview.classList.add('show');
+        const approxKB = Math.round((compressed.length * 0.75) / 1024);
+        hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+      }catch(e){
+        hint.textContent = 'Could not process this image.';
+        setVar(null);
+      }
+    }
+    document.getElementById(prefix + 'Photo').addEventListener('change', function(){ handle(this.files[0]); });
+    document.getElementById(prefix + 'PhotoCamera').addEventListener('change', function(){ handle(this.files[0]); });
+  }
+  wirePhotoCapture('receive', (v)=>{ receivePhotoData = v; });
+  wirePhotoCapture('release', (v)=>{ releasePhotoData = v; });
+
+  // ---------- Item Type toggle ----------
+  let selectedItemType = 'Consumable';
+  document.getElementById('addItemTypeToggle').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.type-btn');
+    if(!btn) return;
+    document.querySelectorAll('#addItemTypeToggle .type-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedItemType = btn.dataset.type;
+  });
+
+  // ---------- Add New Item ----------
+  document.getElementById('addItemBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('addItemBtn');
+    const resultBox = document.getElementById('addItemResult');
+    const itemName = document.getElementById('addItemName').value.trim();
+    if(!itemName){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Item name is required.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action: 'addNewItem',
+      itemName,
+      branch: currentBranch,
+      itemCode: document.getElementById('addItemCode').value.trim(),
+      itemType: selectedItemType,
+      category: document.getElementById('addItemCategory').value,
+      qty: document.getElementById('addItemQty').value || 0,
+      unit: document.getElementById('addItemUnit').value,
+      price: document.getElementById('addItemPrice').value || 0,
+      minStock: document.getElementById('addItemMinStock').value,
+      notes: document.getElementById('addItemNotes').value,
+      photoBase64: addItemPhotoData || '',
+      enteredBy: document.getElementById('addItemEnteredBy').value
+    });
+
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Add Item';
+      if(res.error){
+        resultBox.className = 'result err show';
+        resultBox.textContent = res.error;
+        return;
+      }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode;
+      showReceipt('addItemReceiptCard', 'addItemReceiptText', lastAddItemReceipt = [
+        'NEW ITEM ADDED',
+        'Item: ' + itemName,
+        'Code: ' + res.itemCode,
+        'Branch: ' + currentBranch,
+        'Starting Qty: ' + (document.getElementById('addItemQty').value || 0)
+      ]);
+      // Reset form
+      document.getElementById('addItemName').value = '';
+      document.getElementById('addItemCode').value = '';
+      document.getElementById('addItemCategory').value = '';
+      document.getElementById('addItemQty').value = '';
+      document.getElementById('addItemPrice').value = '';
+      document.getElementById('addItemMinStock').value = '';
+      document.getElementById('addItemNotes').value = '';
+      document.getElementById('addItemPhoto').value = '';
+      document.getElementById('addItemPhotoCamera').value = '';
+      document.getElementById('addItemPhotoPreview').classList.remove('show');
+      document.getElementById('addItemPhotoClearBtn').style.display = 'none';
+      document.getElementById('addItemPhotoHint').textContent = '';
+      addItemPhotoData = null;
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Add Item';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Item search (shared pattern for Receiving + Release) ----------
+  function setupItemSearch(inputId, resultsId, onSelect){
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    input.addEventListener('input', async ()=>{
+      if(ITEMS.length === 0) await loadItems();
+      const q = input.value.trim().toLowerCase();
+      if(!q){ results.classList.remove('show'); return; }
+      const matches = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q)).slice(0, 10);
+      results.innerHTML = matches.map(it => `<div class="search-result-item" data-name="${it['Item Name']}">${it['Item Name']} <span style="color:var(--ink-dim);">(${it['Qty']} ${it['Unit']||''})</span></div>`).join('');
+      results.classList.toggle('show', matches.length > 0);
+    });
+    results.addEventListener('click', (e)=>{
+      const item = e.target.closest('.search-result-item');
+      if(!item) return;
+      input.value = item.dataset.name;
+      results.classList.remove('show');
+      onSelect(item.dataset.name);
+    });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('.search-box')) results.classList.remove('show');
+    });
+  }
+
+  setupItemSearch('receiveSearch', 'itemSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('receiveCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+  setupItemSearch('releaseSearch', 'releaseSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('releaseCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+
+  setupItemSearch('transferSearch', 'transferSearchResults', (name)=>{
+    const item = ITEMS.find(it => it['Item Name'] === name);
+    document.getElementById('transferCurrentQty').textContent = item ? ('Current stock at ' + currentBranch + ': ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+  });
+
+  // ---------- Receiving ----------
+  document.getElementById('receiveBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('receiveBtn');
+    const resultBox = document.getElementById('receiveResult');
+    const itemName = document.getElementById('receiveSearch').value.trim();
+    const qty = document.getElementById('receiveQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'receiveItem', itemName, qty, branch: currentBranch,
+      date: document.getElementById('receiveDate').value,
+      receivedBy: document.getElementById('receiveBy').value,
+      photoBase64: receivePhotoData || ''
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      showReceipt('receiveReceiptCard', 'receiveReceiptText', lastReceiveReceipt = [
+        'RECEIVING RECEIPT',
+        'Item: ' + res.itemName,
+        'Branch: ' + res.branch,
+        'Qty Received: +' + qty,
+        'New Total: ' + res.newQty
+      ]);
+      document.getElementById('receiveSearch').value = '';
+      document.getElementById('receiveQty').value = '';
+      document.getElementById('receiveCurrentQty').textContent = '';
+      document.getElementById('receivePhoto').value = '';
+      document.getElementById('receivePhotoCamera').value = '';
+      document.getElementById('receivePhotoPreview').classList.remove('show');
+      document.getElementById('receivePhotoHint').textContent = '';
+      receivePhotoData = null;
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Receive Stock';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  // ---------- Release ----------
+  document.getElementById('releaseBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('releaseBtn');
+    const resultBox = document.getElementById('releaseResult');
+    const itemName = document.getElementById('releaseSearch').value.trim();
+    const qty = document.getElementById('releaseQty').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'releaseItem', itemName, qty, branch: currentBranch,
+      date: document.getElementById('releaseDate').value,
+      reason: document.getElementById('releaseReason').value,
+      releasedBy: document.getElementById('releaseBy').value,
+      photoBase64: releasePhotoData || ''
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      btn.disabled = false; btn.textContent = 'Release';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ ' + res.itemName + ': ' + res.previousQty + ' → ' + res.newQty;
+      showReceipt('releaseReceiptCard', 'releaseReceiptText', lastReleaseReceipt = [
+        'RELEASE RECEIPT',
+        'Item: ' + res.itemName,
+        'Branch: ' + res.branch,
+        'Qty Released: -' + qty,
+        'New Total: ' + res.newQty
+      ]);
+      document.getElementById('releaseSearch').value = '';
+      document.getElementById('releaseQty').value = '';
+      document.getElementById('releaseReason').value = '';
+      document.getElementById('releaseCurrentQty').textContent = '';
+      document.getElementById('releasePhoto').value = '';
+      document.getElementById('releasePhotoCamera').value = '';
+      document.getElementById('releasePhotoPreview').classList.remove('show');
+      document.getElementById('releasePhotoHint').textContent = '';
+      releasePhotoData = null;
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Release';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  document.getElementById('transferBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('transferBtn');
+    const resultBox = document.getElementById('transferResult');
+    const itemName = document.getElementById('transferSearch').value.trim();
+    const qty = document.getElementById('transferQty').value;
+    const fromBranch = document.getElementById('transferFromBranch').value;
+    const toBranch = document.getElementById('transferToBranch').value;
+    if(!itemName || !qty || Number(qty) <= 0){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Pick an item and enter a Qty greater than 0.';
+      return;
+    }
+    if(fromBranch === toBranch){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'From Branch and To Branch cannot be the same.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Transferring…';
+    resultBox.className = 'result';
+
+    const params = new URLSearchParams({
+      action:'transferItem', itemName, qty, fromBranch, toBranch,
+      date: document.getElementById('transferDate').value,
+      transferredBy: document.getElementById('transferBy').value
+    });
+    try{
+      const res = await (await fetch(API_URL + '?' + params.toString())).json();
+      btn.disabled = false; btn.textContent = 'Transfer';
+      if(res.error){ resultBox.className = 'result err show'; resultBox.textContent = res.error; return; }
+      resultBox.className = 'result ok show';
+      resultBox.textContent = '✓ Na-transfer: ' + res.qty + ' ' + res.itemName + ' (' + res.fromBranch + ' → ' + res.toBranch + ')';
+      document.getElementById('transferSearch').value = '';
+      document.getElementById('transferQty').value = '';
+      document.getElementById('transferCurrentQty').textContent = '';
+      ITEMS = [];
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Transfer';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
+  });
+
+  async function loadStaffNames(){
+    try{
+      const names = await (await fetch(API_URL + '?action=getItemStaff&_ts=' + Date.now())).json();
+      document.getElementById('staffNameList').innerHTML =
+        (names || []).map(n => `<option value="${n}"></option>`).join('');
+    }catch(e){ console.error(e); }
+  }
+
+  loadItems();
+  document.getElementById('printAddItemBtn').addEventListener('click', ()=> printReceipt(lastAddItemReceipt));
+  document.getElementById('waAddItemBtn').addEventListener('click', ()=> shareReceipt(lastAddItemReceipt));
+  document.getElementById('printReceiveBtn').addEventListener('click', ()=> printReceipt(lastReceiveReceipt));
+  document.getElementById('waReceiveBtn').addEventListener('click', ()=> shareReceipt(lastReceiveReceipt));
+  document.getElementById('printReleaseBtn').addEventListener('click', ()=> printReceipt(lastReleaseReceipt));
+  document.getElementById('waReleaseBtn').addEventListener('click', ()=> shareReceipt(lastReleaseReceipt));
+
+  loadStaffNames();
+
+  // Soft piano-like note on hover/click for the carousel and hero
+  // icon — same style as Index.html / Flower Tools' hover sound.
+  let itemAudioCtx = null;
+  function playPianoTone(){
+    try{
+      if(!itemAudioCtx) itemAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      const freq = notes[Math.floor(Math.random()*notes.length)];
+      const o = itemAudioCtx.createOscillator(), g = itemAudioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = freq;
+      const start = itemAudioCtx.currentTime;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.09, start + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.45);
+      o.connect(g).connect(itemAudioCtx.destination);
+      o.start(start); o.stop(start + 0.46);
+    }catch(_){}
+  }
+  document.querySelectorAll('.carousel-item, .tool-card').forEach(el=>{
+    el.addEventListener('mouseenter', playPianoTone);
+    el.addEventListener('click', playPianoTone);
+  });
+
+  // Small playful touch matching the hero flower on Index/Flower Tools —
+  // a quick bounce + rotation on tap, purely decorative.
+  const heroBox = document.getElementById('heroBox');
+  if(heroBox){
+    heroBox.addEventListener('click', ()=>{
+      heroBox.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      heroBox.style.transform = 'scale(1.25) rotate(-10deg)';
+      setTimeout(()=>{ heroBox.style.transform = 'scale(1) rotate(0deg)'; }, 350);
+    });
+  }
+
+  // ---------- Scan Barcode (Receiving) ----------
+  // Matches the scanned Item Code against the loaded catalog and, if
+  // found, fills the search box the same way picking it from the
+  // dropdown would — so scanning is just a faster path to the exact
+  // same "select this item" step, not a separate flow.
+  let scanStream = null;
+  let scanLoopActive = false;
+
+  // Generic scanner opener — takes a callback that receives the raw
+  // scanned code string, so New Item, Receiving, and Release can each
+  // decide what to do with it (fill a code field vs. look up an
+  // existing item) without duplicating the camera/detector plumbing.
+  function openBarcodeScanner(onScanned){
+    return async ()=>{
+      if(!('BarcodeDetector' in window)){
+        alert('Hindi supported ang barcode scanning sa browser na ito. I-type na lang.');
+        return;
+      }
+      if(ITEMS.length === 0) await loadItems();
+      const modal = document.getElementById('scannerModal');
+      const video = document.getElementById('scannerVideo');
+      modal.style.display = 'flex';
+      try{
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = scanStream;
+        scanLoopActive = true;
+        const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+        const scanLoop = async ()=>{
+          if(!scanLoopActive) return;
+          try{
+            const codes = await detector.detect(video);
+            if(codes.length > 0){
+              const scannedCode = codes[0].rawValue;
+              stopScanner();
+              onScanned(scannedCode);
+              return;
+            }
+          }catch(e){}
+          requestAnimationFrame(scanLoop);
+        };
+        scanLoop();
+      }catch(e){
+        alert('Hindi ma-access ang camera. I-check ang permissions.');
+        modal.style.display = 'none';
+      }
+    };
+  }
+
+  // ---------- Print / WhatsApp receipt (shared by New Item, Receiving, Release) ----------
+  let lastAddItemReceipt = [], lastReceiveReceipt = [], lastReleaseReceipt = [];
+  function showReceipt(cardId, textId, lines){
+    document.getElementById(cardId).classList.add('show');
+    document.getElementById(textId).innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+  }
+
+  function printReceipt(lines){
+    document.getElementById('receiptPrintBody').innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+    const el = document.getElementById('receiptPrintArea');
+    el.style.display = 'block';
+    el.classList.add('printing');
+    window.print();
+    setTimeout(()=>{ el.style.display = 'none'; el.classList.remove('printing'); }, 400);
+  }
+
+  async function shareReceipt(lines){
+    if(!navigator.share){ alert('Hindi supported ang sharing sa browser na ito.'); return; }
+    document.getElementById('receiptPrintBody').innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+    const el = document.getElementById('receiptPrintArea');
+    el.style.display = 'block';
+    try{
+      const canvas = await html2canvas(el, { backgroundColor:'#ffffff', scale:2 });
+      el.style.display = 'none';
+      canvas.toBlob(async (blob)=>{
+        const file = new File([blob], 'lalabella-item-receipt.png', { type:'image/png' });
+        try{ await navigator.share({ files:[file], title:'Lalabella Item Receipt' }); }catch(e){}
+      }, 'image/png');
+    }catch(e){
+      el.style.display = 'none';
+      alert('Hindi na-generate ang larawan.');
+    }
+  }
+
+  function findItemByCode(scannedCode){
+    return ITEMS.find(it => String(it['Item Code']||'').trim().toLowerCase() === scannedCode.trim().toLowerCase());
+  }
+
+  document.getElementById('scanReceiveBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('receiveSearch').value = match['Item Name'];
+      document.getElementById('receiveCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('receiveQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  document.getElementById('scanReleaseBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('releaseSearch').value = match['Item Name'];
+      document.getElementById('releaseCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('releaseQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  document.getElementById('scanTransferBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    const match = findItemByCode(scannedCode);
+    if(match){
+      document.getElementById('transferSearch').value = match['Item Name'];
+      document.getElementById('transferCurrentQty').textContent = 'Current stock at ' + currentBranch + ': ' + match['Qty'] + ' ' + (match['Unit']||'');
+      document.getElementById('transferQty').focus();
+    } else {
+      alert('Walang item na tumutugma sa Item Code: ' + scannedCode);
+    }
+  }));
+
+  // New Item's scan is different on purpose: there's no existing item
+  // to look up yet — this scans a code already printed on the
+  // physical product/box (e.g. a supplier barcode) and uses it AS the
+  // new item's own Product Code, instead of auto-generating one.
+  document.getElementById('scanNewItemBtn').addEventListener('click', openBarcodeScanner((scannedCode)=>{
+    document.getElementById('addItemCode').value = scannedCode;
+  }));
+
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){
+      scanStream.getTracks().forEach(t => t.stop());
+      scanStream = null;
+    }
+    document.getElementById('scannerModal').style.display = 'none';
+  }
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+</script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+})();
+</script>
+
+<datalist id="staffNameList"></datalist>
+
+
+<script>
+// ---------- Shared music player (same saved sound as the rest of
+// Lalabella on THIS device — set it once anywhere, it follows you
+// across every page on this same browser/phone). ----------
+(function(){
+  const audio = document.getElementById('chocoAudioPlayer');
+  const musicBtn = document.getElementById('chocoMusicToggleBtn');
+  const urlInput = document.getElementById('chocoMusicUrlInput');
+  const nowText = document.getElementById('chocoMusicNow');
+  const searchInput = document.getElementById('chocoMusicSearchInput');
+  const searchBtn = document.getElementById('chocoMusicSearchBtn');
+  if(!audio || !musicBtn) return;
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+  function playYouTube(id){
+    document.getElementById('chocoYtPlayerWrap').innerHTML =
+      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      urlInput.value = savedUrl;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+      } else {
+        audio.src = savedUrl;
+      }
+      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
+      if(sessionPlaying){
+        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
+        isPlaying = true;
+        musicBtn.textContent = '♫ Playing';
+        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
+      } else {
+        isPlaying = false;
+        musicBtn.textContent = '♫ Music';
+        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
+      }
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  function applyUrl(url){
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      nowText.textContent = 'Now playing YouTube track';
+      isPlaying = true; musicBtn.textContent = '♫ Playing';
+      saveSoundChoice(url, true);
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    } else {
+      ytVideoId = null; stopYouTube();
+      audio.src = url;
+      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
+      saveSoundChoice(url, false);
+      audio.play().then(()=>{
+        isPlaying = true; musicBtn.textContent = '♫ Playing';
+        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    }
+  }
+
+  musicBtn.addEventListener('click', ()=>{
+    const url = urlInput.value.trim();
+    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
+      applyUrl(url);
+      return;
+    }
+    if(!audio.src && !ytVideoId) return;
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      musicBtn.textContent = '♫ Music'; isPlaying = false;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      musicBtn.textContent = '♫ Playing'; isPlaying = true;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    }
+  });
+
+  if(searchBtn && searchInput){
+    searchBtn.addEventListener('click', ()=>{
+      const q = searchInput.value.trim();
+      if(!q) return;
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+    });
+    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+  }
+})();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getDatabase, ref, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+const firebaseConfig={apiKey:"AIzaSyAz4M9M9fZiYTNBuKt8y7eQ01-KQULKwLM",authDomain:"lalabellachatbot.firebaseapp.com",databaseURL:"https://lalabellachatbot-default-rtdb.firebaseio.com",projectId:"lalabellachatbot",storageBucket:"lalabellachatbot.firebasestorage.app",messagingSenderId:"224994260432",appId:"1:224994260432:web:beb2f3ce3738291738f5d5",measurementId:"G-BWXNBJ4JJ2"};
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
+
+(async ()=>{
+  const chatRef = ref(db, "chat");
+  const msgBadge = document.getElementById('msgBadge');
+  let uid = null, unread = 0, firstBatch = true;
+
+  function lastSeen(){
+    try{ return Number(localStorage.getItem('lalabellaChatLastSeenTime')) || 0; }catch(e){ return 0; }
+  }
+  function updateBadge(){
+    if(unread > 0){
+      msgBadge.textContent = unread > 9 ? '9+' : String(unread);
+      msgBadge.style.display = 'flex';
+    } else {
+      msgBadge.style.display = 'none';
+    }
+  }
+  let notifyCtx = null;
+  function playNotify(){
+    try{
+      if(!notifyCtx) notifyCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = notifyCtx.createOscillator(), g = notifyCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 660;
+      const now = notifyCtx.currentTime;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.05, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+      o.connect(g); g.connect(notifyCtx.destination);
+      o.start(); o.stop(now + 0.35);
+    }catch(e){}
+  }
+
+  try{
+    const c = await signInAnonymously(auth);
+    uid = c.user.uid;
+    const seenTime = lastSeen();
+    onChildAdded(query(chatRef, limitToLast(50)), (s)=>{
+      const v = s.val();
+      if(!v || !v.text || v.uid === uid) return;
+      if(v.time && v.time > seenTime){
+        unread++; updateBadge();
+        if(!firstBatch) playNotify();
+      }
+    });
+    setTimeout(()=>{ firstBatch = false; }, 1500);
+  }catch(e){ console.error('Item Inventory chat listener:', e); }
+})();
+</script>
+
+<script>
+(function(){
+  var BRANCH_API = 'https://script.google.com/macros/s/AKfycbyD9RV8ATs0uLjjkyCVcRiM4aYZPttDredD3BZsE1vbv61gER6A3oT00_BkMUR5FPE/exec';
+  var btn = document.getElementById('lalaBellBtn');
+  var badge = document.getElementById('lalaBellBadge');
+  var panel = document.getElementById('lalaBellPanel');
+  var list = document.getElementById('lalaBellList');
+  if(!btn) return;
+
+  var lastCount = null;
+
+  function playAlarm(){
+    try{
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1108, 880].forEach(function(freq,i){
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        var start = ctx.currentTime + i*0.18;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
+        o.connect(g).connect(ctx.destination);
+        o.start(start); o.stop(start + 0.18);
+      });
+    }catch(e){}
+  }
+
+  function refresh(){
+    fetch(BRANCH_API + '?action=getUnassignedStatus&_ts=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var count = Number(data.count) || 0;
+        var orderNumbers = (data.orderNumbers || '').split(',').filter(Boolean);
+
+        if(count > 0){ badge.textContent = String(count); badge.classList.add('show'); }
+        else{ badge.classList.remove('show'); }
+
+        if(lastCount !== null && count > lastCount){
+          playAlarm();
+          btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring');
+        }
+        lastCount = count;
+
+        list.innerHTML = orderNumbers.length
+          ? orderNumbers.map(function(o){ return '<div class="lala-bell-order">' + o + '</div>'; }).join('')
+          : '<div class="lala-bell-empty">Walang unassigned order ngayon.</div>';
+      })
+      .catch(function(){});
+  }
+
+  btn.addEventListener('click', function(){
+    panel.classList.toggle('show');
+    if(panel.classList.contains('show')) refresh();
+  });
+  document.addEventListener('click', function(e){
+    if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== btn){
+      panel.classList.remove('show');
+    }
+  });
+
+  refresh();
+  setInterval(refresh, 20000);
+})();
+</script>
+
+</body>
+</html>
