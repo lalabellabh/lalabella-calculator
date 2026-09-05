@@ -170,7 +170,12 @@
     </div>
 
     <label>Photo <span style="text-transform:none;">(optional — replaces the existing one if uploaded)</span></label>
-    <input type="file" id="editItemPhoto" accept="image/*">
+    <div style="display:flex; gap:8px;">
+      <label for="editItemPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+      <label for="editItemPhoto" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+    </div>
+    <input type="file" id="editItemPhotoCamera" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="editItemPhoto" accept="image/*" style="display:none;">
     <img id="editItemPhotoPreview" class="photo-preview" alt="Preview">
     <div style="font-size:11px;color:var(--ink-dim);margin-top:4px;" id="editItemPhotoHint"></div>
 
@@ -183,6 +188,13 @@
 
     <button class="btn" id="saveEditItemBtn">Save Changes</button>
     <div class="result" id="editItemResult"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔧 Check &amp; Fix Barcodes</div>
+    <p class="card-sub">Scans every item for a missing Product Code (can't be scanned) or a duplicate one (two items sharing the same code, which would scan as the wrong item) — and auto-generates a fresh code to fix each one found.</p>
+    <button class="btn" id="checkBarcodesBtn">Scan &amp; Fix</button>
+    <div class="result" id="checkBarcodesResult"></div>
   </div>
 </div>
 
@@ -259,8 +271,7 @@
     });
   }
 
-  document.getElementById('editItemPhoto').addEventListener('change', async function(){
-    const file = this.files[0];
+  async function handleEditPhotoFile(file){
     if(!file) return;
     const hint = document.getElementById('editItemPhotoHint');
     hint.textContent = 'Compressing…';
@@ -276,6 +287,12 @@
       hint.textContent = 'Could not process this image.';
       editItemPhotoData = null;
     }
+  }
+  document.getElementById('editItemPhoto').addEventListener('change', function(){
+    handleEditPhotoFile(this.files[0]);
+  });
+  document.getElementById('editItemPhotoCamera').addEventListener('change', function(){
+    handleEditPhotoFile(this.files[0]);
   });
 
   document.getElementById('saveEditItemBtn').addEventListener('click', async ()=>{
@@ -346,6 +363,36 @@
     document.getElementById('labelPrintArea').classList.add('printing');
     window.print();
     setTimeout(()=>document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  });
+
+  document.getElementById('checkBarcodesBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('checkBarcodesBtn');
+    const resultBox = document.getElementById('checkBarcodesResult');
+    btn.disabled = true; btn.textContent = 'Scanning…';
+    resultBox.className = 'result';
+
+    try{
+      const res = await (await fetch(API_URL + '?action=checkFixBarcodes&_ts=' + Date.now())).json();
+      btn.disabled = false; btn.textContent = 'Scan & Fix';
+      if(res.error){
+        resultBox.className = 'result err show';
+        resultBox.textContent = res.error;
+        return;
+      }
+      if(res.missingFixed === 0 && res.duplicatesFixed === 0){
+        resultBox.className = 'result ok show';
+        resultBox.textContent = '✓ Malinis na — walang nakitang missing o duplicate na barcode.';
+      } else {
+        resultBox.className = 'result ok show';
+        resultBox.textContent = '✓ Naayos: ' + res.missingFixed + ' walang barcode, ' + res.duplicatesFixed + ' duplicate. ' +
+          res.details.map(d => d.name + ' → ' + d.newCode).join(', ');
+      }
+      await loadItems();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Scan & Fix';
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'Could not reach the server. Check your connection.';
+    }
   });
 </script>
 
