@@ -221,6 +221,20 @@
   color:var(--rose-deep); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
   padding:0 12px 8px; opacity:0.8;
 }
+.choco-drawer .choco-music-box{
+  margin-top:10px; padding:12px; border-radius:12px; background:var(--blush);
+  border:1px solid var(--line);
+}
+.choco-drawer .choco-music-box input{
+  width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+  background:#fff; color:var(--ink); font-size:12px; outline:none; margin-bottom:8px;
+  box-sizing:border-box;
+}
+.choco-drawer .choco-music-box button{
+  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
+  background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff;
+}
+.choco-drawer .choco-music-now{ font-size:10.5px; color:var(--ink-dim); margin-top:8px; word-break:break-all; line-height:1.4; }
 .wrap{ padding-top:76px !important; }
 </style>
 
@@ -232,7 +246,19 @@
   <a href="flower-tools.html">🌸 Flower Tools</a>
   <a href="item-dashboard.html">📊 Item Dashboard</a>
   <a href="item-inventory.html">📦 Item Inventory</a>
+  <div class="choco-music-box">
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose-deep);margin-bottom:6px;">Music</label>
+    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
+    <button id="chocoMusicToggleBtn">♫ Music</button>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
+      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
+    </div>
+    <div class="choco-music-now" id="chocoMusicNow"></div>
+  </div>
 </nav>
+<audio id="chocoAudioPlayer" loop></audio>
+<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
 
 <div class="wrap">
@@ -954,6 +980,120 @@
 
 <datalist id="staffNameList"></datalist>
 
+
+<script>
+// ---------- Shared music player (same saved sound as the rest of
+// Lalabella on THIS device — set it once anywhere, it follows you
+// across every page on this same browser/phone). ----------
+(function(){
+  const audio = document.getElementById('chocoAudioPlayer');
+  const musicBtn = document.getElementById('chocoMusicToggleBtn');
+  const urlInput = document.getElementById('chocoMusicUrlInput');
+  const nowText = document.getElementById('chocoMusicNow');
+  const searchInput = document.getElementById('chocoMusicSearchInput');
+  const searchBtn = document.getElementById('chocoMusicSearchBtn');
+  if(!audio || !musicBtn) return;
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+  function playYouTube(id){
+    document.getElementById('chocoYtPlayerWrap').innerHTML =
+      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      urlInput.value = savedUrl;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+      } else {
+        audio.src = savedUrl;
+      }
+      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
+      if(sessionPlaying){
+        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
+        isPlaying = true;
+        musicBtn.textContent = '♫ Playing';
+        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
+      } else {
+        isPlaying = false;
+        musicBtn.textContent = '♫ Music';
+        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
+      }
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  function applyUrl(url){
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      nowText.textContent = 'Now playing YouTube track';
+      isPlaying = true; musicBtn.textContent = '♫ Playing';
+      saveSoundChoice(url, true);
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    } else {
+      ytVideoId = null; stopYouTube();
+      audio.src = url;
+      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
+      saveSoundChoice(url, false);
+      audio.play().then(()=>{
+        isPlaying = true; musicBtn.textContent = '♫ Playing';
+        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    }
+  }
+
+  musicBtn.addEventListener('click', ()=>{
+    const url = urlInput.value.trim();
+    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
+      applyUrl(url);
+      return;
+    }
+    if(!audio.src && !ytVideoId) return;
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      musicBtn.textContent = '♫ Music'; isPlaying = false;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      musicBtn.textContent = '♫ Playing'; isPlaying = true;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    }
+  });
+
+  if(searchBtn && searchInput){
+    searchBtn.addEventListener('click', ()=>{
+      const q = searchInput.value.trim();
+      if(!q) return;
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+    });
+    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+  }
+})();
+</script>
 
 </body>
 </html>
