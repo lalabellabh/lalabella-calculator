@@ -7,13 +7,13 @@
 <style>
 :root{
   --bg:#07080b;--panel:#0d1016;--line:#252a34;--text:#f5f1e9;--muted:#8f96a5;
-  --gold:#d9a84a;--gold2:#ffe09a;--green:#63e6a2;--red:#ff6b6b;
+  --gold:#1677ff;--gold2:#8fd8ff;--green:#63e6a2;--red:#ff6b6b;--cyan:#2ee8ff;
 }
 *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
 body{overflow:hidden}
 button{font:inherit}
 .app{height:100dvh;display:grid;grid-template-columns:260px 1fr 300px;background:
-radial-gradient(circle at 50% 45%,rgba(217,168,74,.07),transparent 34%),#07080b}
+radial-gradient(circle at 50% 45%,rgba(22,135,255,.12),transparent 38%),#020711}
 .side{border-right:1px solid var(--line);padding:22px 16px;display:flex;flex-direction:column;gap:18px;background:rgba(10,12,16,.86);backdrop-filter:blur(18px)}
 .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 18px;border-bottom:1px solid var(--line)}
 .logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#111;background:linear-gradient(135deg,var(--gold2),var(--gold));font-weight:900}
@@ -23,28 +23,37 @@ radial-gradient(circle at 50% 45%,rgba(217,168,74,.07),transparent 34%),#07080b}
 .main{position:relative;display:flex;flex-direction:column;min-width:0}
 .top{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line)}
 .top .title{font-size:12px;letter-spacing:.2em;color:#b6bbc5}.clock{color:#737a88;font-size:11px}
-.stage{flex:1;display:grid;place-items:center;position:relative}
+.stage{flex:1;display:grid;place-items:center;position:relative;overflow:hidden}
 .assembly{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
-.ring{position:absolute;border:1px solid rgba(217,168,74,.12);border-radius:50%;animation:spin 20s linear infinite}.r1{width:390px;height:390px}.r2{width:510px;height:510px;animation-direction:reverse;animation-duration:30s;border-style:dashed}.r3{width:650px;height:650px;animation-duration:42s;border-color:rgba(217,168,74,.05)}
+.ring{position:absolute;border:1px solid rgba(22,135,255,.18);border-radius:50%;animation:spin 20s linear infinite}.r1{width:390px;height:390px}.r2{width:510px;height:510px;animation-direction:reverse;animation-duration:30s;border-style:dashed}.r3{width:650px;height:650px;animation-duration:42s;border-color:rgba(46,232,255,.08)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.core{width:245px;height:245px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#fff7d6 0,#e4b95c 3%,#8e6424 16%,#17130b 48%,#08090b 70%);box-shadow:0 0 35px rgba(217,168,74,.15),inset 0 0 45px #000;animation:idle 4s ease-in-out infinite}
-.core:before,.core:after{content:"";position:absolute;border-radius:50%;inset:17px;border:1px solid rgba(255,224,154,.28)}.core:after{inset:31px;border-style:dashed;animation:spin 9s linear infinite}
-@keyframes idle{50%{transform:scale(1.015);box-shadow:0 0 65px rgba(217,168,74,.22),inset 0 0 55px #000}}
-.coreText{text-align:center;z-index:2}.coreText strong{display:block;font-size:31px;letter-spacing:.16em}.coreText span{font-size:9px;letter-spacing:.28em;color:#bda76e}
-.wave{position:absolute;bottom:26px;display:flex;gap:4px;height:24px;align-items:center}.wave i{display:block;width:2px;height:5px;background:#756340;border-radius:3px;transition:.2s}.listening .wave i{animation:wave .7s ease-in-out infinite}.listening .wave i:nth-child(2n){animation-delay:.1s}.listening .wave i:nth-child(3n){animation-delay:.2s}
+.core{width:245px;height:245px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#eafaff 0,#42c9ff 4%,#1677ff 16%,#0b1f3d 48%,#08090b 70%);box-shadow:0 0 35px rgba(22,135,255,.25),inset 0 0 45px #000;animation:idle 4s ease-in-out infinite}
+.core:before,.core:after{content:"";position:absolute;border-radius:50%;inset:17px;border:1px solid rgba(143,216,255,.32)}.core:after{inset:31px;border-style:dashed;animation:spin 9s linear infinite}
+@keyframes idle{50%{transform:scale(1.015);box-shadow:0 0 65px rgba(22,135,255,.38),inset 0 0 55px #000}}
+.coreText{text-align:center;z-index:2}.coreText strong{display:block;font-size:31px;letter-spacing:.16em}.coreText span{font-size:9px;letter-spacing:.28em;color:#8fd8ff}
+.wave{position:absolute;bottom:26px;display:flex;gap:4px;height:24px;align-items:center}.wave i{display:block;width:2px;height:5px;background:#3a6da8;border-radius:3px;transition:.2s}.listening .wave i{animation:wave .7s ease-in-out infinite}.listening .wave i:nth-child(2n){animation-delay:.1s}.listening .wave i:nth-child(3n){animation-delay:.2s}
 @keyframes wave{50%{height:22px;background:var(--gold)}}
 .state{position:absolute;top:30px;text-align:center;color:#777f8e;font-size:11px;letter-spacing:.18em;text-transform:uppercase}.state b{color:#ddd}
 .hello{position:absolute;bottom:34px;text-align:center;color:#555d6b;font-size:11px}.hello strong{color:#a7aeb9}
 .right{border-left:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:13px;background:rgba(10,12,16,.86)}
 .card{border:1px solid var(--line);background:#0c0f14;border-radius:14px;padding:15px}.card h3{font-size:10px;letter-spacing:.18em;color:#888f9d;margin:0 0 12px;text-transform:uppercase}
 .activity{flex:1;min-height:200px;overflow:auto}.event{padding:10px 0;border-bottom:1px solid #181c24;font-size:12px}.event span{display:block;color:#656d7a;font-size:9px;margin-bottom:3px}.event b{font-weight:500}
-.quick{display:grid;gap:7px}.quick button{background:#11151c;border:1px solid #222832;color:#b7bdc8;padding:10px;border-radius:9px;text-align:left;cursor:pointer}.quick button:hover{border-color:#725c30;color:#fff}
-.mic{position:absolute;bottom:28px;right:28px;width:48px;height:48px;border-radius:50%;border:1px solid #4b3d21;background:#111;color:var(--gold2);cursor:pointer;box-shadow:0 0 20px rgba(217,168,74,.08)}
+.quick{display:grid;gap:7px}.quick button{background:#11151c;border:1px solid #222832;color:#b7bdc8;padding:10px;border-radius:9px;text-align:left;cursor:pointer}.quick button:hover{border-color:#1c4a78;color:#fff}
+.mic{position:absolute;bottom:28px;right:28px;width:48px;height:48px;border-radius:50%;border:1px solid #14385e;background:#111;color:var(--gold2);cursor:pointer;box-shadow:0 0 20px rgba(22,135,255,.12)}
 .transcript{position:absolute;left:25px;bottom:27px;max-width:390px;display:none;background:#0d1016;border:1px solid var(--line);padding:11px 13px;border-radius:11px;font-size:12px;color:#c6cbd4}.transcript.show{display:block}
-.assembled .core{box-shadow:0 0 90px rgba(217,168,74,.28),inset 0 0 55px #000}
+.assembled .core{box-shadow:0 0 90px rgba(22,135,255,.4),inset 0 0 55px #000}
 .thinking .core{animation:think 1.2s ease-in-out infinite}@keyframes think{50%{filter:brightness(1.35);transform:scale(1.03)}}
-.speaking .core{box-shadow:0 0 120px rgba(217,168,74,.35),inset 0 0 55px #000}
-@media(max-width:900px){.app{grid-template-columns:1fr}.side,.right{display:none}.top{height:58px;padding:0 16px}.stage{min-height:0}.r1{width:280px;height:280px}.r2{width:365px;height:365px}.r3{width:470px;height:470px}.core{width:190px;height:190px}.coreText strong{font-size:25px}.mic{right:18px;bottom:18px}.transcript{left:16px;bottom:18px;right:76px;max-width:none}.state{top:22px}.hello{bottom:25px;font-size:10px}}
+.speaking .core{box-shadow:0 0 120px rgba(46,232,255,.45),inset 0 0 55px #000}
+
+/* Orbiting particles — small glowing dots that visibly travel around
+   the core on their own path, separate from the static rings above. */
+.orbit-particle-track{position:absolute;width:340px;height:340px;border-radius:50%;z-index:3;pointer-events:none;animation:orbitTrackSpin linear infinite}
+.orbit-particle-track.track-a{animation-duration:6s}
+.orbit-particle-track.track-b{width:270px;height:270px;animation-duration:9s;animation-direction:reverse}
+.orbit-particle{position:absolute;left:50%;top:-5px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:radial-gradient(circle,#fff 0%,#8fd8ff 45%,#1677ff 100%);box-shadow:0 0 12px 3px rgba(46,232,255,.9),0 0 26px 8px rgba(22,135,255,.5)}
+@keyframes orbitTrackSpin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){.app{grid-template-columns:1fr}.side,.right{display:none}.top{height:58px;padding:0 16px}.stage{min-height:0}.r1{width:280px;height:280px}.r2{width:365px;height:365px}.r3{width:470px;height:470px}.core{width:190px;height:190px}.coreText strong{font-size:25px}.mic{right:18px;bottom:18px}.transcript{left:16px;bottom:18px;right:76px;max-width:none}.state{top:22px}.hello{bottom:25px;font-size:10px}.orbit-particle-track.track-a{width:225px;height:225px}.orbit-particle-track.track-b{width:175px;height:175px}.orbit-particle{width:6px;height:6px;margin-left:-3px}}
 </style>
 </head>
 <body>
@@ -64,13 +73,17 @@ radial-gradient(circle at 50% 45%,rgba(217,168,74,.07),transparent 34%),#07080b}
   <main class="main">
     <header class="top"><div class="title">COMMAND CENTER / NOVA CORE</div><div class="clock" id="clock"></div></header>
     <section class="stage" id="stage">
-      <div class="assembly" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div></div>
+      <div class="assembly" aria-hidden="true">
+        <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+        <div class="orbit-particle-track track-a"><div class="orbit-particle"></div></div>
+        <div class="orbit-particle-track track-b"><div class="orbit-particle"></div></div>
+      </div>
       <div class="state" id="state">CORE <b>STANDBY</b></div>
       <div class="core" id="core">
         <div class="coreText"><strong>NOVA</strong><span>INTELLIGENCE CORE</span></div>
         <div class="wave" id="wave"></div>
       </div>
-      <div class="hello">Say <strong>“Hey Nova”</strong> to activate</div>
+      <div class="hello">Say <strong>"Hey Nova"</strong> to activate</div>
       <div class="transcript" id="transcript"></div>
       <button class="mic" id="mic" title="Manual voice input">◉</button>
     </section>
@@ -107,25 +120,6 @@ function showTranscript(t){transcript.textContent=t;transcript.classList.add('sh
 function speak(text){if(!text)return; setState('speaking','SPEAKING'); log(text,'NOVA'); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text);u.rate=.96;u.pitch=.92;u.onend=()=>setState('awake','AWAKE');speechSynthesis.speak(u)}
 function heard(text){showTranscript(text);log(text,'YOU')}
 function isWake(t){return /\b(hey\s+nova|hello\s+nova|nova)\b/i.test(t)}
-async function askNova(message){
-  if(!NOVA_API_URL || NOVA_API_URL.includes('PASTE_')) {
-    return fallback(message);
-  }
-  setState('thinking','THINKING');
-  try{
-    const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message,session,context:{page:'NOVA Command Center',app:'Flower Tools'}})});
-    const data=await r.json(); if(!data.ok) throw new Error(data.error||'API error');
-    session=data.session||session;
-    if(data.navigateTo){
-      log('Opening ' + data.navigateTo, 'SYSTEM');
-      // Give NOVA a moment to actually speak the response before the
-      // page navigates away — otherwise the tab changes mid-sentence.
-      setTimeout(()=>{ window.location.href = data.navigateTo; }, 1800);
-    }
-    return data.text;
-  }catch(e){log('API connection unavailable — using local standby response.','SYSTEM');return fallback(message)}
-}
 // ------------------------------------------------------------
 // LOCAL / FREE COMMAND LAYER
 // These commands run entirely in the browser: no OpenAI API call.
@@ -160,27 +154,24 @@ function normalizeCommand(t){
 function localCommand(raw){
   const t = normalizeCommand(raw);
 
-  // Basic conversation — completely local.
   if (/^(hi|hello|hey|good morning|good afternoon|good evening)( nova)?$/.test(t))
     return {text:'Hello Boss. NOVA is ready.', handled:true};
 
   if (/^(thanks|thank you|salamat|salamat nova)$/.test(t))
-    return {text:'You’re welcome, Boss.', handled:true};
+    return {text:'You\u2019re welcome, Boss.', handled:true};
 
   if (/^(who are you|what are you|introduce yourself)$/.test(t))
-    return {text:'I’m NOVA, the intelligence interface for your Flower Tools system.', handled:true};
+    return {text:'I\u2019m NOVA, the intelligence interface for your Flower Tools system.', handled:true};
 
   if (/^(help|what can you do|show commands)$/.test(t))
     return {text:'I can open system pages, tell the time and date, control the interface, and handle simple local commands without using the AI API. Live inventory and business questions can use the API when it is connected.', handled:true};
 
-  // Time / date — browser only.
   if (/^(what time is it|time|current time|tell me the time)$/.test(t))
     return {text:'It is ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + '.', handled:true};
 
   if (/^(what date is it|date|today|what day is it)$/.test(t))
     return {text:'Today is ' + new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric', year:'numeric'}) + '.', handled:true};
 
-  // UI controls.
   if (/^(stop|stop talking|be quiet|silence|cancel speech)$/.test(t)){
     speechSynthesis.cancel();
     setState(awake?'awake':'','STANDBY');
@@ -193,7 +184,6 @@ function localCommand(raw){
     return {text:'Activity log cleared.', handled:true};
   }
 
-  // Navigation — no API.
   const navPatterns = [
     ['inventory', /^(open|go to|show|take me to)\s+(the\s+)?(item\s+)?inventory$/],
     ['dashboard', /^(open|go to|show|take me to)\s+(the\s+)?dashboard$/],
@@ -212,11 +202,9 @@ function localCommand(raw){
     }
   }
 
-  // Local inventory start UI only. Actual stock data still comes from the backend.
   if (/^(start|begin)\s+(the\s+)?inventory$/.test(t))
     return {text:'Okay Boss. Inventory mode is ready. I can start the live count when the Flower Tools API is connected.', handled:true};
 
-  // Not a local command -> caller may use API.
   return {handled:false};
 }
 
