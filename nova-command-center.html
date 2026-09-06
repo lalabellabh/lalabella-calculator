@@ -116,7 +116,14 @@ async function askNova(message){
     const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({message,session,context:{page:'NOVA Command Center',app:'Flower Tools'}})});
     const data=await r.json(); if(!data.ok) throw new Error(data.error||'API error');
-    session=data.session||session; return data.text;
+    session=data.session||session;
+    if(data.navigateTo){
+      log('Opening ' + data.navigateTo, 'SYSTEM');
+      // Give NOVA a moment to actually speak the response before the
+      // page navigates away — otherwise the tab changes mid-sentence.
+      setTimeout(()=>{ window.location.href = data.navigateTo; }, 1800);
+    }
+    return data.text;
   }catch(e){log('API connection unavailable — using local standby response.','SYSTEM');return fallback(message)}
 }
 function fallback(t){
@@ -159,6 +166,15 @@ document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{awake=true;han
 setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),1000);
 setState('','STANDBY');
 startWake();
+
+// Greets immediately on load — no need to say "Hey Nova" first.
+// awake=true right away so the very next thing said is treated as a
+// real question/command, not just another wake-phrase check.
+setTimeout(()=>{
+  awake = true;
+  setState('awake','AWAKE');
+  speak('Hello Boss! Nandito na ako. Ano ang kailangan mo?');
+}, 900);
 </script>
 </body>
 </html>
