@@ -1833,7 +1833,7 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
       .then(function(r){ return r.json(); })
       .then(function(data){
         var count = Number(data.count) || 0;
-        var orderNumbers = (data.orderNumbers || '').split(',').filter(Boolean);
+        var ordersDetail = Array.isArray(data.ordersDetail) ? data.ordersDetail : [];
 
         if(count > 0){ badge.textContent = String(count); badge.classList.add('show'); }
         else{ badge.classList.remove('show'); }
@@ -1844,8 +1844,12 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
         }
         lastCount = count;
 
-        list.innerHTML = orderNumbers.length
-          ? orderNumbers.map(function(o){ return '<div class="lala-bell-order">' + o + '</div>'; }).join('')
+        list.innerHTML = ordersDetail.length
+          ? ordersDetail.map(function(o){
+              return '<div class="lala-bell-order"><b>' + o.orderNo + '</b>' +
+                (o.address ? '<div style="font-size:11px;color:#8a7078;margin-top:2px;">' + o.address + '</div>' : '') +
+                '</div>';
+            }).join('')
           : '<div class="lala-bell-empty">Walang unassigned order ngayon.</div>';
       })
       .catch(function(){});
@@ -1862,7 +1866,7 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
   });
 
   refresh();
-  setInterval(refresh, 20000);
+  setInterval(refresh, 7000);
 })();
 </script>
 
