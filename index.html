@@ -887,7 +887,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       .then(r => r.json())
       .then(data => {
         const count = Number(data.count) || 0;
-        const orderNumbers = (data.orderNumbers || '').split(',').filter(Boolean);
+        const ordersDetail = Array.isArray(data.ordersDetail) ? data.ordersDetail : [];
 
         if(count > 0){ badge.textContent = String(count); badge.classList.add('show'); }
         else{ badge.classList.remove('show'); }
@@ -898,8 +898,8 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         }
         lastCount = count;
 
-        list.innerHTML = orderNumbers.length
-          ? orderNumbers.map(o => `<div class="lala-bell-order">${o}</div>`).join('')
+        list.innerHTML = ordersDetail.length
+          ? ordersDetail.map(o => `<div class="lala-bell-order"><b>${o.orderNo}</b>${o.address ? `<div style="font-size:11px;color:#8a7078;margin-top:2px;">${o.address}</div>` : ''}</div>`).join('')
           : '<div class="lala-bell-empty">Walang unassigned order ngayon.</div>';
       })
       .catch(()=>{});
@@ -916,7 +916,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   });
 
   refresh();
-  setInterval(refresh, 20000);
+  setInterval(refresh, 7000);
 })();
 </script>
 
