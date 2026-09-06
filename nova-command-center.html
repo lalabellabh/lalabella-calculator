@@ -356,20 +356,6 @@ function startWake(){
   }
 }
 
-// Explicitly asks for microphone permission on load, separately from
-// SpeechRecognition's own implicit request — this guarantees the
-// browser's permission prompt actually appears (some browsers are
-// inconsistent about prompting from SpeechRecognition alone), and
-// logs plainly if the user denies it, instead of NOVA just staying
-// silent with no explanation.
-if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => { stream.getTracks().forEach(t => t.stop()); })
-    .catch(err => {
-      micPermissionWarned = true;
-      log('Microphone permission was not granted (' + err.name + '). NOVA cannot hear "Hey Nova" until this is allowed.', 'SYSTEM');
-    });
-}
 function manual(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
   if(listening){recognition?.stop();return}
