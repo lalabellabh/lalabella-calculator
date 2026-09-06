@@ -314,6 +314,7 @@ async function handle(t){
   }
   const answer=await askNova(t); speak(answer);
 }
+let micPermissionWarned=false;
 function startWake(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){log('Speech recognition is not supported in this browser.','SYSTEM');return}
@@ -327,11 +328,47 @@ function startWake(){
       if(e.results[i].isFinal) handle(e.results[i][0].transcript);
     }
   };
+  // Without this, a mic-permission problem (the most common reason
+  // the wake word never gets heard) fails completely silently — no
+  // log entry, no visible sign anything is wrong. This surfaces it.
+  wakeRecognition.onerror=(e)=>{
+    const err = e && e.error;
+    if(err === 'not-allowed' || err === 'service-not-allowed'){
+      if(!micPermissionWarned){
+        micPermissionWarned=true;
+        log('Microphone access is blocked. Click the 🔒/site-info icon in the address bar and allow microphone access, then reload this page.', 'SYSTEM');
+      }
+      return; // don't auto-restart — it would just fail the same way again.
+    }
+    if(err === 'no-speech' || err === 'aborted'){
+      return; // normal in a continuous listener — no need to log every silence.
+    }
+    console.error('[NOVA] wakeRecognition error:', err);
+    log('Voice recognition error: ' + (err || 'unknown') + '.', 'SYSTEM');
+  };
   wakeRecognition.onend=()=>{
     if(wakeRecognition && !document.hidden && !speechSynthesis.speaking && !listening)
       setTimeout(()=>{try{wakeRecognition.start()}catch(e){}},350);
   };
-  try{wakeRecognition.start();}catch(e){}
+  try{wakeRecognition.start();}catch(e){
+    console.error('[NOVA] wakeRecognition.start() threw:', e);
+    log('Could not start listening: ' + (e && e.message ? e.message : e), 'SYSTEM');
+  }
+}
+
+// Explicitly asks for microphone permission on load, separately from
+// SpeechRecognition's own implicit request — this guarantees the
+// browser's permission prompt actually appears (some browsers are
+// inconsistent about prompting from SpeechRecognition alone), and
+// logs plainly if the user denies it, instead of NOVA just staying
+// silent with no explanation.
+if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => { stream.getTracks().forEach(t => t.stop()); })
+    .catch(err => {
+      micPermissionWarned = true;
+      log('Microphone permission was not granted (' + err.name + '). NOVA cannot hear "Hey Nova" until this is allowed.', 'SYSTEM');
+    });
 }
 function manual(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
