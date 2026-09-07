@@ -517,7 +517,15 @@ async function askNova(message){
 
   setState('thinking','THINKING');
   try{
-    const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+    // Google Apps Script Web Apps have a well-known CORS quirk: a POST
+    // with Content-Type: application/json triggers a browser preflight
+    // (OPTIONS) request that Apps Script doesn't answer properly,
+    // making the actual request fail with a generic "Failed to fetch"
+    // before it ever reaches the server. text/plain avoids the
+    // preflight entirely — the server still parses the same JSON body
+    // fine via e.postData.contents regardless of what content-type the
+    // client claims.
+    const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({message,session,context:{page:'NOVA Command Center',app:'Flower Tools'}})});
     if(!r.ok){
       log('NOVA API HTTP error ' + r.status + ': ' + (await r.text()).slice(0,300), 'SYSTEM');
