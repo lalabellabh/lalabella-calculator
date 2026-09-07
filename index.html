@@ -188,6 +188,10 @@ window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded
 .auth-field{margin-bottom:12px;}
 .auth-field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8a7078;margin-bottom:5px;font-weight:600;}
 .auth-field input,.auth-field select{width:100%;padding:11px 13px;border:1px solid #f0d9d9;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;background:#fdf9f8;}
+.auth-field-pw-wrap{position:relative;}
+.auth-field-pw-wrap input{padding-right:38px;}
+.auth-pw-toggle{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:#a98a90;font-size:16px;line-height:1;user-select:none;}
+.auth-pw-toggle:hover{color:#c9506b;}
 .auth-field input:focus,.auth-field select:focus{border-color:#c9506b;}
 .auth-btn{width:100%;padding:13px 0;border:none;border-radius:12px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
 .auth-btn:disabled{opacity:.6;cursor:default;}
@@ -226,7 +230,10 @@ window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded
       </div>
       <div class="auth-field">
         <label>Password</label>
-        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+        <div class="auth-field-pw-wrap">
+          <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="auth-pw-toggle" id="loginPwToggle" aria-label="Show password">👁</button>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
         <input type="checkbox" id="rememberMe" style="width:15px;height:15px;cursor:pointer;">
@@ -257,7 +264,10 @@ window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded
       </div>
       <div class="auth-field">
         <label>Password</label>
-        <input type="password" id="regPassword" autocomplete="new-password" placeholder="Choose a password">
+        <div class="auth-field-pw-wrap">
+          <input type="password" id="regPassword" autocomplete="new-password" placeholder="Choose a password">
+          <button type="button" class="auth-pw-toggle" id="regPwToggle" aria-label="Show password">👁</button>
+        </div>
       </div>
       <button class="auth-btn" id="regBtn">Register</button>
       <div class="auth-error" id="regError"></div>
@@ -1044,6 +1054,19 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       })
       .catch(() => showLock());
   }
+
+  function setupPasswordToggle(inputId, btnId){
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('click', () => {
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? '👁' : '🙈';
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+  }
+  setupPasswordToggle('loginPassword', 'loginPwToggle');
+  setupPasswordToggle('regPassword', 'regPwToggle');
 
   document.getElementById('showRegisterBtn').addEventListener('click', () => {
     loginPanel.style.display = 'none';
