@@ -270,14 +270,87 @@ function isWake(t){
 // AI is reserved for questions that actually need reasoning/live data.
 // ------------------------------------------------------------
 const LOCAL_ROUTES = {
-  home: ['index.html', 'flower-tools.html', 'home.html'],
-  inventory: ['item-inventory.html', 'inventory.html'],
-  dashboard: ['flower-dashboard.html', 'dashboard.html'],
-  purchases: ['purchase.html', 'purchases.html', 'supplier-invoice.html'],
-  reports: ['reports.html', 'flower-reports.html'],
-  cards: ['card-print.html', 'card-tools.html', 'card-printing.html'],
-  settings: ['settings.html'],
+  chocolatehome: ['index.html'],
+  flowerhome: ['flower-tools.html'],
+  iteminventory: ['item-inventory.html'],
+  chocolatedashboard: ['dashboard.html'],
+  flowerdashboard: ['flower-dashboard.html'],
+  itemdashboard: ['item-dashboard.html'],
+  chocolatereceiving: ['chocolate-receiving.html'],
+  flowerreceiving: ['flower-receiving.html'],
+  chocolaterelease: ['chocolate-release.html'],
+  stockcount: ['stock-count.html'],
+  flowerstockcount: ['flower-stock-count.html'],
+  stockapproval: ['stock-approval.html'],
+  initialstock: ['initial-stock.html'],
+  chocolatecalc: ['chocolate-calc.html'],
+  flowercalc: ['flower-calc.html'],
+  chocolateadmin: ['chocolate-admin.html'],
+  floweradmin: ['flower-admin.html'],
+  itemadmin: ['item-admin.html'],
+  chocolatebarcode: ['chocolate-barcode.html'],
+  flowerbarcode: ['flower-barcode.html'],
+  orderform: ['order-form.html'],
+  cardprint: ['card-print.html'],
+  notes: ['notes.html'],
+  chatbox: ['chatbox.html'],
+  branchconfig: ['branch-config.html'],
+  supplylog: ['supply-log.html'],
+  chocolateodoo: ['chocolate-odoo-import.html'],
+  flowerodoo: ['flower-odoo-import.html'],
+  itemodoo: ['item-odoo-import.html'],
+  // Generic fallbacks — used only when no branch-specific phrase
+  // (e.g. "flower dashboard") matched first, since ROUTE_PHRASES
+  // checks specific patterns before these general ones.
+  dashboard: ['flower-dashboard.html'],
+  inventory: ['item-inventory.html'],
+  purchases: ['supply-log.html'],
+  reports: ['flower-dashboard.html'],
+  home: ['index.html'],
 };
+
+// Each key above maps to a real page — this table gives every
+// natural way a person might refer to it in speech. Longer, more
+// specific phrases are listed BEFORE shorter/generic ones so
+// something like "flower dashboard" matches the flower-specific
+// route rather than the generic "dashboard" one.
+const ROUTE_PHRASES = [
+  ['chocolatehome', /chocolate home|chocolate main|chocolate tools/],
+  ['flowerhome', /flower home|flower tools|flower main|flower garden/],
+  ['iteminventory', /item inventory|ribbon.*inventory|vase.*inventory|supplies inventory/],
+  ['chocolatedashboard', /chocolate dashboard/],
+  ['flowerdashboard', /flower dashboard/],
+  ['itemdashboard', /item dashboard/],
+  ['dashboard', /dashboard/],
+  ['chocolatereceiving', /chocolate receiving/],
+  ['flowerreceiving', /flower receiving/],
+  ['receiving', /receiving/],
+  ['chocolaterelease', /chocolate release|release chocolate/],
+  ['flowerstockcount', /flower stock count|flower count/],
+  ['stockcount', /stock count|physical count/],
+  ['stockapproval', /stock approval|approve stock|approve count/],
+  ['initialstock', /initial stock|opening stock|starting stock/],
+  ['chocolatecalc', /chocolate calc|chocolate calculator|chocolate pric/],
+  ['flowercalc', /flower calc|flower calculator|flower pric/],
+  ['chocolateadmin', /chocolate admin/],
+  ['floweradmin', /flower admin/],
+  ['itemadmin', /item admin/],
+  ['chocolatebarcode', /chocolate barcode/],
+  ['flowerbarcode', /flower barcode/],
+  ['orderform', /order form/],
+  ['cardprint', /card print|card tool|print card|message card/],
+  ['notes', /notes|reminders/],
+  ['chatbox', /chat box|chatbox|messages|messaging/],
+  ['branchconfig', /branch config|branch setting/],
+  ['supplylog', /supply log|supplier log/],
+  ['chocolateodoo', /chocolate odoo|chocolate price import/],
+  ['flowerodoo', /flower odoo|flower price import/],
+  ['itemodoo', /item odoo|item price import/],
+  ['inventory', /inventory/],
+  ['purchases', /purchase/],
+  ['reports', /report/],
+  ['home', /\bhome\b|main page|main menu/],
+];
 
 function localNavigate(target){
   const candidates = LOCAL_ROUTES[target] || [];
@@ -331,28 +404,59 @@ function localCommand(raw){
     return {text:'Activity log cleared.', handled:true};
   }
 
-  // Navigation — no API.
-  const navPatterns = [
-    ['inventory', /^(open|go to|show|take me to)\s+(the\s+)?(item\s+)?inventory$/],
-    ['dashboard', /^(open|go to|show|take me to)\s+(the\s+)?dashboard$/],
-    ['purchases', /^(open|go to|show|take me to)\s+(the\s+)?(purchases?|purchase)$/],
-    ['reports', /^(open|go to|show|take me to)\s+(the\s+)?reports?$/],
-    ['cards', /^(open|go to|show|take me to)\s+(the\s+)?(card tools?|card printing|cards?)$/],
-    ['settings', /^(open|go to|show|take me to)\s+(the\s+)?settings?$/],
-    ['home', /^(open|go to|show|take me to)\s+(home|flower tools)$/],
-  ];
-
-  for (const [target, rx] of navPatterns){
-    if (rx.test(t)){
-      if (localNavigate(target))
-        return {text:'Opening ' + target + '.', handled:true};
-      return {text:'I know that local command, Boss, but I need the correct page file for ' + target + '.', handled:true};
+  // Navigation — no API. Any phrase containing "open/go to/show/take
+  // me to" followed by a recognizable page name routes locally.
+  if(/^(open|go to|show|take me to|navigate to)\b/.test(t)){
+    for(const [target, rx] of ROUTE_PHRASES){
+      if(rx.test(t)){
+        if(localNavigate(target))
+          return {text:'Opening ' + target.replace(/([A-Z])/g,' $1').toLowerCase() + '.', handled:true};
+        return {text:'I know that page, Boss, but I could not find its file to open it.', handled:true};
+      }
     }
   }
 
   // Local inventory start UI only. Actual stock data still comes from the backend.
   if (/^(start|begin)\s+(the\s+)?inventory$/.test(t))
     return {text:'Okay Boss. Inventory mode is ready. I can start the live count when the Flower Tools API is connected.', handled:true};
+
+  // ---------------------------------------------------------------
+  // System FAQ — how the Lalabella tools work, answered locally with
+  // no AI call needed. Longer/more specific phrases are checked first.
+  // ---------------------------------------------------------------
+  if (/what is (the )?chocolate system|about (the )?chocolate system|explain chocolate/.test(t))
+    return {text:'The Chocolate system tracks chocolate inventory across three branches: ModaMall, Hamala, and Galali. It covers receiving, release, barcode labels, an admin panel for new items, and a live dashboard.', handled:true};
+
+  if (/what is (the )?flower system|about (the )?flower system|explain flower/.test(t))
+    return {text:'The Flower system handles flower receiving, physical stock counting, and pricing, across the same three branches, with a dashboard showing live stock levels and purchase history.', handled:true};
+
+  if (/what is item inventory|about item inventory|explain item inventory/.test(t))
+    return {text:'Item Inventory tracks ribbon, vases, packaging, and fixed assets, also per branch, with New Item, Receiving, Release, and Transfer between branches, plus barcode labels for each item.', handled:true};
+
+  if (/how (do|can) i receive stock|how (does|to) receiving work/.test(t))
+    return {text:'To receive stock, open the Receiving tool for Chocolate or Flower, search for the item, enter the quantity received, and submit. The new total updates immediately.', handled:true};
+
+  if (/how (do|can) i release stock|how (does|to) release work/.test(t))
+    return {text:'To release stock, open the Release tool, search for the item, enter the quantity, and give a reason such as an order or event. This subtracts from the current total.', handled:true};
+
+  if (/how (do|can) i transfer items?|how (does|to) transfer work/.test(t))
+    return {text:'To transfer items between branches, use the Transfer tab in Item Inventory. Pick the item, the From branch, the To branch, and the quantity. It creates the item at the destination branch if it does not exist there yet.', handled:true};
+
+  if (/how (do|can) i (do a |start )?stock count|how (does|to) stock count work/.test(t))
+    return {text:'Stock Count lets you enter the physical quantity you actually counted for each item. The system compares it against the recorded quantity and shows the variance for review.', handled:true};
+
+  if (/what branches (do we have|are there)|how many branches/.test(t))
+    return {text:'Lalabella operates three branches: ModaMall, Hamala, and Galali.', handled:true};
+
+  if (/how (do|can) i print a barcode|how (does|to) barcode(s)? work/.test(t))
+    return {text:'Open the Barcode tool for Chocolate or Flower, find the item, and print its label directly from there.', handled:true};
+
+  if (/how (do|can) i print a card|how (does|to) card print work/.test(t))
+    return {text:'Open Card Print, choose your message and design, and print it directly for the order.', handled:true};
+
+  if (/what pages? (are there|do you have)|what can i open|list (the )?pages/.test(t))
+    return {text:'I can open Chocolate Home, Flower Home, Item Inventory, the dashboards, Receiving, Release, Stock Count, Calculators, Admin pages, Barcode tools, Order Form, Card Print, Notes, and more. Just say the name of what you need.', handled:true};
+
 
   // Not a local command -> caller may use API.
   return {handled:false};
