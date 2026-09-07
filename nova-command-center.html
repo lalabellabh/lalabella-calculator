@@ -519,6 +519,10 @@ async function askNova(message){
   try{
     const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({message,session,context:{page:'NOVA Command Center',app:'Flower Tools'}})});
+    if(!r.ok){
+      log('NOVA API HTTP error ' + r.status + ': ' + (await r.text()).slice(0,300), 'SYSTEM');
+      return 'The AI connection had a server error, Boss. Check Live Activity for the details.';
+    }
     const data=await r.json(); if(!data.ok) throw new Error(data.error||'API error');
     session=data.session||session;
     if(data.navigateTo){
@@ -527,7 +531,8 @@ async function askNova(message){
     }
     return data.text;
   }catch(e){
-    log('API connection unavailable — local command mode remains active.','SYSTEM');
+    console.error('[Joyboy] askNova failed:', e);
+    log('API error: ' + (e && e.message ? e.message : String(e)), 'SYSTEM');
     return 'The AI connection is unavailable right now, Boss. Local commands are still working.';
   }
 }
