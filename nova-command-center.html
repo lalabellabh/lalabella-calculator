@@ -214,6 +214,16 @@ for(let i=0;i<46;i++){const col=document.createElement('i'); col.textContent=Arr
 for(let i=0;i<36;i++){const x=document.createElement('i');wave.appendChild(x)}
 function setState(s,label){app.className='app '+s;state.innerHTML='CORE <b>'+label+'</b>'}
 function log(text,type='SYSTEM'){const d=document.createElement('div');d.className='event';d.innerHTML='<span>'+type+' · NOW</span><b>'+escapeHtml(text)+'</b>';activity.prepend(d)}
+// Surfaces ANY uncaught error into Live Activity itself, not just the
+// browser console — otherwise a silent JS exception (e.g. inside an
+// event handler) can quietly block a response with no visible sign
+// anything went wrong.
+window.addEventListener('error', (e)=>{
+  try{ log('Script error: ' + (e.message || 'unknown') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''), 'SYSTEM'); }catch(_){}
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  try{ log('Promise error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), 'SYSTEM'); }catch(_){}
+});
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function showTranscript(t){transcript.textContent=t;transcript.classList.add('show');clearTimeout(showTranscript.t);showTranscript.t=setTimeout(()=>transcript.classList.remove('show'),6000)}
 function speak(text){
@@ -224,19 +234,26 @@ function speak(text){
   // Prevent the wake listener from hearing NOVA's own voice.
   try{ if(wakeRecognition) wakeRecognition.stop(); }catch(e){}
   try{ if(recognition) recognition.stop(); }catch(e){}
-  startInterruptListener();
+  try{ startInterruptListener(); }catch(e){ console.error('[Joyboy] startInterruptListener failed:', e); }
 
   // Chrome has a well-known race condition where cancel() followed
   // immediately by speak() silently drops the utterance entirely —
-  // no sound, no error. A short delay avoids it.
+  // no sound, no error. A longer delay (was 80ms) gives the audio
+  // pipeline more room to fully reset on slower systems.
   speechSynthesis.cancel();
   setTimeout(()=>{
-    const u=new SpeechSynthesisUtterance(String(text));
-    u.lang='en-US';
-    // Chrome has a documented stutter/replay bug specifically with
-    // SHORT utterances when rate/pitch are set to non-default values
-    // (like .96/.92) — sticking to the plain defaults (1) avoids it
-    // on the systems where it shows up.
+    // Chrome's short-utterance stutter/replay bug (garbled "Yes,
+    // Boss?"-length phrases repeating themselves) is specifically
+    // tied to VERY short text. Padding it out with a leading space
+    // and trailing pause-inducing punctuation gives the engine's
+    // internal chunking enough material to not glitch, without
+    // being audibly different to the listener.
+    const padded = text.length < 20 ? (' ' + text + '  ') : text;
+    const u=new SpeechSynthesisUtterance(padded);
+    // Deliberately NOT setting u.lang or u.voice — letting the
+    // browser use its own default avoids a second Chrome bug where
+    // assigning a voice from a not-yet-fully-loaded getVoices() list
+    // can itself trigger the stutter.
     u.rate=1;
     u.pitch=1;
     u.volume=1;
@@ -248,11 +265,8 @@ function speak(text){
       log('Speech error: ' + (e && e.error ? e.error : 'unknown'), 'SYSTEM');
       setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350);
     };
-    // Some browsers need the voice list to be loaded before speaking.
-    const voices=speechSynthesis.getVoices();
-    if(voices.length) u.voice=voices.find(v=>/^en(-|_)/i.test(v.lang))||voices[0];
     speechSynthesis.speak(u);
-  }, 80);
+  }, 180);
 }
 function heard(text){showTranscript(text);log(text,'YOU')}
 // Tolerant wake-word matching — speech recognition engines frequently
