@@ -185,7 +185,15 @@ let isSpeaking=false; // Explicit flag — speechSynthesis.speaking can lag
                        // behind reality by several ms, which is exactly
                        // long enough for wakeRecognition's onend handler
                        // to misfire a restart while speak() is mid-setup.
-
+let wakeCooldownUntil=0; // Set for a couple seconds right after Joyboy
+                          // finishes speaking — without a laptop/phone's
+                          // mic having real echo-cancellation hardware,
+                          // the mic can pick up Joyboy's OWN voice (or
+                          // its speaker-echo) coming back through the
+                          // speakers as if it were a fresh "Hey Joyboy",
+                          // producing an endless "Yes, Boss?" loop. Any
+                          // wake trigger heard during this short window
+                          // is treated as an echo, not a real address.
 // Voice Interrupt toggle — the interrupt listener keeps the mic
 // active while speaking (needed to hear "Stop" mid-utterance), but on
 // systems without echo cancellation that can itself contribute to
@@ -257,7 +265,7 @@ function speak(text){
     u.rate=1;
     u.pitch=1;
     u.volume=1;
-    u.onend=()=>{isSpeaking=false; stopInterruptListener(); setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350)};
+    u.onend=()=>{isSpeaking=false; stopInterruptListener(); wakeCooldownUntil=Date.now()+2200; setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350)};
     u.onerror=(e)=>{
       isSpeaking=false;
       stopInterruptListener();
@@ -502,6 +510,12 @@ async function askNova(message){
 }
 async function handle(t){
   heard(t);
+  if(isWake(t) && Date.now() < wakeCooldownUntil){
+    // Heard right after Joyboy finished speaking — almost certainly
+    // the mic picking up its own voice/echo, not a real address.
+    // Silently ignore instead of treating it as a fresh wake.
+    return;
+  }
   if(!awake && !isWake(t)) return; // IMPORTANT: silent unless greeted
   if(isWake(t)){
     awake=true; setState('awake','AWAKE'); speak('Yes, Boss?'); 
