@@ -177,7 +177,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
   - After activation, normal conversation can be sent to your NOVA API.
   - Replace NOVA_API_URL after deploying nova-api.gs.
 */
-const NOVA_API_URL = 'https://script.google.com/macros/s/AKfycbxiET8LZ9VplRo13KR7-pn74Gu_gYkZmGsEwJD50qm7NVYDK9NfXBxIcNeDP_lSBkeC/exec';
+const NOVA_API_URL = 'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec';
 const app=document.getElementById('app'), core=document.getElementById('core'), state=document.getElementById('state');
 const transcript=document.getElementById('transcript'), activity=document.getElementById('activity'), wave=document.getElementById('wave');
 let listening=false, awake=false, recognition=null, wakeRecognition=null, session={};
@@ -194,6 +194,29 @@ let wakeCooldownUntil=0; // Set for a couple seconds right after Joyboy
                           // producing an endless "Yes, Boss?" loop. Any
                           // wake trigger heard during this short window
                           // is treated as an echo, not a real address.
+
+// Circuit breaker — on some systems the echo is persistent enough that
+// even the cooldown above isn't sufficient and the loop keeps going
+// (just slower). If several wake-triggers land in quick succession,
+// this stops the automatic mic entirely rather than let it keep
+// talking to itself — the person has to tap the mic button to
+// manually confirm they're really there before it resumes.
+let recentWakeCount=0;
+let recentWakeWindowStart=0;
+let autoWakeDisabled=false;
+function registerWakeTrigger(){
+  const now=Date.now();
+  if(now - recentWakeWindowStart > 12000){
+    recentWakeWindowStart=now;
+    recentWakeCount=0;
+  }
+  recentWakeCount++;
+  if(recentWakeCount >= 3){
+    autoWakeDisabled=true;
+    try{ if(wakeRecognition) wakeRecognition.stop(); }catch(e){}
+    log('Auto-listening paused — heard "Joyboy" too many times in a row (likely echo feedback). Tap the mic button to resume.', 'SYSTEM');
+  }
+}
 // Voice Interrupt toggle — the interrupt listener keeps the mic
 // active while speaking (needed to hear "Stop" mid-utterance), but on
 // systems without echo cancellation that can itself contribute to
@@ -518,6 +541,8 @@ async function handle(t){
   }
   if(!awake && !isWake(t)) return; // IMPORTANT: silent unless greeted
   if(isWake(t)){
+    registerWakeTrigger();
+    if(autoWakeDisabled) return;
     awake=true; setState('awake','AWAKE'); speak('Yes, Boss?'); 
     const rest=t.replace(/\b(hey\s+joyboy|hello\s+joyboy|joyboy)\b/i,'').trim();
     if(rest) setTimeout(()=>handle(rest),350);
@@ -572,6 +597,7 @@ function stopInterruptListener(){
 }
 
 function startWake(){
+  if(autoWakeDisabled) return; // paused by the circuit breaker — only the manual mic button can clear this
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){log('Speech recognition is not supported in this browser.','SYSTEM');return}
   if(wakeRecognition) { try{wakeRecognition.stop()}catch(e){} }
@@ -621,6 +647,13 @@ function startWake(){
 function manual(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
   if(listening){recognition?.stop();return}
+  // A deliberate button tap is real human confirmation — safe to
+  // clear the echo-loop circuit breaker and resume normal listening.
+  if(autoWakeDisabled){
+    autoWakeDisabled=false;
+    recentWakeCount=0;
+    log('Auto-listening resumed.', 'SYSTEM');
+  }
   try{if(wakeRecognition)wakeRecognition.stop()}catch(e){}
   // Pressing the mic button IS the wake gesture — a deliberate tap
   // already establishes intent, so whatever is said next should be
