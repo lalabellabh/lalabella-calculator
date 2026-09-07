@@ -265,7 +265,7 @@ function speak(text){
     u.rate=1;
     u.pitch=1;
     u.volume=1;
-    u.onend=()=>{isSpeaking=false; stopInterruptListener(); wakeCooldownUntil=Date.now()+2200; setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350)};
+    u.onend=()=>{isSpeaking=false; stopInterruptListener(); wakeCooldownUntil=Date.now()+4500; setState(awake?'awake':'','AWAKE'); setTimeout(startWake,1500)};
     u.onerror=(e)=>{
       isSpeaking=false;
       stopInterruptListener();
