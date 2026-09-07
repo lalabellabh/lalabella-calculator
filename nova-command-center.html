@@ -104,6 +104,13 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
       <button>⚙ System</button>
     </div>
     <div class="status"><span class="dot"></span><b style="font-size:11px">SYSTEM ONLINE</b><br><small>Listening only when addressed</small></div>
+    <div style="padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#0a0d12;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        <b style="font-size:10.5px;display:block;">Voice Interrupt</b>
+        <small style="color:var(--muted);font-size:9px;line-height:1.4;display:block;margin-top:2px;">Say "Stop" while speaking. Turn off if it causes audio stutter.</small>
+      </div>
+      <button id="voiceInterruptToggle" style="flex-shrink:0;width:38px;height:22px;border-radius:11px;border:1px solid var(--line);background:#1a2e1f;position:relative;cursor:pointer;padding:0;"><span id="voiceInterruptDot" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--green);transition:.2s ease;box-shadow:0 0 8px var(--green);"></span></button>
+    </div>
     <div style="font-size:10px;color:#6b7280;font-style:italic;text-align:center;line-height:1.6;padding:0 4px;">"Smarter tools. Better Flowers. Bigger dreams."</div>
   </aside>
 
@@ -159,6 +166,28 @@ let isSpeaking=false; // Explicit flag — speechSynthesis.speaking can lag
                        // long enough for wakeRecognition's onend handler
                        // to misfire a restart while speak() is mid-setup.
 
+// Voice Interrupt toggle — the interrupt listener keeps the mic
+// active while speaking (needed to hear "Stop" mid-utterance), but on
+// systems without echo cancellation that can itself contribute to
+// audio stutter. Saved to localStorage so the choice persists.
+let voiceInterruptEnabled = (localStorage.getItem('joyboyVoiceInterrupt') !== 'off');
+const viToggle = document.getElementById('voiceInterruptToggle');
+const viDot = document.getElementById('voiceInterruptDot');
+function renderInterruptToggle(){
+  viToggle.style.background = voiceInterruptEnabled ? '#1a2e1f' : '#2a1414';
+  viDot.style.left = voiceInterruptEnabled ? '2px' : '18px';
+  viDot.style.background = voiceInterruptEnabled ? 'var(--green)' : '#8a5555';
+  viDot.style.boxShadow = voiceInterruptEnabled ? '0 0 8px var(--green)' : 'none';
+}
+renderInterruptToggle();
+viToggle.addEventListener('click', ()=>{
+  voiceInterruptEnabled = !voiceInterruptEnabled;
+  localStorage.setItem('joyboyVoiceInterrupt', voiceInterruptEnabled ? 'on' : 'off');
+  renderInterruptToggle();
+  if(!voiceInterruptEnabled) stopInterruptListener();
+  log('Voice Interrupt turned ' + (voiceInterruptEnabled ? 'ON' : 'OFF') + '. Use the mic button to interrupt speech instead.', 'SYSTEM');
+});
+
 const matrix=document.getElementById('matrix');
 const glyphs='01NOVA<>[]{}/*\\+-=|AI';
 for(let i=0;i<46;i++){const col=document.createElement('i'); col.textContent=Array.from({length:Math.floor(7+Math.random()*18)},()=>glyphs[Math.floor(Math.random()*glyphs.length)]).join('\n'); col.style.left=(Math.random()*100)+'%'; col.style.animationDuration=(5+Math.random()*9)+'s'; col.style.animationDelay=(-Math.random()*12)+'s'; col.style.fontSize=(8+Math.random()*6)+'px'; matrix.appendChild(col)}
@@ -175,6 +204,7 @@ function speak(text){
   // Prevent the wake listener from hearing NOVA's own voice.
   try{ if(wakeRecognition) wakeRecognition.stop(); }catch(e){}
   try{ if(recognition) recognition.stop(); }catch(e){}
+  startInterruptListener();
 
   // Chrome has a well-known race condition where cancel() followed
   // immediately by speak() silently drops the utterance entirely —
@@ -190,9 +220,10 @@ function speak(text){
     u.rate=1;
     u.pitch=1;
     u.volume=1;
-    u.onend=()=>{isSpeaking=false; setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350)};
+    u.onend=()=>{isSpeaking=false; stopInterruptListener(); setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350)};
     u.onerror=(e)=>{
       isSpeaking=false;
+      stopInterruptListener();
       console.error('[NOVA] speech error:', e);
       log('Speech error: ' + (e && e.error ? e.error : 'unknown'), 'SYSTEM');
       setState(awake?'awake':'','AWAKE'); setTimeout(startWake,350);
@@ -342,6 +373,52 @@ async function handle(t){
   }
   const answer=await askNova(t); speak(answer);
 }
+// A separate, always-on recognizer that runs SPECIFICALLY while NOVA
+// is speaking — the normal wake listener has to stay off during
+// speech (otherwise it hears NOVA's own voice), but that also meant
+// there was previously NO way to interrupt a stuck/stuttering
+// utterance by voice. This one only ever reacts to a stop-phrase; any
+// other speech it picks up (including NOVA's own voice bleeding into
+// the mic) is silently ignored.
+let interruptRecognition=null;
+function startInterruptListener(){
+  if(!voiceInterruptEnabled) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  try{ if(interruptRecognition) interruptRecognition.stop(); }catch(e){}
+  interruptRecognition=new SR();
+  interruptRecognition.continuous=true;
+  interruptRecognition.interimResults=true;
+  interruptRecognition.lang='en-US';
+  interruptRecognition.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript.toLowerCase();
+      if(/\b(stop|stop talking|be quiet|silence|cancel|tigil|tama\s*na)\b/i.test(t)){
+        speechSynthesis.cancel();
+        isSpeaking=false;
+        stopInterruptListener();
+        log('Speech stopped by voice interrupt.','SYSTEM');
+        setState(awake?'awake':'','AWAKE');
+        setTimeout(startWake,300);
+        return;
+      }
+    }
+  };
+  interruptRecognition.onend=()=>{
+    if(isSpeaking && interruptRecognition){
+      setTimeout(()=>{ if(isSpeaking) try{interruptRecognition.start()}catch(e){} },150);
+    }
+  };
+  try{ interruptRecognition.start(); }catch(e){}
+}
+function stopInterruptListener(){
+  if(interruptRecognition){
+    const r=interruptRecognition;
+    interruptRecognition=null; // clear first so onend doesn't restart it
+    try{ r.stop(); }catch(e){}
+  }
+}
+
 function startWake(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){log('Speech recognition is not supported in this browser.','SYSTEM');return}
