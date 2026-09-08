@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Duty Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
+    --cream:#fdf1f0; --ink:#2f2024; --muted:#8a7078; --line:#f0dede;
+    --panel:#ffffff; --bg:#fdf1f0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
+  body{padding:22px 16px 60px;}
+
+  .wrap{max-width:1000px;margin:0 auto;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;font-weight:800;color:#3a2a10;}
+  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
+  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
+
+  /* Hero: clock + weather side by side, this IS the memorable moment */
+  .hero{display:grid;grid-template-columns:1.3fr 1fr;gap:0;border-radius:24px;overflow:hidden;box-shadow:0 18px 46px rgba(158,47,74,.16);margin-bottom:26px;}
+  .clock-panel{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);color:#fff;padding:34px 30px;position:relative;overflow:hidden;}
+  .clock-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(217,164,65,.22),transparent 55%);}
+  .clock-date{position:relative;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-light);margin-bottom:6px;}
+  .clock-time{position:relative;font-family:'Fraunces',serif;font-weight:700;font-size:clamp(38px,7vw,58px);line-height:1;letter-spacing:-.01em;}
+  .clock-time span{font-size:.42em;color:rgba(255,255,255,.55);margin-left:6px;}
+  .clock-sub{position:relative;margin-top:10px;font-size:12px;color:rgba(255,255,255,.7);}
+
+  .weather-panel{background:#fff;padding:30px 26px;display:flex;flex-direction:column;justify-content:center;gap:6px;}
+  .weather-loc{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .weather-main{display:flex;align-items:center;gap:14px;margin:6px 0;}
+  .weather-emoji{font-size:44px;line-height:1;}
+  .weather-temp{font-family:'Fraunces',serif;font-weight:700;font-size:40px;color:var(--rose-dark);}
+  .weather-desc{font-size:13px;color:var(--muted);}
+  .weather-extra{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);}
+  .weather-extra b{color:var(--ink);}
+
+  @media(max-width:680px){ .hero{grid-template-columns:1fr;} }
+
+  /* Employee selector */
+  .selector-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:22px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .selector-card label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .selector-row{display:flex;gap:10px;flex-wrap:wrap;}
+  select#employeeSelect{flex:1;min-width:180px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;}
+  select#employeeSelect:focus{border-color:var(--rose);}
+  .my-schedule-btn{padding:12px 18px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .my-schedule-btn:active{transform:scale(.97);}
+
+  /* Real month calendar */
+  .cal-title{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;}
+  .cal-title .role-tag{font-size:11px;background:var(--gold-light);color:#5c4416;padding:3px 10px;border-radius:20px;font-family:'Space Grotesk',sans-serif;font-weight:600;}
+  .cal-nav{display:flex;align-items:center;gap:10px;font-size:13px;}
+  .cal-nav button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;color:var(--rose-dark);}
+  .cal-nav button:hover{background:var(--cream);}
+
+  .month-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px;}
+  .weekday-row span{text-align:center;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+
+  .date-cell{position:relative;border-radius:12px;min-height:74px;padding:6px 6px 8px;background:#fdfbfa;border:1px solid transparent;transition:box-shadow .2s;}
+  .date-cell.pad{background:transparent;}
+  .date-cell.today{border-color:var(--rose);}
+  .date-cell .dnum{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .date-cell.today .dnum{color:var(--rose-dark);}
+
+  /* Snake-and-ladder style reveal: cells within the active week light
+     up and populate one after another in sequence (Sun -> Sat), like
+     a token hopping square to square across the board, instead of
+     everything appearing at once. */
+  .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#fdf1ee 100%);border-color:var(--rose);box-shadow:0 6px 14px rgba(201,80,107,.14);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .date-cell.hit.off{background:#faf6f5;border-color:var(--line);box-shadow:none;}
+  @keyframes hopIn{ 60%{ transform:scale(1.06) translateY(-3px); opacity:1; } 100%{ transform:scale(1) translateY(0); opacity:1; } }
+  .date-cell.hit::before{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold);}
+  .date-cell .shift-txt{margin-top:5px;font-size:10.5px;line-height:1.35;color:var(--ink);font-weight:600;}
+  .date-cell .shift-txt.off-txt{color:var(--muted);font-weight:500;}
+  .date-cell .branch-txt{margin-top:3px;font-size:9.5px;color:#3a5c46;background:#eef2ee;display:inline-block;padding:1px 6px;border-radius:8px;}
+
+  /* Connecting "path" dots drawn between consecutive revealed cells
+     in the same row, echoing the board-game trail without needing a
+     literal snakes-and-ladders illustration. */
+  .date-cell.hit:not(:first-child)::after{content:'';position:absolute;left:-9px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold-light);opacity:0;animation:dotFade .3s ease forwards .15s;}
+  @keyframes dotFade{ to{ opacity:1; } }
+
+  @media(max-width:600px){
+    .date-cell{min-height:60px;}
+    .date-cell .shift-txt{font-size:9px;}
+  }
+
+  .empty-state{padding:20px;}
+  .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+
+  /* Empty-state hero — fills the otherwise-wasted space with a
+     gently animated calendar illustration instead of one dim line
+     of text, especially on wide desktop/webapp viewports. */
+  .empty-hero{position:relative;min-height:280px;border-radius:22px;background:linear-gradient(160deg,#fff 0%,#fdf6f5 100%);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:30px 20px;}
+  .empty-hero-float{position:absolute;font-size:26px;opacity:.5;animation:emptyFloat 6s ease-in-out infinite;}
+  @keyframes emptyFloat{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-14px) rotate(4deg); } }
+
+  .empty-cal-icon{width:88px;height:88px;position:relative;animation:calBreathe 3.4s ease-in-out infinite;z-index:1;}
+  @keyframes calBreathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+  .empty-cal-icon .cal-top{position:absolute;top:0;left:8px;right:8px;height:20px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:10px 10px 0 0;}
+  .empty-cal-icon .cal-ring{position:absolute;top:-6px;width:8px;height:16px;border-radius:4px;background:var(--gold);box-shadow:0 0 0 2px #fff;}
+  .empty-cal-icon .cal-ring.l{left:22px;}
+  .empty-cal-icon .cal-ring.r{right:22px;}
+  .empty-cal-icon .cal-body{position:absolute;top:16px;left:0;right:0;bottom:0;background:#fff;border:2px solid var(--rose);border-top:none;border-radius:0 0 14px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:16px 10px 10px;}
+  .empty-cal-icon .cal-dot{width:9px;height:9px;border-radius:3px;background:#f1dede;}
+  .empty-cal-icon .cal-dot.hi{background:var(--gold);animation:dotPulse 1.8s ease-in-out infinite;}
+  @keyframes dotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+  .empty-hero-title{font-family:'Fraunces',serif;font-size:17px;margin:18px 0 4px;color:var(--ink);z-index:1;}
+  .empty-hero-sub{font-size:12.5px;color:var(--muted);z-index:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><div class="logo">L</div><b>Duty Schedule</b></div>
+    <a class="backlink" href="index.html">← Back to Lalabella</a>
+  </div>
+
+  <div class="hero">
+    <div class="clock-panel">
+      <div class="clock-date" id="clockDate">—</div>
+      <div class="clock-time" id="clockTime">--:--<span id="clockSec">--</span></div>
+      <div class="clock-sub">Bahrain time (AST)</div>
+    </div>
+    <div class="weather-panel">
+      <div class="weather-loc">Bahrain</div>
+      <div class="weather-main">
+        <div class="weather-emoji" id="weatherEmoji">☁️</div>
+        <div>
+          <div class="weather-temp" id="weatherTemp">—°C</div>
+          <div class="weather-desc" id="weatherDesc">Loading weather…</div>
+        </div>
+      </div>
+      <div class="weather-extra">
+        <span>Feels like <b id="weatherFeels">—°</b></span>
+        <span>Humidity <b id="weatherHumidity">—%</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="selector-card">
+    <label>Whose schedule do you want to see?</label>
+    <div class="selector-row">
+      <select id="employeeSelect">
+        <option value="">Loading employees…</option>
+      </select>
+      <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
+    </div>
+  </div>
+
+  <h2 class="cal-title">
+    <span id="calTitleText">Select a name to see their schedule <span class="role-tag" id="calRoleTag" style="display:none;"></span></span>
+    <span class="cal-nav">
+      <button id="prevMonthBtn" aria-label="Previous month">‹</button>
+      <span id="monthLabel">—</span>
+      <button id="nextMonthBtn" aria-label="Next month">›</button>
+    </span>
+  </h2>
+
+  <div class="month-card">
+    <div class="weekday-row">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="month-grid" id="monthGrid"></div>
+  </div>
+
+  <div id="calEmptyNote" class="empty-state">
+    <div class="empty-hero">
+      <span class="empty-hero-float" style="left:12%;top:18%;animation-delay:0s;">🌸</span>
+      <span class="empty-hero-float" style="right:14%;top:24%;animation-delay:1.4s;">🍫</span>
+      <span class="empty-hero-float" style="left:16%;bottom:20%;animation-delay:2.6s;font-size:20px;">✨</span>
+      <span class="empty-hero-float" style="right:12%;bottom:16%;animation-delay:.8s;font-size:20px;">🎀</span>
+      <div class="empty-cal-icon">
+        <div class="cal-ring l"></div><div class="cal-ring r"></div>
+        <div class="cal-top"></div>
+        <div class="cal-body">
+          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot hi"></div><div class="cal-dot"></div>
+          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div>
+        </div>
+      </div>
+      <div class="empty-hero-title">No one selected yet</div>
+      <div class="empty-hero-sub">Pick a name above — their shifts will hop onto the calendar</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCHEDULE_API_URL = 'https://script.google.com/macros/s/AKfycbwp9vFxJFCfQtBZY0VQVMxXNw3BxPnfFSAzNrqVC-WBq3h7-YlzuhHBWucte6pcSf4/exec';
+const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DAY_FULL = {SUN:'Sunday',MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+
+// ---------- Real-time clock ----------
+function tickClock(){
+  const now = new Date();
+  const opts = { timeZone: 'Asia/Bahrain' };
+  const dateStr = now.toLocaleDateString('en-US', { ...opts, weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { ...opts, hour:'numeric', minute:'2-digit', hour12:true });
+  const [main, ampm] = timeStr.split(' ');
+  document.getElementById('clockDate').textContent = dateStr;
+  document.getElementById('clockTime').innerHTML = main + '<span>' + (ampm||'') + '</span>';
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ---------- Weather (Open-Meteo — free, no API key required) ----------
+const WEATHER_ICONS = {
+  0:['☀️','Clear sky'], 1:['🌤️','Mostly clear'], 2:['⛅','Partly cloudy'], 3:['☁️','Overcast'],
+  45:['🌫️','Fog'], 48:['🌫️','Fog'],
+  51:['🌦️','Light drizzle'], 61:['🌧️','Light rain'], 63:['🌧️','Rain'], 65:['🌧️','Heavy rain'],
+  80:['🌦️','Rain showers'], 95:['⛈️','Thunderstorm']
+};
+async function loadWeather(){
+  try{
+    // Manama, Bahrain coordinates
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FBahrain';
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+    const [emoji, desc] = WEATHER_ICONS[c.weather_code] || ['🌡️','—'];
+    document.getElementById('weatherEmoji').textContent = emoji;
+    document.getElementById('weatherTemp').textContent = Math.round(c.temperature_2m) + '°C';
+    document.getElementById('weatherDesc').textContent = desc;
+    document.getElementById('weatherFeels').textContent = Math.round(c.apparent_temperature) + '°C';
+    document.getElementById('weatherHumidity').textContent = Math.round(c.relative_humidity_2m) + '%';
+  }catch(e){
+    document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+  }
+}
+loadWeather();
+setInterval(loadWeather, 15 * 60 * 1000); // refresh every 15 minutes
+
+// ---------- Schedule data ----------
+let allEmployees = [];
+let currentSchedule = null;   // last-loaded schedule records for the selected employee
+let currentEmployeeName = null;
+let viewMonth = new Date().getMonth();
+let viewYear = new Date().getFullYear();
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+// Renders the real month grid (correct number of days, correct
+// weekday offsets, actual date numbers) — independent of whether a
+// schedule is loaded yet.
+function renderMonthGrid(){
+  const monthGrid = document.getElementById('monthGrid');
+  const monthLabel = document.getElementById('monthLabel');
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const startWeekday = firstOfMonth.getDay(); // 0=Sun
+
+  monthLabel.textContent = firstOfMonth.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear()===viewYear && today.getMonth()===viewMonth;
+
+  monthGrid.innerHTML = '';
+  for(let i=0;i<startWeekday;i++){
+    const pad = document.createElement('div');
+    pad.className = 'date-cell pad';
+    monthGrid.appendChild(pad);
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const cell = document.createElement('div');
+    cell.className = 'date-cell';
+    cell.dataset.date = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
+    if(isCurrentMonth && d===today.getDate()) cell.classList.add('today');
+    cell.innerHTML = `<div class="dnum">${d}</div>`;
+    monthGrid.appendChild(cell);
+  }
+
+  // If a schedule is already loaded, re-apply it to the freshly
+  // rendered month (e.g. after navigating months).
+  if(currentSchedule) applyScheduleToGrid(currentSchedule, employeeIsOnScreen());
+}
+function employeeIsOnScreen(){ return true; }
+
+document.getElementById('prevMonthBtn').addEventListener('click', () => {
+  viewMonth--; if(viewMonth<0){ viewMonth=11; viewYear--; }
+  renderMonthGrid();
+});
+document.getElementById('nextMonthBtn').addEventListener('click', () => {
+  viewMonth++; if(viewMonth>11){ viewMonth=0; viewYear++; }
+  renderMonthGrid();
+});
+
+async function loadEmployees(){
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(SCHEDULE_API_URL + '?action=getEmployees&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){ throw new Error(data.error||'Failed to load employees'); }
+    allEmployees = data.employees;
+    const sel = document.getElementById('employeeSelect');
+    sel.innerHTML = '<option value="">— Select a name —</option>' +
+      allEmployees.map(e => `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`).join('');
+  }catch(e){
+    document.getElementById('employeeSelect').innerHTML = '<option value="">Could not load — check connection</option>';
+  }
+}
+
+async function loadScheduleFor(employeeName){
+  document.getElementById('calEmptyNote').style.display = 'none';
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success || !data.schedule.length){
+      document.getElementById('calEmptyNote').style.display = 'block';
+      document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No schedule found';
+      document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.';
+      currentSchedule = null;
+      renderMonthGrid();
+      return;
+    }
+    currentSchedule = data.schedule;
+    currentEmployeeName = employeeName;
+
+    const emp = allEmployees.find(e => e.name === employeeName);
+    document.getElementById('calTitleText').innerHTML = `${employeeName}'s schedule`;
+    const roleTag = document.getElementById('calRoleTag');
+    if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
+    else { roleTag.style.display = 'none'; }
+
+    // Jump the calendar view to the month the schedule's week falls in.
+    if(data.schedule[0] && data.schedule[0].WeekOf){
+      const wk = new Date(data.schedule[0].WeekOf);
+      if(!isNaN(wk)){ viewMonth = wk.getMonth(); viewYear = wk.getFullYear(); }
+    }
+    renderMonthGrid();
+    applyScheduleToGrid(currentSchedule, true);
+  }catch(e){
+    document.getElementById('calEmptyNote').style.display = 'block';
+    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'Connection error';
+    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'Could not load schedule — check your connection.';
+  }
+}
+
+// The "snake and ladder" reveal: walk the week's records in day
+// order (Sun -> Sat), find each one's actual calendar date cell, and
+// pop it in with a staggered delay — so the shifts visibly hop onto
+// the board one square at a time, tracing the week left to right.
+function applyScheduleToGrid(records, animate){
+  const byDay = {};
+  records.forEach(r => { byDay[r.Day] = r; });
+  const weekOf = records[0] && records[0].WeekOf ? new Date(records[0].WeekOf) : null;
+
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
+
+  let step = 0;
+  DAY_ORDER.forEach((day, idx) => {
+    const rec = byDay[day];
+    if(!rec || !weekOf) return;
+    const cellDate = new Date(weekOf);
+    cellDate.setDate(weekOf.getDate() + idx);
+    const key = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth()+1)}-${pad2(cellDate.getDate())}`;
+    const cell = document.querySelector(`.date-cell[data-date="${key}"]`);
+    if(!cell) return; // that date isn't in the currently-viewed month
+
+    const isOff = /^off$/i.test(String(rec.ScheduleDetail).trim());
+    cell.classList.add('hit');
+    if(isOff) cell.classList.add('off');
+    if(animate) cell.style.animationDelay = (step * 0.12) + 's';
+    step++;
+
+    const detail = String(rec.ScheduleDetail);
+    const [mainPart, ...noteParts] = detail.split(';');
+    const shiftEl = document.createElement('div');
+    shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
+    shiftEl.textContent = isOff ? 'Off' : mainPart.trim();
+    cell.appendChild(shiftEl);
+
+    if(rec.HomeBranch){
+      const branchEl = document.createElement('div');
+      branchEl.className = 'branch-txt';
+      branchEl.textContent = rec.HomeBranch;
+      cell.appendChild(branchEl);
+    }
+  });
+}
+
+document.getElementById('employeeSelect').addEventListener('change', (e) => {
+  if(e.target.value) loadScheduleFor(e.target.value);
+});
+
+document.getElementById('myScheduleBtn').addEventListener('click', async () => {
+  const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
+  if(!userStr){ return; }
+  const user = JSON.parse(userStr);
+  const firstName = (user.fullName || '').split(' ')[0];
+  const sel = document.getElementById('employeeSelect');
+  const match = allEmployees.find(e => e.name.toLowerCase() === firstName.toLowerCase());
+  if(match){
+    sel.value = match.name;
+    loadScheduleFor(match.name);
+  } else {
+    document.getElementById('calEmptyNote').style.display = 'block';
+    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No match found';
+    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.';
+  }
+});
+
+renderMonthGrid();
+loadEmployees();
+</script>
+</body>
+</html>
