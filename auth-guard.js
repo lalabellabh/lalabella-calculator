@@ -1,4 +1,4 @@
-""/**
+/**
  * LALABELLA AUTH GUARD — FAST SESSION v3
  *
  * Browser session gate for protected pages.
@@ -11,7 +11,7 @@
  *   field in their POST body.
  */
 (function () {
-  const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
+  const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec';
   const BACKEND_PATTERN = /script\.google\.com\/macros\/s\//;
   const VERIFY_CACHE_MS = 30 * 60 * 1000;
   const VERIFY_TIMEOUT_MS = 8000;
@@ -147,7 +147,6 @@
         markVerified();
       }
 
-      // Temporary/malformed server errors do not destroy a remembered session.
       return true;
     } catch (e) {
       return true;
@@ -272,4 +271,3 @@
     }
   });
 })();
-""
