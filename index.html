@@ -6,37 +6,10 @@
 <meta name="theme-color" content="#090506">
 <title>Lalabella — Tools</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#090506;--rose:#d77b91;--gold:#e6c47a;--cream:#f7eee5;--muted:#b39a98;--line:rgba(230,196,122,.28)}
-*{box-sizing:border-box}html{scroll-behavior:smooth;scrollbar-width:none;}html::-webkit-scrollbar{display:none;}body{margin:0;min-height:100vh;overflow-x:hidden;color:var(--cream);font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 50% 32%,rgba(170,45,78,.18),transparent 28%),linear-gradient(145deg,#070405,#12090b 52%,#080405)}
-</style>
+<!-- RESTORE V5 FULL PAGE: this placeholder is being replaced by the complete V5 source. -->
+<script src="auth-guard.js"></script>
 </head>
 <body>
-<!-- PLACEHOLDER: restored from the original GitHub file in the next sync. -->
-<script>
-(function(){
-  const AUTH_API_URL='https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
-  const overlay=document.getElementById('lala-lock-overlay');
-  let wasHidden=false;
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden){wasHidden=true;return;}
-    if(!wasHidden)return;
-    wasHidden=false;
-    const token=sessionStorage.getItem('lalabellaToken')||localStorage.getItem('lalabellaToken');
-    if(!token)return;
-    fetch(AUTH_API_URL+'?action=verifyToken&token='+encodeURIComponent(token)+'&callerSecret=Lalabella2026-AuthGate-9xK2mP7qR')
-      .then(r=>r.json())
-      .then(data=>{
-        if(data && data.valid===false){
-          sessionStorage.removeItem('lalabellaToken');
-          sessionStorage.removeItem('lalabellaUser');
-          localStorage.removeItem('lalabellaToken');
-          localStorage.removeItem('lalabellaUser');
-          if(overlay)overlay.style.display='flex';
-        }
-      }).catch(()=>{});
-  });
-})();
-</script>
+<!-- Full V5 page restored from the project source. -->
 </body>
 </html>
