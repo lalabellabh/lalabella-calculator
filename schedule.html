@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Duty Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
+    --cream:#fdf1f0; --ink:#2f2024; --muted:#8a7078; --line:#f0dede;
+    --panel:#ffffff; --bg:#fdf1f0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
+  body{padding:22px 16px 60px;}
+
+  .wrap{max-width:1000px;margin:0 auto;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;font-weight:800;color:#3a2a10;}
+  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
+  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
+
+  /* Hero: clock + weather side by side, this IS the memorable moment */
+  .hero{display:grid;grid-template-columns:1.3fr 1fr;gap:0;border-radius:24px;overflow:hidden;box-shadow:0 18px 46px rgba(158,47,74,.16);margin-bottom:26px;}
+  .clock-panel{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);color:#fff;padding:34px 30px;position:relative;overflow:hidden;}
+  .clock-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(217,164,65,.22),transparent 55%);}
+  .clock-date{position:relative;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-light);margin-bottom:6px;}
+  .clock-time{position:relative;font-family:'Fraunces',serif;font-weight:700;font-size:clamp(38px,7vw,58px);line-height:1;letter-spacing:-.01em;}
+  .clock-time span{font-size:.42em;color:rgba(255,255,255,.55);margin-left:6px;}
+  .clock-sub{position:relative;margin-top:10px;font-size:12px;color:rgba(255,255,255,.7);}
+
+  .weather-panel{background:#fff;padding:30px 26px;display:flex;flex-direction:column;justify-content:center;gap:6px;}
+  .weather-loc{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .weather-main{display:flex;align-items:center;gap:14px;margin:6px 0;}
+  .weather-emoji{font-size:44px;line-height:1;}
+  .weather-temp{font-family:'Fraunces',serif;font-weight:700;font-size:40px;color:var(--rose-dark);}
+  .weather-desc{font-size:13px;color:var(--muted);}
+  .weather-extra{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);}
+  .weather-extra b{color:var(--ink);}
+
+  @media(max-width:680px){ .hero{grid-template-columns:1fr;} }
+
+  /* Employee selector */
+  .selector-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:22px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .selector-card label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .selector-row{display:flex;gap:10px;flex-wrap:wrap;}
+  select#employeeSelect{flex:1;min-width:180px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;}
+  select#employeeSelect:focus{border-color:var(--rose);}
+  .my-schedule-btn{padding:12px 18px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .my-schedule-btn:active{transform:scale(.97);}
+
+  /* Calendar grid */
+  .cal-title{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;display:flex;align-items:center;gap:10px;}
+  .cal-title .role-tag{font-size:11px;background:var(--gold-light);color:#5c4416;padding:3px 10px;border-radius:20px;font-family:'Space Grotesk',sans-serif;font-weight:600;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+  @media(max-width:820px){ .cal-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:460px){ .cal-grid{grid-template-columns:1fr;} }
+
+  .day-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 14px;min-height:120px;opacity:0;transform:translateY(10px);animation:dayIn .45s ease forwards;}
+  .day-card.today{border-color:var(--rose);box-shadow:0 0 0 3px rgba(201,80,107,.12);}
+  .day-card.off{background:#faf6f5;}
+  @keyframes dayIn{ to{ opacity:1; transform:translateY(0); } }
+
+  .day-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
+  .day-label b{color:var(--rose-dark);}
+  .day-shift{margin-top:10px;font-size:14px;font-weight:600;line-height:1.4;}
+  .day-shift.off-text{color:var(--muted);font-weight:500;}
+  .day-note{margin-top:6px;font-size:11.5px;color:var(--muted);line-height:1.5;}
+  .day-branch-tag{display:inline-block;margin-top:8px;font-size:10.5px;background:#eef2ee;color:#3a5c46;padding:2px 8px;border-radius:10px;}
+
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+  .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><div class="logo">L</div><b>Duty Schedule</b></div>
+    <a class="backlink" href="index.html">← Back to Lalabella</a>
+  </div>
+
+  <div class="hero">
+    <div class="clock-panel">
+      <div class="clock-date" id="clockDate">—</div>
+      <div class="clock-time" id="clockTime">--:--<span id="clockSec">--</span></div>
+      <div class="clock-sub">Bahrain time (AST)</div>
+    </div>
+    <div class="weather-panel">
+      <div class="weather-loc">Bahrain</div>
+      <div class="weather-main">
+        <div class="weather-emoji" id="weatherEmoji">☁️</div>
+        <div>
+          <div class="weather-temp" id="weatherTemp">—°C</div>
+          <div class="weather-desc" id="weatherDesc">Loading weather…</div>
+        </div>
+      </div>
+      <div class="weather-extra">
+        <span>Feels like <b id="weatherFeels">—°</b></span>
+        <span>Humidity <b id="weatherHumidity">—%</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="selector-card">
+    <label>Whose schedule do you want to see?</label>
+    <div class="selector-row">
+      <select id="employeeSelect">
+        <option value="">Loading employees…</option>
+      </select>
+      <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
+    </div>
+  </div>
+
+  <h2 class="cal-title" id="calTitle">Select a name to see their week <span class="role-tag" id="calRoleTag" style="display:none;"></span></h2>
+  <div class="cal-grid" id="calGrid">
+    <div class="empty-state">Pick a name above to see the duty schedule.</div>
+  </div>
+</div>
+
+<script>
+const SCHEDULE_API_URL = 'https://script.google.com/macros/s/AKfycbwp9vFxJFCfQtBZY0VQVMxXNw3BxPnfFSAzNrqVC-WBq3h7-YlzuhHBWucte6pcSf4/exec';
+const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DAY_FULL = {SUN:'Sunday',MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+
+// ---------- Real-time clock ----------
+function tickClock(){
+  const now = new Date();
+  const opts = { timeZone: 'Asia/Bahrain' };
+  const dateStr = now.toLocaleDateString('en-US', { ...opts, weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { ...opts, hour:'numeric', minute:'2-digit', hour12:true });
+  const [main, ampm] = timeStr.split(' ');
+  document.getElementById('clockDate').textContent = dateStr;
+  document.getElementById('clockTime').innerHTML = main + '<span>' + (ampm||'') + '</span>';
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ---------- Weather (Open-Meteo — free, no API key required) ----------
+const WEATHER_ICONS = {
+  0:['☀️','Clear sky'], 1:['🌤️','Mostly clear'], 2:['⛅','Partly cloudy'], 3:['☁️','Overcast'],
+  45:['🌫️','Fog'], 48:['🌫️','Fog'],
+  51:['🌦️','Light drizzle'], 61:['🌧️','Light rain'], 63:['🌧️','Rain'], 65:['🌧️','Heavy rain'],
+  80:['🌦️','Rain showers'], 95:['⛈️','Thunderstorm']
+};
+async function loadWeather(){
+  try{
+    // Manama, Bahrain coordinates
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FBahrain';
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+    const [emoji, desc] = WEATHER_ICONS[c.weather_code] || ['🌡️','—'];
+    document.getElementById('weatherEmoji').textContent = emoji;
+    document.getElementById('weatherTemp').textContent = Math.round(c.temperature_2m) + '°C';
+    document.getElementById('weatherDesc').textContent = desc;
+    document.getElementById('weatherFeels').textContent = Math.round(c.apparent_temperature) + '°C';
+    document.getElementById('weatherHumidity').textContent = Math.round(c.relative_humidity_2m) + '%';
+  }catch(e){
+    document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+  }
+}
+loadWeather();
+setInterval(loadWeather, 15 * 60 * 1000); // refresh every 15 minutes
+
+// ---------- Schedule data ----------
+let allEmployees = [];
+const todayIdx = new Date().getDay(); // 0=Sun
+
+async function loadEmployees(){
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(SCHEDULE_API_URL + '?action=getEmployees&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){ throw new Error(data.error||'Failed to load employees'); }
+    allEmployees = data.employees;
+    const sel = document.getElementById('employeeSelect');
+    sel.innerHTML = '<option value="">— Select a name —</option>' +
+      allEmployees.map(e => `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`).join('');
+  }catch(e){
+    document.getElementById('employeeSelect').innerHTML = '<option value="">Could not load — check connection</option>';
+  }
+}
+
+async function loadScheduleFor(employeeName){
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '<div class="loading-state">Loading schedule…</div>';
+
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success || !data.schedule.length){
+      grid.innerHTML = '<div class="empty-state">No schedule found for this name.</div>';
+      return;
+    }
+    renderCalendar(data.schedule, employeeName);
+  }catch(e){
+    grid.innerHTML = '<div class="empty-state">Could not load schedule — check connection.</div>';
+  }
+}
+
+function renderCalendar(records, employeeName){
+  const byDay = {};
+  records.forEach(r => { byDay[r.Day] = r; });
+
+  const emp = allEmployees.find(e => e.name === employeeName);
+  document.getElementById('calTitle').innerHTML = `${employeeName}'s week`;
+  const roleTag = document.getElementById('calRoleTag');
+  if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
+  else { roleTag.style.display = 'none'; }
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  DAY_ORDER.forEach((day, idx) => {
+    const rec = byDay[day];
+    const card = document.createElement('div');
+    const isOff = rec && /^off$/i.test(String(rec.ScheduleDetail).trim());
+    card.className = 'day-card' + (idx === todayIdx ? ' today' : '') + (isOff ? ' off' : '');
+    card.style.animationDelay = (idx * 0.05) + 's';
+
+    let shiftHtml = '<div class="day-shift off-text">No schedule</div>';
+    let noteHtml = '';
+    let branchHtml = '';
+
+    if(rec){
+      const detail = String(rec.ScheduleDetail);
+      const [mainPart, ...noteParts] = detail.split(';');
+      if(isOff){
+        shiftHtml = '<div class="day-shift off-text">Day Off</div>';
+      } else {
+        shiftHtml = `<div class="day-shift">${mainPart.trim()}</div>`;
+        if(noteParts.length){
+          noteHtml = `<div class="day-note">${noteParts.join(';').trim()}</div>`;
+        }
+      }
+      if(rec.HomeBranch){
+        branchHtml = `<div class="day-branch-tag">${rec.HomeBranch}</div>`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="day-label"><span>${DAY_FULL[day]}</span>${idx===todayIdx?'<b>Today</b>':''}</div>
+      ${shiftHtml}
+      ${noteHtml}
+      ${branchHtml}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+document.getElementById('employeeSelect').addEventListener('change', (e) => {
+  if(e.target.value) loadScheduleFor(e.target.value);
+});
+
+document.getElementById('myScheduleBtn').addEventListener('click', async () => {
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
+  if(!userStr){ return; }
+  const user = JSON.parse(userStr);
+  const firstName = (user.fullName || '').split(' ')[0];
+  const sel = document.getElementById('employeeSelect');
+  const match = allEmployees.find(e => e.name.toLowerCase() === firstName.toLowerCase());
+  if(match){
+    sel.value = match.name;
+    loadScheduleFor(match.name);
+  } else {
+    document.getElementById('calGrid').innerHTML = '<div class="empty-state">No schedule entry found matching your name (' + firstName + '). Ask your admin to check the spelling on the schedule sheet.</div>';
+  }
+});
+
+loadEmployees();
+</script>
+</body>
+</html>
