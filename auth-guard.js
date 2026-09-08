@@ -75,16 +75,20 @@
       // For calls to our own backends, peek at the JSON body (via a
       // clone, so the original response stream is left untouched for
       // whatever code actually called fetch) — if the backend
-      // rejected the request as Unauthorized, that means the session
-      // itself is the problem, not "the internet". Redirecting
-      // straight to login here is both more honest (no more
-      // misleading "check your connection" messages hiding an
-      // expired/invalid token) and saves every individual page from
-      // having to special-case this itself.
+      // rejected the request as Unauthorized, that COULD mean the
+      // session itself is invalid. But it could just as easily be a
+      // transient backend-to-backend hiccup (this specific data call
+      // failing to reach the Auth backend for a moment) that has
+      // nothing to do with whether the person is really logged in —
+      // redirecting on that alone was bouncing people back to login
+      // even with a perfectly good "Remember me" session. So this
+      // only ever ACTS on a confirmed, independent verifyToken check
+      // (which has its own retry built in) — never on a single
+      // "Unauthorized" from an unrelated data call.
       if (isBackendCall) {
         response.clone().json().then(data => {
           if (data && data.error && /unauthorized/i.test(String(data.error))) {
-            goToLoginPublic_();
+            confirmSessionInvalidThenRedirect_();
           }
         }).catch(() => { /* not JSON, or already consumed — ignore */ });
       }
@@ -97,6 +101,25 @@
   // that definition executes) still reach it via closure once the
   // script has fully loaded.
   function goToLoginPublic_(){ goToLogin(); }
+
+  // Debounced, independently-verified redirect trigger — at most one
+  // confirmation check in flight at a time, so a burst of several
+  // data calls all failing at once (common when a page loads and
+  // fires off multiple fetches together) doesn't launch several
+  // redundant verifyToken calls.
+  let confirmingInvalidSession = false;
+  function confirmSessionInvalidThenRedirect_(){
+    if (confirmingInvalidSession) return;
+    confirmingInvalidSession = true;
+    const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
+    if (!token) { goToLoginPublic_(); return; }
+    verifyTokenWithRetryPublic_(token).then(data => {
+      confirmingInvalidSession = false;
+      if (!data.valid) goToLoginPublic_();
+      // If it turns out valid after all, do nothing — the original
+      // failing call was genuinely just a transient blip.
+    }).catch(() => { confirmingInvalidSession = false; });
+  }
 
   function goToLogin() {
     sessionStorage.removeItem('lalabellaToken');
@@ -133,6 +156,7 @@
         return data;
       });
   }
+  function verifyTokenWithRetryPublic_(tok){ return verifyTokenWithRetry(tok, 1); }
 
   verifyTokenWithRetry(token, 1)
     .then(data => {
