@@ -1,14 +1,7 @@
 /**
- * LALABELLA AUTH GUARD — FAST SESSION v3
- *
+ * LALABELLA AUTH GUARD — FAST SESSION v4
  * Browser session gate for protected pages.
- *
- * IMPORTANT:
- * - The browser only carries the user's session token.
- * - Backend-to-backend AUTH_CALLER_SECRET values are NEVER shipped here.
- * - Browser verification uses the dedicated verifySession action.
- * - Application API requests automatically receive ?token=... or a token
- *   field in their POST body.
+ * Browser carries only the user's session token.
  */
 (function () {
   const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec';
@@ -20,29 +13,20 @@
 
   function getToken() {
     try {
-      return sessionStorage.getItem('lalabellaToken') ||
-        localStorage.getItem('lalabellaToken') || '';
-    } catch (e) {
-      return '';
-    }
+      return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+    } catch (e) { return ''; }
   }
 
   function getUserRaw() {
     try {
-      return sessionStorage.getItem('lalabellaUser') ||
-        localStorage.getItem('lalabellaUser') || '';
-    } catch (e) {
-      return '';
-    }
+      return sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '';
+    } catch (e) { return ''; }
   }
 
-  function setGlobals(token, userRaw) {
+  function setGlobals(token, raw) {
     window.LALABELLA_TOKEN = token || '';
-    try {
-      window.LALABELLA_USER = userRaw ? JSON.parse(userRaw) : null;
-    } catch (e) {
-      window.LALABELLA_USER = null;
-    }
+    try { window.LALABELLA_USER = raw ? JSON.parse(raw) : null; }
+    catch (e) { window.LALABELLA_USER = null; }
   }
 
   function saveUser(user) {
@@ -56,24 +40,17 @@
   }
 
   function clearSession() {
-    try {
-      ['lalabellaToken', 'lalabellaUser', VERIFY_AT_KEY, VERIFY_TOKEN_KEY]
-        .forEach(k => sessionStorage.removeItem(k));
-    } catch (e) {}
-    try {
-      ['lalabellaToken', 'lalabellaUser', VERIFY_AT_KEY, VERIFY_TOKEN_KEY]
-        .forEach(k => localStorage.removeItem(k));
-    } catch (e) {}
+    ['lalabellaToken','lalabellaUser',VERIFY_AT_KEY,VERIFY_TOKEN_KEY].forEach(function (k) {
+      try { sessionStorage.removeItem(k); } catch (e) {}
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
     window.LALABELLA_TOKEN = '';
     window.LALABELLA_USER = null;
   }
 
   function goToLogin() {
     clearSession();
-    if (location.pathname.endsWith('/index.html') ||
-        location.pathname === '/' ||
-        location.pathname === '') return;
-
+    if (location.pathname.endsWith('/index.html') || location.pathname === '/' || location.pathname === '') return;
     const next = location.pathname.split('/').pop() + location.search;
     location.replace('index.html?next=' + encodeURIComponent(next));
   }
@@ -89,21 +66,12 @@
 
   setGlobals(token, userRaw);
 
-  function isFreshVerification() {
+  function isFresh() {
     try {
-      const verifiedToken =
-        sessionStorage.getItem(VERIFY_TOKEN_KEY) ||
-        localStorage.getItem(VERIFY_TOKEN_KEY) || '';
-      const at = Number(
-        sessionStorage.getItem(VERIFY_AT_KEY) ||
-        localStorage.getItem(VERIFY_AT_KEY) || 0
-      );
-      return verifiedToken === token &&
-        at > 0 &&
-        (Date.now() - at) < VERIFY_CACHE_MS;
-    } catch (e) {
-      return false;
-    }
+      const verifiedToken = sessionStorage.getItem(VERIFY_TOKEN_KEY) || localStorage.getItem(VERIFY_TOKEN_KEY) || '';
+      const at = Number(sessionStorage.getItem(VERIFY_AT_KEY) || localStorage.getItem(VERIFY_AT_KEY) || 0);
+      return verifiedToken === token && at > 0 && Date.now() - at < VERIFY_CACHE_MS;
+    } catch (e) { return false; }
   }
 
   function markVerified() {
@@ -119,34 +87,23 @@
   const originalFetch = window.fetch.bind(window);
 
   async function verifyToken() {
-    const controller =
-      typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = controller ?
-      setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS) : null;
-
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(function () { controller.abort(); }, VERIFY_TIMEOUT_MS) : null;
     try {
-      const url = AUTH_API_URL +
-        '?action=verifySession&token=' + encodeURIComponent(token);
-
+      const url = AUTH_API_URL + '?action=verifySession&token=' + encodeURIComponent(token);
       const response = await originalFetch(url, {
-        method: 'GET',
-        cache: 'no-store',
-        signal: controller ? controller.signal : undefined
+        method: 'GET', cache: 'no-store', signal: controller ? controller.signal : undefined
       });
-
-      const data = await response.json().catch(() => null);
-
+      const data = await response.json().catch(function () { return null; });
       if (data && data.valid === false) {
         clearSession();
         goToLogin();
         return false;
       }
-
       if (data && data.valid === true) {
         saveUser(data.user);
         markVerified();
       }
-
       return true;
     } catch (e) {
       return true;
@@ -155,39 +112,27 @@
     }
   }
 
-  let authReadyResolve;
-  window.LALABELLA_AUTH_READY = new Promise(resolve => {
-    authReadyResolve = resolve;
-  });
+  let authResolve;
+  window.LALABELLA_AUTH_READY = new Promise(function (resolve) { authResolve = resolve; });
 
-  function prepareBackendRequest(input, init, currentToken) {
-    let url = typeof input === 'string' ? input :
-      (input && input.url) || '';
+  function prepareRequest(input, init, currentToken) {
+    let url = typeof input === 'string' ? input : (input && input.url) || '';
     let nextInput = input;
     let nextInit = init;
-
     const isBackend = !!currentToken && BACKEND_PATTERN.test(url);
     const isAuth = url.indexOf(AUTH_API_URL) === 0;
 
     if (isBackend && !isAuth && !/[?&]token=/.test(url)) {
       const sep = url.indexOf('?') >= 0 ? '&' : '?';
       const newUrl = url + sep + 'token=' + encodeURIComponent(currentToken);
-
-      if (typeof input === 'string') {
-        nextInput = newUrl;
-      } else if (input && input.url) {
-        try {
-          nextInput = new Request(newUrl, input);
-        } catch (e) {}
+      if (typeof input === 'string') nextInput = newUrl;
+      else if (input && input.url) {
+        try { nextInput = new Request(newUrl, input); } catch (e) {}
       }
     }
 
-    if (isBackend && !isAuth &&
-        nextInit && nextInit.body &&
-        typeof nextInit.body === 'string' &&
-        !/[?&]token=/.test(nextInit.body)) {
+    if (isBackend && !isAuth && nextInit && typeof nextInit.body === 'string') {
       let body = nextInit.body;
-
       try {
         const parsed = JSON.parse(body);
         if (parsed && typeof parsed === 'object') {
@@ -195,77 +140,49 @@
           body = JSON.stringify(parsed);
         }
       } catch (e) {
-        body += (body ? '&' : '') +
-          'token=' + encodeURIComponent(currentToken);
+        if (!/[?&]token=/.test(body)) body += (body ? '&' : '') + 'token=' + encodeURIComponent(currentToken);
       }
-
       nextInit = Object.assign({}, nextInit, { body: body });
-    } else if (isBackend && !isAuth &&
-        nextInit && nextInit.body instanceof URLSearchParams &&
-        !nextInit.body.has('token')) {
+    } else if (isBackend && !isAuth && nextInit && nextInit.body instanceof URLSearchParams && !nextInit.body.has('token')) {
       const params = new URLSearchParams(nextInit.body);
       params.append('token', currentToken);
       nextInit = Object.assign({}, nextInit, { body: params });
     }
 
-    return { input: nextInput, init: nextInit, isBackend, isAuth };
+    return { input: nextInput, init: nextInit, isBackend: isBackend, isAuth: isAuth };
   }
 
   if (!window.__LALABELLA_FETCH_GUARD__) {
     window.fetch = function (input, init) {
       const currentToken = window.LALABELLA_TOKEN || getToken();
-      const prepared = prepareBackendRequest(input, init, currentToken);
-      const send = () => originalFetch(prepared.input, prepared.init);
-
-      if (prepared.isBackend && !prepared.isAuth) {
-        return window.LALABELLA_AUTH_READY.then(send);
-      }
-
+      const prepared = prepareRequest(input, init, currentToken);
+      const send = function () { return originalFetch(prepared.input, prepared.init); };
+      if (prepared.isBackend && !prepared.isAuth) return window.LALABELLA_AUTH_READY.then(send);
       return send();
     };
-
     window.__LALABELLA_FETCH_GUARD__ = true;
   }
 
   window.lalabellaCheckResponse = function (data) {
-    if (data &&
-        typeof data === 'object' &&
-        !Array.isArray(data) &&
-        data.error) {
-      throw new Error(String(data.error));
-    }
+    if (data && typeof data === 'object' && !Array.isArray(data) && data.error) throw new Error(String(data.error));
     return data;
   };
 
-  if (isFreshVerification()) {
-    if (authReadyResolve) {
-      authReadyResolve(true);
-      authReadyResolve = null;
-    }
+  if (isFresh()) {
+    authResolve(true);
+    authResolve = null;
   } else {
-    verifyToken().then(() => {
-      if (authReadyResolve) {
-        authReadyResolve(true);
-        authReadyResolve = null;
-      }
-    }).catch(() => {
-      if (authReadyResolve) {
-        authReadyResolve(true);
-        authReadyResolve = null;
-      }
+    verifyToken().then(function () {
+      if (authResolve) { authResolve(true); authResolve = null; }
+    }).catch(function () {
+      if (authResolve) { authResolve(true); authResolve = null; }
     });
   }
 
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      hiddenAt = Date.now();
-      return;
-    }
-
-    if (hiddenAt &&
-        Date.now() - hiddenAt > 60000 &&
-        window.LALABELLA_TOKEN) {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (hiddenAt && Date.now() - hiddenAt > 60000 && window.LALABELLA_TOKEN) {
       hiddenAt = 0;
       verifyToken();
     }
