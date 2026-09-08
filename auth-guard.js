@@ -93,8 +93,24 @@
   // redirect happens for an invalid session.
   document.documentElement.style.visibility = 'hidden';
 
-  fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(token) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
-    .then(r => r.json())
+  // A single verifyToken call is a server-to-server request (this
+  // page's backend calling the Auth backend) — on a shaky connection
+  // that hop can fail even when the token is genuinely valid, which
+  // would otherwise bounce someone back to login for no real reason.
+  // One retry after a short pause absorbs that kind of blip; only a
+  // second consecutive failure is treated as a real "not logged in".
+  function verifyTokenWithRetry(tok, attempt){
+    return fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(tok) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.valid && attempt < 2) {
+          return new Promise(resolve => setTimeout(resolve, 900)).then(() => verifyTokenWithRetry(tok, attempt + 1));
+        }
+        return data;
+      });
+  }
+
+  verifyTokenWithRetry(token, 1)
     .then(data => {
       if (!data.valid) {
         goToLogin();
