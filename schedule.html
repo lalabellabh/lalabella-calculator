@@ -54,27 +54,70 @@
   .my-schedule-btn{padding:12px 18px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
   .my-schedule-btn:active{transform:scale(.97);}
 
-  /* Calendar grid */
-  .cal-title{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;display:flex;align-items:center;gap:10px;}
+  /* Real month calendar */
+  .cal-title{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;}
   .cal-title .role-tag{font-size:11px;background:var(--gold-light);color:#5c4416;padding:3px 10px;border-radius:20px;font-family:'Space Grotesk',sans-serif;font-weight:600;}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
-  @media(max-width:820px){ .cal-grid{grid-template-columns:repeat(2,1fr);} }
-  @media(max-width:460px){ .cal-grid{grid-template-columns:1fr;} }
+  .cal-nav{display:flex;align-items:center;gap:10px;font-size:13px;}
+  .cal-nav button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;color:var(--rose-dark);}
+  .cal-nav button:hover{background:var(--cream);}
 
-  .day-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 14px;min-height:120px;opacity:0;transform:translateY(10px);animation:dayIn .45s ease forwards;}
-  .day-card.today{border-color:var(--rose);box-shadow:0 0 0 3px rgba(201,80,107,.12);}
-  .day-card.off{background:#faf6f5;}
-  @keyframes dayIn{ to{ opacity:1; transform:translateY(0); } }
+  .month-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px;}
+  .weekday-row span{text-align:center;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
 
-  .day-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
-  .day-label b{color:var(--rose-dark);}
-  .day-shift{margin-top:10px;font-size:14px;font-weight:600;line-height:1.4;}
-  .day-shift.off-text{color:var(--muted);font-weight:500;}
-  .day-note{margin-top:6px;font-size:11.5px;color:var(--muted);line-height:1.5;}
-  .day-branch-tag{display:inline-block;margin-top:8px;font-size:10.5px;background:#eef2ee;color:#3a5c46;padding:2px 8px;border-radius:10px;}
+  .date-cell{position:relative;border-radius:12px;min-height:74px;padding:6px 6px 8px;background:#fdfbfa;border:1px solid transparent;transition:box-shadow .2s;}
+  .date-cell.pad{background:transparent;}
+  .date-cell.today{border-color:var(--rose);}
+  .date-cell .dnum{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .date-cell.today .dnum{color:var(--rose-dark);}
 
-  .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+  /* Snake-and-ladder style reveal: cells within the active week light
+     up and populate one after another in sequence (Sun -> Sat), like
+     a token hopping square to square across the board, instead of
+     everything appearing at once. */
+  .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#fdf1ee 100%);border-color:var(--rose);box-shadow:0 6px 14px rgba(201,80,107,.14);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .date-cell.hit.off{background:#faf6f5;border-color:var(--line);box-shadow:none;}
+  @keyframes hopIn{ 60%{ transform:scale(1.06) translateY(-3px); opacity:1; } 100%{ transform:scale(1) translateY(0); opacity:1; } }
+  .date-cell.hit::before{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold);}
+  .date-cell .shift-txt{margin-top:5px;font-size:10.5px;line-height:1.35;color:var(--ink);font-weight:600;}
+  .date-cell .shift-txt.off-txt{color:var(--muted);font-weight:500;}
+  .date-cell .branch-txt{margin-top:3px;font-size:9.5px;color:#3a5c46;background:#eef2ee;display:inline-block;padding:1px 6px;border-radius:8px;}
+
+  /* Connecting "path" dots drawn between consecutive revealed cells
+     in the same row, echoing the board-game trail without needing a
+     literal snakes-and-ladders illustration. */
+  .date-cell.hit:not(:first-child)::after{content:'';position:absolute;left:-9px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold-light);opacity:0;animation:dotFade .3s ease forwards .15s;}
+  @keyframes dotFade{ to{ opacity:1; } }
+
+  @media(max-width:600px){
+    .date-cell{min-height:60px;}
+    .date-cell .shift-txt{font-size:9px;}
+  }
+
+  .empty-state{padding:20px;}
   .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+
+  /* Empty-state hero — fills the otherwise-wasted space with a
+     gently animated calendar illustration instead of one dim line
+     of text, especially on wide desktop/webapp viewports. */
+  .empty-hero{position:relative;min-height:280px;border-radius:22px;background:linear-gradient(160deg,#fff 0%,#fdf6f5 100%);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:30px 20px;}
+  .empty-hero-float{position:absolute;font-size:26px;opacity:.5;animation:emptyFloat 6s ease-in-out infinite;}
+  @keyframes emptyFloat{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-14px) rotate(4deg); } }
+
+  .empty-cal-icon{width:88px;height:88px;position:relative;animation:calBreathe 3.4s ease-in-out infinite;z-index:1;}
+  @keyframes calBreathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+  .empty-cal-icon .cal-top{position:absolute;top:0;left:8px;right:8px;height:20px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:10px 10px 0 0;}
+  .empty-cal-icon .cal-ring{position:absolute;top:-6px;width:8px;height:16px;border-radius:4px;background:var(--gold);box-shadow:0 0 0 2px #fff;}
+  .empty-cal-icon .cal-ring.l{left:22px;}
+  .empty-cal-icon .cal-ring.r{right:22px;}
+  .empty-cal-icon .cal-body{position:absolute;top:16px;left:0;right:0;bottom:0;background:#fff;border:2px solid var(--rose);border-top:none;border-radius:0 0 14px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:16px 10px 10px;}
+  .empty-cal-icon .cal-dot{width:9px;height:9px;border-radius:3px;background:#f1dede;}
+  .empty-cal-icon .cal-dot.hi{background:var(--gold);animation:dotPulse 1.8s ease-in-out infinite;}
+  @keyframes dotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+  .empty-hero-title{font-family:'Fraunces',serif;font-size:17px;margin:18px 0 4px;color:var(--ink);z-index:1;}
+  .empty-hero-sub{font-size:12.5px;color:var(--muted);z-index:1;}
 </style>
 </head>
 <body>
@@ -116,9 +159,39 @@
     </div>
   </div>
 
-  <h2 class="cal-title" id="calTitle">Select a name to see their week <span class="role-tag" id="calRoleTag" style="display:none;"></span></h2>
-  <div class="cal-grid" id="calGrid">
-    <div class="empty-state">Pick a name above to see the duty schedule.</div>
+  <h2 class="cal-title">
+    <span id="calTitleText">Select a name to see their schedule <span class="role-tag" id="calRoleTag" style="display:none;"></span></span>
+    <span class="cal-nav">
+      <button id="prevMonthBtn" aria-label="Previous month">‹</button>
+      <span id="monthLabel">—</span>
+      <button id="nextMonthBtn" aria-label="Next month">›</button>
+    </span>
+  </h2>
+
+  <div class="month-card">
+    <div class="weekday-row">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="month-grid" id="monthGrid"></div>
+  </div>
+
+  <div id="calEmptyNote" class="empty-state">
+    <div class="empty-hero">
+      <span class="empty-hero-float" style="left:12%;top:18%;animation-delay:0s;">🌸</span>
+      <span class="empty-hero-float" style="right:14%;top:24%;animation-delay:1.4s;">🍫</span>
+      <span class="empty-hero-float" style="left:16%;bottom:20%;animation-delay:2.6s;font-size:20px;">✨</span>
+      <span class="empty-hero-float" style="right:12%;bottom:16%;animation-delay:.8s;font-size:20px;">🎀</span>
+      <div class="empty-cal-icon">
+        <div class="cal-ring l"></div><div class="cal-ring r"></div>
+        <div class="cal-top"></div>
+        <div class="cal-body">
+          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot hi"></div><div class="cal-dot"></div>
+          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div>
+        </div>
+      </div>
+      <div class="empty-hero-title">No one selected yet</div>
+      <div class="empty-hero-sub">Pick a name above — their shifts will hop onto the calendar</div>
+    </div>
   </div>
 </div>
 
@@ -169,7 +242,57 @@ setInterval(loadWeather, 15 * 60 * 1000); // refresh every 15 minutes
 
 // ---------- Schedule data ----------
 let allEmployees = [];
-const todayIdx = new Date().getDay(); // 0=Sun
+let currentSchedule = null;   // last-loaded schedule records for the selected employee
+let currentEmployeeName = null;
+let viewMonth = new Date().getMonth();
+let viewYear = new Date().getFullYear();
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+// Renders the real month grid (correct number of days, correct
+// weekday offsets, actual date numbers) — independent of whether a
+// schedule is loaded yet.
+function renderMonthGrid(){
+  const monthGrid = document.getElementById('monthGrid');
+  const monthLabel = document.getElementById('monthLabel');
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const startWeekday = firstOfMonth.getDay(); // 0=Sun
+
+  monthLabel.textContent = firstOfMonth.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear()===viewYear && today.getMonth()===viewMonth;
+
+  monthGrid.innerHTML = '';
+  for(let i=0;i<startWeekday;i++){
+    const pad = document.createElement('div');
+    pad.className = 'date-cell pad';
+    monthGrid.appendChild(pad);
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const cell = document.createElement('div');
+    cell.className = 'date-cell';
+    cell.dataset.date = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
+    if(isCurrentMonth && d===today.getDate()) cell.classList.add('today');
+    cell.innerHTML = `<div class="dnum">${d}</div>`;
+    monthGrid.appendChild(cell);
+  }
+
+  // If a schedule is already loaded, re-apply it to the freshly
+  // rendered month (e.g. after navigating months).
+  if(currentSchedule) applyScheduleToGrid(currentSchedule, employeeIsOnScreen());
+}
+function employeeIsOnScreen(){ return true; }
+
+document.getElementById('prevMonthBtn').addEventListener('click', () => {
+  viewMonth--; if(viewMonth<0){ viewMonth=11; viewYear--; }
+  renderMonthGrid();
+});
+document.getElementById('nextMonthBtn').addEventListener('click', () => {
+  viewMonth++; if(viewMonth>11){ viewMonth=0; viewYear++; }
+  renderMonthGrid();
+});
 
 async function loadEmployees(){
   const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
@@ -187,70 +310,82 @@ async function loadEmployees(){
 }
 
 async function loadScheduleFor(employeeName){
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '<div class="loading-state">Loading schedule…</div>';
-
+  document.getElementById('calEmptyNote').style.display = 'none';
   const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
   try{
     const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
     const data = await res.json();
     if(!data.success || !data.schedule.length){
-      grid.innerHTML = '<div class="empty-state">No schedule found for this name.</div>';
+      document.getElementById('calEmptyNote').style.display = 'block';
+      document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No schedule found';
+      document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.';
+      currentSchedule = null;
+      renderMonthGrid();
       return;
     }
-    renderCalendar(data.schedule, employeeName);
+    currentSchedule = data.schedule;
+    currentEmployeeName = employeeName;
+
+    const emp = allEmployees.find(e => e.name === employeeName);
+    document.getElementById('calTitleText').innerHTML = `${employeeName}'s schedule`;
+    const roleTag = document.getElementById('calRoleTag');
+    if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
+    else { roleTag.style.display = 'none'; }
+
+    // Jump the calendar view to the month the schedule's week falls in.
+    if(data.schedule[0] && data.schedule[0].WeekOf){
+      const wk = new Date(data.schedule[0].WeekOf);
+      if(!isNaN(wk)){ viewMonth = wk.getMonth(); viewYear = wk.getFullYear(); }
+    }
+    renderMonthGrid();
+    applyScheduleToGrid(currentSchedule, true);
   }catch(e){
-    grid.innerHTML = '<div class="empty-state">Could not load schedule — check connection.</div>';
+    document.getElementById('calEmptyNote').style.display = 'block';
+    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'Connection error';
+    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'Could not load schedule — check your connection.';
   }
 }
 
-function renderCalendar(records, employeeName){
+// The "snake and ladder" reveal: walk the week's records in day
+// order (Sun -> Sat), find each one's actual calendar date cell, and
+// pop it in with a staggered delay — so the shifts visibly hop onto
+// the board one square at a time, tracing the week left to right.
+function applyScheduleToGrid(records, animate){
   const byDay = {};
   records.forEach(r => { byDay[r.Day] = r; });
+  const weekOf = records[0] && records[0].WeekOf ? new Date(records[0].WeekOf) : null;
 
-  const emp = allEmployees.find(e => e.name === employeeName);
-  document.getElementById('calTitle').innerHTML = `${employeeName}'s week`;
-  const roleTag = document.getElementById('calRoleTag');
-  if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
-  else { roleTag.style.display = 'none'; }
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
 
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-
+  let step = 0;
   DAY_ORDER.forEach((day, idx) => {
     const rec = byDay[day];
-    const card = document.createElement('div');
-    const isOff = rec && /^off$/i.test(String(rec.ScheduleDetail).trim());
-    card.className = 'day-card' + (idx === todayIdx ? ' today' : '') + (isOff ? ' off' : '');
-    card.style.animationDelay = (idx * 0.05) + 's';
+    if(!rec || !weekOf) return;
+    const cellDate = new Date(weekOf);
+    cellDate.setDate(weekOf.getDate() + idx);
+    const key = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth()+1)}-${pad2(cellDate.getDate())}`;
+    const cell = document.querySelector(`.date-cell[data-date="${key}"]`);
+    if(!cell) return; // that date isn't in the currently-viewed month
 
-    let shiftHtml = '<div class="day-shift off-text">No schedule</div>';
-    let noteHtml = '';
-    let branchHtml = '';
+    const isOff = /^off$/i.test(String(rec.ScheduleDetail).trim());
+    cell.classList.add('hit');
+    if(isOff) cell.classList.add('off');
+    if(animate) cell.style.animationDelay = (step * 0.12) + 's';
+    step++;
 
-    if(rec){
-      const detail = String(rec.ScheduleDetail);
-      const [mainPart, ...noteParts] = detail.split(';');
-      if(isOff){
-        shiftHtml = '<div class="day-shift off-text">Day Off</div>';
-      } else {
-        shiftHtml = `<div class="day-shift">${mainPart.trim()}</div>`;
-        if(noteParts.length){
-          noteHtml = `<div class="day-note">${noteParts.join(';').trim()}</div>`;
-        }
-      }
-      if(rec.HomeBranch){
-        branchHtml = `<div class="day-branch-tag">${rec.HomeBranch}</div>`;
-      }
+    const detail = String(rec.ScheduleDetail);
+    const [mainPart, ...noteParts] = detail.split(';');
+    const shiftEl = document.createElement('div');
+    shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
+    shiftEl.textContent = isOff ? 'Off' : mainPart.trim();
+    cell.appendChild(shiftEl);
+
+    if(rec.HomeBranch){
+      const branchEl = document.createElement('div');
+      branchEl.className = 'branch-txt';
+      branchEl.textContent = rec.HomeBranch;
+      cell.appendChild(branchEl);
     }
-
-    card.innerHTML = `
-      <div class="day-label"><span>${DAY_FULL[day]}</span>${idx===todayIdx?'<b>Today</b>':''}</div>
-      ${shiftHtml}
-      ${noteHtml}
-      ${branchHtml}
-    `;
-    grid.appendChild(card);
   });
 }
 
@@ -259,7 +394,6 @@ document.getElementById('employeeSelect').addEventListener('change', (e) => {
 });
 
 document.getElementById('myScheduleBtn').addEventListener('click', async () => {
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
   const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
   if(!userStr){ return; }
   const user = JSON.parse(userStr);
@@ -270,10 +404,13 @@ document.getElementById('myScheduleBtn').addEventListener('click', async () => {
     sel.value = match.name;
     loadScheduleFor(match.name);
   } else {
-    document.getElementById('calGrid').innerHTML = '<div class="empty-state">No schedule entry found matching your name (' + firstName + '). Ask your admin to check the spelling on the schedule sheet.</div>';
+    document.getElementById('calEmptyNote').style.display = 'block';
+    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No match found';
+    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.';
   }
 });
 
+renderMonthGrid();
 loadEmployees();
 </script>
 </body>
