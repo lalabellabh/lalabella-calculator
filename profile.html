@@ -55,6 +55,23 @@
   .logout-btn{width:100%;padding:13px;border:1.5px solid #c0392b;border-radius:12px;background:#fff;color:#c0392b;font-weight:700;font-size:13px;cursor:pointer;}
 
   input[type=file]{display:none;}
+
+  /* Photo crop modal */
+  .crop-backdrop{position:fixed;inset:0;background:rgba(40,20,25,.6);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+  .crop-backdrop.show{display:flex;}
+  .crop-modal{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .crop-title{font-family:'Fraunces',serif;font-size:17px;margin-bottom:14px;text-align:center;}
+  .crop-stage{position:relative;width:260px;height:260px;margin:0 auto;border-radius:16px;overflow:hidden;background:#2a1a1e;touch-action:none;cursor:grab;}
+  .crop-stage.dragging{cursor:grabbing;}
+  .crop-stage img{position:absolute;top:0;left:0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+  .crop-circle-mask{position:absolute;top:50%;left:50%;width:230px;height:230px;margin:-115px 0 0 -115px;border-radius:50%;pointer-events:none;box-shadow:0 0 0 2000px rgba(20,10,12,.6);border:2px solid rgba(255,255,255,.85);}
+  .crop-zoom-row{display:flex;align-items:center;gap:10px;margin-top:16px;}
+  .crop-zoom-label{font-size:14px;}
+  .crop-zoom-row input[type=range]{flex:1;accent-color:var(--rose);}
+  .crop-hint{text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px;}
+  .crop-actions{display:flex;gap:10px;margin-top:18px;}
+  .crop-cancel-btn{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-weight:600;cursor:pointer;font-size:13px;}
+  .crop-save-btn{flex:1;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;cursor:pointer;font-size:13px;}
 </style>
 </head>
 <body>
@@ -73,6 +90,28 @@
     <div class="hero-name" id="heroName">—</div>
     <div class="hero-role" id="heroRole">—</div>
     <div class="hero-branch-tag" id="heroBranch">—</div>
+  </div>
+
+  <!-- Photo crop modal — lets the person drag/zoom to choose exactly
+       what part of their picture ends up inside the circular avatar,
+       instead of a fixed auto-center crop they have no control over. -->
+  <div class="crop-backdrop" id="cropBackdrop">
+    <div class="crop-modal">
+      <div class="crop-title">Adjust your photo</div>
+      <div class="crop-stage" id="cropStage">
+        <img id="cropImg" alt="">
+        <div class="crop-circle-mask"></div>
+      </div>
+      <div class="crop-zoom-row">
+        <span class="crop-zoom-label">🔍</span>
+        <input type="range" id="cropZoom" min="100" max="300" value="100">
+      </div>
+      <div class="crop-hint">Drag the photo to reposition it</div>
+      <div class="crop-actions">
+        <button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button>
+        <button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button>
+      </div>
+    </div>
   </div>
 
   <div class="section-card">
@@ -166,34 +205,123 @@ async function loadProfile(){
 }
 loadProfile();
 
-// ---------- Photo upload: compress client-side to keep it small ----------
+// ---------- Photo upload: interactive crop (drag + zoom) before saving ----------
 document.getElementById('avatarEditBtn').addEventListener('click', () => {
   document.getElementById('photoInput').click();
 });
+
+const cropBackdrop = document.getElementById('cropBackdrop');
+const cropStage = document.getElementById('cropStage');
+const cropImg = document.getElementById('cropImg');
+const cropZoom = document.getElementById('cropZoom');
+
+let cropState = { naturalW:0, naturalH:0, baseScale:1, scale:1, offsetX:0, offsetY:0 };
+const STAGE_SIZE = 260; // matches .crop-stage width/height in CSS
+
+function applyCropTransform(){
+  const s = cropState.baseScale * cropState.scale;
+  const w = cropState.naturalW * s;
+  const h = cropState.naturalH * s;
+  cropImg.style.width = w + 'px';
+  cropImg.style.height = h + 'px';
+  cropImg.style.transform = `translate(${cropState.offsetX}px, ${cropState.offsetY}px)`;
+}
+
+// Keeps the drag within sane bounds — the circle (and stage) must
+// always stay fully covered by image, so it can never be dragged far
+// enough to reveal empty space at an edge.
+function clampOffset(){
+  const s = cropState.baseScale * cropState.scale;
+  const w = cropState.naturalW * s;
+  const h = cropState.naturalH * s;
+  const minX = STAGE_SIZE - w, maxX = 0;
+  const minY = STAGE_SIZE - h, maxY = 0;
+  cropState.offsetX = Math.min(maxX, Math.max(minX, cropState.offsetX));
+  cropState.offsetY = Math.min(maxY, Math.max(minY, cropState.offsetY));
+}
+
 document.getElementById('photoInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  const img = new Image();
   const reader = new FileReader();
-  reader.onload = (ev) => { img.src = ev.target.result; };
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    const size = 200; // small square avatar keeps this to just a few KB
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const scale = Math.max(size/img.width, size/img.height);
-    const w = img.width*scale, h = img.height*scale;
-    ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
-    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-    saveProfile(null, null, compressedBase64);
-
-    const avatarEl = document.getElementById('avatarImg');
-    avatarEl.style.backgroundImage = `url('${compressedBase64}')`;
-    avatarEl.style.backgroundSize = 'cover';
-    avatarEl.style.backgroundPosition = 'center';
-    avatarEl.textContent = '';
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      cropState.naturalW = img.width;
+      cropState.naturalH = img.height;
+      // Base scale: smallest scale where the image still fully covers
+      // the square stage (same "cover" behavior as before), zoom
+      // slider then multiplies further from there.
+      cropState.baseScale = Math.max(STAGE_SIZE/img.width, STAGE_SIZE/img.height);
+      cropState.scale = 1;
+      cropState.offsetX = (STAGE_SIZE - img.width*cropState.baseScale) / 2;
+      cropState.offsetY = (STAGE_SIZE - img.height*cropState.baseScale) / 2;
+      cropImg.src = ev.target.result;
+      cropZoom.value = 100;
+      applyCropTransform();
+      cropBackdrop.classList.add('show');
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+  e.target.value = ''; // allow re-selecting the same file later
+});
+
+cropZoom.addEventListener('input', () => {
+  cropState.scale = Number(cropZoom.value) / 100;
+  clampOffset();
+  applyCropTransform();
+});
+
+// Drag to reposition — pointer events cover mouse AND touch in one
+// handler set, so this works the same on desktop and phone.
+let dragging = false, dragStartX = 0, dragStartY = 0, startOffsetX = 0, startOffsetY = 0;
+cropStage.addEventListener('pointerdown', (e) => {
+  dragging = true;
+  cropStage.classList.add('dragging');
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  startOffsetX = cropState.offsetX; startOffsetY = cropState.offsetY;
+  cropStage.setPointerCapture(e.pointerId);
+});
+cropStage.addEventListener('pointermove', (e) => {
+  if(!dragging) return;
+  cropState.offsetX = startOffsetX + (e.clientX - dragStartX);
+  cropState.offsetY = startOffsetY + (e.clientY - dragStartY);
+  clampOffset();
+  applyCropTransform();
+});
+cropStage.addEventListener('pointerup', () => { dragging = false; cropStage.classList.remove('dragging'); });
+cropStage.addEventListener('pointercancel', () => { dragging = false; cropStage.classList.remove('dragging'); });
+
+document.getElementById('cropCancelBtn').addEventListener('click', () => {
+  cropBackdrop.classList.remove('show');
+});
+
+document.getElementById('cropSaveBtn').addEventListener('click', () => {
+  // Render exactly what's inside the circle right now — same math as
+  // the live preview, onto a small square canvas — so the exported
+  // avatar matches what the person just saw and positioned.
+  const size = 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const s = cropState.baseScale * cropState.scale;
+  const exportScale = size / STAGE_SIZE;
+  ctx.drawImage(
+    cropImg,
+    cropState.offsetX * exportScale, cropState.offsetY * exportScale,
+    cropState.naturalW * s * exportScale, cropState.naturalH * s * exportScale
+  );
+  const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+  saveProfile(null, null, compressedBase64);
+
+  const avatarEl = document.getElementById('avatarImg');
+  avatarEl.style.backgroundImage = `url('${compressedBase64}')`;
+  avatarEl.style.backgroundSize = 'cover';
+  avatarEl.style.backgroundPosition = 'center';
+  avatarEl.textContent = '';
+
+  cropBackdrop.classList.remove('show');
 });
 
 async function saveProfile(fullName, branch, photoBase64){
@@ -269,10 +397,6 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   sessionStorage.removeItem('lalabellaUser');
   localStorage.removeItem('lalabellaToken');
   localStorage.removeItem('lalabellaUser');
-  localStorage.removeItem('lalabellaVerifiedToken');
-  localStorage.removeItem('lalabellaVerifiedAt');
-  sessionStorage.removeItem('lalabellaVerifiedToken');
-  sessionStorage.removeItem('lalabellaVerifiedAt');
   window.location.href = 'index.html';
 });
 </script>
