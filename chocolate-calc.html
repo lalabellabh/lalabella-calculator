@@ -1652,7 +1652,26 @@
     }
   });
 
-  loadData();
+  // Guards against a rare timing/network issue where this page's own
+  // script starts running before auth-guard.js (loaded in <head>, a
+  // few lines above) has actually finished downloading — e.g. a slow
+  // or briefly-interrupted connection. Rather than crashing with a
+  // raw "lalabellaCheckResponse is not defined" the moment loadData()
+  // tries to use it, this waits briefly and retries; if auth-guard.js
+  // genuinely never loads, it shows a clear message instead of a
+  // silent/cryptic failure.
+  (function startWhenAuthGuardReady(attempt){
+    attempt = attempt || 1;
+    if (typeof lalabellaCheckResponse === 'function') {
+      loadData();
+      return;
+    }
+    if (attempt >= 6) {
+      alert('Connection issue loading this page. Please refresh.');
+      return;
+    }
+    setTimeout(function(){ startWhenAuthGuardReady(attempt + 1); }, 300 * attempt);
+  })();
 
   /* ---------- Mixed chocolate + flower falling background ---------- */
   const BG_EMOJI = ['🍫','🍬','🌸','🌺'];
