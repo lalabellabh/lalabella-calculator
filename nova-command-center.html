@@ -267,8 +267,37 @@ window.addEventListener('unhandledrejection', (e)=>{
 });
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function showTranscript(t){transcript.textContent=t;transcript.classList.add('show');clearTimeout(showTranscript.t);showTranscript.t=setTimeout(()=>transcript.classList.remove('show'),6000)}
+// Short two-tone "ready" chime — plays the instant Joyboy has an
+// answer and is about to speak (right before speak() below), so the
+// person gets an audible cue even if they're not watching the screen
+// during the wait. Built with the Web Audio API directly rather than
+// an audio file, so there's nothing extra to host or load.
+function playReadyChime(){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [[880, 0], [1180, 0.09]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.14);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.15);
+    });
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 400);
+  }catch(e){ /* Web Audio unavailable — fail silently, chime is a nice-to-have */ }
+}
+
 function speak(text){
   if(!text)return;
+  playReadyChime();
   isSpeaking=true;
   setState('speaking','SPEAKING');
   log(text,'NOVA');
@@ -666,6 +695,13 @@ function stopInterruptListener(){
 
 function startWake(){
   if(autoWakeDisabled) return; // paused by the circuit breaker — only the manual mic button can clear this
+  // Respect the "Always Listening" toggle — several places elsewhere
+  // in this file call startWake() after Joyboy finishes speaking or
+  // after the manual mic button is used, regardless of this setting.
+  // Rather than adding this same check at every one of those call
+  // sites (easy to miss one), checking it centrally here means the
+  // toggle is honored no matter what triggered the call.
+  if(typeof wakeEnabled !== 'undefined' && !wakeEnabled) return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){log('Speech recognition is not supported in this browser.','SYSTEM');return}
   if(wakeRecognition) { try{wakeRecognition.stop()}catch(e){} }
