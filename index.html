@@ -1049,7 +1049,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     // keep the user logged in.
     const controller = new AbortController();
     const verifyTimer = setTimeout(() => controller.abort(), 8000);
-    fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(existingToken) + '&callerSecret=Lalabella2026-AuthGate-9xK2mP7qR', {signal: controller.signal})
+    fetch(AUTH_API_URL + '?action=verifySession&token=' + encodeURIComponent(existingToken), {signal: controller.signal})
       .then(r => r.json())
       .then(data => {
         if(data && data.valid){
@@ -1197,7 +1197,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       wasHidden = false;
       const token = sessionStorage.getItem('lalabellaToken');
       if(!token){ showLock(); return; }
-      fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(token) + '&callerSecret=Lalabella2026-AuthGate-9xK2mP7qR')
+      fetch(AUTH_API_URL + '?action=verifySession&token=' + encodeURIComponent(token))
         .then(r => r.json())
         .then(data => { if(!data.valid) showLock(); })
         .catch(() => {});
