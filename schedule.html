@@ -311,6 +311,15 @@ async function loadEmployees(){
 
 async function loadScheduleFor(employeeName){
   document.getElementById('calEmptyNote').style.display = 'none';
+  // Clear out whatever was showing before this request even starts —
+  // otherwise, if this NEW request fails, the old employee's data
+  // stays on screen looking like it belongs to the newly-picked name,
+  // which is actively misleading rather than just "stale".
+  currentSchedule = null;
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
+  document.getElementById('calTitleText').innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
+  document.getElementById('calRoleTag').style.display = 'none';
+
   const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
   try{
     const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
@@ -340,9 +349,16 @@ async function loadScheduleFor(employeeName){
     renderMonthGrid();
     applyScheduleToGrid(currentSchedule, true);
   }catch(e){
-    document.getElementById('calEmptyNote').style.display = 'block';
-    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'Connection error';
-    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'Could not load schedule — check your connection.';
+    // If the calendar already has a successfully-loaded schedule
+    // showing (from an earlier request), this failure is a transient
+    // blip on the NEW request — don't rip away a working calendar to
+    // show an error box. Only take over the whole view with the
+    // error state when there's nothing successfully shown yet.
+    if(!currentSchedule){
+      document.getElementById('calEmptyNote').style.display = 'block';
+      document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'Connection error';
+      document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'Could not load schedule — check your connection.';
+    }
   }
 }
 
