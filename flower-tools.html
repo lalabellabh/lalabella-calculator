@@ -915,7 +915,7 @@ kbd{
 </style>
 
 <style>
-.lala-bell-dock{ position:fixed; top:84px; right:16px; z-index:9300; }
+.lala-bell-dock{ position:fixed; top:14px; right:78px; z-index:9300; }
 .lala-bell-btn{
   width:44px; height:44px; border-radius:50%; border:none; cursor:pointer;
   background:linear-gradient(135deg,#d9a441,#b8860b); color:#2a1a0a; font-size:20px;
@@ -931,7 +931,7 @@ kbd{
 .lala-bell-btn.ring{ animation:lalaBellRing .5s ease 2; }
 @keyframes lalaBellRing{ 0%,100%{ transform:rotate(0); } 25%{ transform:rotate(-15deg); } 75%{ transform:rotate(15deg); } }
 .lala-bell-panel{
-  position:fixed; top:134px; right:16px; z-index:9300; width:280px;
+  position:fixed; top:64px; right:78px; z-index:9300; width:280px;
   background:#fff; border:1px solid #f0d9d9; border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.2);
   padding:14px; display:none; font-family:'Space Grotesk',sans-serif;
 }
@@ -944,7 +944,10 @@ kbd{
   background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; text-decoration:none;
   font-size:12.5px; font-weight:700;
 }
-@media (max-width:640px){ .lala-bell-dock, .lala-bell-panel{ right:8px; } }
+@media (max-width:640px){
+  .lala-bell-dock{ top:10px; right:62px; }
+  .lala-bell-panel{ top:60px; right:62px; }
+}
 </style>
 </head>
 
