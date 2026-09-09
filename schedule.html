@@ -174,31 +174,30 @@
     </div>
     <div class="month-grid" id="monthGrid"></div>
   </div>
-
-  <div id="calEmptyNote" class="empty-state">
-    <div class="empty-hero">
-      <span class="empty-hero-float" style="left:12%;top:18%;animation-delay:0s;">🌸</span>
-      <span class="empty-hero-float" style="right:14%;top:24%;animation-delay:1.4s;">🍫</span>
-      <span class="empty-hero-float" style="left:16%;bottom:20%;animation-delay:2.6s;font-size:20px;">✨</span>
-      <span class="empty-hero-float" style="right:12%;bottom:16%;animation-delay:.8s;font-size:20px;">🎀</span>
-      <div class="empty-cal-icon">
-        <div class="cal-ring l"></div><div class="cal-ring r"></div>
-        <div class="cal-top"></div>
-        <div class="cal-body">
-          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot hi"></div><div class="cal-dot"></div>
-          <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div>
-        </div>
-      </div>
-      <div class="empty-hero-title">No one selected yet</div>
-      <div class="empty-hero-sub">Pick a name above — their shifts will hop onto the calendar</div>
-    </div>
-  </div>
 </div>
 
 <script>
 const SCHEDULE_API_URL = 'https://script.google.com/macros/s/AKfycbwp9vFxJFCfQtBZY0VQVMxXNw3BxPnfFSAzNrqVC-WBq3h7-YlzuhHBWucte6pcSf4/exec';
 const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const DAY_FULL = {SUN:'Sunday',MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+
+// Safe wrapper around the (now-removed) empty-state note box — a
+// no-op if the element isn't in the page, so removing that box from
+// the HTML doesn't crash any of the calls below that used to show
+// messages in it.
+function showCalEmptyMessage(title, message){
+  const el = document.getElementById('calEmptyNote');
+  if(!el) return;
+  el.style.display = 'block';
+  const titleEl = el.querySelector('.empty-hero-title');
+  const subEl = el.querySelector('.empty-hero-sub');
+  if(titleEl && title) titleEl.textContent = title;
+  if(subEl && message) subEl.textContent = message;
+}
+function hideCalEmptyMessage(){
+  const el = document.getElementById('calEmptyNote');
+  if(el) el.style.display = 'none';
+}
 
 // ---------- Real-time clock ----------
 function tickClock(){
@@ -310,7 +309,7 @@ async function loadEmployees(){
 }
 
 async function loadScheduleFor(employeeName){
-  document.getElementById('calEmptyNote').style.display = 'none';
+  hideCalEmptyMessage();
   // Clear out whatever was showing before this request even starts —
   // otherwise, if this NEW request fails, the old employee's data
   // stays on screen looking like it belongs to the newly-picked name,
@@ -325,9 +324,7 @@ async function loadScheduleFor(employeeName){
     const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
     const data = await res.json();
     if(!data.success || !data.schedule.length){
-      document.getElementById('calEmptyNote').style.display = 'block';
-      document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No schedule found';
-      document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.';
+      showCalEmptyMessage('No schedule found', 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.');
       currentSchedule = null;
       renderMonthGrid();
       return;
@@ -355,9 +352,7 @@ async function loadScheduleFor(employeeName){
     // show an error box. Only take over the whole view with the
     // error state when there's nothing successfully shown yet.
     if(!currentSchedule){
-      document.getElementById('calEmptyNote').style.display = 'block';
-      document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'Connection error';
-      document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'Could not load schedule — check your connection.';
+      showCalEmptyMessage('Connection error', 'Could not load schedule — check your connection.');
     }
   }
 }
@@ -420,9 +415,7 @@ document.getElementById('myScheduleBtn').addEventListener('click', async () => {
     sel.value = match.name;
     loadScheduleFor(match.name);
   } else {
-    document.getElementById('calEmptyNote').style.display = 'block';
-    document.querySelector('#calEmptyNote .empty-hero-title').textContent = 'No match found';
-    document.querySelector('#calEmptyNote .empty-hero-sub').textContent = 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.';
+    showCalEmptyMessage('No match found', 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.');
   }
 });
 
