@@ -263,7 +263,7 @@ window.addEventListener('error', (e)=>{
   try{ log('Script error: ' + (e.message || 'unknown') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''), 'SYSTEM'); }catch(_){}
 });
 window.addEventListener('unhandledrejection', (e)=>{
-  try{ log('Promise error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), 'SYSTEM'); }catch(_){ }
+  try{ log('Promise error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), 'SYSTEM'); }catch(_){}
 });
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function showTranscript(t){transcript.textContent=t;transcript.classList.add('show');clearTimeout(showTranscript.t);showTranscript.t=setTimeout(()=>transcript.classList.remove('show'),6000)}
@@ -337,9 +337,9 @@ const LOCAL_ROUTES = {
   chocolatedashboard: ['dashboard.html'],
   flowerdashboard: ['flower-dashboard.html'],
   itemdashboard: ['item-dashboard.html'],
-  chocolatedashboard: ['dashboard.html'],
+  chocolatereceiving: ['chocolate-receiving.html'],
   flowerreceiving: ['flower-receiving.html'],
-  flowerrelease: ['flower-release.html'],
+  chocolaterelease: ['chocolate-release.html'],
   stockcount: ['stock-count.html'],
   flowerstockcount: ['flower-stock-count.html'],
   stockapproval: ['stock-approval.html'],
@@ -360,6 +360,9 @@ const LOCAL_ROUTES = {
   chocolateodoo: ['chocolate-odoo-import.html'],
   flowerodoo: ['flower-odoo-import.html'],
   itemodoo: ['item-odoo-import.html'],
+  // Generic fallbacks — used only when no branch-specific phrase
+  // (e.g. "flower dashboard") matched first, since ROUTE_PHRASES
+  // checks specific patterns before these general ones.
   dashboard: ['flower-dashboard.html'],
   inventory: ['item-inventory.html'],
   purchases: ['supply-log.html'],
@@ -429,6 +432,7 @@ function normalizeCommand(t){
 function localCommand(raw){
   const t = normalizeCommand(raw);
 
+  // Basic conversation — completely local.
   if (/^(hi|hello|hey|good morning|good afternoon|good evening)( joyboy)?$/.test(t))
     return {text:'Hello Boss. Joyboy is ready.', handled:true};
 
@@ -441,12 +445,14 @@ function localCommand(raw){
   if (/^(help|what can you do|show commands)$/.test(t))
     return {text:'I can open system pages, tell the time and date, control the interface, and handle simple local commands without using the AI API. Live inventory and business questions can use the API when it is connected.', handled:true};
 
+  // Time / date — browser only.
   if (/^(what time is it|time|current time|tell me the time)$/.test(t))
     return {text:'It is ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + '.', handled:true};
 
   if (/^(what date is it|date|today|what day is it)$/.test(t))
     return {text:'Today is ' + new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric', year:'numeric'}) + '.', handled:true};
 
+  // UI controls.
   if (/^(stop|stop talking|be quiet|silence|cancel speech)$/.test(t)){
     speechSynthesis.cancel();
     setState(awake?'awake':'','STANDBY');
@@ -459,6 +465,8 @@ function localCommand(raw){
     return {text:'Activity log cleared.', handled:true};
   }
 
+  // Navigation — no API. Any phrase containing "open/go to/show/take
+  // me to" followed by a recognizable page name routes locally.
   if(/^(open|go to|show|take me to|navigate to)\b/.test(t)){
     for(const [target, rx] of ROUTE_PHRASES){
       if(rx.test(t)){
@@ -469,9 +477,14 @@ function localCommand(raw){
     }
   }
 
+  // Local inventory start UI only. Actual stock data still comes from the backend.
   if (/^(start|begin)\s+(the\s+)?inventory$/.test(t))
     return {text:'Okay Boss. Inventory mode is ready. I can start the live count when the Flower Tools API is connected.', handled:true};
 
+  // ---------------------------------------------------------------
+  // System FAQ — how the Lalabella tools work, answered locally with
+  // no AI call needed. Longer/more specific phrases are checked first.
+  // ---------------------------------------------------------------
   if (/what is (the )?chocolate system|about (the )?chocolate system|explain chocolate/.test(t))
     return {text:'The Chocolate system tracks chocolate inventory across three branches: ModaMall, Hamala, and Galali. It covers receiving, release, barcode labels, an admin panel for new items, and a live dashboard.', handled:true};
 
@@ -505,6 +518,8 @@ function localCommand(raw){
   if (/what pages? (are there|do you have)|what can i open|list (the )?pages/.test(t))
     return {text:'I can open Chocolate Home, Flower Home, Item Inventory, the dashboards, Receiving, Release, Stock Count, Calculators, Admin pages, Barcode tools, Order Form, Card Print, Notes, and more. Just say the name of what you need.', handled:true};
 
+
+  // Not a local command -> caller may use API.
   return {handled:false};
 }
 
@@ -517,14 +532,45 @@ async function askNova(message){
   }
 
   setState('thinking','THINKING');
+  // Voice interrupt while waiting for the AI, not just while Joyboy is
+  // talking — without this, saying "stop" during a slow/stuck response
+  // had no effect until the request finally settled on its own.
   const abortController = new AbortController();
   thinkingAbort = abortController;
   try{ startInterruptListener(); }catch(e){}
   try{
+    // GET, not POST — Google Apps Script Web Apps deliver every
+    // response via an internal redirect, and browsers convert a POST
+    // to GET when following that kind of redirect. That meant doPost()
+    // was never actually reached; every real chat request was quietly
+    // landing back on the backend's default "online" response instead
+    // of the real answer. GET sidesteps this entirely and matches the
+    // pattern every other Lalabella backend already relies on — all
+    // parameters travel as URL query parameters instead of a POST body.
     const lalabellaToken = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-    const r=await fetch(NOVA_API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({message,session,token:lalabellaToken,context:{page:'NOVA Command Center',app:'Flower Tools'}}),
-      signal: abortController.signal});
+    const sessionStr = JSON.stringify(session || {});
+    const contextStr = JSON.stringify({page:'NOVA Command Center',app:'Flower Tools'});
+    const url = NOVA_API_URL
+      + '?action=chat'
+      + '&message=' + encodeURIComponent(message)
+      + '&token=' + encodeURIComponent(lalabellaToken)
+      + '&session=' + encodeURIComponent(sessionStr)
+      + '&context=' + encodeURIComponent(contextStr);
+
+    // URL-length monitoring — GET requests have a practical safe limit
+    // around 2000 characters across browsers/servers. A long-running
+    // conversation (growing `session`) could eventually approach that
+    // and get silently truncated by some intermediary, so this warns
+    // in Live Activity well before that actually happens, rather than
+    // failing mysteriously later. 1500 = getting close; 1900 = right
+    // at the edge, this specific message may already be at risk.
+    if(url.length >= 1900){
+      log('⚠️ Request URL is ' + url.length + ' chars — very close to the safe GET limit (~2000). This message may get cut off. Consider starting a fresh conversation.', 'SYSTEM');
+    } else if(url.length >= 1500){
+      log('Request URL is ' + url.length + ' chars and growing (safe limit ~2000) — conversation is getting long.', 'SYSTEM');
+    }
+
+    const r=await fetch(url, { signal: abortController.signal });
     if(!r.ok){
       log('NOVA API HTTP error ' + r.status + ': ' + (await r.text()).slice(0,300), 'SYSTEM');
       return 'The AI connection had a server error, Boss. Check Live Activity for the details.';
@@ -539,7 +585,7 @@ async function askNova(message){
     return data.text;
   }catch(e){
     if(e && e.name === 'AbortError'){
-      return '';
+      return ''; // user said stop — nothing to speak, cancelStop() already handled the reset
     }
     console.error('[Joyboy] askNova failed:', e);
     log('API error: ' + (e && e.message ? e.message : String(e)), 'SYSTEM');
@@ -552,22 +598,33 @@ async function askNova(message){
 async function handle(t){
   heard(t);
   if(isWake(t) && (wakeLocked || Date.now() < wakeCooldownUntil)){
+    // Either the one-shot lock is already engaged (a wake was JUST
+    // processed and hasn't fully finished yet), or we're still in the
+    // post-speech echo window — either way, treat this as noise, not
+    // a fresh address.
     return;
   }
-  if(!awake && !isWake(t)) return;
+  if(!awake && !isWake(t)) return; // IMPORTANT: silent unless greeted
   if(isWake(t)){
-    wakeLocked=true;
+    wakeLocked=true; // engaged BEFORE speak() runs — closes the window entirely
     registerWakeTrigger();
     if(autoWakeDisabled){ wakeLocked=false; return; }
-    awake=true; setState('awake','AWAKE'); speak('Yes, Boss?');
+    awake=true; setState('awake','AWAKE'); speak('Yes, Boss?'); 
     const rest=t.replace(/\b(hey\s+joyboy|hello\s+joyboy|joyboy)\b/i,'').trim();
     if(rest) setTimeout(()=>handle(rest),350);
     return;
   }
   const answer=await askNova(t); speak(answer);
 }
+// A separate, always-on recognizer that runs SPECIFICALLY while NOVA
+// is speaking — the normal wake listener has to stay off during
+// speech (otherwise it hears NOVA's own voice), but that also meant
+// there was previously NO way to interrupt a stuck/stuttering
+// utterance by voice. This one only ever reacts to a stop-phrase; any
+// other speech it picks up (including NOVA's own voice bleeding into
+// the mic) is silently ignored.
 let interruptRecognition=null;
-let thinkingAbort=null;
+let thinkingAbort=null; // AbortController for the in-flight AI request, set only while waiting on a response — lets a spoken "stop" actually cancel it, not just silence Joyboy's voice.
 function startInterruptListener(){
   if(!voiceInterruptEnabled) return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -602,18 +659,24 @@ function startInterruptListener(){
 function stopInterruptListener(){
   if(interruptRecognition){
     const r=interruptRecognition;
-    interruptRecognition=null;
+    interruptRecognition=null; // clear first so onend doesn't restart it
     try{ r.stop(); }catch(e){}
   }
 }
 
 function startWake(){
-  if(autoWakeDisabled) return;
+  if(autoWakeDisabled) return; // paused by the circuit breaker — only the manual mic button can clear this
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){log('Speech recognition is not supported in this browser.','SYSTEM');return}
   if(wakeRecognition) { try{wakeRecognition.stop()}catch(e){} }
   wakeRecognition=new SR();
   wakeRecognition.continuous=true;
+  // Interim (not-yet-final) results are enabled specifically so the
+  // wake word itself doesn't have to wait for the speech engine's own
+  // pause-detection to mark a phrase "final" — a short word like
+  // "Nova" said quickly can otherwise take a beat to register. Actual
+  // commands (post-wake) still only act on isFinal results below, so
+  // this doesn't make command recognition any less accurate.
   wakeRecognition.interimResults=true;
   wakeRecognition.lang='en-US';
   let wakeTriggeredForThisPhrase=false;
@@ -622,6 +685,13 @@ function startWake(){
       const r=e.results[i];
       if(r.isFinal){
         if(wakeTriggeredForThisPhrase){
+          // The wake word for THIS phrase was already reacted to via
+          // an interim result — calling handle() again with the full
+          // final text (which still contains "nova") would trigger
+          // the wake branch a second time, producing a duplicate
+          // "Yes, Boss?" and repeating itself. Strip the wake word out
+          // and, if there's anything left, treat ONLY that leftover
+          // part as the actual command.
           wakeTriggeredForThisPhrase=false;
           const rest=r[0].transcript.replace(/\b(hey|hello|hi)?\s*(joyboy|joy\s*boy|joyboi|joiboy|joyboh)\b/gi,'').trim();
           if(rest) handle(rest);
@@ -629,6 +699,8 @@ function startWake(){
         }
         handle(r[0].transcript);
       } else if(!awake && !wakeLocked && !wakeTriggeredForThisPhrase && isWake(r[0].transcript)){
+        // Wake word spotted in an interim result — react immediately
+        // instead of waiting for this phrase to finalize.
         wakeTriggeredForThisPhrase=true;
         handle(r[0].transcript);
       }
@@ -643,12 +715,20 @@ function startWake(){
 function manual(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
   if(listening){recognition?.stop();return}
+  // A deliberate button tap is real human confirmation — safe to
+  // clear the echo-loop circuit breaker and resume normal listening.
   if(autoWakeDisabled){
     autoWakeDisabled=false;
     recentWakeCount=0;
     log('Auto-listening resumed.', 'SYSTEM');
   }
   try{if(wakeRecognition)wakeRecognition.stop()}catch(e){}
+  // Pressing the mic button IS the wake gesture — a deliberate tap
+  // already establishes intent, so whatever is said next should be
+  // treated as a real command immediately, without also needing to
+  // say "Nova" first. This makes the button a 100%-reliable fallback
+  // for whenever the accent/background-noise makes the voice-only
+  // wake word unreliable.
   awake=true;
   recognition=new SR();recognition.continuous=false;recognition.interimResults=false;recognition.lang='en-US';listening=true;setState('listening','LISTENING');
   recognition.onresult=e=>handle(e.results[0][0].transcript);
@@ -656,6 +736,11 @@ function manual(){
   recognition.onend=()=>{listening=false;if(!awake)setState('','STANDBY');if(!isSpeaking)setTimeout(startWake,350)};
   try{recognition.start()}catch(e){listening=false;setState(awake?'awake':'','STANDBY');startWake()}
 }
+// Preload the voice list immediately on page load — the very first
+// speak() call (NOVA's "Yes, Boss?" greeting) is otherwise the FIRST
+// time getVoices() is ever called, and Chrome loading the voice list
+// mid-utterance is what causes the short "Yes, Boss?" phrase to
+// stutter/replay on some systems.
 speechSynthesis.getVoices();
 speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
 document.getElementById('mic').onclick=manual;
