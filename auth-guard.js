@@ -1,269 +1,495 @@
 /**
- * LALABELLA AUTH GUARD
- * Include this on EVERY protected page, as early as possible in
- * <head> (before other scripts/content), so an unauthenticated
- * visitor is redirected before anything meaningful renders.
+ * LALABELLA AUTH — Login/Register/Token Verification
+ * Google Apps Script backend, bound to the "Lalabella Users" Sheet.
  *
- * What it does:
- * 1. Checks sessionStorage for a token.
- * 2. If missing, redirects to index.html immediately.
- * 3. If present, verifies it against the Auth backend — an expired
- *    or logged-out token is treated the same as no token at all.
- * 4. Exposes window.LALABELLA_TOKEN and window.LALABELLA_USER once
- *    verified, so the rest of the page's own scripts can read them
- *    (e.g. to append &token=... to their own API calls) without
- *    each page re-implementing this check.
+ * SETUP (do this before anything works):
+ * 1) Bind this script to the "Lalabella Users" spreadsheet:
+ *    Open the Sheet → Extensions → Apps Script → paste this file.
+ * 2) Project Settings → Script Properties → add:
+ *      PEPPER = <a long random secret string, different from any password>
+ *      AUTH_TOKEN = <a second long random secret — this is the ONE all
+ *                    other backends (Chocolate/Flower/Item Inventory/
+ *                    Joyboy) will be given to call verifyToken with>
+ * 3) Deploy → New deployment → Web app → Execute as: Me, Access: Anyone.
+ * 4) Copy the /exec URL into every frontend page's login flow, and give
+ *    the AUTH_TOKEN value to the OTHER backends (as a Script Property
+ *    there too) so they can call verifyToken_ against this one.
+ *
+ * SECURITY NOTES:
+ * - Passwords are NEVER stored in plain text — only SHA-256(password +
+ *   PEPPER), hex-encoded. The PEPPER lives in Script Properties, never
+ *   in the Sheet or in any frontend code, so the hash alone (even if
+ *   someone saw the whole Sheet) isn't crackable without it.
+ * - Every login issues a random session TOKEN, saved back into the
+ *   user's row. Every other backend must validate this token (via the
+ *   verifyToken action here) before returning ANY data — this is what
+ *   makes the system secure even if someone finds a backend's raw URL.
+ * - The two diagnostic actions below (debugProfile, debugHash) are
+ *   gated behind AUTH_TOKEN itself (the same secret only trusted
+ *   backends/developers have) via &debugKey=... — and neither one
+ *   ever echoes a live session token or the PEPPER back in its
+ *   response. A debug endpoint must never leak the credential that
+ *   protects it, or the raw material used to prove identity.
  */
-(function () {
-  const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
-  const AUTH_CALLER_SECRET = 'Lalabella2026-AuthGate-9xK2mP7qR';
 
-  // ---------------------------------------------------------------
-  // GLOBAL FETCH WRAPPER — rather than hand-editing every individual
-  // fetch() call across 30+ pages (error-prone, easy to miss one),
-  // this transparently attaches the current session token to every
-  // outgoing request aimed at any of our own Apps Script backends
-  // (script.google.com/macros/s/...), whatever shape that call takes:
-  // plain GET query string, POST with a JSON body, or POST with a
-  // URLSearchParams/form-encoded body. Calls to anything else (fonts,
-  // OpenAI, other sites) are left completely untouched.
-  // ---------------------------------------------------------------
-  const originalFetch = window.fetch.bind(window);
-  const BACKEND_PATTERN = /script\.google\.com\/macros\/s\//;
+const PROFILE_PHOTOS_FOLDER_ID = '1pL-XwgAum-QmFm1Cw5AnTfAlKgAW53ZL';
 
-  window.fetch = function (input, init) {
-    const token = window.LALABELLA_TOKEN
-      || sessionStorage.getItem('lalabellaToken')
-      || localStorage.getItem('lalabellaToken')
-      || '';
+function doPost(e) { return doGet(e); }
 
-    let url = typeof input === 'string' ? input : (input && input.url) || '';
-    const isBackendCall = token && BACKEND_PATTERN.test(url);
+function doGet(e) {
+  const action = e.parameter.action;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Sheet1') || ss.getSheets()[0];
 
-    if (isBackendCall && !/[?&]token=/.test(url)) {
-      const sep = url.includes('?') ? '&' : '?';
-      url = url + sep + 'token=' + encodeURIComponent(token);
-      if (typeof input === 'string') {
-        input = url;
-      } else {
-        input = new Request(url, input);
+  if (action === 'register') return handleRegister_(sheet, e);
+  if (action === 'login') return handleLogin_(sheet, e);
+  if (action === 'verifyToken') return handleVerifyToken_(sheet, e);
+  if (action === 'logout') return handleLogout_(sheet, e);
+  if (action === 'getProfile') return handleGetProfile_(sheet, e);
+  if (action === 'debugProfile') return handleDebugProfile_(sheet, e);
+  if (action === 'updateProfile') return handleUpdateProfile_(sheet, e);
+  if (action === 'changePassword') return handleChangePassword_(sheet, e);
+  if (action === 'debugHash') return handleDebugHash_(e);
+
+  return json_({ error: 'Unknown action', receivedAction: action || '(none)', marker: 'AUTH-DEPLOY-v1-CONFIRMED' });
+}
+
+// Shared gate for the two diagnostic-only actions below — requires
+// the SAME secret used as AUTH_TOKEN (the one other backends use to
+// call verifyToken). Only someone who already has developer-level
+// access to Script Properties knows this, so a random visitor who
+// merely discovers this URL can't invoke either diagnostic.
+function isDebugCallerAuthorized_(e) {
+  const expected = PropertiesService.getScriptProperties().getProperty('AUTH_TOKEN');
+  const supplied = String((e && e.parameter && e.parameter.debugKey) || '');
+  return !!expected && supplied === expected;
+}
+
+// ---------- Register ----------
+function handleRegister_(sheet, e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const username = String(e.parameter.username || '').trim();
+    const password = String(e.parameter.password || '');
+    const fullName = String(e.parameter.fullName || '').trim();
+    const branch = String(e.parameter.branch || '').trim();
+
+    if (!username || !password || !fullName || !branch) {
+      return json_({ success: false, error: 'All fields are required.' });
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const iUsername = headers.indexOf('Username');
+
+    // Case-insensitive duplicate check — "Admin" and "admin" are the same account.
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][iUsername]).toLowerCase() === username.toLowerCase()) {
+        return json_({ success: false, error: 'That username is already taken.' });
       }
     }
 
-    if (isBackendCall && init && init.body) {
-      if (typeof init.body === 'string') {
-        // Try JSON body first.
-        let handled = false;
-        try {
-          const parsed = JSON.parse(init.body);
-          if (parsed && typeof parsed === 'object' && !('token' in parsed)) {
-            parsed.token = token;
-            init = Object.assign({}, init, { body: JSON.stringify(parsed) });
-            handled = true;
+    const passwordHash = hashPassword_(password);
+    // Role is ALWAYS "Staff" at registration — nothing in this request
+    // can grant Admin. Upgrading a role is a manual edit in the Sheet
+    // itself, by someone who already has edit access to it.
+    sheet.appendRow([username, passwordHash, fullName, 'Staff', branch, new Date(), '', '', '', 0, '']);
+
+    return json_({ success: true, message: 'Registered successfully. You can now log in.' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------- Login ----------
+function handleLogin_(sheet, e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const username = String(e.parameter.username || '').trim();
+    const password = String(e.parameter.password || '');
+
+    if (!username || !password) {
+      return json_({ success: false, error: 'Username and password are required.' });
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const iUsername = headers.indexOf('Username');
+    const iHash = headers.indexOf('PasswordHash');
+    const iFullName = headers.indexOf('FullName');
+    const iRole = headers.indexOf('Role');
+    const iBranch = headers.indexOf('Branch');
+    const iToken = headers.indexOf('Token');
+    const iTokenCreated = headers.indexOf('TokenCreated');
+    const iFailedAttempts = headers.indexOf('FailedAttempts');
+    const iLockedUntil = headers.indexOf('LockedUntil');
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][iUsername]).toLowerCase() === username.toLowerCase()) {
+
+        // Locked out — 5 failed attempts in a row triggers a 30-minute
+        // cooldown before this account can try again at all, checked
+        // BEFORE the password is even compared (so a locked account
+        // never leaks whether a guessed password would've worked).
+        if (iLockedUntil !== -1 && data[i][iLockedUntil] instanceof Date) {
+          const lockedUntil = data[i][iLockedUntil];
+          if (Date.now() < lockedUntil.getTime()) {
+            const minutesLeft = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000);
+            return json_({ success: false, error: 'Too many failed attempts. Try again in ' + minutesLeft + ' minute(s).' });
           }
-        } catch (e) { /* not JSON — fall through */ }
-        // Otherwise treat as form-encoded (URLSearchParams.toString() shape).
-        if (!handled && !/[?&]token=/.test(init.body)) {
-          init = Object.assign({}, init, { body: init.body + '&token=' + encodeURIComponent(token) });
         }
-      } else if (init.body instanceof URLSearchParams) {
-        if (!init.body.has('token')) init.body.append('token', token);
+
+        const expectedHash = hashPassword_(password);
+        if (data[i][iHash] !== expectedHash) {
+          if (iFailedAttempts !== -1) {
+            const currentAttempts = (Number(data[i][iFailedAttempts]) || 0) + 1;
+            sheet.getRange(i + 1, iFailedAttempts + 1).setValue(currentAttempts);
+            if (currentAttempts >= 5 && iLockedUntil !== -1) {
+              const lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+              sheet.getRange(i + 1, iLockedUntil + 1).setValue(lockUntil);
+              return json_({ success: false, error: 'Too many failed attempts. Account locked for 30 minutes.' });
+            }
+          }
+          return json_({ success: false, error: 'Incorrect username or password.' });
+        }
+
+        // Correct password — clear any failed-attempt count/lock.
+        if (iFailedAttempts !== -1) sheet.getRange(i + 1, iFailedAttempts + 1).setValue(0);
+        if (iLockedUntil !== -1) sheet.getRange(i + 1, iLockedUntil + 1).setValue('');
+
+        const token = generateToken_();
+        sheet.getRange(i + 1, iToken + 1).setValue(token);
+        sheet.getRange(i + 1, iTokenCreated + 1).setValue(new Date());
+
+        return json_({
+          success: true,
+          token: token,
+          user: {
+            username: data[i][iUsername],
+            fullName: data[i][iFullName],
+            role: data[i][iRole],
+            branch: data[i][iBranch]
+          }
+        });
       }
     }
 
-    return originalFetch(input, init).then(response => {
-      // For calls to our own backends, peek at the JSON body (via a
-      // clone, so the original response stream is left untouched for
-      // whatever code actually called fetch) — if the backend
-      // rejected the request as Unauthorized, that COULD mean the
-      // session itself is invalid. But it could just as easily be a
-      // transient backend-to-backend hiccup (this specific data call
-      // failing to reach the Auth backend for a moment) that has
-      // nothing to do with whether the person is really logged in —
-      // redirecting on that alone was bouncing people back to login
-      // even with a perfectly good "Remember me" session. So this
-      // only ever ACTS on a confirmed, independent verifyToken check
-      // (which has its own retry built in) — never on a single
-      // "Unauthorized" from an unrelated data call.
-      if (isBackendCall) {
-        response.clone().json().then(data => {
-          if (data && data.error && /unauthorized/i.test(String(data.error))) {
-            confirmSessionInvalidThenRedirect_();
-          }
-        }).catch(() => { /* not JSON, or already consumed — ignore */ });
+    return json_({ success: false, error: 'Incorrect username or password.' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------- Logout ----------
+function handleLogout_(sheet, e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const token = String(e.parameter.token || '');
+    if (!token) return json_({ success: true }); // nothing to clear
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const iToken = headers.indexOf('Token');
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][iToken] === token) {
+        sheet.getRange(i + 1, iToken + 1).setValue('');
+        break;
       }
-      return response;
-    });
-  };
+    }
+    return json_({ success: true });
+  } finally {
+    lock.releaseLock();
+  }
+}
 
-  // goToLogin is defined further below as a plain function; this
-  // thin wrapper lets the fetch interceptor above (which runs before
-  // that definition executes) still reach it via closure once the
-  // script has fully loaded.
-  function goToLoginPublic_(){ goToLogin(); }
-
-  // Debounced, independently-verified redirect trigger — at most one
-  // confirmation check in flight at a time, so a burst of several
-  // data calls all failing at once (common when a page loads and
-  // fires off multiple fetches together) doesn't launch several
-  // redundant verifyToken calls.
-  let confirmingInvalidSession = false;
-  function confirmSessionInvalidThenRedirect_(){
-    if (confirmingInvalidSession) return;
-    confirmingInvalidSession = true;
-    const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
-    if (!token) { goToLoginPublic_(); return; }
-    verifyTokenWithRetryPublic_(token).then(data => {
-      confirmingInvalidSession = false;
-      if (!data.valid) goToLoginPublic_();
-      // If it turns out valid after all, do nothing — the original
-      // failing call was genuinely just a transient blip.
-    }).catch(() => { confirmingInvalidSession = false; });
+// ---------- Verify Token ----------
+// Called by THIS backend's own frontend pages, AND by every other
+// backend (Chocolate/Flower/Item Inventory/Joyboy) before they hand
+// back any data — the single shared gate the whole system relies on.
+// Requires a second secret (AUTH_TOKEN) so that only backends that
+// were deliberately given it can even ask "is this session valid?".
+function handleVerifyToken_(sheet, e) {
+  const callerSecret = String(e.parameter.callerSecret || '');
+  const expectedSecret = PropertiesService.getScriptProperties().getProperty('AUTH_TOKEN');
+  if (!expectedSecret || callerSecret !== expectedSecret) {
+    return json_({ valid: false, error: 'Unauthorized caller.' });
   }
 
-  function goToLogin() {
-    sessionStorage.removeItem('lalabellaToken');
-    sessionStorage.removeItem('lalabellaUser');
-    sessionStorage.removeItem('lalabellaVerifiedToken');
-    sessionStorage.removeItem('lalabellaVerifiedAt');
-    showSessionEndedThenRedirect_();
-  }
+  const token = String(e.parameter.token || '');
+  if (!token) return json_({ valid: false });
 
-  // Instead of silently vanishing to the login screen (which used to
-  // just look like a random error), briefly explain the most likely
-  // reason — logging in on any other device/browser replaces this
-  // session, since the system only keeps one active session per
-  // account at a time. A short, friendly overlay for ~2.5s, then the
-  // normal redirect — long enough to actually read, short enough to
-  // not meaningfully delay getting back to login.
-  function showSessionEndedThenRedirect_(){
-    if (!document.body) { window.location.href = 'index.html'; return; } // page not ready yet — just redirect
-    if (document.getElementById('lalabella-session-ended-overlay')) return; // already showing
-    const overlay = document.createElement('div');
-    overlay.id = 'lalabella-session-ended-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(40,20,25,.72);display:flex;align-items:center;justify-content:center;padding:20px;font-family:sans-serif;';
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:320px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);">
-        <div style="font-size:32px;margin-bottom:10px;">🔐</div>
-        <div style="font-family:Georgia,serif;font-size:16px;font-weight:700;color:#3a2a2a;margin-bottom:8px;">Session ended</div>
-        <div style="font-size:13px;color:#8a7078;line-height:1.5;">This usually happens when this account logs in on another device or browser — only one session stays active at a time. Redirecting to login…</div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    setTimeout(()=>{ window.location.href = 'index.html'; }, 2500);
-  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const iToken = headers.indexOf('Token');
+  const iUsername = headers.indexOf('Username');
+  const iFullName = headers.indexOf('FullName');
+  const iRole = headers.indexOf('Role');
+  const iBranch = headers.indexOf('Branch');
+  const iTokenCreated = headers.indexOf('TokenCreated');
 
-  // Accept a token from this tab's own session, OR a "Remember me"
-  // token saved in localStorage from a previous visit/page.
-  const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
-  if (!token) {
-    goToLogin();
-    return;
-  }
-
-  // Synchronous-feeling gate: hide the page immediately while we
-  // verify, so a flash of real content never shows before the
-  // redirect happens for an invalid session.
-  document.documentElement.style.visibility = 'hidden';
-
-  // A single verifyToken call is a server-to-server request (this
-  // page's backend calling the Auth backend) — on a shaky connection
-  // that hop can fail even when the token is genuinely valid, which
-  // would otherwise bounce someone back to login for no real reason.
-  // One retry after a short pause absorbs that kind of blip; only a
-  // second consecutive failure is treated as a real "not logged in".
-  function verifyTokenWithRetry(tok, attempt){
-    return fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(tok) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
-      .then(r => r.json())
-      .then(data => {
-        if (!data.valid && attempt < 2) {
-          return new Promise(resolve => setTimeout(resolve, 900)).then(() => verifyTokenWithRetry(tok, attempt + 1));
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][iToken] === token) {
+      // Optional session expiry — 24 hours from token creation.
+      const created = data[i][iTokenCreated];
+      if (created instanceof Date) {
+        const ageMs = Date.now() - created.getTime();
+        if (ageMs > 24 * 60 * 60 * 1000) {
+          return json_({ valid: false, error: 'Session expired.' });
         }
-        return data;
+      }
+      return json_({
+        valid: true,
+        user: {
+          username: data[i][iUsername],
+          fullName: data[i][iFullName],
+          role: data[i][iRole],
+          branch: data[i][iBranch]
+        }
       });
+    }
   }
-  function verifyTokenWithRetryPublic_(tok){ return verifyTokenWithRetry(tok, 1); }
+  return json_({ valid: false });
+}
 
-  // Session-scoped verification cache — verifying on literally every
-  // single page navigation is a full server-to-server round trip
-  // (this page's backend -> Auth backend) that adds real, noticeable
-  // delay to EVERY click through the app, even though the session
-  // itself rarely actually changes state within a short window. If
-  // this exact token was successfully verified within the last 60
-  // seconds (tracked per-tab in sessionStorage), skip the network
-  // call entirely and trust that result — still safe, since anything
-  // that actually invalidates a session (logout, expiry) either
-  // clears the token outright or naturally gets caught on the next
-  // verification past the window.
-  const CACHE_WINDOW_MS = 60000;
-  const cachedVerifiedToken = sessionStorage.getItem('lalabellaVerifiedToken');
-  const cachedVerifiedAt = Number(sessionStorage.getItem('lalabellaVerifiedAt')) || 0;
-  const cachedUserStr = sessionStorage.getItem('lalabellaUser');
-  if (cachedVerifiedToken === token && (Date.now() - cachedVerifiedAt) < CACHE_WINDOW_MS && cachedUserStr) {
-    window.LALABELLA_TOKEN = token;
-    window.LALABELLA_USER = JSON.parse(cachedUserStr);
-    document.documentElement.style.visibility = '';
-  } else {
-  verifyTokenWithRetry(token, 1)
-    .then(data => {
-      if (!data.valid) {
-        goToLogin();
-        return;
-      }
-      window.LALABELLA_TOKEN = token;
-      window.LALABELLA_USER = data.user || null;
-      // Keep sessionStorage in sync — this tab's other scripts and
-      // any page it navigates to next both read from sessionStorage.
-      sessionStorage.setItem('lalabellaToken', token);
-      if (data.user) sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
-      // Stamp the cache so the NEXT page navigation (within the
-      // window above) can skip this round trip entirely.
-      sessionStorage.setItem('lalabellaVerifiedToken', token);
-      sessionStorage.setItem('lalabellaVerifiedAt', String(Date.now()));
-      document.documentElement.style.visibility = '';
-    })
-    .catch(() => {
-      // Network hiccup — don't lock the user out over a temporary
-      // connection issue; let the page load and its own API calls
-      // will surface a clearer error if the token truly is bad.
-      window.LALABELLA_TOKEN = token;
-      document.documentElement.style.visibility = '';
+// ---------- Get Profile ----------
+function handleGetProfile_(sheet, e) {
+  const auth = verifyTokenInline_(sheet, e.parameter.token);
+  if (!auth.valid) return json_({ success: false, error: 'Unauthorized.' });
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const iUsername = headers.indexOf('Username');
+  const iFullName = headers.indexOf('FullName');
+  const iRole = headers.indexOf('Role');
+  const iBranch = headers.indexOf('Branch');
+  const iPhoto = headers.indexOf('PhotoLink');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][iUsername]).toLowerCase() === auth.username.toLowerCase()) {
+      return json_({
+        success: true,
+        profile: {
+          username: data[i][iUsername],
+          fullName: data[i][iFullName],
+          role: data[i][iRole],
+          branch: data[i][iBranch],
+          photoDataUri: iPhoto !== -1 ? profilePhotoToDataUri_(data[i][iPhoto]) : ''
+        }
+      });
+    }
+  }
+  return json_({ success: false, error: 'Profile not found.' });
+}
+
+// Diagnostic-only action — shows the RAW PhotoLink column value (the
+// bare Drive file ID, before it's converted to a data URI), plus
+// whether the Drive lookup for it actually succeeded. This isolates
+// exactly where a "photo doesn't come back" problem is: nothing ever
+// got saved to the column (PhotoLink shows empty), or something WAS
+// saved but reading it back from Drive is failing.
+//
+// GATED behind &debugKey=<AUTH_TOKEN> (see isDebugCallerAuthorized_)
+// — only someone with developer-level access to Script Properties
+// can call this. It also NEVER echoes a live session token in the
+// response: only whether the supplied token matches (a boolean),
+// never the actual token value stored in the Sheet for any row.
+function handleDebugProfile_(sheet, e) {
+  if (!isDebugCallerAuthorized_(e)) {
+    return json_({ error: 'Unauthorized.' });
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const iToken = headers.indexOf('Token');
+  const iUsername = headers.indexOf('Username');
+  const iPhoto = headers.indexOf('PhotoLink');
+  const suppliedToken = String(e.parameter.token || '').trim();
+
+  const allTokensInSheet = [];
+  for (let i = 1; i < data.length; i++) {
+    allTokensInSheet.push({
+      username: iUsername !== -1 ? data[i][iUsername] : '(no Username column)',
+      hasToken: iToken !== -1 && String(data[i][iToken]).trim() !== '',
+      tokenLength: iToken !== -1 ? String(data[i][iToken]).length : 0,
+      matchesSupplied: iToken !== -1 && String(data[i][iToken]).trim() === suppliedToken
     });
   }
 
-  // Re-verify whenever the tab regains focus — catches a session
-  // that expired or was logged out elsewhere while this tab was in
-  // the background.
-  let wasHidden = false;
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      wasHidden = true;
-    } else if (wasHidden) {
-      wasHidden = false;
-      const t = sessionStorage.getItem('lalabellaToken');
-      if (!t) { goToLogin(); return; }
-      fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(t) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
-        .then(r => r.json())
-        .then(data => { if (!data.valid) goToLogin(); })
-        .catch(() => {});
-    }
+  return json_({
+    marker: 'PROFILE-DEBUG-v3-CONFIRMED',
+    headersFound: headers,
+    tokenColumnIndex: iToken,
+    photoLinkColumnIndex: iPhoto,
+    suppliedTokenLength: suppliedToken.length,
+    allRows: allTokensInSheet
   });
-})();
+}
 
-// ---------------------------------------------------------------
-// Shared response-checking helper — every page's own fetch(...).json()
-// calls can pass their result through this before treating it as
-// real data. It throws a clear, specific error the moment the
-// backend returned {error: "..."} instead of the expected array/
-// object, so a page's own catch block can show the ACTUAL reason
-// (Unauthorized, server error, etc.) instead of the response silently
-// crashing a .filter()/.map() call and getting swallowed into a
-// generic "check your connection" message.
-// Usage: const items = lalabellaCheckResponse(await (await fetch(...)).json());
-// ---------------------------------------------------------------
-function lalabellaCheckResponse(data){
-  if (data && typeof data === 'object' && !Array.isArray(data) && 'error' in data) {
-    throw new Error(data.error || 'Unknown server error');
+// Diagnostic-only action — lets a developer confirm what a given
+// plaintext password would hash to, WITHOUT ever revealing the
+// PEPPER itself (the response only ever proves "hashing is
+// configured", never what the secret actually is).
+//
+// GATED behind &debugKey=<AUTH_TOKEN>, same as handleDebugProfile_.
+function handleDebugHash_(e) {
+  if (!isDebugCallerAuthorized_(e)) {
+    return json_({ error: 'Unauthorized.' });
   }
-  return data;
+  const pw = String(e.parameter.password || '');
+  return json_({
+    computedHash: hashPassword_(pw),
+    pepperConfigured: !!PropertiesService.getScriptProperties().getProperty('PEPPER')
+  });
+}
+
+// ---------- Update Profile (name, branch, photo — NOT role, NOT username) ----------
+function handleUpdateProfile_(sheet, e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const auth = verifyTokenInline_(sheet, e.parameter.token);
+    if (!auth.valid) return json_({ success: false, error: 'Unauthorized.' });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const iUsername = headers.indexOf('Username');
+    const iFullName = headers.indexOf('FullName');
+    const iBranch = headers.indexOf('Branch');
+    const iPhoto = headers.indexOf('PhotoLink');
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][iUsername]).toLowerCase() === auth.username.toLowerCase()) {
+        if (e.parameter.fullName) sheet.getRange(i + 1, iFullName + 1).setValue(e.parameter.fullName);
+        if (e.parameter.branch) sheet.getRange(i + 1, iBranch + 1).setValue(e.parameter.branch);
+        if (e.parameter.photoBase64 && iPhoto !== -1) {
+          const fileId = saveProfilePhotoToDrive_(e.parameter.photoBase64, auth.username);
+          sheet.getRange(i + 1, iPhoto + 1).setValue(fileId);
+        }
+        return json_({ success: true, message: 'Profile updated.' });
+      }
+    }
+    return json_({ success: false, error: 'Profile not found.' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------- Change Password ----------
+function handleChangePassword_(sheet, e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const auth = verifyTokenInline_(sheet, e.parameter.token);
+    if (!auth.valid) return json_({ success: false, error: 'Unauthorized.' });
+
+    const currentPassword = String(e.parameter.currentPassword || '');
+    const newPassword = String(e.parameter.newPassword || '');
+    if (!currentPassword || !newPassword) {
+      return json_({ success: false, error: 'Current and new password are both required.' });
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const iUsername = headers.indexOf('Username');
+    const iHash = headers.indexOf('PasswordHash');
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][iUsername]).toLowerCase() === auth.username.toLowerCase()) {
+        if (data[i][iHash] !== hashPassword_(currentPassword)) {
+          return json_({ success: false, error: 'Current password is incorrect.' });
+        }
+        sheet.getRange(i + 1, iHash + 1).setValue(hashPassword_(newPassword));
+        return json_({ success: true, message: 'Password changed successfully.' });
+      }
+    }
+    return json_({ success: false, error: 'Profile not found.' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Lightweight in-sheet token check for the profile actions above —
+// avoids a self-referential HTTP call back to this same script's own
+// verifyToken endpoint.
+function verifyTokenInline_(sheet, token) {
+  if (!token) return { valid: false };
+  const cleanToken = String(token).trim();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const iToken = headers.indexOf('Token');
+  const iUsername = headers.indexOf('Username');
+  for (let i = 1; i < data.length; i++) {
+    // Sheet cells can carry invisible leading/trailing whitespace
+    // even when they look identical — comparing as trimmed strings
+    // (rather than strict ===, which is sensitive to that) avoids a
+    // token that's genuinely correct being rejected over formatting.
+    if (String(data[i][iToken]).trim() === cleanToken) {
+      return { valid: true, username: data[i][iUsername] };
+    }
+  }
+  return { valid: false };
+}
+
+// Saves a base64-encoded profile photo (already compressed client-
+// side) into the dedicated Lalabella Profile Photos Drive folder —
+// same pattern as Item Inventory's photo handling. Only the file ID
+// is stored in the Sheet, keeping it light.
+function saveProfilePhotoToDrive_(base64Data, username) {
+  if (!base64Data) return '';
+  const folder = DriveApp.getFolderById(PROFILE_PHOTOS_FOLDER_ID);
+  const commaIdx = base64Data.indexOf(',');
+  const cleanBase64 = commaIdx !== -1 ? base64Data.slice(commaIdx + 1) : base64Data;
+  const bytes = Utilities.base64Decode(cleanBase64);
+  const blob = Utilities.newBlob(bytes, 'image/jpeg', username + '.jpg');
+  const file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return file.getId();
+}
+
+// Turns a stored profile PhotoLink (a bare Drive file ID) into a
+// data: URI with the actual image bytes inline, ready to drop
+// straight into an <img src="...">.
+function profilePhotoToDataUri_(photoLink) {
+  if (!photoLink) return '';
+  try {
+    const file = DriveApp.getFileById(String(photoLink).trim());
+    const blob = file.getBlob();
+    return 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  } catch (err) {
+    return '';
+  }
+}
+
+// ---------- Helpers ----------
+function hashPassword_(password) {
+  const pepper = PropertiesService.getScriptProperties().getProperty('PEPPER');
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + pepper);
+  return raw.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
+
+function generateToken_() {
+  const raw = Utilities.getUuid() + Utilities.getUuid();
+  return raw.replace(/-/g, '');
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Run this ONE function manually (select it from the function
+// dropdown at the top of the editor, then click Run) to trigger the
+// "Authorization required" permission prompt for BOTH external
+// requests (UrlFetchApp — used by verifyToken calls from other
+// backends) AND Google Drive access (DriveApp — used to save/read
+// profile photos). These are two SEPARATE permission scopes; running
+// only a UrlFetchApp call before would authorize verifyToken calls
+// but silently leave Drive photo saves failing.
+function authorizeExternalRequests(){
+  UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  DriveApp.getFolderById(PROFILE_PHOTOS_FOLDER_ID);
 }
