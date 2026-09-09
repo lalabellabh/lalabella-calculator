@@ -1,190 +1,269 @@
 /**
- * LALABELLA AUTH GUARD — FAST SESSION v4
- * Browser session gate for protected pages.
- * Browser carries only the user's session token.
+ * LALABELLA AUTH GUARD
+ * Include this on EVERY protected page, as early as possible in
+ * <head> (before other scripts/content), so an unauthenticated
+ * visitor is redirected before anything meaningful renders.
+ *
+ * What it does:
+ * 1. Checks sessionStorage for a token.
+ * 2. If missing, redirects to index.html immediately.
+ * 3. If present, verifies it against the Auth backend — an expired
+ *    or logged-out token is treated the same as no token at all.
+ * 4. Exposes window.LALABELLA_TOKEN and window.LALABELLA_USER once
+ *    verified, so the rest of the page's own scripts can read them
+ *    (e.g. to append &token=... to their own API calls) without
+ *    each page re-implementing this check.
  */
 (function () {
-  const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec';
+  const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
+  const AUTH_CALLER_SECRET = 'Lalabella2026-AuthGate-9xK2mP7qR';
+
+  // ---------------------------------------------------------------
+  // GLOBAL FETCH WRAPPER — rather than hand-editing every individual
+  // fetch() call across 30+ pages (error-prone, easy to miss one),
+  // this transparently attaches the current session token to every
+  // outgoing request aimed at any of our own Apps Script backends
+  // (script.google.com/macros/s/...), whatever shape that call takes:
+  // plain GET query string, POST with a JSON body, or POST with a
+  // URLSearchParams/form-encoded body. Calls to anything else (fonts,
+  // OpenAI, other sites) are left completely untouched.
+  // ---------------------------------------------------------------
+  const originalFetch = window.fetch.bind(window);
   const BACKEND_PATTERN = /script\.google\.com\/macros\/s\//;
-  const VERIFY_CACHE_MS = 30 * 60 * 1000;
-  const VERIFY_TIMEOUT_MS = 8000;
-  const VERIFY_AT_KEY = 'lalabellaVerifiedAt';
-  const VERIFY_TOKEN_KEY = 'lalabellaVerifiedToken';
 
-  function getToken() {
-    try {
-      return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-    } catch (e) { return ''; }
-  }
+  window.fetch = function (input, init) {
+    const token = window.LALABELLA_TOKEN
+      || sessionStorage.getItem('lalabellaToken')
+      || localStorage.getItem('lalabellaToken')
+      || '';
 
-  function getUserRaw() {
-    try {
-      return sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '';
-    } catch (e) { return ''; }
-  }
+    let url = typeof input === 'string' ? input : (input && input.url) || '';
+    const isBackendCall = token && BACKEND_PATTERN.test(url);
 
-  function setGlobals(token, raw) {
-    window.LALABELLA_TOKEN = token || '';
-    try { window.LALABELLA_USER = raw ? JSON.parse(raw) : null; }
-    catch (e) { window.LALABELLA_USER = null; }
-  }
+    if (isBackendCall && !/[?&]token=/.test(url)) {
+      const sep = url.includes('?') ? '&' : '?';
+      url = url + sep + 'token=' + encodeURIComponent(token);
+      if (typeof input === 'string') {
+        input = url;
+      } else {
+        input = new Request(url, input);
+      }
+    }
 
-  function saveUser(user) {
-    if (!user) return;
-    const raw = JSON.stringify(user);
-    try {
-      sessionStorage.setItem('lalabellaUser', raw);
-      localStorage.setItem('lalabellaUser', raw);
-    } catch (e) {}
-    window.LALABELLA_USER = user;
-  }
+    if (isBackendCall && init && init.body) {
+      if (typeof init.body === 'string') {
+        // Try JSON body first.
+        let handled = false;
+        try {
+          const parsed = JSON.parse(init.body);
+          if (parsed && typeof parsed === 'object' && !('token' in parsed)) {
+            parsed.token = token;
+            init = Object.assign({}, init, { body: JSON.stringify(parsed) });
+            handled = true;
+          }
+        } catch (e) { /* not JSON — fall through */ }
+        // Otherwise treat as form-encoded (URLSearchParams.toString() shape).
+        if (!handled && !/[?&]token=/.test(init.body)) {
+          init = Object.assign({}, init, { body: init.body + '&token=' + encodeURIComponent(token) });
+        }
+      } else if (init.body instanceof URLSearchParams) {
+        if (!init.body.has('token')) init.body.append('token', token);
+      }
+    }
 
-  function clearSession() {
-    ['lalabellaToken','lalabellaUser',VERIFY_AT_KEY,VERIFY_TOKEN_KEY].forEach(function (k) {
-      try { sessionStorage.removeItem(k); } catch (e) {}
-      try { localStorage.removeItem(k); } catch (e) {}
+    return originalFetch(input, init).then(response => {
+      // For calls to our own backends, peek at the JSON body (via a
+      // clone, so the original response stream is left untouched for
+      // whatever code actually called fetch) — if the backend
+      // rejected the request as Unauthorized, that COULD mean the
+      // session itself is invalid. But it could just as easily be a
+      // transient backend-to-backend hiccup (this specific data call
+      // failing to reach the Auth backend for a moment) that has
+      // nothing to do with whether the person is really logged in —
+      // redirecting on that alone was bouncing people back to login
+      // even with a perfectly good "Remember me" session. So this
+      // only ever ACTS on a confirmed, independent verifyToken check
+      // (which has its own retry built in) — never on a single
+      // "Unauthorized" from an unrelated data call.
+      if (isBackendCall) {
+        response.clone().json().then(data => {
+          if (data && data.error && /unauthorized/i.test(String(data.error))) {
+            confirmSessionInvalidThenRedirect_();
+          }
+        }).catch(() => { /* not JSON, or already consumed — ignore */ });
+      }
+      return response;
     });
-    window.LALABELLA_TOKEN = '';
-    window.LALABELLA_USER = null;
+  };
+
+  // goToLogin is defined further below as a plain function; this
+  // thin wrapper lets the fetch interceptor above (which runs before
+  // that definition executes) still reach it via closure once the
+  // script has fully loaded.
+  function goToLoginPublic_(){ goToLogin(); }
+
+  // Debounced, independently-verified redirect trigger — at most one
+  // confirmation check in flight at a time, so a burst of several
+  // data calls all failing at once (common when a page loads and
+  // fires off multiple fetches together) doesn't launch several
+  // redundant verifyToken calls.
+  let confirmingInvalidSession = false;
+  function confirmSessionInvalidThenRedirect_(){
+    if (confirmingInvalidSession) return;
+    confirmingInvalidSession = true;
+    const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
+    if (!token) { goToLoginPublic_(); return; }
+    verifyTokenWithRetryPublic_(token).then(data => {
+      confirmingInvalidSession = false;
+      if (!data.valid) goToLoginPublic_();
+      // If it turns out valid after all, do nothing — the original
+      // failing call was genuinely just a transient blip.
+    }).catch(() => { confirmingInvalidSession = false; });
   }
 
   function goToLogin() {
-    clearSession();
-    if (location.pathname.endsWith('/index.html') || location.pathname === '/' || location.pathname === '') return;
-    const next = location.pathname.split('/').pop() + location.search;
-    location.replace('index.html?next=' + encodeURIComponent(next));
+    sessionStorage.removeItem('lalabellaToken');
+    sessionStorage.removeItem('lalabellaUser');
+    sessionStorage.removeItem('lalabellaVerifiedToken');
+    sessionStorage.removeItem('lalabellaVerifiedAt');
+    showSessionEndedThenRedirect_();
   }
 
-  const token = getToken();
-  const userRaw = getUserRaw();
+  // Instead of silently vanishing to the login screen (which used to
+  // just look like a random error), briefly explain the most likely
+  // reason — logging in on any other device/browser replaces this
+  // session, since the system only keeps one active session per
+  // account at a time. A short, friendly overlay for ~2.5s, then the
+  // normal redirect — long enough to actually read, short enough to
+  // not meaningfully delay getting back to login.
+  function showSessionEndedThenRedirect_(){
+    if (!document.body) { window.location.href = 'index.html'; return; } // page not ready yet — just redirect
+    if (document.getElementById('lalabella-session-ended-overlay')) return; // already showing
+    const overlay = document.createElement('div');
+    overlay.id = 'lalabella-session-ended-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(40,20,25,.72);display:flex;align-items:center;justify-content:center;padding:20px;font-family:sans-serif;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:320px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);">
+        <div style="font-size:32px;margin-bottom:10px;">🔐</div>
+        <div style="font-family:Georgia,serif;font-size:16px;font-weight:700;color:#3a2a2a;margin-bottom:8px;">Session ended</div>
+        <div style="font-size:13px;color:#8a7078;line-height:1.5;">This usually happens when this account logs in on another device or browser — only one session stays active at a time. Redirecting to login…</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(()=>{ window.location.href = 'index.html'; }, 2500);
+  }
 
+  // Accept a token from this tab's own session, OR a "Remember me"
+  // token saved in localStorage from a previous visit/page.
+  const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
   if (!token) {
-    setGlobals('', '');
     goToLogin();
     return;
   }
 
-  setGlobals(token, userRaw);
+  // Synchronous-feeling gate: hide the page immediately while we
+  // verify, so a flash of real content never shows before the
+  // redirect happens for an invalid session.
+  document.documentElement.style.visibility = 'hidden';
 
-  function isFresh() {
-    try {
-      const verifiedToken = sessionStorage.getItem(VERIFY_TOKEN_KEY) || localStorage.getItem(VERIFY_TOKEN_KEY) || '';
-      const at = Number(sessionStorage.getItem(VERIFY_AT_KEY) || localStorage.getItem(VERIFY_AT_KEY) || 0);
-      return verifiedToken === token && at > 0 && Date.now() - at < VERIFY_CACHE_MS;
-    } catch (e) { return false; }
-  }
-
-  function markVerified() {
-    const now = String(Date.now());
-    try {
-      sessionStorage.setItem(VERIFY_TOKEN_KEY, token);
-      sessionStorage.setItem(VERIFY_AT_KEY, now);
-      localStorage.setItem(VERIFY_TOKEN_KEY, token);
-      localStorage.setItem(VERIFY_AT_KEY, now);
-    } catch (e) {}
-  }
-
-  const originalFetch = window.fetch.bind(window);
-
-  async function verifyToken() {
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = controller ? setTimeout(function () { controller.abort(); }, VERIFY_TIMEOUT_MS) : null;
-    try {
-      const url = AUTH_API_URL + '?action=verifySession&token=' + encodeURIComponent(token);
-      const response = await originalFetch(url, {
-        method: 'GET', cache: 'no-store', signal: controller ? controller.signal : undefined
-      });
-      const data = await response.json().catch(function () { return null; });
-      if (data && data.valid === false) {
-        clearSession();
-        goToLogin();
-        return false;
-      }
-      if (data && data.valid === true) {
-        saveUser(data.user);
-        markVerified();
-      }
-      return true;
-    } catch (e) {
-      return true;
-    } finally {
-      if (timer) clearTimeout(timer);
-    }
-  }
-
-  let authResolve;
-  window.LALABELLA_AUTH_READY = new Promise(function (resolve) { authResolve = resolve; });
-
-  function prepareRequest(input, init, currentToken) {
-    let url = typeof input === 'string' ? input : (input && input.url) || '';
-    let nextInput = input;
-    let nextInit = init;
-    const isBackend = !!currentToken && BACKEND_PATTERN.test(url);
-    const isAuth = url.indexOf(AUTH_API_URL) === 0;
-
-    if (isBackend && !isAuth && !/[?&]token=/.test(url)) {
-      const sep = url.indexOf('?') >= 0 ? '&' : '?';
-      const newUrl = url + sep + 'token=' + encodeURIComponent(currentToken);
-      if (typeof input === 'string') nextInput = newUrl;
-      else if (input && input.url) {
-        try { nextInput = new Request(newUrl, input); } catch (e) {}
-      }
-    }
-
-    if (isBackend && !isAuth && nextInit && typeof nextInit.body === 'string') {
-      let body = nextInit.body;
-      try {
-        const parsed = JSON.parse(body);
-        if (parsed && typeof parsed === 'object') {
-          parsed.token = currentToken;
-          body = JSON.stringify(parsed);
+  // A single verifyToken call is a server-to-server request (this
+  // page's backend calling the Auth backend) — on a shaky connection
+  // that hop can fail even when the token is genuinely valid, which
+  // would otherwise bounce someone back to login for no real reason.
+  // One retry after a short pause absorbs that kind of blip; only a
+  // second consecutive failure is treated as a real "not logged in".
+  function verifyTokenWithRetry(tok, attempt){
+    return fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(tok) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.valid && attempt < 2) {
+          return new Promise(resolve => setTimeout(resolve, 900)).then(() => verifyTokenWithRetry(tok, attempt + 1));
         }
-      } catch (e) {
-        if (!/[?&]token=/.test(body)) body += (body ? '&' : '') + 'token=' + encodeURIComponent(currentToken);
-      }
-      nextInit = Object.assign({}, nextInit, { body: body });
-    } else if (isBackend && !isAuth && nextInit && nextInit.body instanceof URLSearchParams && !nextInit.body.has('token')) {
-      const params = new URLSearchParams(nextInit.body);
-      params.append('token', currentToken);
-      nextInit = Object.assign({}, nextInit, { body: params });
-    }
-
-    return { input: nextInput, init: nextInit, isBackend: isBackend, isAuth: isAuth };
+        return data;
+      });
   }
+  function verifyTokenWithRetryPublic_(tok){ return verifyTokenWithRetry(tok, 1); }
 
-  if (!window.__LALABELLA_FETCH_GUARD__) {
-    window.fetch = function (input, init) {
-      const currentToken = window.LALABELLA_TOKEN || getToken();
-      const prepared = prepareRequest(input, init, currentToken);
-      const send = function () { return originalFetch(prepared.input, prepared.init); };
-      if (prepared.isBackend && !prepared.isAuth) return window.LALABELLA_AUTH_READY.then(send);
-      return send();
-    };
-    window.__LALABELLA_FETCH_GUARD__ = true;
-  }
-
-  window.lalabellaCheckResponse = function (data) {
-    if (data && typeof data === 'object' && !Array.isArray(data) && data.error) throw new Error(String(data.error));
-    return data;
-  };
-
-  if (isFresh()) {
-    authResolve(true);
-    authResolve = null;
+  // Session-scoped verification cache — verifying on literally every
+  // single page navigation is a full server-to-server round trip
+  // (this page's backend -> Auth backend) that adds real, noticeable
+  // delay to EVERY click through the app, even though the session
+  // itself rarely actually changes state within a short window. If
+  // this exact token was successfully verified within the last 60
+  // seconds (tracked per-tab in sessionStorage), skip the network
+  // call entirely and trust that result — still safe, since anything
+  // that actually invalidates a session (logout, expiry) either
+  // clears the token outright or naturally gets caught on the next
+  // verification past the window.
+  const CACHE_WINDOW_MS = 60000;
+  const cachedVerifiedToken = sessionStorage.getItem('lalabellaVerifiedToken');
+  const cachedVerifiedAt = Number(sessionStorage.getItem('lalabellaVerifiedAt')) || 0;
+  const cachedUserStr = sessionStorage.getItem('lalabellaUser');
+  if (cachedVerifiedToken === token && (Date.now() - cachedVerifiedAt) < CACHE_WINDOW_MS && cachedUserStr) {
+    window.LALABELLA_TOKEN = token;
+    window.LALABELLA_USER = JSON.parse(cachedUserStr);
+    document.documentElement.style.visibility = '';
   } else {
-    verifyToken().then(function () {
-      if (authResolve) { authResolve(true); authResolve = null; }
-    }).catch(function () {
-      if (authResolve) { authResolve(true); authResolve = null; }
+  verifyTokenWithRetry(token, 1)
+    .then(data => {
+      if (!data.valid) {
+        goToLogin();
+        return;
+      }
+      window.LALABELLA_TOKEN = token;
+      window.LALABELLA_USER = data.user || null;
+      // Keep sessionStorage in sync — this tab's other scripts and
+      // any page it navigates to next both read from sessionStorage.
+      sessionStorage.setItem('lalabellaToken', token);
+      if (data.user) sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
+      // Stamp the cache so the NEXT page navigation (within the
+      // window above) can skip this round trip entirely.
+      sessionStorage.setItem('lalabellaVerifiedToken', token);
+      sessionStorage.setItem('lalabellaVerifiedAt', String(Date.now()));
+      document.documentElement.style.visibility = '';
+    })
+    .catch(() => {
+      // Network hiccup — don't lock the user out over a temporary
+      // connection issue; let the page load and its own API calls
+      // will surface a clearer error if the token truly is bad.
+      window.LALABELLA_TOKEN = token;
+      document.documentElement.style.visibility = '';
     });
   }
 
-  let hiddenAt = 0;
+  // Re-verify whenever the tab regains focus — catches a session
+  // that expired or was logged out elsewhere while this tab was in
+  // the background.
+  let wasHidden = false;
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { hiddenAt = Date.now(); return; }
-    if (hiddenAt && Date.now() - hiddenAt > 60000 && window.LALABELLA_TOKEN) {
-      hiddenAt = 0;
-      verifyToken();
+    if (document.hidden) {
+      wasHidden = true;
+    } else if (wasHidden) {
+      wasHidden = false;
+      const t = sessionStorage.getItem('lalabellaToken');
+      if (!t) { goToLogin(); return; }
+      fetch(AUTH_API_URL + '?action=verifyToken&token=' + encodeURIComponent(t) + '&callerSecret=' + encodeURIComponent(AUTH_CALLER_SECRET))
+        .then(r => r.json())
+        .then(data => { if (!data.valid) goToLogin(); })
+        .catch(() => {});
     }
   });
 })();
+
+// ---------------------------------------------------------------
+// Shared response-checking helper — every page's own fetch(...).json()
+// calls can pass their result through this before treating it as
+// real data. It throws a clear, specific error the moment the
+// backend returned {error: "..."} instead of the expected array/
+// object, so a page's own catch block can show the ACTUAL reason
+// (Unauthorized, server error, etc.) instead of the response silently
+// crashing a .filter()/.map() call and getting swallowed into a
+// generic "check your connection" message.
+// Usage: const items = lalabellaCheckResponse(await (await fetch(...)).json());
+// ---------------------------------------------------------------
+function lalabellaCheckResponse(data){
+  if (data && typeof data === 'object' && !Array.isArray(data) && 'error' in data) {
+    throw new Error(data.error || 'Unknown server error');
+  }
+  return data;
+}
