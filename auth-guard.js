@@ -267,3 +267,28 @@ function lalabellaCheckResponse(data){
   }
   return data;
 }
+
+// ---------------------------------------------------------------
+// JOYBOY VOICE CONTINUATION — if Joyboy just navigated the browser
+// here from the NOVA Command Center (see nova-command-center.html's
+// navigateTo handling), it leaves its last spoken line in
+// sessionStorage under 'joyboyPendingSpeech'. Every page loads this
+// same auth-guard.js, so checking for it here — once, centrally —
+// makes Joyboy's voice "follow" onto whatever page it opens, without
+// needing its full chat UI embedded on every page.
+// ---------------------------------------------------------------
+(function(){
+  try{
+    const pending = sessionStorage.getItem('joyboyPendingSpeech');
+    if(pending){
+      sessionStorage.removeItem('joyboyPendingSpeech');
+      window.addEventListener('load', () => {
+        try{
+          const utter = new SpeechSynthesisUtterance(pending);
+          utter.rate = 1.0;
+          speechSynthesis.speak(utter);
+        }catch(e){ /* speechSynthesis not supported — fail silently */ }
+      });
+    }
+  }catch(e){ /* sessionStorage unavailable — fail silently */ }
+})();
