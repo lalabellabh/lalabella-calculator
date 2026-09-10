@@ -128,6 +128,9 @@
   #receipt .r-head{ text-align:center; margin-bottom:18px; }
   #receipt .r-title{ font-family:'Great Vibes',cursive; font-size:34px; color:var(--rose-deep); }
   #receipt .r-or{ font-family:'Space Mono',monospace; font-size:13px; color:#666; margin-top:4px; }
+  #receipt .r-status{ display:flex; justify-content:center; align-items:center; gap:8px; margin:10px auto 0; padding:7px 12px; width:max-content; max-width:100%; border:1px solid #bbb; border-radius:999px; font-size:12px; font-weight:700; }
+  #receipt .r-status-label{ color:#666; font-weight:600; }
+  #receipt .r-status-value{ color:#222; font-family:'Space Mono',monospace; text-transform:uppercase; }
   #receipt .r-section{ margin-bottom:14px; }
   #receipt .r-section h4{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--rose-deep); border-bottom:1px solid #eee; padding-bottom:4px; margin:0 0 8px; }
   #receipt .r-row{ display:flex; justify-content:space-between; font-size:13px; padding:2px 0; }
@@ -143,7 +146,9 @@
   @media print{
     body{ background:#fff; }
     .back-link, .card, header, .actions{ display:none !important; }
-    #receipt{ display:block !important; width:100%; }
+    #receipt{ display:block !important; width:100%; padding:18px 24px; color:#222; }
+    #receipt .r-status{ display:flex !important; border:2px solid #222 !important; color:#222 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #receipt .r-status-value{ color:#222 !important; }
   }
   @media (max-width:600px){
     .fields{ grid-template-columns:1fr; }
@@ -263,6 +268,10 @@
   <div class="r-head">
     <div class="r-title">Lalabella</div>
     <div class="r-or">Order <span id="rOr"></span> — <span id="rDate"></span></div>
+    <div class="r-status" aria-label="Payment / Order Status">
+      <span class="r-status-label">Payment / Order Status:</span>
+      <strong class="r-status-value" id="rStatusTop"></strong>
+    </div>
   </div>
   <div class="r-section">
     <h4>Arrangements</h4>
@@ -289,7 +298,7 @@
   <div class="r-section">
     <h4>Notes &amp; Receiving</h4>
     <div class="r-row"><span>Received By</span><span id="rReceivedBy"></span></div>
-    <div class="r-row"><span>Status</span><span id="rStatus"></span></div>
+    <div class="r-row"><span>Status</span><strong id="rStatus"></strong></div>
     <div class="r-row" style="display:block;"><span>Notes</span><div id="rNotes" style="margin-top:4px;font-size:12.5px;color:#555;"></div></div>
   </div>
   <div class="r-section">
@@ -517,17 +526,34 @@ function compressPhoto(dataUrl){
 
 // ---------- Build the clean invoice (used by Print + WhatsApp) ----------
 async function buildReceipt(){
+  const senderEl = document.getElementById('sender');
+  const senderPhoneEl = document.getElementById('senderPhone');
+  const receiverEl = document.getElementById('receiver');
+  const receiverPhoneEl = document.getElementById('receiverPhone');
+  const methodEl = document.getElementById('method');
+  const dateEl = document.getElementById('date');
+  const timeEl = document.getElementById('time');
+  const addressEl = document.getElementById('address');
+  const receivedByEl = document.getElementById('receivedBy');
+  const statusEl = document.getElementById('status');
+  const notesEl = document.getElementById('notes');
+  const additionalEl = document.getElementById('additional');
+  const deliveryPriceEl = document.getElementById('deliveryPrice');
+  const subtotalEl = document.getElementById('subtotal');
+  const grandEl = document.getElementById('grand');
+
   document.getElementById('rOr').textContent = document.getElementById('orderNo').textContent;
   document.getElementById('rDate').textContent = new Date().toLocaleDateString();
+  document.getElementById('rStatusTop').textContent = statusEl.value || 'Pending';
   document.getElementById('rArrangements').innerHTML = arrangements
     .filter(a => a.name || a.photoDataUrl)
     .map(a => `<div class="r-arr-card">${a.photoDataUrl ? `<img src="${a.photoDataUrl}">` : ''}<div>${escapeHtml(a.name || '')}</div></div>`)
     .join('');
-  document.getElementById('rSender').textContent = sender.value + (senderPhone.value ? ' — ' + senderPhone.value : '');
-  document.getElementById('rReceiver').textContent = receiver.value + (receiverPhone.value ? ' — ' + receiverPhone.value : '');
-  document.getElementById('rMethod').textContent = method.value;
-  document.getElementById('rDateTime').textContent = (date.value || '') + '  ' + (time.value || '');
-  document.getElementById('rAddress').textContent = address.value;
+  document.getElementById('rSender').textContent = senderEl.value + (senderPhoneEl.value ? ' — ' + senderPhoneEl.value : '');
+  document.getElementById('rReceiver').textContent = receiverEl.value + (receiverPhoneEl.value ? ' — ' + receiverPhoneEl.value : '');
+  document.getElementById('rMethod').textContent = methodEl.value;
+  document.getElementById('rDateTime').textContent = (dateEl.value || '') + '  ' + (timeEl.value || '');
+  document.getElementById('rAddress').textContent = addressEl.value;
   document.getElementById('rItemsBody').innerHTML = [...document.querySelectorAll('.item')].map(r => `
     <tr>
       <td>${escapeHtml(r.querySelector('.iname').value)}</td>
@@ -536,12 +562,12 @@ async function buildReceipt(){
       <td style="text-align:right;">${r.querySelector('.calc').textContent}</td>
     </tr>
   `).join('');
-  document.getElementById('rReceivedBy').textContent = receivedBy.value || '—';
-  document.getElementById('rStatus').textContent = status.value;
-  document.getElementById('rNotes').textContent = notes.value || '(wala)';
-  document.getElementById('rSubtotal').textContent = subtotal.textContent;
-  document.getElementById('rAdditional').textContent = additional.value ? (additional.value + ' (' + (parseFloat(deliveryPrice.value)||0).toFixed(3) + ' BHD)') : '(wala)';
-  document.getElementById('rGrand').textContent = grand.textContent;
+  document.getElementById('rReceivedBy').textContent = receivedByEl.value || '—';
+  document.getElementById('rStatus').textContent = statusEl.value || 'Pending';
+  document.getElementById('rNotes').textContent = notesEl.value || '(wala)';
+  document.getElementById('rSubtotal').textContent = subtotalEl.textContent;
+  document.getElementById('rAdditional').textContent = additionalEl.value ? (additionalEl.value + ' (' + (parseFloat(deliveryPriceEl.value)||0).toFixed(3) + ' BHD)') : '(wala)';
+  document.getElementById('rGrand').textContent = grandEl.textContent;
 }
 function escapeHtml(str){
   const div = document.createElement('div');
