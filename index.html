@@ -978,7 +978,19 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   }
 
   function refresh(){
-    fetch(BRANCH_API + '?action=getUnassignedStatus&_ts=' + Date.now())
+    // Only poll while an actual session exists — this widget's backend
+    // (Order Assignment) requires a valid token like every other
+    // Lalabella backend. Without this check, refresh() was firing
+    // every 7 seconds even on the bare login page with nobody signed
+    // in yet, silently failing "Unauthorized" each time (swallowed by
+    // the .catch() below) — wasted requests that showed up as constant
+    // background network activity for no benefit.
+    const activeToken = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
+    if (!activeToken) {
+      badge.classList.remove('show');
+      return;
+    }
+    fetch(BRANCH_API + '?action=getUnassignedStatus&token=' + encodeURIComponent(activeToken) + '&_ts=' + Date.now())
       .then(r => r.json())
       .then(data => {
         const count = Number(data.count) || 0;
