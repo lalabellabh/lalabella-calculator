@@ -1,6 +1,6 @@
 # Module Segregation
 
-The `lalabella-system` branch now uses a domain-based module layout while preserving legacy URLs.
+The `lalabella-system` branch uses a domain-based module layout while preserving the existing production URLs.
 
 ## Module groups
 
@@ -15,12 +15,20 @@ The `lalabella-system` branch now uses a domain-based module layout while preser
 
 ## Compatibility strategy
 
-The original root-level HTML entry points were replaced with tiny redirect stubs. This keeps existing bookmarks, old menu links, and external references working while the real source files live under `modules/`.
+The original root-level HTML entry points are kept as tiny redirect stubs. This keeps existing bookmarks, old menu links, and external references working while the real source files live under `modules/`.
 
-Exact pre-segregation source blobs are also retained under `legacy/` as a rollback/reference layer. Git stores identical blobs only once, so this does not duplicate the file contents in object storage.
+The relocated pages load a small module compatibility guard which:
+
+1. loads the existing root authentication guard;
+2. establishes the root as the base URL for copied pages;
+3. normalizes internal HTML links to root URLs;
+4. protects keyboard-driven navigation used by interactive tools; and
+5. fixes the common inline logout redirect to use the root URL.
+
+Exact pre-segregation source files are also retained under `legacy/` as a rollback/reference layer.
 
 ## Important boundary
 
-This phase intentionally preserves the original page source code. Internal relative paths inside the monolithic pages have not yet been normalized into the new module-relative layout. That is the next refactor step and should be done page-by-page after dependency mapping, so authentication, printing, API calls, stickers, and navigation are not accidentally broken.
+The source code inside the functional modules is intentionally still the existing working page code. We are not rewriting business calculations, API contracts, printing logic, or authentication behavior as part of this URL/layout repair. Further refactoring should happen only after the new deployment is tested page-by-page.
 
-`main` remains untouched; all segregation work is isolated to `lalabella-system`.
+`main` remains untouched; all segregation and repair work is isolated to `lalabella-system` until the new URL is fully validated.
