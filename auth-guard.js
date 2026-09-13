@@ -18,20 +18,23 @@
         if(!profile && !publicPages.has(here)){location.replace(login);return;}
         window.LALABELLA_USER=user;
         window.LALABELLA_PROFILE=profile||null;
-        // NOVA compatibility bridge: the legacy NOVA UI still calls its old
-        // URL internally. Redirect that request to the Supabase Edge Function
-        // while preserving the existing Joyboy interface and voice behavior.
+        // Compatibility bridge for the legacy NOVA UI. The old page may still
+        // construct an Apps Script URL, but the browser never sends a request
+        // to Google Apps Script; it is converted to the authenticated Edge API.
         if(here==='nova-command-center.html'){
           const originalFetch=window.fetch.bind(window);
           window.fetch=async function(input,init){
             const url=typeof input==='string'?input:(input&&input.url)||'';
-            if(/script\\.google\\.com\\/macros\\/s\\//.test(url)){
+            if(/script\.google\.com\/macros\/s\//.test(url)){
               const sessionResult=await window.LalabellaAuth.getSession();
               const accessToken=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token;
               if(!accessToken) throw new Error('Supabase session expired. Please log in again.');
-              const body=typeof init?.body==='string'?JSON.parse(init.body||'{}'):{};
+              let body={};
+              try{ body=typeof init?.body==='string'?JSON.parse(init.body||'{}'):{}; }catch(e){}
+              let parsed={};
+              try{ parsed=new URL(url); }catch(e){}
               const endpoint=window.LALABELLA_SUPABASE.url+'/functions/v1/nova-api';
-              return originalFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},body:JSON.stringify({message:body.message||new URL(url).searchParams.get('message')||'',session:body.session||{},context:body.context||{page:'NOVA Command Center',app:'Flower Tools'}}),signal:init?.signal});
+              return originalFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},body:JSON.stringify({message:body.message||parsed.searchParams?.get('message')||'',session:body.session||{},context:body.context||{page:'NOVA Command Center',app:'Flower Tools'}}),signal:init?.signal});
             }
             return originalFetch(input,init);
           };
