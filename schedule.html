@@ -66,8 +66,8 @@
   .date-cell{position:relative;border-radius:12px;min-height:74px;padding:6px 6px 8px;background:#fdfbfa;border:1px solid transparent;transition:box-shadow .2s;}
   .date-cell.pad{background:transparent;}
   .date-cell.today{border-color:var(--rose);}
-  .date-cell .dnum{font-size:11.5px;color:var(--muted);font-weight:600;}
-  .date-cell .off-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 6px rgba(158,47,74,.25);display:block;margin:2px auto 0;}
+  .date-cell .dnum{font-size:13px;color:var(--ink);font-weight:800;position:relative;z-index:2;}
+  .date-cell .off-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 6px rgba(158,47,74,.25);display:block;margin:3px auto 0;}
   .date-cell.today .dnum{color:var(--rose-dark);}
 
   .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#ffe3e3 100%);border:2px solid #e5342f;box-shadow:0 6px 14px rgba(229,52,47,.22);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
@@ -311,7 +311,7 @@ async function loadEmployees(){
 async function loadScheduleFor(employeeName){
   hideCalEmptyMessage();
   currentSchedule = null;
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
   const titleEl0 = document.getElementById('calTitleText');
   if(titleEl0) titleEl0.innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
   const roleTagEl0 = document.getElementById('calRoleTag');
@@ -371,7 +371,7 @@ function applyScheduleToGrid(records, animate){
   });
   const distinctWeeks = [...new Set(records.map(r => r.WeekOf).filter(Boolean))];
 
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
 
   let step = 0;
   distinctWeeks.forEach(weekOfStr => {
