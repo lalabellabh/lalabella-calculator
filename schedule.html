@@ -358,41 +358,53 @@ async function loadScheduleFor(employeeName){
 }
 
 function applyScheduleToGrid(records, animate){
-  const byDay = {};
-  records.forEach(r => { byDay[r.Day] = r; });
-  const weekOf = records[0] && records[0].WeekOf ? parseDateOnly_(records[0].WeekOf) : null;
+  // Group by "WeekOf|Day" instead of just "Day" — with multiple
+  // weeks of data now on file, keying by Day alone meant every
+  // week's Sunday overwrote the previous week's Sunday in this map,
+  // so only the LAST week survived while still being drawn using the
+  // FIRST week's dates. Keying by week+day keeps every week distinct.
+  const byWeekDay = {};
+  records.forEach(r => {
+    if(!r.WeekOf) return;
+    byWeekDay[r.WeekOf + '|' + r.Day] = r;
+  });
+  const distinctWeeks = [...new Set(records.map(r => r.WeekOf).filter(Boolean))];
 
   document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
 
   let step = 0;
-  DAY_ORDER.forEach((day, idx) => {
-    const rec = byDay[day];
-    if(!rec || !weekOf) return;
-    const cellDate = new Date(weekOf);
-    cellDate.setDate(weekOf.getDate() + idx);
-    const key = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth()+1)}-${pad2(cellDate.getDate())}`;
-    const cell = document.querySelector(`.date-cell[data-date="${key}"]`);
-    if(!cell) return;
+  distinctWeeks.forEach(weekOfStr => {
+    const weekOf = parseDateOnly_(weekOfStr);
+    if(!weekOf) return;
+    DAY_ORDER.forEach((day, idx) => {
+      const rec = byWeekDay[weekOfStr + '|' + day];
+      if(!rec) return;
+      const cellDate = new Date(weekOf);
+      cellDate.setDate(weekOf.getDate() + idx);
+      const key = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth()+1)}-${pad2(cellDate.getDate())}`;
+      const cell = document.querySelector(`.date-cell[data-date="${key}"]`);
+      if(!cell) return; // that date isn't in the currently-viewed month
 
-    const isOff = /^off$/i.test(String(rec.ScheduleDetail).trim());
-    cell.classList.add('hit');
-    if(isOff) cell.classList.add('off');
-    if(animate) cell.style.animationDelay = (step * 0.12) + 's';
-    step++;
+      const isOff = /^off$/i.test(String(rec.ScheduleDetail).trim());
+      cell.classList.add('hit');
+      if(isOff) cell.classList.add('off');
+      if(animate) cell.style.animationDelay = (step * 0.12) + 's';
+      step++;
 
-    const detail = String(rec.ScheduleDetail);
-    const [mainPart, ...noteParts] = detail.split(';');
-    const shiftEl = document.createElement('div');
-    shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
-    shiftEl.textContent = isOff ? '🌴 Off' : mainPart.trim();
-    cell.appendChild(shiftEl);
+      const detail = String(rec.ScheduleDetail);
+      const [mainPart, ...noteParts] = detail.split(';');
+      const shiftEl = document.createElement('div');
+      shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
+      shiftEl.textContent = isOff ? '🌴 Off' : mainPart.trim();
+      cell.appendChild(shiftEl);
 
-    if(rec.HomeBranch){
-      const branchEl = document.createElement('div');
-      branchEl.className = 'branch-txt';
-      branchEl.textContent = rec.HomeBranch;
-      cell.appendChild(branchEl);
-    }
+      if(rec.HomeBranch){
+        const branchEl = document.createElement('div');
+        branchEl.className = 'branch-txt';
+        branchEl.textContent = rec.HomeBranch;
+        cell.appendChild(branchEl);
+      }
+    });
   });
 }
 
