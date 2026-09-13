@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lalabella — System Test</title>
+<script src="supabase-config.js"></script>
+<script src="supabase-client.js"></script>
+<script src="supabase-auth.js"></script>
+<style>
+body{margin:0;background:#071018;color:#eaf3f7;font-family:Inter,system-ui,sans-serif}.wrap{max-width:1100px;margin:auto;padding:28px}.card{background:#0d1820;border:1px solid #263844;border-radius:14px;padding:18px;margin-bottom:16px}.head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}h1{margin:0;font-size:24px}h2{font-size:15px;margin:0 0 12px;color:#9bdcff}.muted{color:#8295a2;font-size:13px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:800px){.grid{grid-template-columns:1fr}}.test{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid #1c2b34;padding:11px 0}.test:first-child{border-top:0}.name{font-weight:700}.detail{font-size:12px;color:#8295a2;margin-top:3px;word-break:break-word}.badge{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.ok{background:#173b2b;color:#79e6ad}.bad{background:#47202a;color:#ff9bad}.warn{background:#4a3a18;color:#ffd56b}.neutral{background:#1c2931;color:#9db0bb}button{background:#1687ff;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:800;cursor:pointer}button.secondary{background:#1b2a33}.small{font-size:11px}.mono{font-family:ui-monospace,monospace}.summary{font-size:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card head"><div><h1>Lalabella System Test</h1><div class="muted">Central QA page for the Supabase migration. No Google Sheets or Apps Script calls are required by this test page.</div></div><div><button id="run">Run Full Test</button> <button id="nova" class="secondary">Test NOVA API</button></div></div>
+<div class="card"><h2>Authentication & Security</h2><div id="auth"></div></div>
+<div class="card"><h2>Database Connectivity</h2><div id="db" class="grid"></div></div>
+<div class="card"><h2>Repository Runtime Scan</h2><div class="muted">Fetches active frontend files from the same GitHub Pages origin and scans their source for Google Apps Script runtime URLs.</div><div id="scan"></div></div>
+<div class="card"><h2>Final Result</h2><div id="result" class="summary">Not run yet.</div></div>
+</div>
+<script>
+(async()=>{
+'use strict';
+const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const checks=[];const add=(section,name,status,detail='')=>{checks.push({section,name,status,detail});render(section)};
+function render(section){const el=$(section);if(!el)return;const rows=checks.filter(x=>x.section===section);el.innerHTML=rows.map(x=>`<div class="test"><div><div class="name">${esc(x.name)}</div><div class="detail">${esc(x.detail)}</div></div><span class="badge ${x.status==='PASS'?'ok':x.status==='FAIL'?'bad':x.status==='WARN'?'warn':'neutral'}">${x.status}</span></div>`).join('')||'<div class="muted">Waiting…</div>';}
+async function authTest(){
+ try{const u=await sbAuth.getUser();if(!u){add('auth','Supabase session','FAIL','No signed-in user. Log in first.');return null}add('auth','Supabase session','PASS',u.email||u.id);const p=await sbAuth.getProfile();if(!p){add('auth','Profile','FAIL','auth.users exists but public.profiles is missing.');return null}add('auth','Profile','PASS',`${p.full_name||p.username||'User'} · ${p.role} · ${p.branch||'No branch'}`);const rb=await sb.rpc('current_branch');add('auth','current_branch()','PASS',String(rb.data??'null'));const rr=await sb.rpc('current_role');add('auth','current_role()','PASS',String(rr.data??'null'));return p}catch(e){add('auth','Authentication test','FAIL',e.message);return null}}
+async function dbTest(){
+ const tables=[['profiles','Profile records'],['branch_config','Branches'],['flower_item','Flower catalog'],['flower_database','Flower receiving'],['flower_transfer_history','Flower transfers'],['chocolate_database','Chocolate stock'],['chocolate_stock_count_history','Chocolate count history'],['stock_adjustment_approvals','Stock approvals'],['item_inventory','Item inventory'],['duty_schedule','Duty schedule'],['orders','Orders'],['supply_log_entries','Supply log'],['card_notes','Card notes']];
+ for(const [t,label] of tables){try{const r=await sb.from(t).select('*',{count:'exact',head:true});if(r.error)add('db',label,'FAIL',r.error.message);else add('db',label,'PASS',`${r.count??0} rows visible to this session`)}catch(e){add('db',label,'FAIL',e.message)}}
+}
+async function runtimeScan(){
+ const files=['index.html','login.html','dashboard.html','profile.html','schedule.html','stock-count.html','stock-approval.html','supply-log.html','flower-calc.html','flower-receiving.html','flower-transfer.html','flower-dashboard.html','flower-catalog-supabase.html','flower-admin.html','chocolate-receiving.html','chocolate-release.html','initial-stock.html','item-inventory.html','item-dashboard.html','item-admin.html','order-form.html','nova-command-center.html','nova-assistant.js','auth-guard.js','supabase-config.js'];
+ let hits=0;
+ for(const file of files){try{const r=await fetch(file,{cache:'no-store'});const text=await r.text();const found=/(script\.google\.com|script\.googleusercontent\.com|macros\/s\/)/i.test(text);if(found){hits++;add('scan',file,'WARN','Google Apps Script URL/reference found in source. Runtime bridge may still be present.')}else add('scan',file,'PASS','No Apps Script URL detected.')}catch(e){add('scan',file,'WARN','Could not fetch '+e.message)}}
+ return hits;
+}
+async function run(){
+ $('run').disabled=true;checks.length=0;render('auth');render('db');render('scan');$('result').textContent='Running…';
+ const p=await authTest();if(p)await dbTest();const hits=await runtimeScan();
+ const fails=checks.filter(x=>x.status==='FAIL').length;const warns=checks.filter(x=>x.status==='WARN').length;
+ $('result').innerHTML=fails?`<span class="badge bad">FAIL</span> ${fails} failed, ${warns} warnings. Fix failures before production.`:warns?`<span class="badge warn">PASS WITH WARNINGS</span> No hard failures. ${warns} source/runtime warnings remain.`:`<span class="badge ok">PASS</span> All automated checks passed.`;
+ $('run').disabled=false;
+}
+$('run').onclick=run;
+$('nova').onclick=async()=>{const b=$('nova');b.disabled=true;b.textContent='Testing…';try{const s=await sbAuth.getSession();const token=s&&s.data&&s.data.session&&s.data.session.access_token;if(!token)throw new Error('No active Supabase session');const r=await fetch(window.LALABELLA_SUPABASE.url+'/functions/v1/nova-api',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({message:'Reply only with: NOVA API online.',session:{},context:{page:'System Test',app:'Lalabella QA'}})});const t=await r.text();if(!r.ok)throw new Error('HTTP '+r.status+' '+t.slice(0,300));alert('NOVA API PASS\n'+t.slice(0,500));}catch(e){alert('NOVA API FAIL\n'+e.message)}finally{b.disabled=false;b.textContent='Test NOVA API'}};
+run();
+})();
+</script>
+</body></html>
