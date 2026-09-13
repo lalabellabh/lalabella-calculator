@@ -69,7 +69,7 @@
   .date-cell .dnum{font-size:11.5px;color:var(--muted);font-weight:600;}
   .date-cell.today .dnum{color:var(--rose-dark);}
 
-  .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#fdf1ee 100%);border-color:var(--rose);box-shadow:0 6px 14px rgba(201,80,107,.14);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#ffe3e3 100%);border:2px solid #e5342f;box-shadow:0 6px 14px rgba(229,52,47,.22);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
   .date-cell.hit.off{background:#faf6f5;border-color:var(--line);box-shadow:none;}
   @keyframes hopIn{ 60%{ transform:scale(1.06) translateY(-3px); opacity:1; } 100%{ transform:scale(1) translateY(0); opacity:1; } }
   .date-cell.hit::before{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold);}
@@ -311,8 +311,10 @@ async function loadScheduleFor(employeeName){
   hideCalEmptyMessage();
   currentSchedule = null;
   document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt'); extra.forEach(n=>n.remove()); });
-  document.getElementById('calTitleText').innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
-  document.getElementById('calRoleTag').style.display = 'none';
+  const titleEl0 = document.getElementById('calTitleText');
+  if(titleEl0) titleEl0.innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
+  const roleTagEl0 = document.getElementById('calRoleTag');
+  if(roleTagEl0) roleTagEl0.style.display = 'none';
 
   const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
   try{
@@ -320,7 +322,8 @@ async function loadScheduleFor(employeeName){
     const data = await res.json();
     if(!data.success || !data.schedule.length){
       showCalEmptyMessage('No schedule found', 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.');
-      document.getElementById('calTitleText').innerHTML = 'No schedule found for ' + employeeName;
+      const t1 = document.getElementById('calTitleText');
+      if(t1) t1.innerHTML = 'No schedule found for ' + employeeName;
       currentSchedule = null;
       renderMonthGrid();
       return;
@@ -329,10 +332,13 @@ async function loadScheduleFor(employeeName){
     currentEmployeeName = employeeName;
 
     const emp = allEmployees.find(e => e.name === employeeName);
-    document.getElementById('calTitleText').innerHTML = `${employeeName}'s schedule`;
+    const t2 = document.getElementById('calTitleText');
+    if(t2) t2.innerHTML = `${employeeName}'s schedule`;
     const roleTag = document.getElementById('calRoleTag');
-    if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
-    else { roleTag.style.display = 'none'; }
+    if(roleTag){
+      if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
+      else { roleTag.style.display = 'none'; }
+    }
 
     // Jump the calendar view to the month the schedule's week falls
     // in — now using the same local-time parser as everywhere else.
@@ -345,7 +351,8 @@ async function loadScheduleFor(employeeName){
   }catch(e){
     if(!currentSchedule){
       showCalEmptyMessage('Connection error', 'Could not load schedule — check your connection.');
-      document.getElementById('calTitleText').innerHTML = 'Could not load ' + employeeName + '\u2019s schedule <span style="color:#c0392b;font-size:12px;">(tap the name again to retry)</span>';
+      const t3 = document.getElementById('calTitleText');
+      if(t3) t3.innerHTML = 'Could not load ' + employeeName + '\u2019s schedule <span style="color:#c0392b;font-size:12px;">(tap the name again to retry)</span>';
     }
   }
 }
@@ -377,7 +384,7 @@ function applyScheduleToGrid(records, animate){
     const [mainPart, ...noteParts] = detail.split(';');
     const shiftEl = document.createElement('div');
     shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
-    shiftEl.textContent = isOff ? 'Off' : mainPart.trim();
+    shiftEl.textContent = isOff ? '🌴 Off' : mainPart.trim();
     cell.appendChild(shiftEl);
 
     if(rec.HomeBranch){
