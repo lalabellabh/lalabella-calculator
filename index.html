@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#090506">
 <title>Lalabella — Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#090506;--rose:#d77b91;--gold:#e6c47a;--cream:#f7eee5;--muted:#b39a98;--line:rgba(230,196,122,.28)}
@@ -74,13 +76,27 @@ header{ padding-top:52px; }
   100%{ transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(1.1); opacity:0; }
 }
 </style>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { getDatabase, ref, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-const firebaseConfig={apiKey:"AIzaSyAz4M9M9fZiYTNBuKt8y7eQ01-KQULKwLM",authDomain:"lalabellachatbot.firebaseapp.com",databaseURL:"https://lalabellachatbot-default-rtdb.firebaseio.com",projectId:"lalabellachatbot",storageBucket:"lalabellachatbot.firebasestorage.app",messagingSenderId:"224994260432",appId:"1:224994260432:web:beb2f3ce3738291738f5d5",measurementId:"G-BWXNBJ4JJ2"};
-const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
-window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded,query,limitToLast};
+<script>
+// Firebase (chat notification badge) is a nice-to-have, not core
+// functionality — deferring its network fetch until after the rest
+// of the page has finished loading means it no longer competes with
+// fonts/CSS/critical content for bandwidth on the initial load. The
+// badge will still update correctly, just starting a beat later.
+window.addEventListener('load', function(){
+  import("https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js").then(({ initializeApp }) => {
+    Promise.all([
+      import("https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js")
+    ]).then(([authMod, dbMod]) => {
+      const { getAuth, signInAnonymously } = authMod;
+      const { getDatabase, ref, onChildAdded, query, limitToLast } = dbMod;
+      const firebaseConfig={apiKey:"AIzaSyAz4M9M9fZiYTNBuKt8y7eQ01-KQULKwLM",authDomain:"lalabellachatbot.firebaseapp.com",databaseURL:"https://lalabellachatbot-default-rtdb.firebaseio.com",projectId:"lalabellachatbot",storageBucket:"lalabellachatbot.firebasestorage.app",messagingSenderId:"224994260432",appId:"1:224994260432:web:beb2f3ce3738291738f5d5",measurementId:"G-BWXNBJ4JJ2"};
+      const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
+      window.LBFB_INDEX={auth,db,chatRef:ref(db,"chat"),signInAnonymously,onChildAdded,query,limitToLast};
+      window.dispatchEvent(new Event('lbfbReady'));
+    });
+  });
+});
 </script>
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
