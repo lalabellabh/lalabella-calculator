@@ -67,6 +67,7 @@
   .date-cell.pad{background:transparent;}
   .date-cell.today{border-color:var(--rose);}
   .date-cell .dnum{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .date-cell .off-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 6px rgba(158,47,74,.25);display:block;margin:2px auto 0;}
   .date-cell.today .dnum{color:var(--rose-dark);}
 
   .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#ffe3e3 100%);border:2px solid #e5342f;box-shadow:0 6px 14px rgba(229,52,47,.22);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
@@ -398,6 +399,18 @@ function applyScheduleToGrid(records, animate){
       shiftEl.textContent = isOff ? '🌴 Off' : mainPart.trim();
       cell.appendChild(shiftEl);
 
+      // Your own face on your own day-off cells — a small personal
+      // touch, only shown when viewing your own schedule (via the
+      // "My Schedule" button) and only you have a photo on file.
+      // Placed below the date number, never over it.
+      if(isOff && viewingIsMe && myPhotoDataUri){
+        const avatarEl = document.createElement('img');
+        avatarEl.className = 'off-avatar';
+        avatarEl.src = myPhotoDataUri;
+        avatarEl.alt = 'You';
+        cell.appendChild(avatarEl);
+      }
+
       if(rec.HomeBranch){
         const branchEl = document.createElement('div');
         branchEl.className = 'branch-txt';
@@ -409,8 +422,26 @@ function applyScheduleToGrid(records, animate){
 }
 
 document.getElementById('employeeSelect').addEventListener('change', (e) => {
+  viewingIsMe = false;
   if(e.target.value) loadScheduleFor(e.target.value);
 });
+
+const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
+let myPhotoDataUri = null;
+let viewingIsMe = false;
+
+async function fetchMyPhoto(){
+  if(myPhotoDataUri !== null) return myPhotoDataUri; // already fetched (or confirmed none) this session
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(AUTH_API_URL + '?action=getProfile&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    myPhotoDataUri = (data.success && data.profile && data.profile.photoDataUri) ? data.profile.photoDataUri : '';
+  }catch(e){
+    myPhotoDataUri = '';
+  }
+  return myPhotoDataUri;
+}
 
 document.getElementById('myScheduleBtn').addEventListener('click', async () => {
   const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
@@ -421,6 +452,8 @@ document.getElementById('myScheduleBtn').addEventListener('click', async () => {
   const match = allEmployees.find(e => e.name.toLowerCase() === firstName.toLowerCase());
   if(match){
     sel.value = match.name;
+    viewingIsMe = true;
+    await fetchMyPhoto();
     loadScheduleFor(match.name);
   } else {
     showCalEmptyMessage('No match found', 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.');
