@@ -61,6 +61,8 @@
   .txn-amt.topup{color:var(--good);}
   .send-btn{font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--rose);background:#fff;color:var(--rose-dark);cursor:pointer;white-space:nowrap;}
   .sent-badge{font-size:10.5px;color:var(--good);font-weight:700;}
+  .delete-btn{background:none;border:none;color:var(--bad);font-size:14px;cursor:pointer;padding:4px;opacity:.7;}
+  .delete-btn:hover{opacity:1;}
   .empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;}
 
   .denom-grid{display:grid;grid-template-columns:1fr 70px 90px;gap:6px 10px;align-items:center;margin-bottom:6px;}
@@ -288,7 +290,7 @@ async function loadPettyCash(){
       targetLine.textContent = '';
     }
 
-    window.lastPettyCashTxns = data.transactions; // for the print-report button below
+    window.lastPettyCashTxns = data.transactions;
     if(!data.transactions.length){ hist.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
     hist.innerHTML = data.transactions.map(t => `
       <div class="txn-row">
@@ -296,14 +298,33 @@ async function loadPettyCash(){
           <div class="txn-main">${t.purpose}</div>
           <div class="txn-date">${fmtDate(t.date)} · ${t.branch} · ${t.enteredBy||'—'}</div>
         </div>
-        <div class="txn-amt ${t.type}">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="txn-amt ${t.type}">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</div>
+          <button class="delete-btn" data-id="${t.id}" title="Delete">🗑️</button>
+        </div>
       </div>
     `).join('');
+    hist.querySelectorAll('.delete-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> deletePettyCashEntry(btn.dataset.id));
+    });
   }catch(e){
     hist.innerHTML = '<div class="empty">Could not load — check your connection.</div>';
   }
 }
 loadPettyCash();
+
+async function deletePettyCashEntry(id){
+  if(!confirm('Sigurado ka bang gusto mong burahin itong entry?')) return;
+  try{
+    const params = new URLSearchParams({ action: 'deletePettyCashEntry', id, token: getToken() });
+    const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
+    const data = await res.json();
+    if(!data.success){ alert(data.error || 'Failed to delete.'); return; }
+    loadPettyCash();
+  }catch(e){
+    alert('Connection error.');
+  }
+}
 
 document.getElementById('toggleTargetLink').addEventListener('click', (e)=>{
   e.preventDefault();
@@ -384,12 +405,15 @@ async function loadCashCounts(){
           <button class="print-btn" data-id="${c.id}">🖨️ Print</button>
           ${c.sentToQalali
             ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span>`
-            : `<button class="send-btn" data-id="${c.id}">Send to Qalali</button>`}
+            : `<button class="send-btn" data-id="${c.id}">Send to Qalali</button><button class="delete-btn" data-id="${c.id}" title="Delete">🗑️</button>`}
         </div>
       </div>
     `).join('');
     hist.querySelectorAll('.send-btn').forEach(btn=>{
       btn.addEventListener('click', ()=> markSent(btn.dataset.id, btn));
+    });
+    hist.querySelectorAll('.delete-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteCashCount(btn.dataset.id));
     });
     hist.querySelectorAll('.print-btn').forEach(btn=>{
       btn.addEventListener('click', ()=> printCashCount(btn.dataset.id));
@@ -399,6 +423,19 @@ async function loadCashCounts(){
   }
 }
 loadCashCounts();
+
+async function deleteCashCount(id){
+  if(!confirm('Sigurado ka bang gusto mong burahin itong cash count?')) return;
+  try{
+    const params = new URLSearchParams({ action: 'deleteCashCount', id, token: getToken() });
+    const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
+    const data = await res.json();
+    if(!data.success){ alert(data.error || 'Failed to delete.'); return; }
+    loadCashCounts();
+  }catch(e){
+    alert('Connection error.');
+  }
+}
 
 function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
