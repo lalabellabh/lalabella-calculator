@@ -133,6 +133,10 @@
 
     <div class="card">
       <h2>📋 History</h2>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+        <input type="date" id="pcReportDate" style="margin-bottom:0;flex:1;">
+        <button class="print-btn" id="pcPrintReportBtn">🖨️ Print Daily Report</button>
+      </div>
       <div id="pcHistory"><div class="empty">Loading…</div></div>
     </div>
   </div>
@@ -150,10 +154,10 @@
       <input type="date" id="ccDate">
 
       <label style="margin-top:4px;">📄 Notes (BD)</label>
-      <div class="denom-grid" id="denomNotes"></div>
+      <div id="denomNotes"></div>
 
       <label style="margin-top:14px;">🪙 Coins (Fils)</label>
-      <div class="denom-grid" id="denomCoins"></div>
+      <div id="denomCoins"></div>
 
       <div class="denom-total">Total: <span id="denomGrandTotal">0.000 BD</span></div>
 
@@ -194,6 +198,7 @@ document.getElementById('branchSelect').addEventListener('change', ()=>{ loadPet
 
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('pcDate').value = today;
+document.getElementById('pcReportDate').value = today;
 document.getElementById('ccDate').value = today;
 
 /* ---------- Denomination breakdown (Bahraini Dinar) ---------- */
@@ -288,6 +293,7 @@ async function loadPettyCash(){
       targetLine.textContent = '';
     }
 
+    window.lastPettyCashTxns = data.transactions; // for the print-report button below
     if(!data.transactions.length){ hist.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
     hist.innerHTML = data.transactions.map(t => `
       <div class="txn-row">
@@ -398,6 +404,38 @@ async function loadCashCounts(){
   }
 }
 loadCashCounts();
+
+document.getElementById('pcPrintReportBtn').addEventListener('click', ()=>{
+  const reportDate = document.getElementById('pcReportDate').value;
+  if(!reportDate){ alert('Pumili ng date.'); return; }
+  const branch = document.getElementById('branchSelect').value;
+  // Only THIS day's entries — a daily report never pulls in entries
+  // from other days, so re-printing a later day's report never
+  // repeats what an earlier day's report already covered.
+  const dayTxns = (window.lastPettyCashTxns || []).filter(t => t.date === reportDate);
+  if(!dayTxns.length){ alert('Walang entries sa petsang ito.'); return; }
+
+  const rows = dayTxns.map(t => `
+    <tr>
+      <td>${t.purpose}</td>
+      <td>${t.type === 'topup' ? 'Top-up' : 'Expense'}</td>
+      <td>${t.enteredBy || '—'}</td>
+      <td style="text-align:right;">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</td>
+    </tr>
+  `).join('');
+  const net = dayTxns.reduce((sum, t) => sum + (t.type === 'topup' ? t.amount : -t.amount), 0);
+
+  document.getElementById('printArea').innerHTML = `
+    <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash Daily Report</h2>
+    <p>${branch} · ${fmtDate(reportDate)}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">NET CHANGE</td><td style="text-align:right;">${net >= 0 ? '+' : '−'}${fmtBD(Math.abs(net))}</td></tr></tfoot>
+    </table>
+  `;
+  window.print();
+});
 
 function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
