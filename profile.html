@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="auth-guard.js?v=4"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — My Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#2f6570;--teal-dark:#214e57;--teal-soft:#dcebed;--rose:#c9506b;--rose-dark:#9e2f4a;--gold:#d9a441;--ink:#3d3a39;--muted:#827976;--line:#e6e0dc;--cream:#faf9f6;--white:#fff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:'Space Grotesk',sans-serif;color:var(--ink);background:var(--cream)}body{overflow-x:hidden;padding-bottom:80px}.wrap{width:min(1360px,calc(100% - 48px));margin:0 auto;position:relative;z-index:2}
+.announcement{height:76px;margin:0 -24px 0;background:linear-gradient(135deg,#2c626d,#245662);color:#fff;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;letter-spacing:.02em;box-shadow:0 5px 24px rgba(33,78,87,.12)}.announcement b{font-family:Georgia,serif;font-size:15px;font-weight:500;letter-spacing:.04em}.announcement span{font-size:10px;opacity:.72;margin-top:4px;letter-spacing:.14em;text-transform:uppercase}
+.site-head{max-width:1080px;margin:0 auto;padding:34px 0 20px;border-bottom:1px solid #ddd8d4;text-align:center;position:relative}.brand{font-family:Georgia,'Times New Roman',serif;font-size:25px;letter-spacing:.32em;margin-left:.32em;color:#575150}.brand small{display:block;font-family:Georgia,serif;font-size:9px;letter-spacing:.28em;margin:5px 0 0;color:#9a918d}.head-actions{position:absolute;right:0;top:42px;display:flex;align-items:center;gap:14px}.head-actions a{color:#5f5a57;text-decoration:none;font-size:12px}.head-icon{font-size:20px;color:#555;transition:.25s}.head-actions a:hover .head-icon{color:var(--teal);transform:translateY(-2px)}
+.navline{display:flex;justify-content:center;gap:34px;padding:20px 0 18px;font-size:12px;color:#555}.navline a{color:inherit;text-decoration:none;position:relative}.navline a:after{content:'';position:absolute;left:50%;right:50%;bottom:-8px;height:1px;background:var(--teal);transition:.25s}.navline a:hover:after{left:0;right:0}
+.botanical{position:fixed;z-index:0;pointer-events:none;opacity:.24;fill:none;stroke:#7db2ba;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 5px 8px rgba(45,100,112,.04))}.botanical.left{left:-34px;bottom:0;width:250px;height:430px}.botanical.right{right:-45px;bottom:5px;width:290px;height:470px;transform:scaleX(-1)}
+.page-title{max-width:1080px;margin:32px auto 22px;display:flex;align-items:end;justify-content:space-between;gap:20px}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:7px}.page-title h1{font-family:'Fraunces',serif;font-size:38px;line-height:1.05;font-weight:600;margin:0;color:#454140}.page-title p{max-width:430px;margin:0;color:var(--muted);font-size:12px;line-height:1.65;text-align:right}
+.profile-layout{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:330px minmax(0,1fr);gap:26px;align-items:start}.profile-sidebar{position:sticky;top:20px}.profile-main{min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:18px}.desktop-label{grid-column:1/-1;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:700;margin:2px 0 -3px}
+.photo-hero{min-height:520px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:3px;padding:42px 28px;text-align:center;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;box-shadow:0 18px 50px rgba(57,49,46,.07);animation:rise .65s ease both}.photo-hero:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 15%,rgba(47,101,112,.10),transparent 34%),radial-gradient(circle at 85% 85%,rgba(201,80,107,.07),transparent 35%)}.photo-hero:after{content:'LALABELLA';position:absolute;bottom:18px;left:0;right:0;font-family:Georgia,serif;font-size:9px;letter-spacing:.42em;color:#b8b0ac}.avatar-wrap{position:relative;z-index:1;width:150px;height:150px;margin:0 auto 22px}.avatar-img{width:150px;height:150px;border-radius:50%;object-fit:cover;border:1px solid #d9cfc9;background:#edf4f4;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--teal);font-family:'Fraunces',serif;box-shadow:0 0 0 8px #fff,0 0 0 9px #c9dfe2,0 18px 35px rgba(47,101,112,.12);animation:float 5s ease-in-out infinite}.avatar-wrap:after{content:'';position:absolute;inset:-17px;border:1px dashed rgba(47,101,112,.28);border-radius:50%;animation:spin 18s linear infinite}.avatar-edit-btn{position:absolute;z-index:3;bottom:2px;right:2px;width:40px;height:40px;border-radius:50%;background:var(--teal);color:#fff;border:3px solid #fff;display:grid;place-items:center;cursor:pointer;font-size:16px;box-shadow:0 6px 15px rgba(47,101,112,.22);transition:.25s}.avatar-edit-btn:hover{transform:scale(1.08) rotate(-8deg)}.hero-name{position:relative;z-index:1;font-family:'Fraunces',serif;font-size:28px;font-weight:700;margin:0 0 5px;color:#403b39}.hero-role{position:relative;z-index:1;font-size:12px;color:#827976}.hero-branch-tag{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;margin:13px auto 0;font-size:10px;background:var(--teal-soft);color:var(--teal-dark);padding:7px 14px;border-radius:30px;text-transform:uppercase;letter-spacing:.09em}.hero-branch-tag:before{content:'';width:6px;height:6px;border-radius:50%;background:#65a276;box-shadow:0 0 0 4px rgba(101,162,118,.12);animation:pulse 2s infinite}
+.section-card{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:3px;padding:25px 27px;box-shadow:0 12px 32px rgba(57,49,46,.055);transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;animation:rise .65s ease both}.section-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(57,49,46,.09);border-color:#d7cdca}.section-card:nth-of-type(2){animation-delay:.08s}.section-card:nth-of-type(3){animation-delay:.16s}.section-card:nth-of-type(4){animation-delay:.24s}.section-title{font-family:'Fraunces',serif;font-size:21px;font-weight:600;margin:0 0 19px;display:flex;align-items:center;gap:9px;color:#484240}.field{margin-bottom:15px}.field label{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#8c827e;margin-bottom:7px;font-weight:700}.field input,.field select{width:100%;padding:13px 14px;border:1px solid #e3dcd8;border-radius:2px;font-size:13px;font-family:inherit;background:#fcfbf9;color:#403c3a;outline:none;transition:.2s}.field input:hover,.field select:hover{border-color:#c9bfba}.field input:focus,.field select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(47,101,112,.08);background:#fff}.field input:disabled{color:#9b918d;background:#f4f1ee}.pw-wrap{position:relative}.pw-wrap input{padding-right:42px}.pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;color:#958b87;font-size:16px}.save-btn{padding:12px 24px;border:0;border-radius:2px;background:var(--teal);color:#fff;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.02em;transition:.25s}.save-btn:hover{background:var(--teal-dark);transform:translateY(-1px);box-shadow:0 7px 16px rgba(47,101,112,.18)}.save-btn:disabled{opacity:.6;cursor:default}.msg{font-size:12px;margin-top:10px;display:none}.msg.ok{color:#3d7a4f}.msg.err{color:#c0392b}.logout-btn{width:100%;padding:13px;border:1px solid #d8b9b9;border-radius:2px;background:#fff;color:#b44b4b;font-weight:700;font-size:12px;cursor:pointer;transition:.25s}.logout-btn:hover{background:#fff7f7;border-color:#b44b4b;transform:translateY(-1px)}input[type=file]{display:none}
+.crop-backdrop{position:fixed;inset:0;background:rgba(38,57,60,.62);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}.crop-backdrop.show{display:flex}.crop-modal{background:#fff;border-radius:3px;padding:22px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.crop-title{font-family:'Fraunces',serif;font-size:18px;margin-bottom:14px;text-align:center}.crop-stage{position:relative;width:260px;height:260px;margin:0 auto;border-radius:3px;overflow:hidden;background:#edf4f4;touch-action:none;cursor:grab}.crop-stage.dragging{cursor:grabbing}.crop-stage img{position:absolute;top:0;left:0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}.crop-circle-mask{position:absolute;top:50%;left:50%;width:230px;height:230px;margin:-115px 0 0 -115px;border-radius:50%;pointer-events:none;box-shadow:0 0 0 2000px rgba(20,35,37,.55);border:2px solid rgba(255,255,255,.9)}.crop-zoom-row{display:flex;align-items:center;gap:10px;margin-top:16px}.crop-zoom-label{font-size:14px}.crop-zoom-row input[type=range]{flex:1;accent-color:var(--teal)}.crop-hint{text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px}.crop-actions{display:flex;gap:10px;margin-top:18px}.crop-cancel-btn,.crop-save-btn{flex:1;padding:11px;border-radius:2px;font-weight:700;cursor:pointer;font-size:12px}.crop-cancel-btn{border:1px solid var(--line);background:#fff;color:var(--muted)}.crop-save-btn{border:0;background:var(--teal);color:#fff}
+.load-error-banner{display:none;background:#fdecea;border:1px solid #f3b8b3;color:#a12b20;border-radius:3px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;grid-column:1/-1}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45;transform:scale(.8)}}
+@media(max-width:859px){body{padding-bottom:50px}.wrap{width:min(100% - 28px,560px)}.announcement{margin:0 -14px;height:62px}.announcement b{font-size:12px}.site-head{padding:24px 0 16px}.brand{font-size:19px}.head-actions{top:25px;right:0}.head-actions a:first-child{display:none}.navline{gap:15px;overflow:auto;justify-content:flex-start;padding:15px 2px;font-size:10px;white-space:nowrap}.botanical{opacity:.14}.botanical.left{width:150px;height:280px;left:-55px}.botanical.right{width:170px;height:300px;right:-75px}.page-title{display:block;margin:25px 0 18px}.page-title h1{font-size:29px}.page-title p{text-align:left;margin-top:8px}.profile-layout{display:block}.profile-sidebar{position:static}.profile-main{display:block}.desktop-label{display:none}.photo-hero{min-height:0;border-radius:3px;padding:35px 24px;margin-bottom:18px}.avatar-wrap,.avatar-img{width:110px;height:110px}.avatar-img{font-size:35px}.avatar-wrap{margin-bottom:18px}.avatar-wrap:after{inset:-11px}.avatar-edit-btn{width:34px;height:34px;font-size:14px}.hero-name{font-size:23px}.section-card{border-radius:3px;padding:21px;margin-bottom:18px}.section-title{font-size:18px}.head-actions{display:none}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="announcement"><b>LALABELLA • MY PROFILE</b><span>Your account, beautifully arranged</span></div>
+<header class="site-head"><div class="brand">LALABELLA<small>BAHRAIN</small></div><div class="head-actions"><a href="index.html">Home</a><a href="index.html" aria-label="Back">↩ <span class="head-icon">⌂</span></a></div><nav class="navline"><a href="index.html">Dashboard</a><a href="flower-tools.html">Flower Tools</a><a href="item-dashboard.html">Inventory</a><a href="nova-command-center.html">NOVA</a><a href="profile.html">My Profile</a></nav></header>
+<svg class="botanical left" viewBox="0 0 250 430" aria-hidden="true"><path d="M83 430C88 354 83 292 105 229C125 172 155 124 170 70"/><path d="M103 251C75 236 54 213 40 180C68 181 92 198 111 222"/><path d="M91 299C59 295 32 277 17 251C47 248 72 260 96 281"/><path d="M106 224C101 190 107 157 129 132C143 163 135 194 117 222"/><path d="M122 170C105 144 104 116 117 91C140 112 143 141 130 165"/><path d="M167 72C145 64 130 48 128 28C151 28 169 40 174 59"/><path d="M171 73C189 56 209 51 229 57C217 77 196 87 174 82"/></svg>
+<svg class="botanical right" viewBox="0 0 290 470" aria-hidden="true"><path d="M83 470C90 386 85 325 111 260C137 195 174 140 195 72"/><path d="M107 279C76 265 52 242 39 209C70 211 97 228 116 252"/><path d="M95 330C60 323 32 303 18 275C48 273 78 287 102 310"/><path d="M119 246C114 209 124 176 149 149C160 185 151 219 130 247"/><path d="M145 188C128 159 130 129 146 104C168 129 170 158 155 182"/><path d="M193 75C171 68 157 51 156 30C179 31 197 45 200 64"/><path d="M198 76C218 57 241 55 263 63C248 84 223 91 199 84"/></svg>
+<div class="page-title"><div><div class="eyebrow">Account / Personal space</div><h1>My Profile</h1></div><p>Keep your Lalabella account details updated. Your profile information and preferences are managed here.</p></div>
+<div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div></div></aside>
+<main class="profile-main">
+<div class="load-error-banner" id="loadErrorBanner"></div>
+<div class="desktop-label">Account settings</div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
+<div class="section-card"><h3 class="section-title">✏️ Edit Info</h3><div class="field"><label>Username</label><input type="text" id="usernameField" disabled></div><div class="field"><label>Full Name</label><input type="text" id="fullNameField"></div><div class="field"><label>Branch</label><select id="branchField"><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div><button class="save-btn" id="saveInfoBtn">Save Changes</button><div class="msg" id="infoMsg"></div></div>
+<div class="section-card"><h3 class="section-title">🔒 Change Password</h3><div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="currentPw"><button type="button" class="pw-toggle" id="toggleCurrentPw">👁</button></div></div><div class="field"><label>New Password</label><div class="pw-wrap"><input type="password" id="newPw"><button type="button" class="pw-toggle" id="toggleNewPw">👁</button></div></div><button class="save-btn" id="savePwBtn">Update Password</button><div class="msg" id="pwMsg"></div></div>
+<div class="section-card"><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></div></main></div></div>
+<script>
+// CORRECTED — the previous version of this UI accidentally pointed at
+// the Joyboy/NOVA API URL instead of the Auth backend, which is why
+// every single action here (getProfile, updateProfile, changePassword)
+// was failing: it was asking the wrong backend entirely, one that has
+// no idea what "getProfile" even means.
+const AUTH_API_URL='https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec';
+function getToken(){return window.LALABELLA_TOKEN||sessionStorage.getItem('lalabellaToken')||localStorage.getItem('lalabellaToken')||''}
+function setupPwToggle(inputId,btnId){const input=document.getElementById(inputId),btn=document.getElementById(btnId);btn.addEventListener('click',()=>{const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁':'🙈'})}
+setupPwToggle('currentPw','toggleCurrentPw');setupPwToggle('newPw','toggleNewPw');
+
+function showLoadError(message){
+  const banner = document.getElementById('loadErrorBanner');
+  banner.textContent = '⚠ Could not load your profile: ' + message;
+  banner.style.display = 'block';
+}
+
+async function loadProfile(){
+  const token = getToken();
+  if(!token){
+    showLoadError('No session token found. Please log out and log in again.');
+    return;
+  }
+  try{
+    const res = await fetch(AUTH_API_URL+'?action=getProfile&token='+encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){
+      showLoadError(data.error || 'Unknown error from server.');
+      return;
+    }
+    const p=data.profile;
+    document.getElementById('heroName').textContent=p.fullName||p.username;
+    document.getElementById('heroRole').textContent=p.role||'Staff';
+    document.getElementById('heroBranch').textContent=p.branch||'—';
+    document.getElementById('usernameField').value=p.username;
+    document.getElementById('fullNameField').value=p.fullName||'';
+    document.getElementById('branchField').value=p.branch||'ModaMall';
+    const avatarEl=document.getElementById('avatarImg');
+    if(p.photoDataUri){
+      avatarEl.style.backgroundImage=`url('${p.photoDataUri}')`;
+      avatarEl.style.backgroundSize='cover';
+      avatarEl.style.backgroundPosition='center';
+      avatarEl.textContent=''
+    }else{
+      avatarEl.textContent=(p.fullName||p.username||'?').charAt(0).toUpperCase()
+    }
+  }catch(e){
+    console.error('[Profile] load failed',e);
+    showLoadError('Connection error — ' + e.message);
+  }
+}
+loadProfile();
+
+document.getElementById('avatarEditBtn').addEventListener('click',()=>document.getElementById('photoInput').click());
+const cropBackdrop=document.getElementById('cropBackdrop'),cropStage=document.getElementById('cropStage'),cropImg=document.getElementById('cropImg'),cropZoom=document.getElementById('cropZoom');
+let cropState={naturalW:0,naturalH:0,baseScale:1,scale:1,offsetX:0,offsetY:0};
+const STAGE_SIZE=260;
+function applyCropTransform(){const s=cropState.baseScale*cropState.scale;cropImg.style.width=cropState.naturalW*s+'px';cropImg.style.height=cropState.naturalH*s+'px';cropImg.style.transform=`translate(${cropState.offsetX}px,${cropState.offsetY}px)`}
+function clampOffset(){const s=cropState.baseScale*cropState.scale,w=cropState.naturalW*s,h=cropState.naturalH*s,minX=STAGE_SIZE-w,maxX=0,minY=STAGE_SIZE-h,maxY=0;cropState.offsetX=Math.min(maxX,Math.max(minX,cropState.offsetX));cropState.offsetY=Math.min(maxY,Math.max(minY,cropState.offsetY))}
+
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      cropState.naturalW=img.width;cropState.naturalH=img.height;
+      cropState.baseScale=Math.max(STAGE_SIZE/img.width,STAGE_SIZE/img.height);
+      cropState.scale=1;
+      cropState.offsetX=(STAGE_SIZE-img.width*cropState.baseScale)/2;
+      cropState.offsetY=(STAGE_SIZE-img.height*cropState.baseScale)/2;
+      cropImg.src=ev.target.result;
+      cropZoom.value=100;
+      applyCropTransform();
+      cropBackdrop.classList.add('show');
+    };
+    img.onerror=()=>{ alert('Could not read that image file. Please try a different photo (JPG or PNG).'); };
+    img.src=ev.target.result;
+  };
+  reader.onerror=()=>{ alert('Could not read that file from your device. Please try again.'); };
+  reader.readAsDataURL(file);
+  e.target.value='';
+});
+
+cropZoom.addEventListener('input',()=>{cropState.scale=Number(cropZoom.value)/100;clampOffset();applyCropTransform()});
+let dragging=false,dragStartX=0,dragStartY=0,startOffsetX=0,startOffsetY=0;
+cropStage.addEventListener('pointerdown',e=>{dragging=true;cropStage.classList.add('dragging');dragStartX=e.clientX;dragStartY=e.clientY;startOffsetX=cropState.offsetX;startOffsetY=cropState.offsetY;cropStage.setPointerCapture(e.pointerId)});
+cropStage.addEventListener('pointermove',e=>{if(!dragging)return;cropState.offsetX=startOffsetX+(e.clientX-dragStartX);cropState.offsetY=startOffsetY+(e.clientY-dragStartY);clampOffset();applyCropTransform()});
+cropStage.addEventListener('pointerup',()=>{dragging=false;cropStage.classList.remove('dragging')});
+cropStage.addEventListener('pointercancel',()=>{dragging=false;cropStage.classList.remove('dragging')});
+document.getElementById('cropCancelBtn').addEventListener('click',()=>cropBackdrop.classList.remove('show'));
+
+document.getElementById('cropSaveBtn').addEventListener('click',async()=>{
+  const btn = document.getElementById('cropSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const size=200,canvas=document.createElement('canvas');
+  canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext('2d'),s=cropState.baseScale*cropState.scale,exportScale=size/STAGE_SIZE;
+  ctx.drawImage(cropImg,cropState.offsetX*exportScale,cropState.offsetY*exportScale,cropState.naturalW*s*exportScale,cropState.naturalH*s*exportScale);
+  const compressedBase64=canvas.toDataURL('image/jpeg',.7);
+  try{
+    const data = await saveProfile(null,null,compressedBase64);
+    btn.disabled = false; btn.textContent = 'Use This Photo';
+    if(!data.success){
+      alert('Could not save photo: ' + (data.error || 'unknown error'));
+      return;
+    }
+    const avatarEl=document.getElementById('avatarImg');
+    avatarEl.style.backgroundImage=`url('${compressedBase64}')`;
+    avatarEl.style.backgroundSize='cover';
+    avatarEl.style.backgroundPosition='center';
+    avatarEl.textContent='';
+    cropBackdrop.classList.remove('show');
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Use This Photo';
+    alert('Connection error while saving photo: ' + e.message);
+  }
+});
+
+async function saveProfile(fullName,branch,photoBase64){
+  const token=getToken();
+  const params=new URLSearchParams({action:'updateProfile',token});
+  if(fullName)params.set('fullName',fullName);
+  if(branch)params.set('branch',branch);
+  if(photoBase64)params.set('photoBase64',photoBase64);
+  const res=await fetch(AUTH_API_URL+'?'+params.toString());
+  return res.json();
+}
+
+document.getElementById('saveInfoBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('saveInfoBtn'),msg=document.getElementById('infoMsg');
+  btn.disabled=true;btn.textContent='Saving…';
+  const fullName=document.getElementById('fullNameField').value.trim(),branch=document.getElementById('branchField').value;
+  try{
+    const data=await saveProfile(fullName,branch,null);
+    btn.disabled=false;btn.textContent='Save Changes';
+    msg.className='msg '+(data.success?'ok':'err');
+    msg.textContent=data.success?'Saved!':(data.error||'Failed to save.');
+    msg.style.display='block';
+    if(data.success){
+      document.getElementById('heroName').textContent=fullName;
+      document.getElementById('heroBranch').textContent=branch;
+      const userStr=sessionStorage.getItem('lalabellaUser');
+      if(userStr){
+        const u=JSON.parse(userStr);
+        u.fullName=fullName;u.branch=branch;
+        sessionStorage.setItem('lalabellaUser',JSON.stringify(u));
+        localStorage.setItem('lalabellaUser',JSON.stringify(u));
+      }
+    }
+  }catch(e){
+    btn.disabled=false;btn.textContent='Save Changes';
+    msg.className='msg err';msg.textContent='Connection error: ' + e.message;msg.style.display='block';
+  }
+});
+
+document.getElementById('savePwBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('savePwBtn'),msg=document.getElementById('pwMsg'),currentPassword=document.getElementById('currentPw').value,newPassword=document.getElementById('newPw').value;
+  if(!currentPassword||!newPassword){msg.className='msg err';msg.textContent='Both fields are required.';msg.style.display='block';return}
+  btn.disabled=true;btn.textContent='Updating…';
+  const token=getToken();
+  try{
+    const res=await fetch(AUTH_API_URL+'?action=changePassword&token='+encodeURIComponent(token)+'&currentPassword='+encodeURIComponent(currentPassword)+'&newPassword='+encodeURIComponent(newPassword));
+    const data=await res.json();
+    btn.disabled=false;btn.textContent='Update Password';
+    msg.className='msg '+(data.success?'ok':'err');
+    msg.textContent=data.success?'Password updated!':(data.error||'Failed.');
+    msg.style.display='block';
+    if(data.success){document.getElementById('currentPw').value='';document.getElementById('newPw').value=''}
+  }catch(e){
+    btn.disabled=false;btn.textContent='Update Password';
+    msg.className='msg err';msg.textContent='Connection error: ' + e.message;msg.style.display='block';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  sessionStorage.removeItem('lalabellaToken');sessionStorage.removeItem('lalabellaUser');
+  localStorage.removeItem('lalabellaToken');localStorage.removeItem('lalabellaUser');
+  window.location.href='index.html';
+});
+</script>
+</body>
+</html>
