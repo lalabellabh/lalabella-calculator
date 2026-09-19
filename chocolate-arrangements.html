@@ -93,6 +93,8 @@
     <h2>➕ Add New Arrangement</h2>
     <label>Arrangement Name</label>
     <input type="text" id="arrName" placeholder="e.g. Deluxe Box A">
+    <label>Display Name (optional — for online/customer display)</label>
+    <input type="text" id="arrDisplayName" placeholder="e.g. Valentine's Sweetheart Box">
     <label>Made By (Florist/Staff)</label>
     <input type="text" id="arrCreator" placeholder="Your name">
 
@@ -241,6 +243,7 @@ async function lookupByCode(code){
       ${data.photoData ? `<img src="${data.photoData}" style="width:100%;max-width:200px;border-radius:10px;margin-bottom:10px;">` : ''}
       <span class="code-badge">${data.arrangementCode}</span>
       <h3 style="font-family:'Fraunces',serif;margin:4px 0;">${data.arrangementName}</h3>
+      ${data.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${data.displayName}</div>` : ''}
       <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">👤 ${data.createdBy || 'Unknown'}</div>
       <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.9;">
         ${data.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}
@@ -271,6 +274,7 @@ async function loadArrangements(){
         ${a.photoData ? `<img src="${a.photoData}" style="width:100%;border-radius:10px;margin-bottom:10px;">` : ''}
         <span class="code-badge">${a.arrangementCode||''}</span>
         <h3>${a.arrangementName}</h3>
+        ${a.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${a.displayName}</div>` : ''}
         <div class="by">👤 ${a.createdBy || 'Unknown'} · ${new Date(a.createdDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
         <ul>${a.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}</ul>
         ${a.notes ? `<div class="notes">${a.notes}</div>` : ''}
@@ -284,6 +288,7 @@ loadArrangements();
 
 document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const arrangementName = document.getElementById('arrName').value.trim();
+  const displayName = document.getElementById('arrDisplayName').value.trim();
   const createdBy = document.getElementById('arrCreator').value.trim();
   const notes = document.getElementById('arrNotes').value.trim();
   const items = Array.from(document.querySelectorAll('.item-row')).map(row => ({
@@ -300,7 +305,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
 
   try{
     const params = new URLSearchParams({
-      action: 'addArrangement', arrangementName, createdBy, notes,
+      action: 'addArrangement', arrangementName, displayName, createdBy, notes,
       items: JSON.stringify(items), photoData: arrPhotoData || '', token
     });
     const res = await fetch(CHOCOLATE_API_URL + '?' + params.toString());
@@ -313,6 +318,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
       `<div class="barcode-box"><svg id="newArrBarcode"></svg></div>`);
     JsBarcode('#newArrBarcode', data.arrangementCode, { format: 'CODE128', width: 1.6, height: 46, displayValue: true, fontSize: 12 });
     document.getElementById('arrName').value = '';
+    document.getElementById('arrDisplayName').value = '';
     document.getElementById('arrCreator').value = '';
     document.getElementById('arrNotes').value = '';
     document.getElementById('itemRows').innerHTML = '';
