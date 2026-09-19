@@ -11,9 +11,9 @@
 <style>
 :root{--bg:#090506;--rose:#d77b91;--gold:#e6c47a;--cream:#f7eee5;--muted:#b39a98;--line:rgba(230,196,122,.28)}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scrollbar-width:none;}html::-webkit-scrollbar{display:none;}body{margin:0;min-height:100vh;overflow-x:hidden;color:var(--cream);font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 50% 32%,rgba(170,45,78,.18),transparent 28%),linear-gradient(145deg,#070405,#12090b 52%,#080405)}
-.ambient{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}.glow{position:absolute;width:42vw;height:42vw;border-radius:50%;filter:blur(70px);opacity:.16;animation:glowMove 10s ease-in-out infinite alternate}.glow.one{left:-15%;top:10%;background:#9d274f}.glow.two{right:-18%;bottom:5%;background:#d8a84e;animation-delay:-4s}@keyframes glowMove{from{transform:translate3d(-20px,0,0) scale(.95)}to{transform:translate3d(30px,-25px,0) scale(1.08)}}
+.ambient{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}.glow{position:absolute;width:42vw;height:42vw;border-radius:50%;filter:blur(70px);opacity:.16}.glow.one{left:-15%;top:10%;background:#9d274f}.glow.two{right:-18%;bottom:5%;background:#d8a84e}
 .petal-field{position:absolute;inset:0;overflow:hidden}.petal{position:absolute;top:-50px;opacity:0;animation:fall linear forwards;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}@keyframes fall{0%{transform:translate3d(0,-60px,0) rotate(0deg);opacity:0}10%{opacity:.7}90%{opacity:.45}100%{transform:translate3d(var(--drift),110vh,0) rotate(420deg);opacity:0}}
-header{position:relative;z-index:5;width:min(1240px,calc(100% - 34px));margin:18px auto 0;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--cream)}.brand-rose{font-size:34px;}.brand-logo{width:38px;height:50px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.brand-logo svg{width:38px;height:50px;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}.brand-logo.bloom-fx{animation:roseBloomFx .6s ease}@keyframes rosePulse{0%,100%{transform:scale(1) rotate(-4deg)}50%{transform:scale(1.08) rotate(4deg)}}.brand-name{font-family:"Cormorant Garamond",serif;font-size:27px;letter-spacing:.16em}.brand-sub{display:block;margin-top:-4px;font-size:8px;letter-spacing:.24em;color:var(--gold)}nav{display:flex;gap:30px}nav a{color:#cdbdb7;text-decoration:none;font-size:12px}.header-actions{display:flex;gap:10px}.sound,.enter-top,.msg-btn{border:1px solid var(--line);background:rgba(20,8,11,.62);color:var(--cream);border-radius:30px;padding:10px 16px;cursor:pointer}.enter-top{background:linear-gradient(135deg,#f1d38c,#c79a4d);color:#24150c;border:0;font-weight:700}.msg-btn{position:relative;text-decoration:none;display:inline-flex;align-items:center}.msg-badge{position:absolute;top:-6px;right:-6px;background:linear-gradient(135deg,#f1a6b8,#d77b91);color:#24150c;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 8px rgba(0,0,0,.4)}.msg-badge.show{display:flex}.msg-btn.has-new{animation:msgPulse 1s ease-in-out infinite}@keyframes msgPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+header{position:relative;z-index:5;width:min(1240px,calc(100% - 34px));margin:18px auto 0;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--cream)}.brand-rose{font-size:34px;}.brand-logo{width:38px;height:50px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.brand-logo svg{width:38px;height:50px;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}.brand-logo.bloom-fx{animation:roseBloomFx .6s ease}@keyframes rosePulse{0%,100%{transform:scale(1) rotate(-4deg)}50%{transform:scale(1.08) rotate(4deg)}}.brand-name{font-family:"Cormorant Garamond",serif;font-size:27px;letter-spacing:.16em}.brand-sub{display:block;margin-top:-4px;font-size:8px;letter-spacing:.24em;color:var(--gold)}nav{display:flex;gap:30px}nav a{color:#cdbdb7;text-decoration:none;font-size:12px}.header-actions{display:flex;gap:10px}.sound,.enter-top,.msg-btn{border:1px solid var(--line);background:rgba(20,8,11,.62);color:var(--cream);border-radius:30px;padding:10px 16px;cursor:pointer}.enter-top{background:linear-gradient(135deg,#f1d38c,#c79a4d);color:#24150c;border:0;font-weight:700}.msg-btn{position:relative;text-decoration:none;display:inline-flex;align-items:center}.msg-badge{position:absolute;top:-6px;right:-6px;background:linear-gradient(135deg,#f1a6b8,#d77b91);color:#24150c;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 8px rgba(0,0,0,.4)}.msg-badge.show{display:flex}.msg-btn.has-new{}
 .music-panel{position:fixed;top:70px;right:20px;z-index:40;width:min(320px,calc(100vw - 40px));background:rgba(18,9,12,.94);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:16px;display:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .music-panel.show{display:block}
 .music-panel label{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
@@ -36,7 +36,7 @@ main{position:relative;z-index:2}.hero{width:min(1240px,calc(100% - 34px));min-h
   box-shadow:0 0 22px var(--lit-color,#f1a6b8),0 0 40px var(--lit-color,#f1a6b8);
   transform:scale(1.5);
 }.petal-big{position:absolute;width:88px;height:132px;border-radius:75% 25% 75% 25%;transform-origin:50% 100%;background:linear-gradient(135deg,#f3b0bf,#a93658 55%,#5d172e);box-shadow:inset -10px -15px 20px rgba(74,7,25,.28),0 4px 20px rgba(150,25,65,.22)}.p1{transform:rotate(0deg) translateY(-50px)}.p2{transform:rotate(45deg) translateY(-50px)}.p3{transform:rotate(90deg) translateY(-50px)}.p4{transform:rotate(135deg) translateY(-50px)}.p5{transform:rotate(180deg) translateY(-50px)}.p6{transform:rotate(225deg) translateY(-50px)}.p7{transform:rotate(270deg) translateY(-50px)}.p8{transform:rotate(315deg) translateY(-50px)}.petal-mid{position:absolute;width:70px;height:112px;border-radius:70% 30% 70% 30%;transform-origin:50% 100%;background:linear-gradient(135deg,#ffccd6,#c44b6b 58%,#6e1935)}.m1{transform:rotate(22deg) translateY(-38px)}.m2{transform:rotate(82deg) translateY(-38px)}.m3{transform:rotate(142deg) translateY(-38px)}.m4{transform:rotate(202deg) translateY(-38px)}.m5{transform:rotate(262deg) translateY(-38px)}.m6{transform:rotate(322deg) translateY(-38px)}.rose-core{position:absolute;top:calc(50% + 43px);left:50%;transform:translate(-50%,-50%);width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#ffdbe3 0 5%,#e77994 6% 18%,#a82e51 35%,#551226 72%);box-shadow:0 0 35px rgba(238,105,137,.4)}.rose-core:before{content:"";position:absolute;inset:20px;border-radius:50%;border:9px solid rgba(255,193,207,.38);transform:rotate(28deg)}.stem{position:absolute;width:14px;height:110px;background:linear-gradient(90deg,#243c25,#5b7b46,#1d321e);bottom:-70px;border-radius:10px;transform:rotate(-7deg)}.leaf{position:absolute;width:65px;height:32px;background:linear-gradient(135deg,#6f944e,#213c25);border-radius:100% 0 100% 0}.leaf.l{bottom:-22px;left:45px;transform:rotate(20deg)}.leaf.r{bottom:8px;right:34px;transform:rotate(155deg)}
-.butterfly{position:absolute;font-size:34px;filter:drop-shadow(0 0 9px rgba(255,120,170,.65));animation:butterflyFly 8s ease-in-out infinite}.butterfly.b1{top:22%;left:4%}.butterfly.b2{right:5%;bottom:20%;animation-delay:-4s;font-size:28px}@keyframes butterflyFly{0%,100%{transform:translate(0,0) rotate(-10deg)}25%{transform:translate(45px,-28px) rotate(8deg)}50%{transform:translate(8px,-60px) rotate(-5deg)}75%{transform:translate(-42px,-18px) rotate(10deg)}}
+.butterfly{position:absolute;font-size:34px;filter:drop-shadow(0 0 9px rgba(255,120,170,.65))}.butterfly.b1{top:22%;left:4%}.butterfly.b2{right:5%;bottom:20%;font-size:28px}
 .tools{width:min(1240px,calc(100% - 34px));margin:0 auto 70px}.section-title{text-align:center;font-family:"Cormorant Garamond",serif;font-size:38px;margin:0 0 8px}.section-sub{text-align:center;color:var(--muted);font-size:12px;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;max-height:400px;overflow-y:auto;padding:4px;scrollbar-width:thin;scrollbar-color:rgba(240,166,184,.5) transparent;}
 .grid::-webkit-scrollbar{width:6px;}
 .grid::-webkit-scrollbar-thumb{background:rgba(240,166,184,.5);border-radius:3px;}
@@ -187,8 +187,7 @@ window.addEventListener('load', function(){
 /* ---------- Real Login/Register gate — split-panel design ---------- */
 #lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0 0%,#f6e0da 50%,#eaf3ec 100%);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;overflow:hidden;padding:16px;}
 #lala-lock-emoji-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
-#lala-lock-emoji-bg span{position:absolute;opacity:0.14;animation:lalaFloat 8s ease-in-out infinite;}
-@keyframes lalaFloat{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-22px) rotate(4deg);}}
+#lala-lock-emoji-bg span{position:absolute;opacity:0.14;}
 
 .auth-shell{position:relative;z-index:2;width:100%;max-width:760px;min-height:460px;background:#fff;border-radius:26px;box-shadow:0 24px 60px rgba(158,47,74,.22);overflow:hidden;display:grid;grid-template-columns:1fr 1fr;}
 .auth-panel{padding:38px 34px;display:flex;flex-direction:column;justify-content:center;}
@@ -568,8 +567,24 @@ const orbitDots=Array.from(document.querySelectorAll('.orbit-dot'));
 const targetColors=['#f1a6b8','#f4d06f','#e77994','#a6c8f4','#f4906f','#c9a6f4'];
 let bx=0,by=0,bvx=0.75,bvy=0.55,boundsReady=false;
 
+// Target/dot positions only change when the layout itself changes
+// (page load, window resize) — NOT every animation frame. The old
+// code recalculated AND rewrote every target's position 60 times a
+// second even though they're static, then immediately read those
+// positions back via getBoundingClientRect() in the hit-detection
+// loop below — a write-then-read cycle repeated for every target and
+// every orbit dot, every single frame. That forces the browser to
+// synchronously recompute layout ("forced reflow") on every frame,
+// which is exactly what Lighthouse flagged as 34s of main-thread
+// work. Now everything is computed once and cached; the animation
+// loop itself does zero layout reads.
+let cachedOrbitR = 0;
+let cachedTargetCenters = []; // [{x,y}] relative to stage, cached
+let cachedDotCenters = [];    // [{x,y}] relative to stage, cached
+let cachedRoseR = 0;
+
 function positionTargets(s){
-  if(orbitDots.length===0)return;
+  if(orbitDots.length===0)return cachedOrbitR;
   const dr=orbitDots[0].getBoundingClientRect();
   const dCenter={x:dr.left+dr.width/2,y:dr.top+dr.height/2};
   const stageCenter={x:s.left+s.width/2,y:s.top+s.height/2};
@@ -579,17 +594,42 @@ function positionTargets(s){
     tEl.style.left=`calc(50% + ${(Math.cos(ang)*measuredR).toFixed(1)}px)`;
     tEl.style.top=`calc(50% + ${(Math.sin(ang)*measuredR).toFixed(1)}px)`;
   });
+  cachedOrbitR = measuredR;
   return measuredR;
 }
 
+// Recomputes and caches every position this animation needs, in one
+// batch — called once on load and again on resize, never per-frame.
+function recacheOrbitLayout(){
+  const s = stage.getBoundingClientRect();
+  if(s.width===0) return;
+  positionTargets(s);
+  cachedTargetCenters = bounceTargets.map(tEl=>{
+    const tr=tEl.getBoundingClientRect();
+    return {x:tr.left+tr.width/2 - s.left, y:tr.top+tr.height/2 - s.top};
+  });
+  cachedDotCenters = orbitDots.map(dEl=>{
+    const dr=dEl.getBoundingClientRect();
+    return {x:dr.left+dr.width/2 - s.left, y:dr.top+dr.height/2 - s.top};
+  });
+  cachedRoseR = rose.getBoundingClientRect().width/2*0.7;
+}
+window.addEventListener('resize', recacheOrbitLayout);
+
 function bounceStep(){
   requestAnimationFrame(bounceStep);
+  // Skip all the physics/DOM work entirely while this tab isn't
+  // visible — this loop otherwise runs forever at 60fps, which is
+  // wasted CPU/battery the moment someone switches tabs or apps
+  // (common on a login page people leave open in the background).
+  // Purely a "don't do unnecessary work" change — the animation
+  // looks and behaves identically whenever the tab IS visible.
+  if(document.hidden)return;
   if(dragging||!boundsReady)return;
   const s=stage.getBoundingClientRect();
   if(s.width===0)return;
-  const measuredR=positionTargets(s);
-  const orbitR=measuredR||Math.min(s.width,s.height)*0.5*0.86;
-  const roseR=rose.getBoundingClientRect().width/2*0.7;
+  const orbitR=cachedOrbitR||Math.min(s.width,s.height)*0.5*0.86;
+  const roseR=cachedRoseR;
   bx+=bvx; by+=bvy;
   const dist=Math.hypot(bx,by),maxDist=orbitR-roseR;
   if(dist>maxDist&&maxDist>0){
@@ -600,15 +640,15 @@ function bounceStep(){
   rose.style.position='absolute';rose.style.margin='0';
   rose.style.left=(s.width/2+bx-rose.offsetWidth/2)+'px';
   rose.style.top=(s.height/2+by-rose.offsetHeight/2)+'px';
-  const roseCenter={x:s.left+s.width/2+bx,y:s.top+s.height/2+by};
+  const roseCenter={x:s.width/2+bx,y:s.height/2+by};
   bounceTargets.forEach((tEl,i)=>{
-    const tr=tEl.getBoundingClientRect(),tCenter={x:tr.left+tr.width/2,y:tr.top+tr.height/2};
+    const tCenter=cachedTargetCenters[i];
+    if(!tCenter)return;
     let hit=Math.hypot(roseCenter.x-tCenter.x,roseCenter.y-tCenter.y)<roseR*0.9+14;
     if(!hit){
-      hit=orbitDots.some(dEl=>{
-        const dr=dEl.getBoundingClientRect(),dCenter={x:dr.left+dr.width/2,y:dr.top+dr.height/2};
-        return Math.hypot(dCenter.x-tCenter.x,dCenter.y-tCenter.y)<16;
-      });
+      hit=cachedDotCenters.some(dCenter=>
+        Math.hypot(dCenter.x-tCenter.x,dCenter.y-tCenter.y)<16
+      );
     }
     if(hit&&!tEl.classList.contains('lit')){
       tEl.style.setProperty('--lit-color',targetColors[i%targetColors.length]);
@@ -617,7 +657,7 @@ function bounceStep(){
     }
   });
 }
-requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
+requestAnimationFrame(()=>{recacheOrbitLayout();boundsReady=true;bounceStep();})
 })();
 </script>
 
@@ -1006,6 +1046,11 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       badge.classList.remove('show');
       return;
     }
+    // Also skip while the tab is in the background — a fresh check
+    // happens automatically the moment the tab becomes visible again
+    // (see visibilitychange listener below), so nothing is missed,
+    // it's just not polled every 7s while nobody can see the result.
+    if (document.hidden) return;
     fetch(BRANCH_API + '?action=getUnassignedStatus&token=' + encodeURIComponent(activeToken) + '&_ts=' + Date.now())
       .then(r => r.json())
       .then(data => {
@@ -1040,6 +1085,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
 
   refresh();
   setInterval(refresh, 7000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refresh(); });
 })();
 </script>
 
