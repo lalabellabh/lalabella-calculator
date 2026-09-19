@@ -1143,13 +1143,75 @@ body{background:
 
   function handleScanResult(code){
     stopScanner();
-    const match = items.find(it => String(it['Product Code']).trim() === String(code).trim());
+    const trimmed = String(code).trim();
+    // Arrangement barcodes (from the Chocolate Arrangement Catalog)
+    // use an "ARR-" prefix — route those to the recipe-based bulk-add
+    // flow instead of the normal single-chocolate lookup below.
+    if(/^ARR-/i.test(trimmed)){
+      addArrangementToCart(trimmed);
+      return;
+    }
+    const match = items.find(it => String(it['Product Code']).trim() === trimmed);
     if(match){
       document.getElementById('fSearch').value = match['Chocolate Name'];
       loadBatches(match['Chocolate Name']);
     } else {
       alert('No chocolate found for code: ' + code);
     }
+  }
+
+  // Scanning an arrangement barcode adds EVERY chocolate in that
+  // recipe to the release cart at once, automatically picking the
+  // batch with the soonest expiry that still has enough stock for
+  // each one (same FIFO logic a person would apply manually). This
+  // is purely a fast way to fill in the cart — it's still the normal
+  // "Release" button below that actually deducts stock, same single
+  // release-confirmation step as adding items one at a time.
+  async function addArrangementToCart(code){
+    let data;
+    try{
+      const res = await fetch(API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code));
+      data = await res.json();
+    }catch(e){
+      alert('Could not reach the server to look up this arrangement.');
+      return;
+    }
+    if(!data.success){
+      alert(data.error || 'Arrangement not found for code: ' + code);
+      return;
+    }
+
+    const added = [], skipped = [];
+    for(const it of data.items){
+      const catalogMatch = items.find(ci => String(ci['Chocolate Name']||'').trim().toLowerCase() === it.chocolateName.trim().toLowerCase());
+      if(!catalogMatch){ skipped.push(it.chocolateName + ' (not in catalog)'); continue; }
+
+      let branchBatches = [];
+      try{
+        branchBatches = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getBatchesForChocolate&branch=' + currentBranch + '&chocolateName=' + encodeURIComponent(catalogMatch['Chocolate Name']) + '&_ts=' + Date.now())).json());
+      }catch(e){ branchBatches = []; }
+
+      // Earliest-expiry batch with enough stock for this item's qty.
+      const usable = branchBatches
+        .filter(b => Number(b.AvailableStock) >= it.qty)
+        .sort((a,b) => new Date(a.ExpiryDate) - new Date(b.ExpiryDate));
+      if(!usable.length){ skipped.push(it.chocolateName + ' (insufficient stock)'); continue; }
+      const batch = usable[0];
+
+      const { price, total } = computeReleasePrice(it.qty, batch.Unit);
+      cart.push({
+        chocolateName: catalogMatch['Chocolate Name'], productCode: catalogMatch['Product Code'] || '',
+        batch: batch.Batch, databaseId: batch.DatabaseID, qty: it.qty, unit: batch.Unit,
+        price, total, expiryDate: batch.ExpiryDate || ''
+      });
+      added.push(it.chocolateName);
+    }
+
+    renderCart();
+    playAddChime();
+    let msg = `"${data.arrangementName}" scanned — added ${added.length} item(s).`;
+    if(skipped.length) msg += `\n\nCould not add:\n- ` + skipped.join('\n- ');
+    alert(msg);
   }
 
   document.getElementById('refreshBtn').addEventListener('click', async ()=>{
