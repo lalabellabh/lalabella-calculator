@@ -508,25 +508,12 @@
 </div>
 
 <script>
-  /* ---------- Falling chocolate + rose petals ---------- */
-  const PETAL_EMOJI = ['🌹','🍫','🌹','🍫','🌸'];
-  function spawnPetal(){
-    const field = document.getElementById('petalField');
-    const p = document.createElement('div');
-    p.className = 'petal';
-    p.textContent = PETAL_EMOJI[Math.floor(Math.random()*PETAL_EMOJI.length)];
-    const left = Math.random() * 100;
-    const duration = 13 + Math.random() * 10;
-    const drift = (Math.random() * 90 - 45) + 'px';
-    p.style.left = left + 'vw';
-    p.style.fontSize = (15 + Math.random()*12) + 'px';
-    p.style.setProperty('--drift', drift);
-    p.style.animationDuration = duration + 's';
-    field.appendChild(p);
-    setTimeout(()=> p.remove(), duration*1000 + 200);
-  }
-  for(let i=0;i<6;i++){ setTimeout(spawnPetal, i * 900); }
-  setInterval(spawnPetal, 2400);
+  /* Falling chocolate/petal animation disabled — was spawning a new
+     animated DOM element every 2.4 seconds for as long as the
+     dashboard stayed open, competing for CPU/render time with the
+     actual dashboard data (charts, stock levels, etc.) that people
+     actually need to see quickly. Matches the same fix already
+     applied to index.html. */
 
   /* ---------- Ambient "river-flowing" piano (original composition, generated) ---------- */
   let musicCtx = null;
