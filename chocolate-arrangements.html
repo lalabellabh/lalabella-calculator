@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
     --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
@@ -50,6 +51,21 @@
   .arr-card ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;}
   .arr-card .notes{margin-top:8px;font-size:11.5px;color:var(--muted);font-style:italic;}
   .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+
+  .scan-hero{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);border-radius:18px;padding:24px;text-align:center;margin-bottom:20px;}
+  .scan-hero h2{color:#fff;font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;}
+  .scan-hero p{color:rgba(255,255,255,.7);font-size:12px;margin:0 0 16px;}
+  .scan-btn-big{padding:13px 26px;border:none;border-radius:30px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#3a2a10;font-weight:700;font-size:14px;cursor:pointer;}
+
+  .scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
+  .scanner-modal.show{display:flex;}
+  .scanner-modal video{width:100%;max-width:400px;border-radius:10px;}
+  .scanner-modal .close-scan{margin-top:16px;background:var(--rose-dark);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;}
+  .scanner-hint{color:#fff;font-size:12px;margin-top:10px;text-align:center;}
+
+  .code-badge{display:inline-block;background:var(--gold-light);color:#5c4416;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:10px;}
+  .barcode-box{text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;}
+  .result-card{border:2px solid var(--rose);}
 </style>
 </head>
 <body>
@@ -61,6 +77,17 @@
 
   <h1>Chocolate Arrangement Catalog</h1>
   <p class="sub">Reference recipes for standard boxes/arrangements — composition and who designed them.</p>
+
+  <div class="scan-hero">
+    <h2>📷 Scan Arrangement Barcode</h2>
+    <p>Point your camera at the barcode on a box to instantly see what's inside.</p>
+    <button class="scan-btn-big" id="scanBtn">Scan Now</button>
+  </div>
+
+  <div id="scanResultCard" style="display:none;" class="card result-card">
+    <h2>🔍 Scan Result</h2>
+    <div id="scanResultBody"></div>
+  </div>
 
   <div class="card">
     <h2>➕ Add New Arrangement</h2>
@@ -76,6 +103,11 @@
     <label>Notes (optional)</label>
     <textarea id="arrNotes" rows="2" placeholder="Any extra notes..."></textarea>
 
+    <label>Reference Photo (optional — auto-compressed)</label>
+    <input type="file" id="arrPhoto" accept="image/*">
+    <div id="arrPhotoHint" style="font-size:11px;color:var(--muted);margin:-8px 0 10px;"></div>
+    <img id="arrPhotoPreview" style="display:none;max-width:120px;border-radius:10px;margin-bottom:14px;">
+
     <button class="save-btn" id="saveBtn">Save Arrangement</button>
     <div class="msg" id="formMsg"></div>
   </div>
@@ -84,6 +116,12 @@
     <h2>📋 Existing Arrangements</h2>
     <div id="arrGrid" class="arr-grid"><div class="empty">Loading…</div></div>
   </div>
+</div>
+
+<div class="scanner-modal" id="scannerModal">
+  <video id="scannerVideo" autoplay playsinline muted></video>
+  <div class="scanner-hint">Point the camera at an arrangement barcode</div>
+  <button class="close-scan" id="closeScanBtn">Cancel</button>
 </div>
 
 <script>
@@ -101,6 +139,119 @@ function addItemRow(name, qty){
 document.getElementById('addItemBtn').addEventListener('click', ()=> addItemRow());
 addItemRow(); addItemRow();
 
+/* ---------- Photo compression (same pattern as item-admin.html) ---------- */
+let arrPhotoData = null;
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 150;
+        let w = img.width, h = img.height;
+        if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+        else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById('arrPhoto').addEventListener('change', async function(){
+  const file = this.files[0];
+  if(!file) return;
+  const hint = document.getElementById('arrPhotoHint');
+  hint.textContent = 'Compressing…';
+  try{
+    arrPhotoData = await compressImage(file);
+    const preview = document.getElementById('arrPhotoPreview');
+    preview.src = arrPhotoData;
+    preview.style.display = 'block';
+    const approxKB = Math.round((arrPhotoData.length * 0.75) / 1024);
+    hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+  }catch(e){
+    hint.textContent = 'Could not process this image.';
+    arrPhotoData = null;
+  }
+});
+
+/* ---------- Barcode scanning (same native BarcodeDetector pattern used in chocolate-barcode.html) ---------- */
+let scanStream = null;
+let scanLoopActive = false;
+
+document.getElementById('scanBtn').addEventListener('click', async ()=>{
+  if(!('BarcodeDetector' in window)){
+    alert('Barcode scanning is not supported in this browser.');
+    return;
+  }
+  const modal = document.getElementById('scannerModal');
+  const video = document.getElementById('scannerVideo');
+  modal.classList.add('show');
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = scanStream;
+    scanLoopActive = true;
+    const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+    const scanLoop = async ()=>{
+      if(!scanLoopActive) return;
+      try{
+        const codes = await detector.detect(video);
+        if(codes.length > 0){
+          stopScanner();
+          lookupByCode(codes[0].rawValue);
+          return;
+        }
+      }catch(e){}
+      requestAnimationFrame(scanLoop);
+    };
+    scanLoop();
+  }catch(e){
+    alert('Could not access the camera. Check permissions and try again.');
+    modal.classList.remove('show');
+  }
+});
+function stopScanner(){
+  scanLoopActive = false;
+  if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  document.getElementById('scannerModal').classList.remove('show');
+}
+document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+
+async function lookupByCode(code){
+  const card = document.getElementById('scanResultCard');
+  const body = document.getElementById('scanResultBody');
+  card.style.display = 'block';
+  body.innerHTML = 'Looking up…';
+  card.scrollIntoView({behavior:'smooth', block:'center'});
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(CHOCOLATE_API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){
+      body.innerHTML = `<div class="msg error" style="display:block;">${data.error || 'Not found.'} (Scanned: ${code})</div>`;
+      return;
+    }
+    body.innerHTML = `
+      ${data.photoData ? `<img src="${data.photoData}" style="width:100%;max-width:200px;border-radius:10px;margin-bottom:10px;">` : ''}
+      <span class="code-badge">${data.arrangementCode}</span>
+      <h3 style="font-family:'Fraunces',serif;margin:4px 0;">${data.arrangementName}</h3>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">👤 ${data.createdBy || 'Unknown'}</div>
+      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.9;">
+        ${data.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}
+      </ul>
+      ${data.notes ? `<div class="notes" style="margin-top:8px;">${data.notes}</div>` : ''}
+    `;
+  }catch(e){
+    body.innerHTML = '<div class="msg error" style="display:block;">Connection error.</div>';
+  }
+}
+
 function showMsg(text, isError){
   const el = document.getElementById('formMsg');
   el.textContent = text;
@@ -117,6 +268,8 @@ async function loadArrangements(){
     if(!data.length){ grid.innerHTML = '<div class="empty">Wala pang arrangement na naka-record. Idagdag ang una sa itaas!</div>'; return; }
     grid.innerHTML = data.map(a => `
       <div class="arr-card">
+        ${a.photoData ? `<img src="${a.photoData}" style="width:100%;border-radius:10px;margin-bottom:10px;">` : ''}
+        <span class="code-badge">${a.arrangementCode||''}</span>
         <h3>${a.arrangementName}</h3>
         <div class="by">👤 ${a.createdBy || 'Unknown'} · ${new Date(a.createdDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
         <ul>${a.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}</ul>
@@ -148,16 +301,25 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   try{
     const params = new URLSearchParams({
       action: 'addArrangement', arrangementName, createdBy, notes,
-      items: JSON.stringify(items), token
+      items: JSON.stringify(items), photoData: arrPhotoData || '', token
     });
     const res = await fetch(CHOCOLATE_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ showMsg(data.error || 'Failed to save.', true); btn.disabled=false; btn.textContent='Save Arrangement'; return; }
-    showMsg('Naka-save na ang arrangement!', false);
+    showMsg('Naka-save na ang arrangement! Code: ' + data.arrangementCode, false);
+    const oldBox = document.querySelector('.barcode-box');
+    if(oldBox) oldBox.remove();
+    document.getElementById('formMsg').insertAdjacentHTML('afterend',
+      `<div class="barcode-box"><svg id="newArrBarcode"></svg></div>`);
+    JsBarcode('#newArrBarcode', data.arrangementCode, { format: 'CODE128', width: 1.6, height: 46, displayValue: true, fontSize: 12 });
     document.getElementById('arrName').value = '';
     document.getElementById('arrCreator').value = '';
     document.getElementById('arrNotes').value = '';
     document.getElementById('itemRows').innerHTML = '';
+    document.getElementById('arrPhoto').value = '';
+    document.getElementById('arrPhotoPreview').style.display = 'none';
+    document.getElementById('arrPhotoHint').textContent = '';
+    arrPhotoData = null;
     addItemRow(); addItemRow();
     loadArrangements();
   }catch(e){
