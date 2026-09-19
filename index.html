@@ -7,7 +7,8 @@
 <title>Lalabella — Tools</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#090506;--rose:#d77b91;--gold:#e6c47a;--cream:#f7eee5;--muted:#b39a98;--line:rgba(230,196,122,.28)}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scrollbar-width:none;}html::-webkit-scrollbar{display:none;}body{margin:0;min-height:100vh;overflow-x:hidden;color:var(--cream);font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 50% 32%,rgba(170,45,78,.18),transparent 28%),linear-gradient(145deg,#070405,#12090b 52%,#080405)}
@@ -602,10 +603,20 @@ function positionTargets(s){
   const dCenter={x:dr.left+dr.width/2,y:dr.top+dr.height/2};
   const stageCenter={x:s.left+s.width/2,y:s.top+s.height/2};
   const measuredR=Math.hypot(dCenter.x-stageCenter.x,dCenter.y-stageCenter.y);
-  bounceTargets.forEach((tEl,i)=>{
+  // Each target's CENTER coincides exactly with its CSS left/top
+  // point (the stylesheet gives it width:22px/height:22px with
+  // margin:-11px, which centers it on that point) — so its center
+  // relative to the stage can be computed directly from this same
+  // angle formula, with zero need to ever read it back from the DOM.
+  // That read-after-write was the one remaining forced-reflow
+  // moment (previously happening 60x/sec, now would've been just
+  // once per load/resize — this removes it entirely, not just
+  // shrinks it).
+  cachedTargetCenters = bounceTargets.map((tEl,i)=>{
     const ang=(Math.PI*2/6)*i - Math.PI/2;
     tEl.style.left=`calc(50% + ${(Math.cos(ang)*measuredR).toFixed(1)}px)`;
     tEl.style.top=`calc(50% + ${(Math.sin(ang)*measuredR).toFixed(1)}px)`;
+    return {x:s.width/2+Math.cos(ang)*measuredR, y:s.height/2+Math.sin(ang)*measuredR};
   });
   cachedOrbitR = measuredR;
   return measuredR;
@@ -613,14 +624,13 @@ function positionTargets(s){
 
 // Recomputes and caches every position this animation needs, in one
 // batch — called once on load and again on resize, never per-frame.
+// The orbit dots themselves are never moved by our own JS (fixed
+// inline percentages in the HTML), so reading them once here isn't
+// a write-then-read pattern — there's no prior write to react to.
 function recacheOrbitLayout(){
   const s = stage.getBoundingClientRect();
   if(s.width===0) return;
-  positionTargets(s);
-  cachedTargetCenters = bounceTargets.map(tEl=>{
-    const tr=tEl.getBoundingClientRect();
-    return {x:tr.left+tr.width/2 - s.left, y:tr.top+tr.height/2 - s.top};
-  });
+  positionTargets(s); // also fills in cachedTargetCenters, math-only, no DOM read
   cachedDotCenters = orbitDots.map(dEl=>{
     const dr=dEl.getBoundingClientRect();
     return {x:dr.left+dr.width/2 - s.left, y:dr.top+dr.height/2 - s.top};
