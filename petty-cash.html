@@ -133,10 +133,6 @@
 
     <div class="card">
       <h2>📋 History</h2>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
-        <input type="date" id="pcReportDate" style="margin-bottom:0;flex:1;">
-        <button class="print-btn" id="pcPrintReportBtn">🖨️ Print Daily Report</button>
-      </div>
       <div id="pcHistory"><div class="empty">Loading…</div></div>
     </div>
   </div>
@@ -198,7 +194,6 @@ document.getElementById('branchSelect').addEventListener('change', ()=>{ loadPet
 
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('pcDate').value = today;
-document.getElementById('pcReportDate').value = today;
 document.getElementById('ccDate').value = today;
 
 /* ---------- Denomination breakdown (Bahraini Dinar) ---------- */
@@ -405,44 +400,34 @@ async function loadCashCounts(){
 }
 loadCashCounts();
 
-document.getElementById('pcPrintReportBtn').addEventListener('click', ()=>{
-  const reportDate = document.getElementById('pcReportDate').value;
-  if(!reportDate){ alert('Pumili ng date.'); return; }
-  const branch = document.getElementById('branchSelect').value;
-  // Only THIS day's entries — a daily report never pulls in entries
-  // from other days, so re-printing a later day's report never
-  // repeats what an earlier day's report already covered.
-  const dayTxns = (window.lastPettyCashTxns || []).filter(t => t.date === reportDate);
-  if(!dayTxns.length){ alert('Walang entries sa petsang ito.'); return; }
-
-  const rows = dayTxns.map(t => `
-    <tr>
-      <td>${t.purpose}</td>
-      <td>${t.type === 'topup' ? 'Top-up' : 'Expense'}</td>
-      <td>${t.enteredBy || '—'}</td>
-      <td style="text-align:right;">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</td>
-    </tr>
-  `).join('');
-  const net = dayTxns.reduce((sum, t) => sum + (t.type === 'topup' ? t.amount : -t.amount), 0);
-
-  document.getElementById('printArea').innerHTML = `
-    <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash Daily Report</h2>
-    <p>${branch} · ${fmtDate(reportDate)}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">NET CHANGE</td><td style="text-align:right;">${net >= 0 ? '+' : '−'}${fmtBD(Math.abs(net))}</td></tr></tfoot>
-    </table>
-  `;
-  window.print();
-});
-
 function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
   if(!c) return;
   const rows = c.breakdown.map(b => `
     <tr><td>${b.label}</td><td style="text-align:center;">${b.count}</td><td style="text-align:right;">${(b.value*b.count).toFixed(3)} BD</td></tr>
   `).join('');
+
+  // Petty Cash history for this same branch, shown together below the
+  // cash count so both totals can be seen and cross-checked at once
+  // (e.g. a Petron/fuel expense that explains part of the cash used).
+  const pettyTxns = (window.lastPettyCashTxns || []).filter(t => t.branch === c.branch);
+  const pettyRows = pettyTxns.map(t => `
+    <tr>
+      <td>${fmtDate(t.date)}</td>
+      <td>${t.purpose}</td>
+      <td>${t.type === 'topup' ? 'Top-up' : 'Expense'}</td>
+      <td>${t.enteredBy || '—'}</td>
+      <td style="text-align:right;">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</td>
+    </tr>
+  `).join('');
+  const pettyNetHtml = pettyTxns.length ? `
+    <h3 style="font-family:'Fraunces',serif;margin-top:24px;">Petty Cash History — ${c.branch}</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>${pettyRows}</tbody>
+    </table>
+  ` : '';
+
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Cash Count</h2>
     <p>${c.branch} · ${fmtDate(c.date)} · Counted by: ${c.countedBy||'—'}</p>
@@ -451,6 +436,7 @@ function printCashCount(id){
       <tbody>${rows}</tbody>
       <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2">TOTAL</td><td style="text-align:right;">${fmtBD(c.amount)}</td></tr></tfoot>
     </table>
+    ${pettyNetHtml}
   `;
   window.print();
 }
