@@ -540,13 +540,26 @@ function startReadyLoop(){if(readyLoopTimer)return;playReadyChime();readyLoopTim
 function stopReadyLoop(){if(readyLoopTimer){clearInterval(readyLoopTimer);readyLoopTimer=null}}
 function playSuccessTing(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(1046.50,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(1568.00,ctx.currentTime+0.12);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.linearRampToValueAtTime(0.07,ctx.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.6);o.connect(g).connect(ctx.destination);o.start();o.stop(ctx.currentTime+0.65)}catch(_){}}
 function p(e){return e.touches&&e.touches[0]?e.touches[0]:e}function c(el){const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}}
+let cachedCircleCenter=null, cachedCircleThreshold=90, lastRoseCenter=null;
+function recacheCircle(){
+  cachedCircleCenter=c(circle);
+  cachedCircleThreshold=Math.max(70,Math.min(circle.getBoundingClientRect().width*.62,110));
+}
+window.addEventListener('resize', recacheCircle);
 function begin(e){e.preventDefault();const q=p(e),r=rose.getBoundingClientRect();dragging=true;startX=q.clientX;startY=q.clientY;maxDragDist=0;ox=q.clientX-r.left;oy=q.clientY-r.top;lastMoveX=q.clientX;lastMoveY=q.clientY;lastMoveTime=performance.now();flingVx=0;flingVy=0;rose.classList.add('dragging');if(rose.setPointerCapture&&e.pointerId!==undefined)try{rose.setPointerCapture(e.pointerId)}catch(_){}}
 function move(e){if(!dragging)return;e.preventDefault();const q=p(e),s=stage.getBoundingClientRect(),r=rose.getBoundingClientRect();maxDragDist=Math.max(maxDragDist,Math.hypot(q.clientX-startX,q.clientY-startY));
   const now=performance.now();
   if(lastMoveTime){const dt=now-lastMoveTime;if(dt>0){flingVx=(q.clientX-lastMoveX)/dt;flingVy=(q.clientY-lastMoveY)/dt;}}
   lastMoveX=q.clientX;lastMoveY=q.clientY;lastMoveTime=now;
-  let x=q.clientX-ox-s.left,y=q.clientY-oy-s.top;x=Math.max(-r.width*.25,Math.min(x,s.width-r.width*.75));y=Math.max(-r.height*.25,Math.min(y,s.height-r.height*.75));rose.style.position='absolute';rose.style.left=x+'px';rose.style.top=y+'px';rose.style.margin='0';const a=c(rose),b=c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=Math.max(70,Math.min(circle.getBoundingClientRect().width*.62,110));const wasReady=hint.classList.contains('ready');const isReady=d<t;hint.classList.toggle('ready',isReady);if(isReady&&!wasReady)startReadyLoop();if(!isReady&&wasReady)stopReadyLoop()}
-function end(e){if(!dragging)return;e.preventDefault();dragging=false;rose.classList.remove('dragging');stopReadyLoop();const a=c(rose),b=c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=Math.max(70,Math.min(circle.getBoundingClientRect().width*.62,110));const MIN_DRAG=40;if(d<t&&maxDragDist>=MIN_DRAG){hint.classList.add('ready');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');playSuccessTing();setTimeout(()=>location.href='flower-tools.html',950)}else{
+  let x=q.clientX-ox-s.left,y=q.clientY-oy-s.top;x=Math.max(-r.width*.25,Math.min(x,s.width-r.width*.75));y=Math.max(-r.height*.25,Math.min(y,s.height-r.height*.75));rose.style.position='absolute';rose.style.left=x+'px';rose.style.top=y+'px';rose.style.margin='0';
+  // Rose's new center computed directly from what we just wrote —
+  // avoids reading it back from the DOM right after writing it
+  // (that write-then-read pattern is what forces a synchronous
+  // layout recalculation on every single pointer-move event while
+  // dragging, same root cause as the orbit animation fix above).
+  const a={x:s.left+x+r.width/2,y:s.top+y+r.height/2};lastRoseCenter=a;
+  const b=cachedCircleCenter||c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=cachedCircleThreshold;const wasReady=hint.classList.contains('ready');const isReady=d<t;hint.classList.toggle('ready',isReady);if(isReady&&!wasReady)startReadyLoop();if(!isReady&&wasReady)stopReadyLoop()}
+function end(e){if(!dragging)return;e.preventDefault();dragging=false;rose.classList.remove('dragging');stopReadyLoop();const a=lastRoseCenter||c(rose),b=cachedCircleCenter||c(circle),d=Math.hypot(a.x-b.x,a.y-b.y),t=cachedCircleThreshold;const MIN_DRAG=40;if(d<t&&maxDragDist>=MIN_DRAG){hint.classList.add('ready');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');playSuccessTing();setTimeout(()=>location.href='flower-tools.html',950)}else{
   const s=stage.getBoundingClientRect();
   bx=a.x-(s.left+s.width/2); by=a.y-(s.top+s.height/2);
   const flingSpeed=Math.hypot(flingVx,flingVy);
@@ -657,7 +670,7 @@ function bounceStep(){
     }
   });
 }
-requestAnimationFrame(()=>{recacheOrbitLayout();boundsReady=true;bounceStep();})
+requestAnimationFrame(()=>{recacheOrbitLayout();recacheCircle();boundsReady=true;bounceStep();})
 })();
 </script>
 
