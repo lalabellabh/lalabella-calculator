@@ -89,9 +89,10 @@
       <div class="label">Petty Cash Balance</div>
       <div class="amount" id="pettyBalance">—</div>
       <div id="targetLine" style="color:rgba(255,255,255,.65);font-size:11.5px;margin-top:6px;"></div>
+      <div style="margin-top:10px;"><a href="#" id="toggleTargetLink" style="color:var(--gold-light);font-size:11px;text-decoration:none;">⚙️ Set target amount</a></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="pcTargetCard" style="display:none;">
       <h2>⚙️ Target Amount</h2>
       <label>Set the standard petty cash float for this branch (e.g. 150)</label>
       <input type="number" step="0.001" min="0" id="pcTarget" placeholder="e.g. 150.000">
@@ -189,8 +190,10 @@ document.getElementById('typeTopupBtn').addEventListener('click', ()=>{
 async function loadPettyCash(){
   const branch = document.getElementById('branchSelect').value;
   const hist = document.getElementById('pcHistory');
-  const targetCard = document.getElementById('pcTarget').closest('.card');
-  targetCard.style.display = (branch === 'All') ? 'none' : 'block';
+  const targetCard = document.getElementById('pcTargetCard');
+  const toggleLink = document.getElementById('toggleTargetLink');
+  targetCard.style.display = 'none'; // always start collapsed, whichever branch is picked
+  toggleLink.style.display = (branch === 'All') ? 'none' : 'inline';
   try{
     const res = await fetch(PETTYCASH_API_URL + '?action=getPettyCash&branch=' + encodeURIComponent(branch) + '&token=' + encodeURIComponent(getToken()));
     const data = await res.json();
@@ -226,6 +229,11 @@ async function loadPettyCash(){
 }
 loadPettyCash();
 
+document.getElementById('toggleTargetLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  const card = document.getElementById('pcTargetCard');
+  card.style.display = (card.style.display === 'none') ? 'block' : 'none';
+});
 document.getElementById('pcTargetSaveBtn').addEventListener('click', async ()=>{
   const branch = document.getElementById('branchSelect').value;
   const targetAmount = document.getElementById('pcTarget').value;
