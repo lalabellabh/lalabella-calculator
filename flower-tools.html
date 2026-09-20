@@ -715,7 +715,7 @@ kbd{
 </style>
 
 <style id="nav-collapse-style">
-  :root{--nav-width:250px}
+  :root{--nav-width:320px}
   .sidebar{transition:transform .22s ease,box-shadow .22s ease;padding-top:62px}
   .nav-toggle{
     position:fixed;left:calc(var(--nav-width) - 52px);right:auto;top:18px;z-index:1001;
@@ -725,7 +725,7 @@ kbd{
   }
   body.nav-collapsed .nav-toggle{left:18px;right:auto}
   body.nav-collapsed .sidebar{transform:translateX(calc(-1 * var(--nav-width) - 10px))}
-  .nav-backdrop{display:none;position:fixed;inset:0;background:rgba(35,20,20,.22);z-index:998}
+  .nav-backdrop{display:none;position:fixed;inset:0;background:rgba(35,20,20,.22);backdrop-filter:blur(3px);z-index:998}
   @media(max-width:900px){
     .nav-toggle{ left:18px !important; right:auto; }
     .sidebar{
