@@ -241,7 +241,11 @@
   </div>
 </div>
 
-<div id="printArea"></div>
+<div id="printArea" style="display:none;"></div>
+
+<style>
+  @media print{ #printArea{ display:block !important; } }
+</style>
 
 <script>
 const PETTYCASH_API_URL = 'https://script.google.com/macros/s/AKfycbxz53pJEQIEOgvfUIxwhcOcdZtu7An4qXwShP7a58bVjvJSPm8ORs4eP6lv-kdKJBdT/exec';
@@ -383,7 +387,7 @@ async function loadPettyCash(){
 loadPettyCash();
 
 async function deletePettyCashEntry(id){
-  if(!confirm('Sigurado ka bang gusto mong burahin itong entry?')) return;
+  if(!confirm('Are you sure you want to delete this entry?')) return;
   try{
     const params = new URLSearchParams({ action: 'deletePettyCashEntry', id, token: getToken() });
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
@@ -405,8 +409,8 @@ document.getElementById('pcTargetSaveBtn').addEventListener('click', async ()=>{
   const targetAmount = document.getElementById('pcTarget').value;
   const msg = document.getElementById('pcTargetMsg');
   msg.className = 'msg';
-  if(branch === 'All'){ msg.textContent = 'Pumili ng specific na branch.'; msg.className = 'msg error'; return; }
-  if(targetAmount === '' || Number(targetAmount) < 0){ msg.textContent = 'Ilagay ang tamang amount.'; msg.className = 'msg error'; return; }
+  if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
+  if(targetAmount === '' || Number(targetAmount) < 0){ msg.textContent = 'Please enter a valid amount.'; msg.className = 'msg error'; return; }
 
   const btn = document.getElementById('pcTargetSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -432,8 +436,8 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
   const msg = document.getElementById('pcMsg');
   msg.className = 'msg';
 
-  if(branch === 'All'){ msg.textContent = 'Pumili ng specific na branch.'; msg.className = 'msg error'; return; }
-  if(!purpose || !amount || Number(amount) <= 0){ msg.textContent = 'Kumpletuhin ang purpose at amount.'; msg.className = 'msg error'; return; }
+  if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
+  if(!purpose || !amount || Number(amount) <= 0){ msg.textContent = 'Please fill in the purpose and amount.'; msg.className = 'msg error'; return; }
 
   const btn = document.getElementById('pcSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -442,7 +446,7 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Entry'; return; }
-    msg.textContent = 'Naka-save na!'; msg.className = 'msg success';
+    msg.textContent = 'Saved!'; msg.className = 'msg success';
     document.getElementById('pcPurpose').value = '';
     document.getElementById('pcAmount').value = '';
     loadPettyCash();
@@ -494,7 +498,7 @@ async function loadCashCounts(){
 loadCashCounts();
 
 async function deleteCashCount(id){
-  if(!confirm('Sigurado ka bang gusto mong burahin itong cash count?')) return;
+  if(!confirm('Are you sure you want to delete this cash count?')) return;
   try{
     const params = new URLSearchParams({ action: 'deleteCashCount', id, token: getToken() });
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
@@ -565,7 +569,7 @@ async function printCashCount(id){
 }
 
 async function markSent(id, btn){
-  if(!confirm('Confirm na na-send na ang cash na ito sa Qalali branch?')) return;
+  if(!confirm('Confirm that this cash has been sent to Qalali branch?')) return;
   btn.disabled = true; btn.textContent = 'Sending…';
   try{
     const params = new URLSearchParams({ action: 'markSentToQalali', id, token: getToken() });
@@ -587,8 +591,8 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
   const msg = document.getElementById('ccMsg');
   msg.className = 'msg';
 
-  if(branch === 'All'){ msg.textContent = 'Pumili ng specific na branch.'; msg.className = 'msg error'; return; }
-  if(!breakdown.length){ msg.textContent = 'Ilagay ang bilang ng kahit isang denomination.'; msg.className = 'msg error'; return; }
+  if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
+  if(!breakdown.length){ msg.textContent = 'Please enter the count for at least one denomination.'; msg.className = 'msg error'; return; }
 
   const btn = document.getElementById('ccSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -597,7 +601,7 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Count'; return; }
-    msg.textContent = 'Naka-save na! Total: ' + Number(data.amount).toFixed(3) + ' BD'; msg.className = 'msg success';
+    msg.textContent = 'Saved! Total: ' + Number(data.amount).toFixed(3) + ' BD'; msg.className = 'msg success';
     resetDenomInputs();
     loadCashCounts();
   }catch(e){
