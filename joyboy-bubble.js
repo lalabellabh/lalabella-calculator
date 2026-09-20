@@ -34,6 +34,9 @@
     #joyboy-panel-header b{ font-size:14px; }
     #joyboy-panel-close{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; opacity:.8; }
     #joyboy-panel-close:hover{ opacity:1; }
+    #joyboy-voice-toggle{ background:none; border:none; color:#fff; font-size:16px; cursor:pointer; opacity:.85; }
+    #joyboy-voice-toggle:hover{ opacity:1; }
+    #joyboy-voice-toggle.on{ color:#f1d38c; }
     #joyboy-msgs{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:#fdf1f0; }
     .jb-msg{ max-width:82%; padding:9px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
     .jb-msg.user{ align-self:flex-end; background:#c9506b; color:#fff; border-bottom-right-radius:3px; }
@@ -60,7 +63,10 @@
   panel.innerHTML = `
     <div id="joyboy-panel-header">
       <b>🎙️ Joyboy</b>
-      <button id="joyboy-panel-close" aria-label="Close">✕</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="joyboy-voice-toggle" aria-label="Toggle voice" title="Voice replies">🔇</button>
+        <button id="joyboy-panel-close" aria-label="Close">✕</button>
+      </div>
     </div>
     <div id="joyboy-msgs"></div>
     <div id="joyboy-input-row">
@@ -76,6 +82,27 @@
 
   let session = {};
   let opened = false;
+  let voiceOn = false;
+  try{ voiceOn = localStorage.getItem('joyboyBubbleVoice') === '1'; }catch(e){}
+  const voiceToggleBtn = document.getElementById('joyboy-voice-toggle');
+  function updateVoiceBtn(){
+    voiceToggleBtn.textContent = voiceOn ? '🔊' : '🔇';
+    voiceToggleBtn.classList.toggle('on', voiceOn);
+  }
+  updateVoiceBtn();
+  voiceToggleBtn.addEventListener('click', ()=>{
+    voiceOn = !voiceOn;
+    updateVoiceBtn();
+    try{ localStorage.setItem('joyboyBubbleVoice', voiceOn ? '1' : '0'); }catch(e){}
+    if(!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
+  });
+  function speak(text){
+    if(!voiceOn || !text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // never overlap two replies
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.02;
+    window.speechSynthesis.speak(utter);
+  }
 
   function addMsg(text, cls){
     const el = document.createElement('div');
@@ -91,6 +118,7 @@
     if(panel.classList.contains('show') && !opened){
       opened = true;
       addMsg('Hi Boss! Ask me anything about how the system works, or tell me what you need done.', 'bot');
+      speak('Hi Boss! Ask me anything about how the system works, or tell me what you need done.');
       inputEl.focus();
     }
   });
@@ -137,6 +165,7 @@
       }
       session = data.session || session;
       addMsg(data.text || '...', 'bot');
+      speak(data.text);
       if(data.navigateTo){
         addMsg('Opening ' + data.navigateTo + '…', 'bot');
         setTimeout(()=>{ window.location.href = data.navigateTo; }, 1400);
