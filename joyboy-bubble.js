@@ -103,6 +103,14 @@
     sendBtn.disabled = true;
     addMsg(message, 'user');
     const thinkingEl = addMsg('Thinking…', 'thinking');
+    // If a real-data lookup is involved, the round trip (asking the
+    // AI what to do, fetching live data, then asking it to phrase
+    // the answer) genuinely takes longer than a plain chat reply —
+    // update the message after a few seconds so it's clear Joyboy is
+    // still actively working, not stuck.
+    const slowTimer = setTimeout(()=>{
+      if(thinkingEl.isConnected) thinkingEl.textContent = 'Still checking, Boss — looking up live data…';
+    }, 4000);
 
     try{
       const lalabellaToken = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
@@ -116,6 +124,7 @@
         + '&context=' + encodeURIComponent(contextStr);
 
       const r = await fetch(url);
+      clearTimeout(slowTimer);
       thinkingEl.remove();
       if(!r.ok){
         addMsg('Connection error (HTTP ' + r.status + '). Try again, Boss.', 'bot');
@@ -133,6 +142,7 @@
         setTimeout(()=>{ window.location.href = data.navigateTo; }, 1400);
       }
     }catch(e){
+      clearTimeout(slowTimer);
       thinkingEl.remove();
       addMsg('The AI connection is unavailable right now, Boss.', 'bot');
     }finally{
