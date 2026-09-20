@@ -53,9 +53,77 @@
   .note .edit{ position:absolute; top:12px; right:42px; width:24px; height:24px; border-radius:50%; border:none; background:var(--blush); color:var(--rose-deep); cursor:pointer; font-size:12px; }
   .empty{ text-align:center; color:var(--ink-dim); font-size:13px; padding:30px 10px; }
 </style>
+<style id="chocoSharedNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid rgba(158,47,74,0.16);
+  background:rgba(255,255,255,0.9); color:#9e2f4a; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  box-shadow:0 5px 16px rgba(158,47,74,.14);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(60,30,30,0.35); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(320px,80vw); z-index:9206;
+  background:rgba(255,255,255,.94);
+  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  font-family:Arial,sans-serif; backdrop-filter:blur(18px);
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.choco-hub-grid a{
+  flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
+  font-size:10.5px; background:rgba(201,80,107,0.05); border:1px solid #f0dede;
+  min-height:76px; justify-content:center; white-space:nowrap;
+}
+.choco-hub-grid a span.hub-icon{ font-size:20px; }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:#2f2024; text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:rgba(201,80,107,0.08); }
+.choco-drawer .choco-drawer-title{
+  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+</style>
 
 </head>
 <body>
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div class="choco-hub-grid">
+    <a href="index.html"><span class="hub-icon">🍫</span>Chocolate</a>
+    <a href="flower-tools.html"><span class="hub-icon">🌸</span>Flower</a>
+    <a href="item-inventory.html"><span class="hub-icon">📦</span>Item Inv.</a>
+  </div>
+  <div class="choco-drawer-title">Quick Tools</div>
+  <a href="schedule.html">📆 Duty Schedule</a>
+  <a href="profile.html">👤 My Profile</a>
+  <a href="card-print.html?from=notes">💌 Card Print</a>
+  <a href="petty-cash.html">💰 Petty Cash & Cash</a>
+  <a href="#" onclick="sessionStorage.clear(); localStorage.removeItem('lalabellaToken'); localStorage.removeItem('lalabellaUser'); localStorage.removeItem('lalabellaVerifiedToken'); localStorage.removeItem('lalabellaVerifiedAt'); window.location.href='index.html'; return false;">🚪 Logout</a>
+</nav>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+})();
+</script>
+
 
 
 <div class="wrap">
