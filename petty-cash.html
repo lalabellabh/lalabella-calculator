@@ -506,7 +506,7 @@ async function deleteCashCount(id){
   }
 }
 
-function printCashCount(id){
+async function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
   if(!c) return;
   const rows = c.breakdown.map(b => `
@@ -526,13 +526,30 @@ function printCashCount(id){
       <td style="text-align:right;">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</td>
     </tr>
   `).join('');
+
+  // Fetch the CURRENT petty cash balance for this exact branch — not
+  // computed from whatever's cached, since the dropdown up top might
+  // currently be showing a different branch entirely. This keeps the
+  // printed remaining-balance accurate regardless of what's selected.
+  let currentBalance = null;
+  try{
+    const res = await fetch(PETTYCASH_API_URL + '?action=getPettyCash&branch=' + encodeURIComponent(c.branch) + '&token=' + encodeURIComponent(getToken()));
+    const data = await res.json();
+    if(!data.error) currentBalance = data.balance;
+  }catch(e){}
+
+  const balanceHtml = currentBalance !== null
+    ? `<div style="text-align:right;font-weight:700;font-size:14px;margin-top:8px;">Petty Cash Remaining Balance: ${fmtBD(currentBalance)}</div>`
+    : '';
+
   const pettyNetHtml = pettyTxns.length ? `
     <h3 style="font-family:'Fraunces',serif;margin-top:24px;">Petty Cash History — ${c.branch}</h3>
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
       <tbody>${pettyRows}</tbody>
     </table>
-  ` : '';
+    ${balanceHtml}
+  ` : balanceHtml;
 
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Cash Count</h2>
