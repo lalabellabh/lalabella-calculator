@@ -510,7 +510,7 @@ async function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
   if(!c) return;
   const rows = c.breakdown.map(b => `
-    <tr><td>${b.label}</td><td style="text-align:center;">${b.count}</td><td style="text-align:right;">${(b.value*b.count).toFixed(3)} BD</td></tr>
+    <tr><td style="padding:4px 8px 4px 0;">${b.label}</td><td style="text-align:center;padding:4px 8px;">${b.count}</td><td style="text-align:right;padding:4px 0 4px 8px;">${(b.value*b.count).toFixed(3)} BD</td></tr>
   `).join('');
 
   // Petty Cash history for this same branch, shown together below the
@@ -554,10 +554,10 @@ async function printCashCount(id){
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Cash Count</h2>
     <p>${c.branch} · ${fmtDate(c.date)} · Counted by: ${c.countedBy||'—'}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Denomination</th><th>Pieces</th><th style="text-align:right;">Subtotal</th></tr></thead>
+    <table style="width:420px;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px 8px 4px 0;">Denomination</th><th style="padding:4px 8px;">Pieces</th><th style="text-align:right;padding:4px 0 4px 8px;">Subtotal</th></tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2">TOTAL</td><td style="text-align:right;">${fmtBD(c.amount)}</td></tr></tfoot>
+      <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2" style="padding:4px 8px 4px 0;">TOTAL</td><td style="text-align:right;padding:4px 0 4px 8px;">${fmtBD(c.amount)}</td></tr></tfoot>
     </table>
     ${pettyNetHtml}
   `;
