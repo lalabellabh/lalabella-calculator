@@ -1732,25 +1732,11 @@
   window.addEventListener('load', tryFanfare);
   document.addEventListener('pointerdown', tryFanfare, { once:true });
 
-  /* ---------- Turtle "bump" sound — plays when the turtle hits the wall and tumbles ---------- */
-  function playBump(){
-    arcadeTone(220, 0, 0.08, 0.09);
-    arcadeTone(165, 0.05, 0.1, 0.07);
-  }
-  const TURTLE_CYCLE_MS = 7000; // matches the 7s turtlePatrol CSS animation
+  /* Turtle "bump" sound — disabled per request (sound removed from Chocolate page) */
+  function playBump(){ /* no-op */ }
+  const TURTLE_CYCLE_MS = 7000;
   let bumpsStarted = false;
-  function startTurtleBumps(){
-    if(bumpsStarted) return;
-    bumpsStarted = true;
-    function scheduleBumps(){
-      setTimeout(playBump, TURTLE_CYCLE_MS * 0.45); // hits right wall, tumbles
-      setTimeout(playBump, TURTLE_CYCLE_MS * 0.95); // hits left wall, tumbles
-    }
-    scheduleBumps();
-    setInterval(scheduleBumps, TURTLE_CYCLE_MS);
-  }
-  window.addEventListener('load', startTurtleBumps);
-  document.addEventListener('pointerdown', startTurtleBumps, { once:true });
+  function startTurtleBumps(){ /* disabled — no longer auto-starts */ }
 
   /* ---------- Distinct chiptune sound per button type (original, generated) ---------- */
   function soundModeToggle(){ arcadeTone(659.25, 0, 0.09, 0.09); }
@@ -1811,17 +1797,8 @@
     o.start(ctx.currentTime+start);
     o.stop(ctx.currentTime+start+dur+.02);
   }
-  function marioOpen(){
-    // Original short platform-game-style jingle; not Nintendo's music.
-    [659.25,783.99,987.77,1174.66,987.77,1318.51].forEach((f,i)=>{
-      marioTone(f,i*.075,.095,.065);
-    });
-  }
-  function marioJumpSound(){
-    marioTone(523.25,0,.07,.055);
-    marioTone(659.25,.055,.07,.055);
-    marioTone(783.99,.11,.13,.05);
-  }
+  function marioOpen(){ /* disabled — sound removed per request */ }
+  function marioJumpSound(){ /* disabled — sound removed per request */ }
 
   function tryMarioOpening(){
     if(marioOpeningPlayed)return;
