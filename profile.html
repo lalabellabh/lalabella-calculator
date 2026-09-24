@@ -34,6 +34,46 @@
 .load-error-banner{display:none;background:#fdecea;border:1px solid #f3b8b3;color:#a12b20;border-radius:3px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;grid-column:1/-1}
 @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45;transform:scale(.8)}}
 @media(max-width:859px){body{padding-bottom:50px}.wrap{width:min(100% - 28px,560px)}.announcement{margin:0 -14px;height:62px}.announcement b{font-size:12px}.site-head{padding:24px 0 16px}.brand{font-size:19px}.head-actions{top:25px;right:0}.head-actions a:first-child{display:none}.navline{gap:15px;overflow:auto;justify-content:flex-start;padding:15px 2px;font-size:10px;white-space:nowrap}.botanical{opacity:.14}.botanical.left{width:150px;height:280px;left:-55px}.botanical.right{width:170px;height:300px;right:-75px}.page-title{display:block;margin:25px 0 18px}.page-title h1{font-size:29px}.page-title p{text-align:left;margin-top:8px}.profile-layout{display:flex;flex-direction:column}.profile-sidebar{position:static;display:contents}.photo-hero{order:1;width:100%;align-self:stretch}.profile-main{width:100%}.profile-main{order:2}.profile-sidebar .logout-btn{order:3;margin-top:0}.announcement{padding:0 58px}.nav-toggle{top:12px;left:12px;width:40px;height:40px}.profile-main{display:block}.field-grid,.field-grid.three{grid-template-columns:1fr}.card-head{display:block}.card-sub{margin-top:6px}.desktop-label{display:none}.photo-hero{min-height:0;border-radius:3px;padding:35px 24px;margin-bottom:18px}.avatar-wrap,.avatar-img{width:110px;height:110px}.avatar-img{font-size:35px}.avatar-wrap{margin-bottom:18px}.avatar-wrap:after{inset:-11px}.avatar-edit-btn{width:34px;height:34px;font-size:14px}.hero-name{font-size:23px}.section-card{border-radius:3px;padding:21px;margin-bottom:18px}.section-title{font-size:18px}.head-actions{display:none}}
+/* ---------- Desktop: full-width banner + whole page fits one screen (mobile untouched) ---------- */
+@media(min-width:860px){
+body{padding-bottom:0}
+.wrap{width:100%}
+.announcement{margin:0;height:54px}.announcement b{font-size:14px}.announcement span{margin-top:2px}
+.site-head{padding:12px 0 0;max-width:1180px}.brand{font-size:21px}.brand small{margin-top:3px}.head-actions{top:18px}.navline{padding:8px 0 10px}
+.page-title{max-width:1180px;margin:14px auto 12px}.page-title h1{font-size:30px}.eyebrow{margin-bottom:4px}
+.profile-layout{max-width:1180px;grid-template-columns:320px minmax(0,1fr);gap:22px}
+.profile-sidebar{top:12px}
+.photo-hero{padding:22px 24px 30px}.avatar-wrap,.avatar-img{width:112px;height:112px}.avatar-img{font-size:36px}.avatar-wrap{margin-bottom:16px}.avatar-wrap:after{inset:-12px}.avatar-edit-btn{width:34px;height:34px;font-size:14px}
+.hero-name{font-size:23px;margin-bottom:3px}.hero-branch-tag{margin-top:9px;padding:5px 12px}
+.meta-list{margin:14px 0 6px}.meta-list div{padding:7px 2px}
+.photo-hero:after{bottom:11px}
+.profile-sidebar .logout-btn{margin-top:10px;padding:11px}
+.profile-main{gap:14px}.desktop-label{margin:0 0 -4px}
+.section-card{padding:16px 22px}.card-head{margin-bottom:12px;padding-bottom:9px}.section-title{font-size:19px}
+.field{margin-bottom:10px}.field label{margin-bottom:5px}.field input,.field select{padding:10px 12px}.field-hint{margin-top:4px;font-size:10px}
+.save-btn{padding:10px 20px}
+}
+/* Tall desktop screens: use the extra room so the page doesn't look empty at the bottom */
+@media(min-width:860px) and (min-height:880px){
+.announcement{height:62px}.site-head{padding-top:18px}.brand{font-size:23px}.navline{padding:12px 0 14px}
+.page-title{margin:24px auto 18px}.page-title h1{font-size:34px}
+.photo-hero{padding:30px 26px 38px}.avatar-wrap,.avatar-img{width:132px;height:132px}.avatar-img{font-size:42px}.avatar-wrap{margin-bottom:20px}.avatar-wrap:after{inset:-14px}
+.hero-name{font-size:26px}.meta-list{margin:20px 0 8px}.meta-list div{padding:10px 2px}
+.profile-main{gap:18px}.section-card{padding:22px 26px}.card-head{margin-bottom:16px;padding-bottom:12px}.section-title{font-size:21px}
+.field{margin-bottom:14px}.field input,.field select{padding:12px 14px}.save-btn{padding:12px 24px}
+.profile-sidebar .logout-btn{margin-top:14px;padding:13px}
+}
+/* Shorter laptop screens: tighten a little more so it still fits */
+@media(min-width:860px) and (max-height:780px){
+.announcement{height:44px}.announcement span{display:none}
+.site-head{padding-top:8px}.brand{font-size:18px}.brand small{display:none}.navline{padding:6px 0 8px}
+.page-title{margin:8px auto 8px}.page-title h1{font-size:25px}.page-title p{font-size:11px}
+.photo-hero{padding:14px 20px 24px}.avatar-wrap,.avatar-img{width:84px;height:84px}.avatar-img{font-size:28px}.avatar-wrap{margin-bottom:12px}.avatar-wrap:after{inset:-9px}.avatar-edit-btn{width:28px;height:28px;font-size:12px}
+.hero-name{font-size:19px}.meta-list{margin:10px 0 4px}.meta-list div{padding:5px 2px}
+.section-card{padding:12px 20px}.card-head{margin-bottom:8px;padding-bottom:7px}.section-title{font-size:17px}
+.field{margin-bottom:7px}.field input,.field select{padding:8px 11px}.field-hint{display:none}
+.profile-main{gap:10px}
+}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
