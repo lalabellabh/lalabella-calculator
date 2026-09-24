@@ -1076,6 +1076,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         if(data && data.valid){
           sessionStorage.setItem('lalabellaToken', existingToken);
           if(data.user) sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
+          window.dispatchEvent(new Event('lb:user-changed'));
           if(localStorage.getItem('lalabellaToken') === existingToken){
             localStorage.setItem('lalabellaUser', JSON.stringify(data.user || savedUser ? (data.user || JSON.parse(savedUser || '{}')) : {}));
           }
@@ -1145,6 +1146,8 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         }
         sessionStorage.setItem('lalabellaToken', data.token);
         sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
+        window.LALABELLA_USER = data.user || null;
+        window.dispatchEvent(new Event('lb:user-changed'));
         sessionStorage.setItem('lalabellaVerifiedToken', data.token);
         sessionStorage.setItem('lalabellaVerifiedAt', String(Date.now()));
         if(document.getElementById('rememberMe').checked){
