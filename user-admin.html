@@ -35,6 +35,10 @@
   .msg{font-size:12.5px;margin-top:10px;min-height:1em}
   .msg.ok{color:var(--teal-dark)} .msg.err{color:var(--red)}
 
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--teal-soft);color:var(--teal-dark);border-radius:20px;padding:6px 6px 6px 12px;font-size:12.5px;font-weight:600}
+  .chip.off{background:#eee;color:#888;text-decoration:line-through}
+  .chip button{padding:2px 8px;font-size:11px;border-radius:14px}
   .search{min-width:240px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -97,7 +101,7 @@
 <div class="wrap">
   <div class="eyebrow">Admin</div>
   <h1>User Management</h1>
-  <p class="sub">Change roles and branches, unlock accounts, reset passwords, disable staff who left, and manage the invite code.</p>
+  <p class="sub">Change positions, roles and branches, unlock accounts, reset passwords, disable staff who left, and manage the invite code.</p>
 
   <div id="denied" class="card denied" style="display:none;">
     <h2>🔒 Admins only</h2>
@@ -116,14 +120,24 @@
     </div>
 
     <div class="card">
+      <div class="card-head"><h2>🏷️ Positions</h2><span class="muted">Job titles staff pick when they register. Display only — not permissions.</span></div>
+      <div class="chips" id="posChips"><span class="muted">Loading…</span></div>
+      <div class="invite-row">
+        <input type="text" id="posInput" maxlength="40" placeholder="New position, e.g. Cashier" autocomplete="off">
+        <button class="primary" id="addPosBtn">Add Position</button>
+      </div>
+      <div class="msg" id="posMsg"></div>
+    </div>
+
+    <div class="card">
       <div class="card-head">
         <h2>👥 Users <span class="muted" id="userCount"></span></h2>
         <input type="search" class="search" id="searchBox" placeholder="Search name, username or branch…">
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>User</th><th>Role</th><th>Branch</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead>
-          <tbody id="userRows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+          <thead><tr><th>User</th><th>Position</th><th>Role</th><th>Branch</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead>
+          <tbody id="userRows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
         </table>
       </div>
       <div class="msg" id="tableMsg"></div>
@@ -181,15 +195,47 @@ document.getElementById('closeRegBtn').addEventListener('click',async()=>{
   setMsg('inviteMsg',d.success?d.message:(d.error||'Could not save.'),d.success);
 });
 
+/* ---------- positions ---------- */
+let positions=[];   // [{id,name,active}]
+function posOptions(current){
+  const names=positions.filter(p=>p.active).map(p=>p.name);
+  if(current && names.indexOf(current)===-1) names.push(current);
+  return names;
+}
+function renderPositions(){
+  const box=document.getElementById('posChips');
+  box.innerHTML=positions.length?positions.map(p=>`<span class="chip${p.active?'':' off'}">${esc(p.name)}<button data-pos="${p.id}" data-act="${p.active?'false':'true'}" title="${p.active?'Hide from lists':'Show again'}">${p.active?'Hide':'Show'}</button></span>`).join(''):'<span class="muted">No positions yet.</span>';
+}
+async function loadPositions(){
+  const d=await api({action:'adminListPositions'});
+  if(d.success){ positions=d.positions; renderPositions(); }
+}
+document.getElementById('posChips').addEventListener('click',async ev=>{
+  const b=ev.target.closest('button[data-pos]'); if(!b) return;
+  b.disabled=true;
+  const d=await api({action:'adminSetPositionActive',id:b.dataset.pos,active:b.dataset.act});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not update.'),d.success);
+  await loadPositions(); render();
+});
+document.getElementById('addPosBtn').addEventListener('click',async()=>{
+  const name=document.getElementById('posInput').value.trim();
+  if(!name){ setMsg('posMsg','Type a position name.',false); return; }
+  const d=await api({action:'adminAddPosition',name});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not add.'),d.success);
+  if(d.success){ document.getElementById('posInput').value=''; await loadPositions(); render(); }
+});
+
 /* ---------- users ---------- */
 let users=[];
 function rowHtml(u){
   const opt=(list,val)=>list.map(x=>`<option${x===val?' selected':''}>${esc(x)}</option>`).join('');
+  
   const branches=BRANCHES.indexOf(u.branch)===-1&&u.branch?BRANCHES.concat([u.branch]):BRANCHES;
   const self=u.isMe;
   return `<tr data-u="${esc(u.username)}" class="${u.status==='Inactive'?'inactive':''}">
     <td data-label="User" class="name"><b>${esc(u.fullName||u.username)}</b><span>@${esc(u.username)} · joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
       ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}</td>
+    <td data-label="Position"><select data-f="position"><option value="">— Not set —</option>${opt(posOptions(u.position),u.position)}</select></td>
     <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(['Staff','Admin'],u.role)}</select></td>
     <td data-label="Branch"><select data-f="branch">${opt(branches,u.branch)}</select></td>
     <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(['Active','Inactive'],u.status)}</select></td>
@@ -203,9 +249,9 @@ function rowHtml(u){
 }
 function render(){
   const q=document.getElementById('searchBox').value.trim().toLowerCase();
-  const list=users.filter(u=>!q||[u.fullName,u.username,u.branch,u.role].join(' ').toLowerCase().includes(q));
+  const list=users.filter(u=>!q||[u.fullName,u.username,u.branch,u.role,u.position].join(' ').toLowerCase().includes(q));
   document.getElementById('userCount').textContent='('+list.length+(q?' of '+users.length:'')+')';
-  document.getElementById('userRows').innerHTML=list.length?list.map(rowHtml).join(''):'<tr><td colspan="6" class="empty">No users match.</td></tr>';
+  document.getElementById('userRows').innerHTML=list.length?list.map(rowHtml).join(''):'<tr><td colspan="7" class="empty">No users match.</td></tr>';
 }
 async function loadUsers(){
   const d=await api({action:'adminListUsers'});
@@ -223,7 +269,7 @@ const tbody=document.getElementById('userRows');
 tbody.addEventListener('change',ev=>{
   const tr=ev.target.closest('tr[data-u]'); if(!tr) return;
   const u=users.find(x=>x.username===tr.dataset.u);
-  const changed=['role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==u[f];});
+  const changed=['position','role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==u[f];});
   tr.classList.toggle('dirty',changed); tr.querySelector('[data-a="save"]').disabled=!changed;
 });
 tbody.addEventListener('click',async ev=>{
@@ -240,7 +286,7 @@ tbody.addEventListener('click',async ev=>{
   }
   if(act==='save'){
     const params={action:'adminUpdateUser',username:u.username};
-    ['role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==u[f])params[f]=el.value;});
+    ['position','role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==u[f])params[f]=el.value;});
     if(params.role==='Admin'&&!confirm('Give '+(u.fullName||u.username)+' full Admin access?')) return;
     if(params.status==='Inactive'&&!confirm('Disable '+(u.fullName||u.username)+'? They will be logged out and cannot log in.')) return;
     btn.disabled=true; btn.textContent='Saving…';
@@ -272,7 +318,7 @@ document.getElementById('pwSave').addEventListener('click',async()=>{
 });
 
 /* start */
-loadUsers().then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
+loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
   document.getElementById('adminArea').style.display='block';
   setMsg('tableMsg','Connection error — please check your connection.',false);
 });
