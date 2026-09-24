@@ -37,10 +37,18 @@
     try { return window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }
     catch (e) { return {}; }
   }
+  // Never wait forever: Apps Script can be slow to wake up, so give up
+  // after 20s and let the person retry instead of staring at "Checking…".
   async function call(params) {
     const p = new URLSearchParams(Object.assign({}, params, { token: token() }));
-    const res = await fetch(LB_CONFIG.AUTH_API + '?' + p.toString());
-    return res.json();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      const res = await fetch(LB_CONFIG.AUTH_API + '?' + p.toString(), { signal: ctrl.signal });
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch (e) { throw new Error('bad-response'); }
+    } finally { clearTimeout(timer); }
   }
 
   let gate;
@@ -68,7 +76,7 @@
         if (d.success) { unlock(); return; }
         if (/admins only/i.test(d.error || '')) { showDenied(); return; }
         msg.textContent = d.error || 'Could not unlock.'; pw.value = ''; pw.focus();
-      } catch (e) { msg.textContent = 'Connection error — please check your connection.'; }
+      } catch (e) { msg.textContent = e && e.name === 'AbortError' ? 'The server is taking too long — please try again.' : 'Could not reach the server — please try again.'; }
       btn.disabled = false; btn.textContent = 'Unlock';
     }
     btn.addEventListener('click', go);
@@ -79,13 +87,16 @@
   async function start() {
     const u = user();
     if (u.role && String(u.role).toLowerCase() !== 'admin') { showDenied(); return; }
-    card('<div style="font-size:36px">🔐</div><h2>' + title + '</h2><p>Checking access…</p>');
+    // Show the password box right away (no waiting on a slow server), and
+    // check in the background — if this login is already unlocked (e.g.
+    // from User Management a few minutes ago) the page just opens.
+    showPassword();
     try {
       const d = await call({ action: 'adminPing' });
       if (d.success) { unlock(); return; }
       if (/admins only/i.test(d.error || '')) { showDenied(); return; }
-      showPassword();
-    } catch (e) { showPassword(); }
+      if (d.error && !d.reauth) console.warn('[admin-gate] adminPing:', d.error);
+    } catch (e) { console.warn('[admin-gate]', e); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
