@@ -747,6 +747,14 @@ kbd{
 </style>
 
 
+<style id="sidebar-fit-fix">
+  /* Menu list takes only the space that is left, so the footer and the
+     Music box at the bottom of the sidebar are always fully visible. */
+  .sidebar{min-height:0;overflow:hidden}
+  .sidebar .nav{flex:1 1 auto;min-height:120px;max-height:none}
+  .sidebar .side-bottom,.sidebar > div:last-child{flex-shrink:0}
+</style>
+
 <style id="garden-music-layout">
   .hero-copy{position:relative}
   .garden-music{
