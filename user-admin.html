@@ -211,6 +211,7 @@ async function unlock(){
       setMsg('unlockMsg',d.error||'Could not unlock.',false); document.getElementById('unlockPw').value=''; return;
     }
     setMsg('unlockMsg','',true);
+    try{ sessionStorage.setItem('lbAdminUnlock', token()+'|'+Date.now()); }catch(e){}
     document.getElementById('lockCard').style.display='none';
     startAdmin();
   }catch(e){ btn.disabled=false; btn.textContent='Unlock'; setMsg('unlockMsg','Connection error — please check your connection.',false); }
