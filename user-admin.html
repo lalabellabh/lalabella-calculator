@@ -35,6 +35,12 @@
   .msg{font-size:12.5px;margin-top:10px;min-height:1em}
   .msg.ok{color:var(--teal-dark)} .msg.err{color:var(--red)}
 
+  .pos-list{margin-bottom:12px}
+  .pos-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 4px;border-bottom:1px dashed #efe9e5}
+  .pos-row .pos-name{flex:1 1 170px;font-weight:700;font-size:13.5px}
+  .pos-row.off .pos-name{color:#999;text-decoration:line-through}
+  .pos-row label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer}
+  .pos-mods{display:flex;gap:14px;flex-wrap:wrap}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
   .chip{display:inline-flex;align-items:center;gap:6px;background:var(--teal-soft);color:var(--teal-dark);border-radius:20px;padding:6px 6px 6px 12px;font-size:12.5px;font-weight:600}
   .chip.off{background:#eee;color:#888;text-decoration:line-through}
@@ -120,8 +126,8 @@
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>🏷️ Positions</h2><span class="muted">Job titles staff pick when they register. Display only — not permissions.</span></div>
-      <div class="chips" id="posChips"><span class="muted">Loading…</span></div>
+      <div class="card-head"><h2>🏷️ Positions</h2><span class="muted">Job titles staff pick when they register. Ticks = which menu sections they see (none ticked = all). Admins always see everything.</span></div>
+      <div class="pos-list" id="posChips"><span class="muted">Loading…</span></div>
       <div class="invite-row">
         <input type="text" id="posInput" maxlength="40" placeholder="New position, e.g. Cashier" autocomplete="off">
         <button class="primary" id="addPosBtn">Add Position</button>
@@ -202,10 +208,24 @@ function posOptions(current){
   if(current && names.indexOf(current)===-1) names.push(current);
   return names;
 }
+const MODS=[['chocolate','🍫 Chocolate'],['flower','🌸 Flower'],['item','📦 Item Inv.']];
 function renderPositions(){
   const box=document.getElementById('posChips');
-  box.innerHTML=positions.length?positions.map(p=>`<span class="chip${p.active?'':' off'}">${esc(p.name)}<button data-pos="${p.id}" data-act="${p.active?'false':'true'}" title="${p.active?'Hide from lists':'Show again'}">${p.active?'Hide':'Show'}</button></span>`).join(''):'<span class="muted">No positions yet.</span>';
+  box.innerHTML=positions.length?positions.map(p=>{
+    const all=!Array.isArray(p.modules);
+    const boxes=MODS.map(m=>`<label><input type="checkbox" data-mod="${m[0]}" data-posid="${p.id}"${(all||p.modules.indexOf(m[0])!==-1)?' checked':''}>${m[1]}</label>`).join('');
+    return `<div class="pos-row${p.active?'':' off'}"><span class="pos-name">${esc(p.name)}</span><span class="pos-mods">${boxes}</span>
+      <button data-pos="${p.id}" data-act="${p.active?'false':'true'}" title="${p.active?'Hide from lists':'Show again'}">${p.active?'Hide':'Show'}</button></div>`;
+  }).join(''):'<span class="muted">No positions yet.</span>';
 }
+document.getElementById('posChips').addEventListener('change',async ev=>{
+  const cb=ev.target.closest('input[data-mod]'); if(!cb) return;
+  const id=cb.dataset.posid;
+  const picked=[...document.querySelectorAll(`input[data-posid="${id}"]:checked`)].map(x=>x.dataset.mod);
+  const d=await api({action:'adminSetPositionModules',id,modules:picked.join(',')});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not save.'),d.success);
+  await loadPositions();
+});
 async function loadPositions(){
   const d=await api({action:'adminListPositions'});
   if(d.success){ positions=d.positions; renderPositions(); }
