@@ -50,7 +50,7 @@
 <svg class="botanical left" viewBox="0 0 250 430" aria-hidden="true"><path d="M83 430C88 354 83 292 105 229C125 172 155 124 170 70"/><path d="M103 251C75 236 54 213 40 180C68 181 92 198 111 222"/><path d="M91 299C59 295 32 277 17 251C47 248 72 260 96 281"/><path d="M106 224C101 190 107 157 129 132C143 163 135 194 117 222"/><path d="M122 170C105 144 104 116 117 91C140 112 143 141 130 165"/><path d="M167 72C145 64 130 48 128 28C151 28 169 40 174 59"/><path d="M171 73C189 56 209 51 229 57C217 77 196 87 174 82"/></svg>
 <svg class="botanical right" viewBox="0 0 290 470" aria-hidden="true"><path d="M83 470C90 386 85 325 111 260C137 195 174 140 195 72"/><path d="M107 279C76 265 52 242 39 209C70 211 97 228 116 252"/><path d="M95 330C60 323 32 303 18 275C48 273 78 287 102 310"/><path d="M119 246C114 209 124 176 149 149C160 185 151 219 130 247"/><path d="M145 188C128 159 130 129 146 104C168 129 170 158 155 182"/><path d="M193 75C171 68 157 51 156 30C179 31 197 45 200 64"/><path d="M198 76C218 57 241 55 263 63C248 84 223 91 199 84"/></svg>
 <div class="page-title"><div><div class="eyebrow">Account / Personal space</div><h1>My Profile</h1></div><p>Keep your Lalabella account details updated. Your profile information and preferences are managed here.</p></div>
-<div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div><div class="meta-list"><div><span>Username</span><b id="metaUsername">—</b></div><div><span>Role</span><b id="metaRole">—</b></div><div><span>Branch</span><b id="metaBranch">—</b></div><div><span>Member since</span><b id="metaSince">—</b></div></div></div><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></aside>
+<div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div><div class="meta-list"><div><span>Username</span><b id="metaUsername">—</b></div><div><span>Position</span><b id="metaPosition">—</b></div><div><span>Role</span><b id="metaRole">—</b></div><div><span>Branch</span><b id="metaBranch">—</b></div><div><span>Member since</span><b id="metaSince">—</b></div></div></div><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></aside>
 <main class="profile-main">
 <div class="load-error-banner" id="loadErrorBanner"></div>
 <div class="desktop-label">Account settings</div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
@@ -70,7 +70,8 @@ setupPwToggle('currentPw','toggleCurrentPw');setupPwToggle('newPw','toggleNewPw'
 (function(){const t=document.getElementById('navToggle'),d=document.getElementById('sideDrawer'),b=document.getElementById('navBackdrop');function open(){d.classList.add('show');b.classList.add('show')}function close(){d.classList.remove('show');b.classList.remove('show')}t.addEventListener('click',()=>d.classList.contains('show')?close():open());b.addEventListener('click',close);document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});})();
 let currentUsername='';
 function fmtDate(v){if(!v)return '—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
-function fillMeta(p){document.getElementById('metaUsername').textContent=p.username||'—';document.getElementById('metaRole').textContent=p.role||'Staff';document.getElementById('metaBranch').textContent=p.branch||'—';if(p.dateRegistered!==undefined)document.getElementById('metaSince').textContent=fmtDate(p.dateRegistered)}
+let currentPosition='';
+function fillMeta(p){if(p.position!==undefined)document.getElementById('metaPosition').textContent=p.position||'Not set';document.getElementById('metaUsername').textContent=p.username||'—';document.getElementById('metaRole').textContent=p.role||'Staff';document.getElementById('metaBranch').textContent=p.branch||'—';if(p.dateRegistered!==undefined)document.getElementById('metaSince').textContent=fmtDate(p.dateRegistered)}
 
 function showLoadError(message){
   const banner = document.getElementById('loadErrorBanner');
@@ -93,7 +94,8 @@ async function loadProfile(){
     }
     const p=data.profile;
     document.getElementById('heroName').textContent=p.fullName||p.username;
-    document.getElementById('heroRole').textContent=p.role||'Staff';
+    currentPosition=p.position||'';
+    document.getElementById('heroRole').textContent=p.position||p.role||'Staff';
     document.getElementById('heroBranch').textContent=p.branch||'—';
     document.getElementById('usernameField').value=p.username;
     currentUsername=p.username||'';
@@ -212,7 +214,7 @@ document.getElementById('saveInfoBtn').addEventListener('click',async()=>{
       if(usernameChanged)currentUsername=username;
       document.getElementById('heroName').textContent=fullName;
       document.getElementById('heroBranch').textContent=branch;
-      fillMeta({username:currentUsername,role:document.getElementById('roleField').value,branch});
+      fillMeta({username:currentUsername,role:document.getElementById('roleField').value,branch,position:currentPosition});
       ['sessionStorage','localStorage'].forEach(store=>{
         const str=window[store].getItem('lalabellaUser');
         if(!str)return;
