@@ -218,6 +218,9 @@ window.addEventListener('load', function(){
 .auth-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;text-align:center;}
 .auth-success{color:#3d7a4f;font-size:12px;margin-top:10px;display:none;text-align:center;}
 #regPanel{display:none;}
+.auth-switch-user{margin-top:12px;background:none;border:0;color:#9e2f4a;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;}
+.lala-welcome-toast{position:fixed;left:50%;top:22px;transform:translate(-50%,-20px);z-index:1000001;background:#fff;color:#2f1a20;border:1px solid #f0d9d9;border-radius:30px;padding:12px 22px;font-family:'Fraunces',serif;font-weight:700;font-size:16px;box-shadow:0 14px 36px rgba(158,47,74,.22);opacity:0;transition:opacity .35s ease,transform .35s ease;pointer-events:none;white-space:nowrap;}
+.lala-welcome-toast.show{opacity:1;transform:translate(-50%,0);}
 /* Register mode: form moves to the right, pink panel to the left */
 .auth-shell.register-mode .auth-side{order:-1;}
 .auth-shell .form-panel,.auth-shell .auth-side-inner{animation:authSlideR .38s ease both;}
@@ -248,8 +251,8 @@ window.addEventListener('load', function(){
     <!-- LOGIN PANEL -->
     <div class="auth-panel form-panel" id="loginPanel">
       <div class="auth-eyebrow">Lalabella</div>
-      <h2 class="auth-title">Login</h2>
-      <div class="auth-sub">Sign in to access Chocolate, Flower, Item Inventory, and Joyboy.</div>
+      <h2 class="auth-title" id="loginTitle">Login</h2>
+      <div class="auth-sub" id="loginSub">Sign in to access Chocolate, Flower, Item Inventory, and Joyboy.</div>
       <div class="auth-field">
         <label>Username</label>
         <input type="text" id="loginUsername" autocomplete="username" placeholder="Your username">
@@ -267,6 +270,7 @@ window.addEventListener('load', function(){
       </div>
       <button class="auth-btn" id="loginBtn">Login</button>
       <div class="auth-error" id="loginError"></div>
+      <button type="button" class="auth-switch-user" id="switchUserBtn" style="display:none;">Not you? Use another account</button>
     </div>
 
     <!-- REGISTER PANEL -->
@@ -1059,7 +1063,49 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   const sideToRegister = document.getElementById('sideToRegister');
   const sideToLogin = document.getElementById('sideToLogin');
 
+  // ---- "Welcome back" — remembers only the last person's first name +
+  // username on this device (no password, no token), so the login screen
+  // can greet them and pre-fill the username. "Not you?" forgets it.
+  function firstName(u){ return String((u && (u.fullName || u.username)) || '').trim().split(/\s+/)[0] || ''; }
+  function getLastUser(){ try{ return JSON.parse(localStorage.getItem('lalabellaLastUser') || 'null'); }catch(e){ return null; } }
+  function setLastUser(u){ try{ if(u && u.username) localStorage.setItem('lalabellaLastUser', JSON.stringify({ username: u.username, firstName: firstName(u) })); }catch(e){} }
+  function applyWelcome(){
+    const last = getLastUser();
+    const title = document.getElementById('loginTitle'), sub = document.getElementById('loginSub');
+    const sw = document.getElementById('switchUserBtn'), un = document.getElementById('loginUsername');
+    if(last && last.username){
+      title.textContent = 'Welcome back, ' + (last.firstName || last.username) + '! 🌸';
+      title.style.fontSize = '22px';
+      sub.textContent = 'Enter your password to continue.';
+      if(!un.value) un.value = last.username;
+      sw.style.display = 'inline-block';
+    } else {
+      title.textContent = 'Login';
+      title.style.fontSize = '';
+      sub.textContent = 'Sign in to access Chocolate, Flower, Item Inventory, and Joyboy.';
+      sw.style.display = 'none';
+    }
+  }
+  function showWelcomeToast(u, isReturning){
+    const name = firstName(u); if(!name) return;
+    const t = document.createElement('div');
+    t.className = 'lala-welcome-toast';
+    t.textContent = (isReturning ? 'Welcome back, ' : 'Welcome, ') + name + '! 🌸';
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 2600);
+  }
+  document.getElementById('switchUserBtn').addEventListener('click', () => {
+    localStorage.removeItem('lalabellaLastUser');
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+    applyWelcome();
+    document.getElementById('loginUsername').focus();
+  });
+  applyWelcome();
+
   function showLock(){
+    applyWelcome();
     sessionStorage.removeItem('lalabellaToken');
     sessionStorage.removeItem('lalabellaUser');
     if(overlay) overlay.style.display = 'flex';
@@ -1077,6 +1123,11 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     sessionStorage.setItem('lalabellaToken', existingToken);
     if(savedUser) sessionStorage.setItem('lalabellaUser', savedUser);
     hideLock();
+    // Remembered login: greet once per browser session.
+    if(!sessionStorage.getItem('lalabellaWelcomed')){
+      sessionStorage.setItem('lalabellaWelcomed', '1');
+      try{ const su = JSON.parse(savedUser || 'null'); if(su){ setLastUser(su); showWelcomeToast(su, true); } }catch(e){}
+    }
 
     // Verify in the background. Only an explicit server response of
     // valid:false clears the remembered session. Network errors/timeouts
@@ -1177,6 +1228,10 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         sessionStorage.setItem('lalabellaToken', data.token);
         sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
         window.LALABELLA_USER = data.user || null;
+        const wasReturning = !!(getLastUser() && String(getLastUser().username).toLowerCase() === String((data.user||{}).username||'').toLowerCase());
+        setLastUser(data.user);
+        sessionStorage.setItem('lalabellaWelcomed', '1');
+        showWelcomeToast(data.user, wasReturning);
         window.dispatchEvent(new Event('lb:user-changed'));
         sessionStorage.setItem('lalabellaVerifiedToken', data.token);
         sessionStorage.setItem('lalabellaVerifiedAt', String(Date.now()));
