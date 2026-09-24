@@ -51,10 +51,30 @@
     } finally { clearTimeout(timer); }
   }
 
+  // Remember (in this tab/browser session) that this login was unlocked,
+  // so hopping Chocolate Admin → Flower Admin → Item Admin opens straight
+  // away. The server still decides: if its 15-minute unlock has expired,
+  // the background check locks the page again and asks for the password.
+  const MARK = 'lbAdminUnlock', WINDOW_MS = 15 * 60 * 1000;
+  function markUnlocked() { try { sessionStorage.setItem(MARK, token() + '|' + Date.now()); } catch (e) {} }
+  function recentlyUnlocked() {
+    try {
+      const v = (sessionStorage.getItem(MARK) || '').split('|');
+      return v[0] === token() && Date.now() - Number(v[1]) < WINDOW_MS;
+    } catch (e) { return false; }
+  }
+  window.lbMarkAdminUnlocked = markUnlocked;   // used by User Management too
+
   let gate;
+  function relock() {
+    document.documentElement.classList.add('lbgate-locked');
+    try { sessionStorage.removeItem(MARK); } catch (e) {}
+    showPassword();
+  }
   function unlock() {
+    markUnlocked();
     document.documentElement.classList.remove('lbgate-locked');
-    if (gate) gate.remove();
+    if (gate) { gate.remove(); gate = null; }
   }
   function card(html) {
     if (!gate) { gate = document.createElement('div'); gate.className = 'lbgate'; document.body.appendChild(gate); }
@@ -87,14 +107,15 @@
   async function start() {
     const u = user();
     if (u.role && String(u.role).toLowerCase() !== 'admin') { showDenied(); return; }
-    // Show the password box right away (no waiting on a slow server), and
-    // check in the background — if this login is already unlocked (e.g.
-    // from User Management a few minutes ago) the page just opens.
-    showPassword();
+    const optimistic = recentlyUnlocked();
+    // Unlocked a moment ago on another admin page → open right away.
+    // Otherwise show the password box immediately (no waiting on a slow server).
+    if (optimistic) unlock(); else showPassword();
     try {
       const d = await call({ action: 'adminPing' });
-      if (d.success) { unlock(); return; }
-      if (/admins only/i.test(d.error || '')) { showDenied(); return; }
+      if (d.success) { if (!optimistic) unlock(); else markUnlocked(); return; }
+      if (/admins only/i.test(d.error || '')) { document.documentElement.classList.add('lbgate-locked'); showDenied(); return; }
+      if (optimistic && d.reauth) { relock(); return; }
       if (d.error && !d.reauth) console.warn('[admin-gate] adminPing:', d.error);
     } catch (e) { console.warn('[admin-gate]', e); }
   }
