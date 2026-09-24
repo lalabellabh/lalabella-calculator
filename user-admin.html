@@ -109,6 +109,15 @@
   <h1>User Management</h1>
   <p class="sub">Change positions, roles and branches, unlock accounts, reset passwords, disable staff who left, and manage the invite code.</p>
 
+  <div id="lockCard" class="card" style="display:none;max-width:420px;margin:30px auto;text-align:center;">
+    <div style="font-size:34px;margin-bottom:6px;">🔐</div>
+    <h2 style="margin-bottom:6px;">Confirm it's you</h2>
+    <p class="muted" style="margin:0 0 14px;">Enter your password to open User Management. It stays unlocked for 15 minutes while you work.</p>
+    <input type="password" id="unlockPw" placeholder="Your password" autocomplete="current-password" style="width:100%;margin-bottom:10px;">
+    <button class="primary" id="unlockBtn" style="width:100%;padding:11px;">Unlock</button>
+    <div class="msg" id="unlockMsg"></div>
+  </div>
+
   <div id="denied" class="card denied" style="display:none;">
     <h2>🔒 Admins only</h2>
     <p class="muted">Ask an admin to give your account the Admin role.</p>
@@ -179,7 +188,32 @@ function fmt(v){ if(!v) return 'Never'; const d=new Date(v); return isNaN(d)?'�
 async function api(params){
   const p=new URLSearchParams(Object.assign({},params,{token:token()}));
   const res=await fetch(LB_CONFIG.AUTH_API+'?'+p.toString());
-  return res.json();
+  const d=await res.json();
+  // Unlock expired (15 min idle) or not done yet → ask for the password again.
+  if(d && d.reauth){ showLock(); }
+  return d;
+}
+function showLock(){
+  document.getElementById('adminArea').style.display='none';
+  document.getElementById('lockCard').style.display='block';
+  document.getElementById('unlockPw').value='';
+  setTimeout(()=>document.getElementById('unlockPw').focus(),50);
+}
+async function unlock(){
+  const pw=document.getElementById('unlockPw').value;
+  if(!pw){ setMsg('unlockMsg','Enter your password.',false); return; }
+  const btn=document.getElementById('unlockBtn'); btn.disabled=true; btn.textContent='Checking…';
+  try{
+    const d=await api({action:'adminUnlock',password:pw});
+    btn.disabled=false; btn.textContent='Unlock';
+    if(!d.success){
+      if(/admin/i.test(d.error||'')){ document.getElementById('lockCard').style.display='none'; document.getElementById('denied').style.display='block'; return; }
+      setMsg('unlockMsg',d.error||'Could not unlock.',false); document.getElementById('unlockPw').value=''; return;
+    }
+    setMsg('unlockMsg','',true);
+    document.getElementById('lockCard').style.display='none';
+    startAdmin();
+  }catch(e){ btn.disabled=false; btn.textContent='Unlock'; setMsg('unlockMsg','Connection error — please check your connection.',false); }
 }
 function setMsg(id,text,ok){ const el=document.getElementById(id); el.textContent=text||''; el.className='msg '+(ok?'ok':'err'); }
 
@@ -337,11 +371,20 @@ document.getElementById('pwSave').addEventListener('click',async()=>{
   setMsg('tableMsg',d.message,true); closePw(); loadUsers();
 });
 
-/* start */
-loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
-  document.getElementById('adminArea').style.display='block';
-  setMsg('tableMsg','Connection error — please check your connection.',false);
-});
+/* start: always ask for the password first */
+function startAdmin(){
+  loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
+    document.getElementById('adminArea').style.display='block';
+    setMsg('tableMsg','Connection error — please check your connection.',false);
+  });
+}
+document.getElementById('unlockBtn').addEventListener('click',unlock);
+document.getElementById('unlockPw').addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+(function(){
+  let u={}; try{ u=window.LALABELLA_USER||JSON.parse(sessionStorage.getItem('lalabellaUser')||localStorage.getItem('lalabellaUser')||'{}')||{}; }catch(e){}
+  if(u.role && String(u.role).toLowerCase()!=='admin'){ document.getElementById('denied').style.display='block'; return; }
+  showLock();
+})();
 </script>
 </body>
 </html>
