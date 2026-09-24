@@ -88,7 +88,8 @@
 
   function isAdmin() {
     try {
-      const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
+      const u = window.LALABELLA_USER ||
+        JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
       return String(u.role || '').toLowerCase() === 'admin';
     } catch (e) { return false; }
   }
@@ -157,5 +158,12 @@
     st.textContent = '[data-lb-menu] a.lb-menu-active{font-weight:700;box-shadow:inset 3px 0 0 currentColor;}';
     document.head.appendChild(st);
   }
-  document.querySelectorAll('[data-lb-menu]').forEach(render);
+  function renderAll() { document.querySelectorAll('[data-lb-menu]').forEach(render); }
+  window.lbRenderMenu = renderAll;
+  renderAll();
+  // The menu is drawn before login finishes (e.g. logging in on the home
+  // page), so redraw whenever the signed-in user changes — otherwise
+  // admin-only links would stay hidden until a full reload.
+  window.addEventListener('lb:user-changed', renderAll);
+  window.addEventListener('storage', e => { if (e.key === 'lalabellaUser') renderAll(); });
 })();
