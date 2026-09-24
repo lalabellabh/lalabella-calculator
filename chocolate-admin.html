@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/admin-gate.js" data-title="Chocolate Admin"></script>
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -149,16 +150,6 @@
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
-<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);display:flex;align-items:center;justify-content:center;z-index:999;">
-  <div style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:32px 28px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 26px rgba(158,47,74,0.12);">
-    <div style="font-size:38px;margin-bottom:8px;">🔒</div>
-    <h2 style="font-family:'Fraunces',serif;color:var(--choc-deep);margin:0 0 4px;">Chocolate Admin</h2>
-    <div style="font-size:12px;color:var(--ink-dim);margin-bottom:16px;">Enter the admin password to continue.</div>
-    <input type="password" id="adminPassInput" placeholder="Password" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;font-size:14px;text-align:center;margin-bottom:10px;" autofocus>
-    <button id="adminPassBtn" class="btn chocolate" style="margin-top:0;">Unlock</button>
-    <div id="adminPassError" style="display:none;color:#c0392b;font-size:12px;margin-top:10px;">Incorrect password.</div>
-  </div>
-</div>
 
 <div class="wrap">
   <a class="back-link" href="index.html">&larr; Chocolate Home</a>
@@ -252,24 +243,6 @@
 </div>
 
 <script>
-// Temporary admin password gate — client-side only, meant as a
-// simple deterrent for now, not real security.
-const ADMIN_PASSWORD = '12345';
-function tryUnlock(){
-  const input = document.getElementById('adminPassInput');
-  const err = document.getElementById('adminPassError');
-  if(input.value === ADMIN_PASSWORD){
-    document.getElementById('lockScreen').style.display = 'none';
-  } else {
-    err.style.display = 'block';
-    input.value = '';
-    input.focus();
-  }
-}
-document.getElementById('adminPassBtn').addEventListener('click', tryUnlock);
-document.getElementById('adminPassInput').addEventListener('keydown', e=>{
-  if(e.key === 'Enter') tryUnlock();
-});
 
 const CHOCOLATE_API = LB_CONFIG.CHOCOLATE_API;
 
