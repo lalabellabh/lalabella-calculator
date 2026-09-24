@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Chocolate Arrangements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
+    --cream:#fdf1f0; --ink:#2f2024; --muted:#8a7078; --line:#f0dede;
+    --panel:#ffffff; --bg:#fdf1f0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',Arial,sans-serif;color:var(--ink);}
+  body{padding:22px 16px 60px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3a2a1a,#5c1a28);display:grid;place-items:center;font-weight:800;color:var(--gold-light);}
+  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
+  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
+
+  h1{font-family:'Fraunces',serif;font-size:26px;margin:0 0 4px;}
+  .sub{font-size:12.5px;color:var(--muted);margin:0 0 22px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:20px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .card h2{font-family:'Fraunces',serif;font-size:17px;margin:0 0 14px;}
+  label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  input,textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;box-sizing:border-box;margin-bottom:14px;}
+  input:focus,textarea:focus{border-color:var(--rose);}
+  .item-row{display:grid;grid-template-columns:2fr 90px 34px;gap:8px;margin-bottom:8px;align-items:center;}
+  .item-row input{margin-bottom:0;}
+  .remove-item{background:none;border:none;color:#c0392b;font-size:18px;cursor:pointer;padding:4px;}
+  .add-item-btn{font-size:12.5px;color:var(--rose-dark);background:none;border:1px dashed var(--rose);border-radius:9px;padding:8px 14px;cursor:pointer;margin-bottom:16px;}
+  .save-btn{padding:12px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
+  .save-btn:disabled{opacity:.6;cursor:default;}
+  .msg{font-size:12.5px;margin-top:10px;display:none;}
+  .msg.error{color:#c0392b;display:block;}
+  .msg.success{color:#3d7a4f;display:block;}
+
+  .arr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .arr-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 4px 14px rgba(158,47,74,.06);}
+  .arr-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 4px;}
+  .arr-card .by{font-size:11px;color:var(--muted);margin-bottom:10px;}
+  .arr-card ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;}
+  .arr-card .notes{margin-top:8px;font-size:11.5px;color:var(--muted);font-style:italic;}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+
+  .scan-hero{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);border-radius:18px;padding:24px;text-align:center;margin-bottom:20px;}
+  .scan-hero h2{color:#fff;font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;}
+  .scan-hero p{color:rgba(255,255,255,.7);font-size:12px;margin:0 0 16px;}
+  .scan-btn-big{padding:13px 26px;border:none;border-radius:30px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#3a2a10;font-weight:700;font-size:14px;cursor:pointer;}
+
+  .scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
+  .scanner-modal.show{display:flex;}
+  .scanner-modal video{width:100%;max-width:400px;border-radius:10px;}
+  .scanner-modal .close-scan{margin-top:16px;background:var(--rose-dark);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;}
+  .scanner-hint{color:#fff;font-size:12px;margin-top:10px;text-align:center;}
+
+  .code-badge{display:inline-block;background:var(--gold-light);color:#5c4416;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:10px;}
+  .barcode-box{text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;}
+  .result-card{border:2px solid var(--rose);}
+</style>
+<style id="chocoSharedNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid rgba(158,47,74,0.16);
+  background:rgba(255,255,255,0.9); color:#9e2f4a; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  box-shadow:0 5px 16px rgba(158,47,74,.14);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(60,30,30,0.35); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(320px,80vw); z-index:9206;
+  background:rgba(255,255,255,.94);
+  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  font-family:Arial,sans-serif; backdrop-filter:blur(18px);
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.choco-hub-grid a{
+  flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
+  font-size:10.5px; background:rgba(201,80,107,0.05); border:1px solid #f0dede;
+  min-height:76px; justify-content:center; white-space:nowrap;
+}
+.choco-hub-grid a span.hub-icon{ font-size:20px; }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:#2f2024; text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:rgba(201,80,107,0.08); }
+.choco-drawer .choco-drawer-title{
+  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.wrap{ padding-top:76px !important; }
+</style>
+</head>
+<body>
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div data-lb-menu></div>
+</nav>
+<script src="shared/nav.js"></script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+})();
+</script>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><div class="logo">🍫</div><b>Chocolate Arrangements</b></div>
+    <a class="backlink" href="index.html">← Back to Lalabella</a>
+  </div>
+
+  <h1>Chocolate Arrangement Catalog</h1>
+  <p class="sub">Reference recipes for standard boxes/arrangements — composition and who designed them.</p>
+
+  <div class="scan-hero">
+    <h2>📷 Scan Arrangement Barcode</h2>
+    <p>Point your camera at the barcode on a box to instantly see what's inside.</p>
+    <button class="scan-btn-big" id="scanBtn">Scan Now</button>
+  </div>
+
+  <div id="scanResultCard" style="display:none;" class="card result-card">
+    <h2>🔍 Scan Result</h2>
+    <div id="scanResultBody"></div>
+  </div>
+
+  <div class="card">
+    <h2>➕ Add New Arrangement</h2>
+    <label>Arrangement Name</label>
+    <input type="text" id="arrName" placeholder="e.g. Deluxe Box A">
+    <label>Display Name (optional — for online/customer display)</label>
+    <input type="text" id="arrDisplayName" placeholder="e.g. Valentine's Sweetheart Box">
+    <label>Made By (Florist/Staff)</label>
+    <input type="text" id="arrCreator" placeholder="Your name">
+
+    <label>Chocolates in this Arrangement</label>
+    <div id="itemRows"></div>
+    <button type="button" class="add-item-btn" id="addItemBtn">+ Add Chocolate</button>
+
+    <label>Notes (optional)</label>
+    <textarea id="arrNotes" rows="2" placeholder="Any extra notes..."></textarea>
+
+    <label>Reference Photo (optional — auto-compressed)</label>
+    <input type="file" id="arrPhoto" accept="image/*">
+    <div id="arrPhotoHint" style="font-size:11px;color:var(--muted);margin:-8px 0 10px;"></div>
+    <img id="arrPhotoPreview" style="display:none;max-width:120px;border-radius:10px;margin-bottom:14px;">
+
+    <button class="save-btn" id="saveBtn">Save Arrangement</button>
+    <div class="msg" id="formMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Existing Arrangements</h2>
+    <div id="arrGrid" class="arr-grid"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<div class="scanner-modal" id="scannerModal">
+  <video id="scannerVideo" autoplay playsinline muted></video>
+  <div class="scanner-hint">Point the camera at an arrangement barcode</div>
+  <button class="close-scan" id="closeScanBtn">Cancel</button>
+</div>
+
+<script>
+const CHOCOLATE_API_URL = LB_CONFIG.CHOCOLATE_API;
+
+function addItemRow(name, qty){
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `<input type="text" class="item-name" placeholder="Chocolate name" value="${name||''}">
+    <input type="number" class="item-qty" placeholder="Qty" min="1" value="${qty||''}">
+    <button type="button" class="remove-item" aria-label="Remove">✕</button>`;
+  row.querySelector('.remove-item').addEventListener('click', ()=> row.remove());
+  document.getElementById('itemRows').appendChild(row);
+}
+document.getElementById('addItemBtn').addEventListener('click', ()=> addItemRow());
+addItemRow(); addItemRow();
+
+/* ---------- Photo compression (same pattern as item-admin.html) ---------- */
+let arrPhotoData = null;
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 150;
+        let w = img.width, h = img.height;
+        if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
+        else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById('arrPhoto').addEventListener('change', async function(){
+  const file = this.files[0];
+  if(!file) return;
+  const hint = document.getElementById('arrPhotoHint');
+  hint.textContent = 'Compressing…';
+  try{
+    arrPhotoData = await compressImage(file);
+    const preview = document.getElementById('arrPhotoPreview');
+    preview.src = arrPhotoData;
+    preview.style.display = 'block';
+    const approxKB = Math.round((arrPhotoData.length * 0.75) / 1024);
+    hint.textContent = 'Compressed to ~' + approxKB + ' KB';
+  }catch(e){
+    hint.textContent = 'Could not process this image.';
+    arrPhotoData = null;
+  }
+});
+
+/* ---------- Barcode scanning (same native BarcodeDetector pattern used in chocolate-barcode.html) ---------- */
+let scanStream = null;
+let scanLoopActive = false;
+
+document.getElementById('scanBtn').addEventListener('click', async ()=>{
+  if(!('BarcodeDetector' in window)){
+    alert('Barcode scanning is not supported in this browser.');
+    return;
+  }
+  const modal = document.getElementById('scannerModal');
+  const video = document.getElementById('scannerVideo');
+  modal.classList.add('show');
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = scanStream;
+    scanLoopActive = true;
+    const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+    const scanLoop = async ()=>{
+      if(!scanLoopActive) return;
+      try{
+        const codes = await detector.detect(video);
+        if(codes.length > 0){
+          stopScanner();
+          lookupByCode(codes[0].rawValue);
+          return;
+        }
+      }catch(e){}
+      requestAnimationFrame(scanLoop);
+    };
+    scanLoop();
+  }catch(e){
+    alert('Could not access the camera. Check permissions and try again.');
+    modal.classList.remove('show');
+  }
+});
+function stopScanner(){
+  scanLoopActive = false;
+  if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  document.getElementById('scannerModal').classList.remove('show');
+}
+document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+
+async function lookupByCode(code){
+  const card = document.getElementById('scanResultCard');
+  const body = document.getElementById('scanResultBody');
+  card.style.display = 'block';
+  body.innerHTML = 'Looking up…';
+  card.scrollIntoView({behavior:'smooth', block:'center'});
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(CHOCOLATE_API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){
+      body.innerHTML = `<div class="msg error" style="display:block;">${data.error || 'Not found.'} (Scanned: ${code})</div>`;
+      return;
+    }
+    body.innerHTML = `
+      ${data.photoData ? `<img src="${data.photoData}" style="width:100%;max-width:200px;border-radius:10px;margin-bottom:10px;">` : ''}
+      <span class="code-badge">${data.arrangementCode}</span>
+      <h3 style="font-family:'Fraunces',serif;margin:4px 0;">${data.arrangementName}</h3>
+      ${data.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${data.displayName}</div>` : ''}
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">👤 ${data.createdBy || 'Unknown'}</div>
+      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.9;">
+        ${data.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}
+      </ul>
+      ${data.notes ? `<div class="notes" style="margin-top:8px;">${data.notes}</div>` : ''}
+    `;
+  }catch(e){
+    body.innerHTML = '<div class="msg error" style="display:block;">Connection error.</div>';
+  }
+}
+
+function showMsg(text, isError){
+  const el = document.getElementById('formMsg');
+  el.textContent = text;
+  el.className = 'msg ' + (isError ? 'error' : 'success');
+}
+
+async function loadArrangements(){
+  const grid = document.getElementById('arrGrid');
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+  try{
+    const res = await fetch(CHOCOLATE_API_URL + '?action=getArrangements&token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!Array.isArray(data)) throw new Error(data.error || 'Failed to load');
+    if(!data.length){ grid.innerHTML = '<div class="empty">No arrangements recorded yet. Add the first one above!</div>'; return; }
+    grid.innerHTML = data.map(a => `
+      <div class="arr-card">
+        ${a.photoData ? `<img src="${a.photoData}" style="width:100%;border-radius:10px;margin-bottom:10px;">` : ''}
+        <span class="code-badge">${a.arrangementCode||''}</span>
+        <h3>${a.arrangementName}</h3>
+        ${a.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${a.displayName}</div>` : ''}
+        <div class="by">👤 ${a.createdBy || 'Unknown'} · ${new Date(a.createdDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        <ul>${a.items.map(it => `<li>${it.qty}x ${it.chocolateName}</li>`).join('')}</ul>
+        ${a.notes ? `<div class="notes">${a.notes}</div>` : ''}
+      </div>
+    `).join('');
+  }catch(e){
+    grid.innerHTML = '<div class="empty">Could not load arrangements — check your connection.</div>';
+  }
+}
+loadArrangements();
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const arrangementName = document.getElementById('arrName').value.trim();
+  const displayName = document.getElementById('arrDisplayName').value.trim();
+  const createdBy = document.getElementById('arrCreator').value.trim();
+  const notes = document.getElementById('arrNotes').value.trim();
+  const items = Array.from(document.querySelectorAll('.item-row')).map(row => ({
+    chocolateName: row.querySelector('.item-name').value.trim(),
+    qty: Number(row.querySelector('.item-qty').value) || 0
+  })).filter(it => it.chocolateName && it.qty > 0);
+
+  if(!arrangementName){ showMsg('Arrangement name is required.', true); return; }
+  if(!items.length){ showMsg('Add at least one chocolate with a quantity.', true); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+
+  try{
+    const params = new URLSearchParams({
+      action: 'addArrangement', arrangementName, displayName, createdBy, notes,
+      items: JSON.stringify(items), photoData: arrPhotoData || '', token
+    });
+    const res = await fetch(CHOCOLATE_API_URL + '?' + params.toString());
+    const data = await res.json();
+    if(!data.success){ showMsg(data.error || 'Failed to save.', true); btn.disabled=false; btn.textContent='Save Arrangement'; return; }
+    showMsg('Arrangement saved! Code: ' + data.arrangementCode, false);
+    const oldBox = document.querySelector('.barcode-box');
+    if(oldBox) oldBox.remove();
+    document.getElementById('formMsg').insertAdjacentHTML('afterend',
+      `<div class="barcode-box"><svg id="newArrBarcode"></svg></div>`);
+    JsBarcode('#newArrBarcode', data.arrangementCode, { format: 'CODE128', width: 1.6, height: 46, displayValue: true, fontSize: 12 });
+    document.getElementById('arrName').value = '';
+    document.getElementById('arrDisplayName').value = '';
+    document.getElementById('arrCreator').value = '';
+    document.getElementById('arrNotes').value = '';
+    document.getElementById('itemRows').innerHTML = '';
+    document.getElementById('arrPhoto').value = '';
+    document.getElementById('arrPhotoPreview').style.display = 'none';
+    document.getElementById('arrPhotoHint').textContent = '';
+    arrPhotoData = null;
+    addItemRow(); addItemRow();
+    loadArrangements();
+  }catch(e){
+    showMsg('Connection error — check your connection.', true);
+  }
+  btn.disabled = false; btn.textContent = 'Save Arrangement';
+});
+</script>
+</body>
+</html>
