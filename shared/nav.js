@@ -70,9 +70,9 @@
     'flower-guide.html', 'chocolate-guide.html'];
 
   const HUB = [
-    ['index.html', '🍫', 'Chocolate'],
-    ['flower-tools.html', '🌸', 'Flower'],
-    ['item-inventory.html', '📦', 'Item Inv.']
+    ['index.html', '🍫', 'Chocolate', 'chocolate'],
+    ['flower-tools.html', '🌸', 'Flower', 'flower'],
+    ['item-inventory.html', '📦', 'Item Inv.', 'item']
   ];
 
   const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
@@ -86,12 +86,21 @@
     return null;
   }
 
-  function isAdmin() {
+  function currentUser() {
     try {
-      const u = window.LALABELLA_USER ||
+      return window.LALABELLA_USER ||
         JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
-      return String(u.role || '').toLowerCase() === 'admin';
-    } catch (e) { return false; }
+    } catch (e) { return {}; }
+  }
+  function isAdmin() { return String(currentUser().role || '').toLowerCase() === 'admin'; }
+
+  // Menu sections for this person's Position (set by an admin in User
+  // Management). null/missing = everything. Admins always see everything.
+  // Only tidies the menu — it is not a permission.
+  function moduleAllowed(key) {
+    if (!key || isAdmin()) return true;
+    const mods = currentUser().modules;
+    return !Array.isArray(mods) || mods.indexOf(key) !== -1;
   }
   // Hiding is only for tidiness — admin pages are also checked on the server.
   const visible = i => i[3] !== 'admin' || isAdmin();
@@ -130,13 +139,16 @@
     const hubClass = el.getAttribute('data-hub-class') || 'choco-hub-grid';
     const titleClass = el.getAttribute('data-title-class') || 'choco-drawer-title';
     iconClass = el.getAttribute('data-icon-class') || '';
-    const mod = MODULES[moduleOf(page)];
-    let html = '<div class="' + esc(hubClass) + '">' +
-      HUB.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
-        '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + '</div>';
+    const modKey = moduleOf(page);
+    const mod = moduleAllowed(modKey) ? MODULES[modKey] : null;
+    const hub = HUB.filter(h => moduleAllowed(h[3]));
+    let html = (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
+      hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
+        '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
 
     // Home keeps id="chocoHomeLink" — some pages' own scripts look it up.
-    const home = mod ? [mod.home, mod.homeLabel] : ['index.html', 'Home'];
+    const firstHub = hub[0] || HUB[0];
+    const home = mod ? [mod.home, mod.homeLabel] : [firstHub[0], 'Home'];
     html += '<a href="' + home[0] + '" id="chocoHomeLink">' + icon_('🏠') + esc(home[1]) + '</a>';
 
     if (mod) {
