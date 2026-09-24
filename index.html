@@ -218,10 +218,17 @@ window.addEventListener('load', function(){
 .auth-error{color:#c0392b;font-size:12px;margin-top:10px;display:none;text-align:center;}
 .auth-success{color:#3d7a4f;font-size:12px;margin-top:10px;display:none;text-align:center;}
 #regPanel{display:none;}
+/* Register mode: form moves to the right, pink panel to the left */
+.auth-shell.register-mode .auth-side{order:-1;}
+.auth-shell .form-panel,.auth-shell .auth-side-inner{animation:authSlideR .38s ease both;}
+.auth-shell.register-mode .form-panel,.auth-shell.register-mode .auth-side-inner{animation-name:authSlideL;}
+@keyframes authSlideR{from{opacity:0;transform:translateX(-26px);}to{opacity:1;transform:none;}}
+@keyframes authSlideL{from{opacity:0;transform:translateX(26px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.auth-shell .form-panel,.auth-shell .auth-side-inner{animation:none;}}
 
 @media(max-width:640px){
   .auth-shell{grid-template-columns:1fr;max-width:400px;}
-  .auth-side{order:-1;padding:26px 24px;}
+  .auth-side,.auth-shell.register-mode .auth-side{order:-1;padding:26px 24px;}
   .auth-panel{padding:28px 24px;}
 }
 </style>
@@ -275,6 +282,12 @@ window.addEventListener('load', function(){
         <label>Branch</label>
         <select id="regBranch">
           <option>ModaMall</option><option>Hamala</option><option>Galali</option>
+        </select>
+      </div>
+      <div class="auth-field">
+        <label>Position</label>
+        <select id="regPosition">
+          <option value="">Choose your position…</option>
         </select>
       </div>
       <div class="auth-field">
@@ -1109,13 +1122,30 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   setupPasswordToggle('loginPassword', 'loginPwToggle');
   setupPasswordToggle('regPassword', 'regPwToggle');
 
+  const authShell = document.querySelector('.auth-shell');
+  let positionsLoaded = false;
+  function loadPositions(){
+    if(positionsLoaded) return;
+    fetch(AUTH_API_URL + '?action=getPositions')
+      .then(r => r.json())
+      .then(data => {
+        if(!data || !data.success || !Array.isArray(data.positions)) return;
+        const sel = document.getElementById('regPosition');
+        data.positions.forEach(name => { const o = document.createElement('option'); o.textContent = name; sel.appendChild(o); });
+        positionsLoaded = true;
+      })
+      .catch(() => {});
+  }
   document.getElementById('showRegisterBtn').addEventListener('click', () => {
+    loadPositions();
+    authShell.classList.add('register-mode');
     loginPanel.style.display = 'none';
     regPanel.style.display = 'flex';
     sideToRegister.style.display = 'none';
     sideToLogin.style.display = 'block';
   });
   document.getElementById('showLoginBtn').addEventListener('click', () => {
+    authShell.classList.remove('register-mode');
     regPanel.style.display = 'none';
     loginPanel.style.display = 'flex';
     sideToLogin.style.display = 'none';
@@ -1175,13 +1205,14 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   function doRegister(){
     const fullName = document.getElementById('regFullName').value.trim();
     const branch = document.getElementById('regBranch').value;
+    const position = document.getElementById('regPosition').value;
     const username = document.getElementById('regUsername').value.trim();
     const password = document.getElementById('regPassword').value;
     const inviteCode = document.getElementById('regInviteCode').value.trim();
     const errEl = document.getElementById('regError');
     const okEl = document.getElementById('regSuccess');
     errEl.style.display = 'none'; okEl.style.display = 'none';
-    if(!fullName || !username || !password || !inviteCode){
+    if(!fullName || !username || !password || !inviteCode || !position){
       errEl.textContent = 'Please fill in all fields.';
       errEl.style.display = 'block';
       return;
@@ -1189,7 +1220,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     const btn = document.getElementById('regBtn');
     btn.disabled = true; btn.textContent = 'Registering…';
 
-    const params = new URLSearchParams({ action: 'register', username, password, fullName, branch, inviteCode });
+    const params = new URLSearchParams({ action: 'register', username, password, fullName, branch, position, inviteCode });
     fetch(AUTH_API_URL + '?' + params.toString())
       .then(r => r.json())
       .then(data => {
