@@ -215,6 +215,7 @@
       // any page it navigates to next both read from sessionStorage.
       sessionStorage.setItem('lalabellaToken', token);
       if (data.user) sessionStorage.setItem('lalabellaUser', JSON.stringify(data.user));
+      window.dispatchEvent(new Event('lb:user-changed'));
       // Stamp the cache so the NEXT page navigation (within the
       // window above) can skip this round trip entirely.
       sessionStorage.setItem('lalabellaVerifiedToken', token);
