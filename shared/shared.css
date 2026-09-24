@@ -1,0 +1,125 @@
+/**
+ * LALABELLA SHARED STYLES
+ * Common design tokens and base patterns used across multiple pages
+ * (initial-stock.html, chocolate-release.html, and others share this
+ * exact palette/font stack already — this file centralizes it instead
+ * of it being copy-pasted independently in every page's <style> block).
+ *
+ * HOW TO ADOPT (safe, one page at a time):
+ * 1. Add this line in a page's <head>, AFTER auth-guard.js:
+ *      <link rel="stylesheet" href="shared/shared.css">
+ * 2. In that page's own <style> block, DELETE any :root{...} variable
+ *    definitions that duplicate the ones below, and any base
+ *    body/button/input rules that duplicate the ones below.
+ * 3. Leave everything page-SPECIFIC (layout, unique components) in the
+ *    page's own <style> block — this file only holds what's genuinely
+ *    shared.
+ * 4. Test the page visually before moving to the next one. Do this
+ *    one page at a time, not all at once.
+ *
+ * Nothing currently references this file — adding it changes nothing
+ * until a page's <head> is updated to include it.
+ */
+
+:root{
+  --paper:#f3ede0;
+  --paper-2:#e9e0c8;
+  --ink:#1c2b45;
+  --ink-dim:#5c6a83;
+  --rust:#b0442e;
+  --gold:#c68a1f;
+  --line:#c9bfa0;
+  --ok:#3d7a4f;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Space Grotesk',sans-serif;
+  min-height:100vh;
+}
+
+.eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--gold);
+}
+
+h1{
+  font-family:'Fraunces',serif;
+  font-weight:900;
+  line-height:1;
+}
+
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:20px;
+}
+
+label{
+  display:block;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  color:var(--ink-dim);
+  margin-bottom:5px;
+  margin-top:14px;
+}
+label:first-child{ margin-top:0; }
+
+input[type=text], input[type=date], input[type=number], input[type=password], textarea, select{
+  width:100%;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:11px 12px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14px;
+  color:var(--ink);
+  outline:none;
+}
+input:focus, textarea:focus, select:focus{ border-color:var(--ink); }
+input:disabled, select:disabled{ background:var(--paper-2); color:var(--ink-dim); cursor:not-allowed; }
+
+.btn-primary{
+  padding:14px 0;
+  background:var(--ink);
+  color:var(--paper);
+  border:none;
+  border-radius:3px;
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  cursor:pointer;
+}
+.btn-primary:hover{ background:#14213a; }
+.btn-primary:disabled{ background:var(--line); cursor:not-allowed; }
+
+.back-link{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--ink-dim);
+  text-decoration:none;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  transition:color .12s ease;
+}
+.back-link:hover{ color:var(--rust); }
+
+.empty-note{
+  color:var(--ink-dim);
+  font-size:13px;
+  text-align:center;
+  padding:20px 0;
+}
