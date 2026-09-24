@@ -50,7 +50,7 @@
     ]}
   };
 
-  // ---- Quick tools (shown on every page) ----
+  // ---- Quick tools (shown on every page). 4th value 'admin' = only Admins see it ----
   const QUICK = [
     ['nova-command-center.html', '🎙️', 'NOVA'],
     ['schedule.html', '📆', 'Duty Schedule'],
@@ -61,6 +61,7 @@
     ['card-print.html', '💌', 'Card Print'],
     ['seeds-card.html', '🌱', 'Seeds of Success Card'],
     ['branch-config.html', '📍', 'Branch Config'],
+    ['user-admin.html', '👥', 'User Management', 'admin'],
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
 
@@ -84,6 +85,15 @@
     if (p.indexOf('item-') === 0) return 'item';
     return null;
   }
+
+  function isAdmin() {
+    try {
+      const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
+      return String(u.role || '').toLowerCase() === 'admin';
+    } catch (e) { return false; }
+  }
+  // Hiding is only for tidiness — admin pages are also checked on the server.
+  const visible = i => i[3] !== 'admin' || isAdmin();
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -130,10 +140,10 @@
 
     if (mod) {
       html += '<div class="' + esc(titleClass) + '">' + esc(mod.title) + '</div>';
-      html += mod.items.map(i => link(i[0], i[1], i[2])).join('');
+      html += mod.items.filter(visible).map(i => link(i[0], i[1], i[2])).join('');
     }
     html += '<div class="' + esc(titleClass) + '">Quick Tools</div>';
-    html += QUICK.map(i => link(i[0], i[1], i[2])).join('');
+    html += QUICK.filter(visible).map(i => link(i[0], i[1], i[2])).join('');
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
 
     el.innerHTML = html;
