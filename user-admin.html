@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — User Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--teal:#2f6570;--teal-dark:#214e57;--teal-soft:#e6f0f1;--ink:#3a3533;--muted:#8f8581;--line:#e8e2de;--bg:#f8f7f4;--red:#b23a3a;--amber:#b9770e;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:'Space Grotesk',Arial,sans-serif;color:var(--ink);padding:22px 16px 60px}
+  .wrap{max-width:1100px;margin:0 auto;padding-top:60px}
+  .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700}
+  h1{font-family:'Fraunces',serif;font-size:32px;margin:6px 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(47,101,112,.06)}
+  .card h2{font-family:'Fraunces',serif;font-size:19px;margin:0}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .muted{color:var(--muted);font-size:12px}
+  input,select{font:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fcfbf9;color:var(--ink);outline:none}
+  input:focus,select:focus{border-color:var(--teal)}
+  button{font:inherit;font-weight:700;font-size:12.5px;border-radius:9px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  button.primary:hover{background:var(--teal-dark)}
+  button.warn{color:var(--amber)}
+  button.danger{color:var(--red)}
+  button:disabled{opacity:.55;cursor:default}
+  .invite-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .invite-row input{flex:1 1 220px;max-width:320px}
+  .msg{font-size:12.5px;margin-top:10px;min-height:1em}
+  .msg.ok{color:var(--teal-dark)} .msg.err{color:var(--red)}
+
+  .pos-list{margin-bottom:12px}
+  .pos-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 4px;border-bottom:1px dashed #efe9e5}
+  .pos-row .pos-name{flex:1 1 170px;font-weight:700;font-size:13.5px}
+  .pos-row.off .pos-name{color:#999;text-decoration:line-through}
+  .pos-row label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer}
+  .pos-mods{display:flex;gap:14px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--teal-soft);color:var(--teal-dark);border-radius:20px;padding:6px 6px 6px 12px;font-size:12.5px;font-weight:600}
+  .chip.off{background:#eee;color:#888;text-decoration:line-through}
+  .chip button{padding:2px 8px;font-size:11px;border-radius:14px}
+  .search{min-width:240px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 8px;border-bottom:1px dashed #efe9e5;vertical-align:middle}
+  td select{padding:7px 8px;font-size:12.5px}
+  .name b{display:block;font-size:13.5px}
+  .name span{color:var(--muted);font-size:11.5px}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin:2px 4px 2px 0}
+  .b-me{background:var(--teal-soft);color:var(--teal-dark)}
+  .b-lock{background:#fbeaea;color:var(--red)}
+  .b-off{background:#eee;color:#777}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  tr.inactive td{opacity:.6}
+  tr.dirty{background:#fffaf0}
+  .table-wrap{overflow-x:auto}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px}
+  .denied{text-align:center;padding:50px 20px}
+  .denied h2{font-family:'Fraunces',serif}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(20,40,45,.45);display:none;align-items:center;justify-content:center;z-index:9300;padding:16px}
+  .modal-bg.show{display:flex}
+  .modal{background:#fff;border-radius:16px;padding:22px;width:min(380px,100%)}
+  .modal h3{font-family:'Fraunces',serif;margin:0 0 6px}
+  .modal input{width:100%;margin:10px 0 4px}
+  .modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+  /* burger (links from shared/nav.js) */
+  .nav-toggle{position:fixed;top:16px;left:16px;z-index:9210;width:44px;height:44px;border-radius:12px;border:1px solid rgba(47,101,112,.25);background:rgba(255,255,255,.92);color:var(--teal);font-size:20px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 18px rgba(47,101,112,.14)}
+  .nav-backdrop{position:fixed;inset:0;z-index:9205;background:rgba(33,78,87,.35);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s}
+  .nav-backdrop.show{opacity:1;pointer-events:auto}
+  .side-drawer{position:fixed;top:0;left:0;bottom:0;width:min(320px,82vw);z-index:9206;background:linear-gradient(170deg,#fdfcfa,#f3f7f7);border-right:1px solid var(--line);box-shadow:12px 0 40px rgba(33,78,87,.18);transform:translateX(-100%);transition:transform .25s;padding:74px 16px 24px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+  .side-drawer.show{transform:translateX(0)}
+  .side-drawer .hub-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
+  .side-drawer .hub-grid a{flex-direction:column;justify-content:center;text-align:center;gap:4px;padding:12px 4px;min-height:74px;font-size:10.5px;background:#fff;border:1px solid var(--line)}
+  .side-drawer .hub-grid .hub-icon{font-size:20px}
+  .side-drawer a{display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;color:#4a4442;text-decoration:none;font-size:13.5px;font-weight:600}
+  .side-drawer a:hover{background:var(--teal-soft);color:var(--teal-dark)}
+  .side-drawer a.active{background:var(--teal);color:#fff}
+  .drawer-title{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:700;margin:8px 12px 4px}
+
+  @media (max-width:760px){
+    thead{display:none}
+    table,tbody,tr,td{display:block;width:100%}
+    tr{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;padding:6px 4px}
+    td{border:0;padding:6px 10px}
+    td[data-label]::before{content:attr(data-label);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    td select{width:100%}
+    .search{min-width:0;width:100%}
+  }
+</style>
+</head>
+<body>
+<button class="nav-toggle" id="navToggle" aria-label="Open menu">☰</button>
+<div class="nav-backdrop" id="navBackdrop"></div>
+<nav class="side-drawer" id="sideDrawer">
+  <div data-lb-menu data-hub-class="hub-grid" data-title-class="drawer-title"></div>
+</nav>
+<script src="shared/nav.js"></script>
+
+<div class="wrap">
+  <div class="eyebrow">Admin</div>
+  <h1>User Management</h1>
+  <p class="sub">Change positions, roles and branches, unlock accounts, reset passwords, disable staff who left, and manage the invite code.</p>
+
+  <div id="lockCard" class="card" style="display:none;max-width:420px;margin:30px auto;text-align:center;">
+    <div style="font-size:34px;margin-bottom:6px;">🔐</div>
+    <h2 style="margin-bottom:6px;">Confirm it's you</h2>
+    <p class="muted" style="margin:0 0 14px;">Enter your password to open User Management. It stays unlocked for 15 minutes while you work.</p>
+    <input type="password" id="unlockPw" placeholder="Your password" autocomplete="current-password" style="width:100%;margin-bottom:10px;">
+    <button class="primary" id="unlockBtn" style="width:100%;padding:11px;">Unlock</button>
+    <div class="msg" id="unlockMsg"></div>
+  </div>
+
+  <div id="denied" class="card denied" style="display:none;">
+    <h2>🔒 Admins only</h2>
+    <p class="muted">Ask an admin to give your account the Admin role.</p>
+  </div>
+
+  <div id="adminArea" style="display:none;">
+    <div class="card">
+      <div class="card-head"><h2>🎟️ Invite Code</h2><span class="muted">New staff need this code to register.</span></div>
+      <div class="invite-row">
+        <input type="text" id="inviteInput" maxlength="40" placeholder="No code — registration is closed" autocomplete="off">
+        <button class="primary" id="saveInviteBtn">Save Code</button>
+        <button class="danger" id="closeRegBtn">Close Registration</button>
+      </div>
+      <div class="msg" id="inviteMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>🏷️ Positions</h2><span class="muted">Job titles staff pick when they register. Ticks = which menu sections they see (none ticked = all). Admins always see everything.</span></div>
+      <div class="pos-list" id="posChips"><span class="muted">Loading…</span></div>
+      <div class="invite-row">
+        <input type="text" id="posInput" maxlength="40" placeholder="New position, e.g. Cashier" autocomplete="off">
+        <button class="primary" id="addPosBtn">Add Position</button>
+      </div>
+      <div class="msg" id="posMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>👥 Users <span class="muted" id="userCount"></span></h2>
+        <input type="search" class="search" id="searchBox" placeholder="Search name, username or branch…">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Position</th><th>Role</th><th>Branch</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead>
+          <tbody id="userRows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="msg" id="tableMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="pwModal">
+  <div class="modal">
+    <h3>Reset password</h3>
+    <div class="muted" id="pwFor"></div>
+    <input type="text" id="pwInput" placeholder="New password (min 6 characters)" autocomplete="off">
+    <div class="muted">They will be logged out and must use this new password.</div>
+    <div class="msg" id="pwMsg"></div>
+    <div class="btns"><button id="pwCancel">Cancel</button><button class="primary" id="pwSave">Reset Password</button></div>
+  </div>
+</div>
+
+<script>
+/* drawer */
+(function(){
+  const t=document.getElementById('navToggle'),d=document.getElementById('sideDrawer'),b=document.getElementById('navBackdrop');
+  const close=()=>{d.classList.remove('show');b.classList.remove('show')};
+  t.addEventListener('click',()=>{d.classList.toggle('show');b.classList.toggle('show')});
+  b.addEventListener('click',close);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+})();
+
+const BRANCHES=['ModaMall','Hamala','Galali'];
+function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(v){ if(!v) return 'Never'; const d=new Date(v); return isNaN(d)?'—':d.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+async function api(params){
+  const p=new URLSearchParams(Object.assign({},params,{token:token()}));
+  const res=await fetch(LB_CONFIG.AUTH_API+'?'+p.toString());
+  const d=await res.json();
+  // Unlock expired (15 min idle) or not done yet → ask for the password again.
+  if(d && d.reauth){ showLock(); }
+  return d;
+}
+function showLock(){
+  document.getElementById('adminArea').style.display='none';
+  document.getElementById('lockCard').style.display='block';
+  document.getElementById('unlockPw').value='';
+  setTimeout(()=>document.getElementById('unlockPw').focus(),50);
+}
+async function unlock(){
+  const pw=document.getElementById('unlockPw').value;
+  if(!pw){ setMsg('unlockMsg','Enter your password.',false); return; }
+  const btn=document.getElementById('unlockBtn'); btn.disabled=true; btn.textContent='Checking…';
+  try{
+    const d=await api({action:'adminUnlock',password:pw});
+    btn.disabled=false; btn.textContent='Unlock';
+    if(!d.success){
+      if(/admin/i.test(d.error||'')){ document.getElementById('lockCard').style.display='none'; document.getElementById('denied').style.display='block'; return; }
+      setMsg('unlockMsg',d.error||'Could not unlock.',false); document.getElementById('unlockPw').value=''; return;
+    }
+    setMsg('unlockMsg','',true);
+    try{ sessionStorage.setItem('lbAdminUnlock', token()+'|'+Date.now()); }catch(e){}
+    document.getElementById('lockCard').style.display='none';
+    startAdmin();
+  }catch(e){ btn.disabled=false; btn.textContent='Unlock'; setMsg('unlockMsg','Connection error — please check your connection.',false); }
+}
+function setMsg(id,text,ok){ const el=document.getElementById(id); el.textContent=text||''; el.className='msg '+(ok?'ok':'err'); }
+
+/* ---------- invite code ---------- */
+async function loadInvite(){
+  const d=await api({action:'adminGetInviteCode'});
+  if(d.success) document.getElementById('inviteInput').value=d.inviteCode||'';
+}
+document.getElementById('saveInviteBtn').addEventListener('click',async()=>{
+  const code=document.getElementById('inviteInput').value.trim();
+  if(!code){ setMsg('inviteMsg','Type a code, or use Close Registration.',false); return; }
+  const d=await api({action:'adminSetInviteCode',inviteCode:code});
+  setMsg('inviteMsg',d.success?d.message:(d.error||'Could not save.'),d.success);
+});
+document.getElementById('closeRegBtn').addEventListener('click',async()=>{
+  if(!confirm('Close registration? Nobody can register until you set a new invite code.')) return;
+  const d=await api({action:'adminSetInviteCode',inviteCode:''});
+  if(d.success) document.getElementById('inviteInput').value='';
+  setMsg('inviteMsg',d.success?d.message:(d.error||'Could not save.'),d.success);
+});
+
+/* ---------- positions ---------- */
+let positions=[];   // [{id,name,active}]
+function posOptions(current){
+  const names=positions.filter(p=>p.active).map(p=>p.name);
+  if(current && names.indexOf(current)===-1) names.push(current);
+  return names;
+}
+const MODS=[['chocolate','🍫 Chocolate'],['flower','🌸 Flower'],['item','📦 Item Inv.']];
+function renderPositions(){
+  const box=document.getElementById('posChips');
+  box.innerHTML=positions.length?positions.map(p=>{
+    const all=!Array.isArray(p.modules);
+    const boxes=MODS.map(m=>`<label><input type="checkbox" data-mod="${m[0]}" data-posid="${p.id}"${(all||p.modules.indexOf(m[0])!==-1)?' checked':''}>${m[1]}</label>`).join('');
+    return `<div class="pos-row${p.active?'':' off'}"><span class="pos-name">${esc(p.name)}</span><span class="pos-mods">${boxes}</span>
+      <button data-pos="${p.id}" data-act="${p.active?'false':'true'}" title="${p.active?'Hide from lists':'Show again'}">${p.active?'Hide':'Show'}</button></div>`;
+  }).join(''):'<span class="muted">No positions yet.</span>';
+}
+document.getElementById('posChips').addEventListener('change',async ev=>{
+  const cb=ev.target.closest('input[data-mod]'); if(!cb) return;
+  const id=cb.dataset.posid;
+  const picked=[...document.querySelectorAll(`input[data-posid="${id}"]:checked`)].map(x=>x.dataset.mod);
+  const d=await api({action:'adminSetPositionModules',id,modules:picked.join(',')});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not save.'),d.success);
+  await loadPositions();
+});
+async function loadPositions(){
+  const d=await api({action:'adminListPositions'});
+  if(d.success){ positions=d.positions; renderPositions(); }
+}
+document.getElementById('posChips').addEventListener('click',async ev=>{
+  const b=ev.target.closest('button[data-pos]'); if(!b) return;
+  b.disabled=true;
+  const d=await api({action:'adminSetPositionActive',id:b.dataset.pos,active:b.dataset.act});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not update.'),d.success);
+  await loadPositions(); render();
+});
+document.getElementById('addPosBtn').addEventListener('click',async()=>{
+  const name=document.getElementById('posInput').value.trim();
+  if(!name){ setMsg('posMsg','Type a position name.',false); return; }
+  const d=await api({action:'adminAddPosition',name});
+  setMsg('posMsg',d.success?d.message:(d.error||'Could not add.'),d.success);
+  if(d.success){ document.getElementById('posInput').value=''; await loadPositions(); render(); }
+});
+
+/* ---------- users ---------- */
+let users=[];
+function rowHtml(u){
+  const opt=(list,val)=>list.map(x=>`<option${x===val?' selected':''}>${esc(x)}</option>`).join('');
+  
+  const branches=BRANCHES.indexOf(u.branch)===-1&&u.branch?BRANCHES.concat([u.branch]):BRANCHES;
+  const self=u.isMe;
+  return `<tr data-u="${esc(u.username)}" class="${u.status==='Inactive'?'inactive':''}">
+    <td data-label="User" class="name"><b>${esc(u.fullName||u.username)}</b><span>@${esc(u.username)} · joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
+      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}</td>
+    <td data-label="Position"><select data-f="position"><option value="">— Not set —</option>${opt(posOptions(u.position),u.position)}</select></td>
+    <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(['Staff','Admin'],u.role)}</select></td>
+    <td data-label="Branch"><select data-f="branch">${opt(branches,u.branch)}</select></td>
+    <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(['Active','Inactive'],u.status)}</select></td>
+    <td data-label="Last login">${esc(fmt(u.lastLogin))}${u.failedAttempts?`<br><span class="muted">${u.failedAttempts} failed tr${u.failedAttempts===1?'y':'ies'}</span>`:''}</td>
+    <td data-label="Actions"><div class="actions">
+      <button class="primary" data-a="save" disabled>Save</button>
+      ${u.locked||u.failedAttempts?'<button class="warn" data-a="unlock">Unlock</button>':''}
+      <button data-a="reset">Reset Password</button>
+    </div></td>
+  </tr>`;
+}
+function render(){
+  const q=document.getElementById('searchBox').value.trim().toLowerCase();
+  const list=users.filter(u=>!q||[u.fullName,u.username,u.branch,u.role,u.position].join(' ').toLowerCase().includes(q));
+  document.getElementById('userCount').textContent='('+list.length+(q?' of '+users.length:'')+')';
+  document.getElementById('userRows').innerHTML=list.length?list.map(rowHtml).join(''):'<tr><td colspan="7" class="empty">No users match.</td></tr>';
+}
+async function loadUsers(){
+  const d=await api({action:'adminListUsers'});
+  if(!d.success){
+    if(/admin/i.test(d.error||'')){ document.getElementById('denied').style.display='block'; return false; }
+    document.getElementById('adminArea').style.display='block';
+    setMsg('tableMsg',d.error||'Could not load users.',false); return true;
+  }
+  document.getElementById('adminArea').style.display='block';
+  users=d.users; render(); return true;
+}
+document.getElementById('searchBox').addEventListener('input',render);
+
+const tbody=document.getElementById('userRows');
+tbody.addEventListener('change',ev=>{
+  const tr=ev.target.closest('tr[data-u]'); if(!tr) return;
+  const u=users.find(x=>x.username===tr.dataset.u);
+  const changed=['position','role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==u[f];});
+  tr.classList.toggle('dirty',changed); tr.querySelector('[data-a="save"]').disabled=!changed;
+});
+tbody.addEventListener('click',async ev=>{
+  const btn=ev.target.closest('button[data-a]'); if(!btn) return;
+  const tr=btn.closest('tr[data-u]'); const u=users.find(x=>x.username===tr.dataset.u); if(!u) return;
+  const act=btn.dataset.a;
+  if(act==='reset'){ openPw(u); return; }
+  if(act==='unlock'){
+    btn.disabled=true;
+    const d=await api({action:'adminUnlockUser',username:u.username});
+    setMsg('tableMsg',d.success?(u.username+': '+d.message):(d.error||'Could not unlock.'),d.success);
+    if(d.success) loadUsers(); else btn.disabled=false;
+    return;
+  }
+  if(act==='save'){
+    const params={action:'adminUpdateUser',username:u.username};
+    ['position','role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==u[f])params[f]=el.value;});
+    if(params.role==='Admin'&&!confirm('Give '+(u.fullName||u.username)+' full Admin access?')) return;
+    if(params.status==='Inactive'&&!confirm('Disable '+(u.fullName||u.username)+'? They will be logged out and cannot log in.')) return;
+    btn.disabled=true; btn.textContent='Saving…';
+    const d=await api(params);
+    setMsg('tableMsg',d.success?(u.username+': saved.'+(params.role?' They need to log in again to see the new role.':'')):(d.error||'Could not save.'),d.success);
+    btn.textContent='Save';
+    if(d.success) loadUsers(); else btn.disabled=false;
+  }
+});
+
+/* ---------- reset password modal ---------- */
+let pwUser=null;
+function openPw(u){
+  pwUser=u; document.getElementById('pwFor').textContent='For '+(u.fullName||u.username)+' (@'+u.username+')';
+  document.getElementById('pwInput').value=''; setMsg('pwMsg','',true);
+  document.getElementById('pwModal').classList.add('show'); document.getElementById('pwInput').focus();
+}
+function closePw(){ document.getElementById('pwModal').classList.remove('show'); pwUser=null; }
+document.getElementById('pwCancel').addEventListener('click',closePw);
+document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target.id==='pwModal') closePw(); });
+document.getElementById('pwSave').addEventListener('click',async()=>{
+  const pw=document.getElementById('pwInput').value;
+  if(pw.length<6){ setMsg('pwMsg','At least 6 characters.',false); return; }
+  const btn=document.getElementById('pwSave'); btn.disabled=true;
+  const d=await api({action:'adminResetPassword',username:pwUser.username,newPassword:pw});
+  btn.disabled=false;
+  if(!d.success){ setMsg('pwMsg',d.error||'Could not reset.',false); return; }
+  setMsg('tableMsg',d.message,true); closePw(); loadUsers();
+});
+
+/* start: always ask for the password first */
+function startAdmin(){
+  loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
+    document.getElementById('adminArea').style.display='block';
+    setMsg('tableMsg','Connection error — please check your connection.',false);
+  });
+}
+document.getElementById('unlockBtn').addEventListener('click',unlock);
+document.getElementById('unlockPw').addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+(function(){
+  let u={}; try{ u=window.LALABELLA_USER||JSON.parse(sessionStorage.getItem('lalabellaUser')||localStorage.getItem('lalabellaUser')||'{}')||{}; }catch(e){}
+  if(u.role && String(u.role).toLowerCase()!=='admin'){ document.getElementById('denied').style.display='block'; return; }
+  showLock();
+})();
+</script>
+</body>
+</html>
