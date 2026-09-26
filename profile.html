@@ -100,6 +100,11 @@ body{padding-bottom:0}
 .px-ring.none{background:transparent;border:2px dashed #c9d9dc;padding:1px}
 .px-face{width:100%;height:100%;border-radius:50%;border:3px solid #fff;background:var(--teal-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:22px;color:#fff;overflow:hidden}
 .px-plus{position:absolute;right:-1px;bottom:-1px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid #fff;font-size:15px;font-weight:700;line-height:20px;text-align:center}
+.px-ring.idle{background:transparent;border:2px solid #e3ecee;padding:1px}
+.px-item.idle{cursor:default}.px-item.idle:hover .px-ring{transform:none}
+.px-dot{position:absolute;right:3px;bottom:3px;width:15px;height:15px;border-radius:50%;background:#34b36b;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.05)}
+.px-sep{flex:0 0 auto;width:1px;background:var(--line);margin:8px 2px 26px}
+.px-time.on{color:#2e9a5c;font-weight:700}
 .px-name{font-size:11.5px;font-weight:700;color:#4a4442;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .px-time{font-size:10px;color:var(--muted)}
 .px-empty,.px-loading{font-size:12px;color:var(--muted);align-self:center;padding:10px 4px}
@@ -191,7 +196,7 @@ body{padding-bottom:0}
 <main class="profile-main">
 <div class="load-error-banner" id="loadErrorBanner"></div>
 <div class="px-toolbar"><div class="desktop-label">Today at Lalabella</div><button type="button" class="acct-btn" id="acctBtn" title="Account settings"><span class="gear">⚙️</span>Account settings</button></div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
-<section class="section-card px-status-card"><div class="card-head"><h3 class="section-title">💬 Team Status</h3><p class="card-sub">Shared with all staff · disappears after 24 hours.</p></div><div class="px-strip" id="pxStrip"><div class="px-loading">Loading statuses…</div></div></section>
+<section class="section-card px-status-card"><div class="card-head"><h3 class="section-title">💬 Team Status</h3><p class="card-sub">Shared with all staff · disappears after 24 hours · 🟢 = active now</p></div><div class="px-strip" id="pxStrip"><div class="px-loading">Loading statuses…</div></div></section>
 <section class="section-card px-gallery-card"><div class="card-head"><h3 class="section-title">🖼️ My Gallery</h3><button type="button" class="px-add-btn" id="pxGalAdd">＋ Add picture</button></div><div class="px-gallery" id="pxGallery"></div></section>
 <div class="acct-modal" id="acctModal" aria-hidden="true"><div class="acct-sheet" role="dialog" aria-modal="true" aria-label="Account settings"><div class="acct-head"><b>⚙️ Account Settings</b><button type="button" class="acct-close" id="acctClose" aria-label="Close">✕</button></div>
 <div class="section-card"><div class="card-head"><h3 class="section-title">✏️ Account Information</h3><p class="card-sub">Update your username, name and branch.</p></div><div class="field-grid"><div class="field"><label>Username</label><input type="text" id="usernameField" autocomplete="username" maxlength="30"><div class="field-hint">Used to log in. Letters, numbers, dot, dash or underscore (3–30 characters).</div></div><div class="field"><label>Full Name</label><input type="text" id="fullNameField" autocomplete="name"></div><div class="field"><label>Branch</label><select id="branchField"><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div><div class="field"><label>Role</label><input type="text" id="roleField" disabled><div class="field-hint">Only an admin can change roles.</div></div></div><div class="card-actions"><button class="save-btn" id="saveInfoBtn">Save Changes</button><div class="msg" id="infoMsg"></div></div></div>
@@ -517,6 +522,16 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
     groups = mine.concat(others);
   }
 
+  function onlineMap(){
+    const m = {};
+    (statusData.online || []).forEach(o=>{ m[o.userId] = o; });
+    return m;
+  }
+  function seenAgo(iso){
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    return mins <= 2 ? 'Active now' : 'Active ' + mins + 'm ago';
+  }
+
   function renderStrip(){
     const strip = document.getElementById('pxStrip');
     const mineG = groups.find(g=>g.mine);
@@ -528,16 +543,30 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
       '<span class="px-plus" data-add="1" title="Add status">+</span></div>' +
       '<div class="px-name">My status</div><div class="px-time">' + (mineG ? mineG.items.length + ' active' : 'Tap to add') + '</div></button>';
     const others = groups.filter(g=>!g.mine);
+    const online = onlineMap();
     others.forEach(g=>{
       const t = g.latest.thumb;
       h += '<button type="button" class="px-item" data-user="' + g.userId + '">' +
         '<div class="px-ring ' + (g.allSeen ? 'seen' : '') + '"><div class="px-face" style="' +
         (t ? 'background-image:url(\'' + esc(t) + '\')' : 'background-color:' + esc(g.latest.bg || faceColor(g.userId))) + '">' +
-        (t ? '' : esc(initials(g.name))) + '</div></div>' +
+        (t ? '' : esc(initials(g.name))) + '</div>' + (online[g.userId] ? '<span class="px-dot" title="Active now"></span>' : '') + '</div>' +
         '<div class="px-name">' + esc(String(g.name).split(' ')[0]) + '</div>' +
         '<div class="px-time">' + esc(ago(g.latest.createdAt)) + (g.items.length > 1 ? ' · <span class="px-count">' + g.items.length + '</span>' : '') + '</div></button>';
     });
-    if(!others.length) h += '<div class="px-empty">No team statuses right now — be the first to share one! 🌸</div>';
+    // Staff active right now who haven't posted a status.
+    const withStatus = {};
+    groups.forEach(g=>{ withStatus[g.userId] = 1; });
+    const meId = statusData.me && statusData.me.id;
+    const idle = (statusData.online || []).filter(o=>!withStatus[o.userId] && o.userId !== meId);
+    if(idle.length && others.length) h += '<div class="px-sep" aria-hidden="true"></div>';
+    idle.forEach(o=>{
+      h += '<div class="px-item idle" title="' + esc(o.name) + (o.position ? ' · ' + esc(o.position) : '') + ' — no status yet">' +
+        '<div class="px-ring idle"><div class="px-face" style="background-color:' + faceColor(o.userId) + '">' + esc(initials(o.name)) + '</div>' +
+        '<span class="px-dot"></span></div>' +
+        '<div class="px-name">' + esc(String(o.name).split(' ')[0]) + '</div>' +
+        '<div class="px-time on">' + esc(seenAgo(o.lastSeen)) + '</div></div>';
+    });
+    if(!others.length && !idle.length) h += '<div class="px-empty">No team statuses right now — be the first to share one! 🌸</div>';
     strip.innerHTML = h;
   }
 
