@@ -108,14 +108,11 @@ body{padding-bottom:0}
 .px-add-btn{border:1px solid var(--line);background:#fff;color:var(--teal-dark);border-radius:999px;padding:7px 13px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
 .px-add-btn:hover{background:var(--teal-soft)}
 .px-add-btn:disabled{opacity:.5;cursor:default}
-.px-gallery{display:grid;gap:8px;grid-template-columns:repeat(6,1fr)}
-.px-gallery .px-pic{position:relative;border-radius:3px;overflow:hidden;background:#efe9e6 center/cover no-repeat;cursor:pointer;border:0;padding:0;aspect-ratio:4/3;grid-column:span 2}
+.px-gallery{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;aspect-ratio:3/1;border-radius:4px;overflow:hidden}
+.px-gallery.n0{aspect-ratio:auto;display:block}
+.px-gallery .px-pic{position:relative;overflow:hidden;background:#efe9e6 center/cover no-repeat;cursor:pointer;border:0;padding:0;height:100%;min-width:0;transition:flex .3s}
 .px-gallery .px-pic:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.25));opacity:0;transition:.2s}
 .px-gallery .px-pic:hover:after{opacity:1}
-.px-gallery.n1 .px-pic{grid-column:1/-1;aspect-ratio:3/1}
-.px-gallery.n2 .px-pic{grid-column:span 3;aspect-ratio:16/10}
-.px-gallery.n4 .px-pic{grid-column:span 3;aspect-ratio:16/9}
-.px-gallery.n5 .px-pic:nth-child(-n+2){grid-column:span 3;aspect-ratio:16/9}
 .px-gallery .px-pic.loading{animation:pxPulse 1.2s ease-in-out infinite}
 .px-gallery-empty{grid-column:1/-1;border:2px dashed #d7e3e5;border-radius:3px;padding:34px 16px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;background:rgba(220,235,237,.25)}
 .px-gallery-empty b{display:block;font-size:26px;margin-bottom:6px;color:var(--teal)}
@@ -171,10 +168,7 @@ body{padding-bottom:0}
 .acct-sheet .section-card{margin:12px 12px 0}
 .px-strip{gap:12px}.px-item{width:70px}.px-ring{width:64px;height:64px}
 .px-status-card .card-head,.px-gallery-card .card-head{display:flex;justify-content:space-between;gap:10px}.px-status-card .card-head{display:block}
-.px-gallery{grid-template-columns:repeat(2,1fr);gap:6px}
-.px-gallery .px-pic,.px-gallery.n2 .px-pic,.px-gallery.n4 .px-pic,.px-gallery.n5 .px-pic:nth-child(-n+2){grid-column:span 1;aspect-ratio:1/1}
-.px-gallery.n1 .px-pic{grid-column:1/-1;aspect-ratio:16/9}
-.px-gallery.n3 .px-pic:first-child,.px-gallery.n5 .px-pic:first-child{grid-column:1/-1;aspect-ratio:16/9}
+.px-gallery{aspect-ratio:2/1;gap:3px}
 .px-modal{align-items:flex-end;padding:0}.px-sheet{width:100%;border-radius:18px 18px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
@@ -778,6 +772,7 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
     addBtn.textContent = n >= 6 ? 'Gallery full (6/6)' : '＋ Add picture (' + n + '/6)';
     box.className = 'px-gallery n' + n;
     if(!n && !loadingSlots){
+      box.className = 'px-gallery n0';
       box.innerHTML = '<div class="px-gallery-empty" id="pxGalEmpty"><b>🖼️</b>Add up to 6 pictures to decorate your profile — your team, your arrangements, your favourite moments.</div>';
       document.getElementById('pxGalEmpty').onclick = addBanner;
       return;
