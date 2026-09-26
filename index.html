@@ -59,6 +59,14 @@ header{ padding-top:52px; }
 .edit-toolbar span{font-size:11px;color:#cdbdb7}
 .edit-toolbar button{background:none;border:1px solid var(--line);color:var(--cream);border-radius:20px;padding:7px 14px;font-size:11px;cursor:pointer}
 .edit-toolbar button.reset{color:#f0a6b8;border-color:rgba(240,166,184,.4)}
+.card-hide-btn{display:none;position:absolute;top:10px;right:10px;z-index:3;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(20,8,11,.85);color:var(--cream);font-size:15px;line-height:1;align-items:center;justify-content:center;cursor:pointer}
+.edit-mode .card-hide-btn{display:flex}
+.card.card-hidden{display:none}
+.edit-mode .card.card-hidden{display:block;opacity:.38;border-style:dashed}
+.edit-mode .card.card-hidden::after{content:'HIDDEN';position:absolute;left:20px;bottom:14px;font-size:9px;letter-spacing:.2em;color:#f0a6b8}
+.edit-mode .card.card-hidden .open{visibility:hidden}
+.grid-empty{display:none;grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:30px 10px}
+.grid-empty.show{display:block}
 .card.dragging{opacity:.55;transform:scale(1.04);box-shadow:0 20px 50px rgba(0,0,0,.5);z-index:20;cursor:grabbing}
 .card.drag-ready{transition:transform .15s ease}
 .brand-rose{cursor:pointer}
@@ -441,7 +449,7 @@ window.addEventListener('load', function(){
 <footer id="about" data-edit-key="footer">Thank you for being part of <span>Lalabella</span> 🌹</footer>
 
 <div class="edit-toolbar" id="editToolbar">
-  <span>✏️ Edit mode — tap any text to change it</span>
+  <span>✏️ Edit mode — tap text to change it, hold a card to move it, 👁 to hide it</span>
   <button class="reset" id="resetEditsBtn">↺ Reset to Default</button>
   <button id="doneEditBtn">Done</button>
 </div>
@@ -679,8 +687,47 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     }catch(e){}
   }
 
+  // ---- Hide cards (edit mode 👁 button). Saved per device. ----
+  const HIDDEN_KEY = 'lalabellaHiddenCards';
+  function loadHidden(){
+    try{ const h = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); return Array.isArray(h) ? h : []; }
+    catch(e){ return []; }
+  }
+  let emptyNote = null;
+  function applyHidden(){
+    const hidden = loadHidden();
+    cards.forEach(card=>{
+      const off = hidden.indexOf(card.dataset.cardKey) !== -1;
+      card.classList.toggle('card-hidden', off);
+      const b = card.querySelector('.card-hide-btn');
+      if(b){ b.textContent = off ? '🙈' : '👁'; b.title = off ? 'Show this tool' : 'Hide this tool'; }
+    });
+    if(emptyNote) emptyNote.classList.toggle('show', cards.length > 0 && hidden.length > 0 &&
+      cards.every(c=> hidden.indexOf(c.dataset.cardKey) !== -1));
+  }
+  function toggleHidden(key){
+    const hidden = loadHidden();
+    const i = hidden.indexOf(key);
+    if(i === -1) hidden.push(key); else hidden.splice(i, 1);
+    try{ localStorage.setItem(HIDDEN_KEY, JSON.stringify(hidden)); }catch(e){}
+    applyHidden();
+  }
+  cards.forEach(card=>{
+    const b = document.createElement('span');
+    b.className = 'card-hide-btn';
+    b.setAttribute('role', 'button');
+    card.appendChild(b);
+  });
+  if(grid){
+    emptyNote = document.createElement('div');
+    emptyNote.className = 'grid-empty';
+    emptyNote.textContent = 'All tools are hidden. Double-click the rose to edit and show them again.';
+    grid.appendChild(emptyNote);
+  }
+
   loadOrder();
   loadEdits();
+  applyHidden();
 
   const editToolbar = document.getElementById('editToolbar');
   const doneEditBtn = document.getElementById('doneEditBtn');
@@ -729,8 +776,8 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   }
 
   resetEditsBtn.addEventListener('click', ()=>{
-    if(!confirm('Reset all edited text and card order back to default?')) return;
-    try{ localStorage.removeItem(EDIT_KEY); localStorage.removeItem(ORDER_KEY); }catch(e){}
+    if(!confirm('Reset all edited text, card order and hidden cards back to default?')) return;
+    try{ localStorage.removeItem(EDIT_KEY); localStorage.removeItem(ORDER_KEY); localStorage.removeItem(HIDDEN_KEY); }catch(e){}
     location.reload();
   });
 
@@ -741,6 +788,11 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   if(grid){
     grid.addEventListener('click', (e)=>{
       if(editMode) e.preventDefault();
+      const hb = e.target.closest('.card-hide-btn');
+      if(hb && editMode){
+        e.stopPropagation();
+        toggleHidden(hb.closest('.card[data-card-key]').dataset.cardKey);
+      }
     });
   }
 
@@ -758,7 +810,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
 
     grid.addEventListener('pointerdown', (e)=>{
       const card = e.target.closest('.card[data-card-key]');
-      if(!card) return;
+      if(!card || e.target.closest('.card-hide-btn')) return;
       startX = e.clientX; startY = e.clientY;
       if(editMode){
         e.preventDefault();
