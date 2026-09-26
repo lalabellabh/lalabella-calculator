@@ -75,6 +75,108 @@ body{padding-bottom:0}
 .field{margin-bottom:7px}.field input,.field select{padding:8px 11px}.field-hint{display:none}
 .profile-main{gap:10px}
 }
+/* ---------- Team Status + Gallery + Account Settings panel ---------- */
+.px-toolbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 -3px}
+.px-toolbar .desktop-label{margin:0}
+.acct-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--teal-dark);border-radius:999px;padding:8px 14px 8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(47,101,112,.08);transition:.2s}
+.acct-btn .gear{font-size:16px;line-height:1;display:inline-block;transition:transform .5s ease}
+.acct-btn:hover{background:var(--teal);color:#fff;border-color:var(--teal)}.acct-btn:hover .gear{transform:rotate(90deg)}
+.acct-modal{position:fixed;inset:0;z-index:9500;background:rgba(33,50,54,.45);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.acct-modal.show{display:flex}
+.acct-sheet{width:min(820px,100%);display:grid;gap:14px;animation:rise .3s ease both}
+.acct-head{display:flex;align-items:center;justify-content:space-between;background:var(--teal);color:#fff;border-radius:3px;padding:12px 16px}
+.acct-head b{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+.acct-close{background:rgba(255,255,255,.15);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}
+.acct-sheet .section-card{margin:0}
+.acct-sheet .section-card:hover{transform:none}
+
+.px-status-card .card-head,.px-gallery-card .card-head{align-items:center}
+.px-strip{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.px-strip::-webkit-scrollbar{height:6px}.px-strip::-webkit-scrollbar-thumb{background:#d6cfcb;border-radius:3px}
+.px-item{flex:0 0 auto;width:78px;text-align:center;cursor:pointer;scroll-snap-align:start;background:none;border:0;padding:0;font:inherit;color:inherit}
+.px-ring{width:70px;height:70px;margin:0 auto 6px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,var(--rose),var(--gold),var(--teal),var(--rose));position:relative;transition:transform .2s}
+.px-item:hover .px-ring{transform:scale(1.05)}
+.px-ring.seen{background:#d9d2ce}
+.px-ring.none{background:transparent;border:2px dashed #c9d9dc;padding:1px}
+.px-face{width:100%;height:100%;border-radius:50%;border:3px solid #fff;background:var(--teal-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:22px;color:#fff;overflow:hidden}
+.px-plus{position:absolute;right:-1px;bottom:-1px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid #fff;font-size:15px;font-weight:700;line-height:20px;text-align:center}
+.px-name{font-size:11.5px;font-weight:700;color:#4a4442;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.px-time{font-size:10px;color:var(--muted)}
+.px-empty,.px-loading{font-size:12px;color:var(--muted);align-self:center;padding:10px 4px}
+.px-count{font-size:10px;color:var(--teal);font-weight:700}
+
+.px-add-btn{border:1px solid var(--line);background:#fff;color:var(--teal-dark);border-radius:999px;padding:7px 13px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.px-add-btn:hover{background:var(--teal-soft)}
+.px-add-btn:disabled{opacity:.5;cursor:default}
+.px-gallery{display:grid;gap:8px;grid-template-columns:repeat(6,1fr)}
+.px-gallery .px-pic{position:relative;border-radius:3px;overflow:hidden;background:#efe9e6 center/cover no-repeat;cursor:pointer;border:0;padding:0;aspect-ratio:4/3;grid-column:span 2}
+.px-gallery .px-pic:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.25));opacity:0;transition:.2s}
+.px-gallery .px-pic:hover:after{opacity:1}
+.px-gallery.n1 .px-pic{grid-column:1/-1;aspect-ratio:3/1}
+.px-gallery.n2 .px-pic{grid-column:span 3;aspect-ratio:16/10}
+.px-gallery.n4 .px-pic{grid-column:span 3;aspect-ratio:16/9}
+.px-gallery.n5 .px-pic:nth-child(-n+2){grid-column:span 3;aspect-ratio:16/9}
+.px-gallery .px-pic.loading{animation:pxPulse 1.2s ease-in-out infinite}
+.px-gallery-empty{grid-column:1/-1;border:2px dashed #d7e3e5;border-radius:3px;padding:34px 16px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;background:rgba(220,235,237,.25)}
+.px-gallery-empty b{display:block;font-size:26px;margin-bottom:6px;color:var(--teal)}
+@keyframes pxPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* Composer + gallery viewer (light sheets) */
+.px-modal{position:fixed;inset:0;z-index:9600;background:rgba(20,28,30,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+.px-sheet{background:#fff;width:min(440px,100%);max-height:92vh;overflow-y:auto;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.3);animation:rise .25s ease both}
+.px-sheet h4{margin:0 0 12px;font-family:'Fraunces',serif;font-size:19px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.px-sheet h4 button{background:none;border:0;font-size:18px;color:var(--muted);cursor:pointer}
+.px-preview{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:9/12;max-height:52vh;width:100%;display:flex;align-items:center;justify-content:center;background:#2f6570;color:#fff;text-align:center;margin-bottom:12px}
+.px-preview img{width:100%;height:100%;object-fit:cover}
+.px-preview .px-ptext{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 14px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.6));font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.px-preview.textonly .px-ptext{position:static;background:none;padding:22px;font-family:'Fraunces',serif;font-size:22px;line-height:1.3}
+.px-preview .px-ptext:empty{display:none}
+.px-preview .px-rmimg{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:14px}
+.px-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.px-sw{width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.px-sw.on{box-shadow:0 0 0 2px var(--ink)}
+.px-sheet textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;color:var(--ink);background:#fff}
+.px-counter{font-size:10.5px;color:var(--muted);text-align:right;margin:4px 0 12px}
+.px-actions{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.px-btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--teal);color:#fff}
+.px-btn.ghost{background:var(--teal-soft);color:var(--teal-dark)}
+.px-btn.danger{background:#fbeaea;color:#a12b20}
+.px-btn:disabled{opacity:.55;cursor:default}
+.px-msg{font-size:12px;color:#a12b20;margin:8px 0 0;min-height:0}
+.px-lightbox img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#111;display:block;margin-bottom:12px}
+
+/* Status viewer (full screen, always dark) */
+.pxv{position:fixed;inset:0;z-index:9700;background:#0d0d0f;color:#fff;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+.pxv-stage{position:relative;width:min(460px,100%);height:min(820px,100%);background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
+@media(min-width:600px){.pxv-stage{border-radius:14px;height:min(820px,calc(100% - 40px))}}
+.pxv-bars{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:4px;z-index:3}
+.pxv-bar{flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden}
+.pxv-bar i{display:block;height:100%;width:0;background:#fff}
+.pxv-head{position:absolute;top:20px;left:10px;right:10px;display:flex;align-items:center;gap:10px;z-index:3}
+.pxv-av{width:36px;height:36px;border-radius:50%;background:#2f6570 center/cover;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;border:2px solid rgba(255,255,255,.7)}
+.pxv-who{flex:1;min-width:0;line-height:1.2}.pxv-who b{display:block;font-size:13.5px}.pxv-who span{font-size:11px;opacity:.75}
+.pxv-ico{width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.35);color:#fff;font-size:16px;cursor:pointer;flex:0 0 auto}
+.pxv-body{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.pxv-body img{width:100%;height:100%;object-fit:contain}
+.pxv-textonly{padding:40px 28px;text-align:center;font-family:'Fraunces',serif;font-size:26px;line-height:1.35;white-space:pre-wrap;word-break:break-word;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.pxv-cap{position:absolute;left:0;right:0;bottom:0;padding:40px 18px calc(22px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,transparent,rgba(0,0,0,.75));font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word;z-index:2}
+.pxv-cap:empty{display:none}
+.pxv-tap{position:absolute;top:70px;bottom:0;width:35%;z-index:2;cursor:pointer}.pxv-tap.l{left:0}.pxv-tap.r{right:0;width:65%}
+.pxv-spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+
+@media(max-width:859px){
+.px-toolbar{display:flex;margin:0 0 14px}.px-toolbar .desktop-label{display:block;margin:0}
+.acct-modal{padding:0;align-items:stretch}.acct-sheet{width:100%;gap:0;align-content:start;background:var(--cream);min-height:100%}
+.acct-head{border-radius:0;position:sticky;top:0;z-index:2;padding:14px 16px calc(14px);padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.acct-sheet .section-card{margin:12px 12px 0}
+.px-strip{gap:12px}.px-item{width:70px}.px-ring{width:64px;height:64px}
+.px-status-card .card-head,.px-gallery-card .card-head{display:flex;justify-content:space-between;gap:10px}.px-status-card .card-head{display:block}
+.px-gallery{grid-template-columns:repeat(2,1fr);gap:6px}
+.px-gallery .px-pic,.px-gallery.n2 .px-pic,.px-gallery.n4 .px-pic,.px-gallery.n5 .px-pic:nth-child(-n+2){grid-column:span 1;aspect-ratio:1/1}
+.px-gallery.n1 .px-pic{grid-column:1/-1;aspect-ratio:16/9}
+.px-gallery.n3 .px-pic:first-child,.px-gallery.n5 .px-pic:first-child{grid-column:1/-1;aspect-ratio:16/9}
+.px-modal{align-items:flex-end;padding:0}.px-sheet{width:100%;border-radius:18px 18px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -94,9 +196,13 @@ body{padding-bottom:0}
 <div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div><div class="meta-list"><div><span>Username</span><b id="metaUsername">—</b></div><div><span>Position</span><b id="metaPosition">—</b></div><div><span>Role</span><b id="metaRole">—</b></div><div><span>Branch</span><b id="metaBranch">—</b></div><div><span>Member since</span><b id="metaSince">—</b></div></div></div><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></aside>
 <main class="profile-main">
 <div class="load-error-banner" id="loadErrorBanner"></div>
-<div class="desktop-label">Account settings</div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
+<div class="px-toolbar"><div class="desktop-label">Today at Lalabella</div><button type="button" class="acct-btn" id="acctBtn" title="Account settings"><span class="gear">⚙️</span>Account settings</button></div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
+<section class="section-card px-status-card"><div class="card-head"><h3 class="section-title">💬 Team Status</h3><p class="card-sub">Shared with all staff · disappears after 24 hours.</p></div><div class="px-strip" id="pxStrip"><div class="px-loading">Loading statuses…</div></div></section>
+<section class="section-card px-gallery-card"><div class="card-head"><h3 class="section-title">🖼️ My Gallery</h3><button type="button" class="px-add-btn" id="pxGalAdd">＋ Add picture</button></div><div class="px-gallery" id="pxGallery"></div></section>
+<div class="acct-modal" id="acctModal" aria-hidden="true"><div class="acct-sheet" role="dialog" aria-modal="true" aria-label="Account settings"><div class="acct-head"><b>⚙️ Account Settings</b><button type="button" class="acct-close" id="acctClose" aria-label="Close">✕</button></div>
 <div class="section-card"><div class="card-head"><h3 class="section-title">✏️ Account Information</h3><p class="card-sub">Update your username, name and branch.</p></div><div class="field-grid"><div class="field"><label>Username</label><input type="text" id="usernameField" autocomplete="username" maxlength="30"><div class="field-hint">Used to log in. Letters, numbers, dot, dash or underscore (3–30 characters).</div></div><div class="field"><label>Full Name</label><input type="text" id="fullNameField" autocomplete="name"></div><div class="field"><label>Branch</label><select id="branchField"><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div><div class="field"><label>Role</label><input type="text" id="roleField" disabled><div class="field-hint">Only an admin can change roles.</div></div></div><div class="card-actions"><button class="save-btn" id="saveInfoBtn">Save Changes</button><div class="msg" id="infoMsg"></div></div></div>
 <div class="section-card"><div class="card-head"><h3 class="section-title">🔒 Change Password</h3><p class="card-sub">At least 6 characters.</p></div><div class="field-grid three"><div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="currentPw" autocomplete="current-password"><button type="button" class="pw-toggle" id="toggleCurrentPw">👁</button></div></div><div class="field"><label>New Password</label><div class="pw-wrap"><input type="password" id="newPw" autocomplete="new-password"><button type="button" class="pw-toggle" id="toggleNewPw">👁</button></div></div><div class="field"><label>Confirm New Password</label><div class="pw-wrap"><input type="password" id="confirmPw" autocomplete="new-password"><button type="button" class="pw-toggle" id="toggleConfirmPw">👁</button></div></div></div><div class="card-actions"><button class="save-btn" id="savePwBtn">Update Password</button><div class="msg" id="pwMsg"></div></div></div>
+</div></div>
 </main></div></div>
 <script>
 // CORRECTED — the previous version of this UI accidentally pointed at
@@ -299,5 +405,457 @@ function logout(){
 }
 document.getElementById('logoutBtn').addEventListener('click',logout);
 </script>
+<script>
+/* =================================================================
+   Account Settings panel · Team Status (24 h) · My Gallery
+   Backend: ProfileExtras.gs in the Auth Apps Script project.
+   ================================================================= */
+(function(){
+  // ---------- Account Settings (⚙️) ----------
+  const acctModal = document.getElementById('acctModal');
+  document.body.appendChild(acctModal);   // out of .wrap so it sits above the burger button
+  function openAcct(){ acctModal.classList.add('show'); acctModal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+  function closeAcct(){ acctModal.classList.remove('show'); acctModal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  document.getElementById('acctBtn').addEventListener('click', openAcct);
+  document.getElementById('acctClose').addEventListener('click', closeAcct);
+  acctModal.addEventListener('click', e=>{ if(e.target === acctModal) closeAcct(); });
+
+  // ---------- helpers ----------
+  const API = LB_CONFIG.AUTH_API;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function apiGet(action, extra){
+    const q = new URLSearchParams(Object.assign({action, token:getToken(), _ts:Date.now()}, extra||{}));
+    const r = await fetch(API + '?' + q.toString());
+    return r.json();
+  }
+  async function apiPost(action, fields){
+    const body = new URLSearchParams(Object.assign({action, token:getToken()}, fields||{}));
+    const r = await fetch(API, { method:'POST', body });
+    return r.json();
+  }
+  function initials(name){
+    const parts = String(name||'?').trim().split(/\s+/);
+    return ((parts[0]||'?')[0] + (parts.length > 1 ? parts[parts.length-1][0] : '')).toUpperCase();
+  }
+  const FACE_COLORS = ['#2f6570','#c9506b','#b07d2b','#5f8f63','#7a5a9e','#3d6fa3'];
+  function faceColor(id){ return FACE_COLORS[Math.abs(Number(id)||0) % FACE_COLORS.length]; }
+  function ago(iso){
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if(m < 1) return 'just now';
+    if(m < 60) return m + 'm ago';
+    return Math.floor(m/60) + 'h ago';
+  }
+  function myPhotoUrl(){
+    const bg = document.getElementById('avatarImg').style.backgroundImage || '';
+    const m = bg.match(/url\(["']?(.*?)["']?\)$/);
+    return m ? m[1] : '';
+  }
+
+  // Compress a picture on the phone before uploading (keeps uploads small and fast).
+  function loadImage(file){
+    return new Promise((res, rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=>{ const img = new Image(); img.onload = ()=>res(img); img.onerror = ()=>rej(new Error('Could not read that picture.')); img.src = fr.result; };
+      fr.onerror = ()=>rej(new Error('Could not read that file.'));
+      fr.readAsDataURL(file);
+    });
+  }
+  function toJpeg(img, maxDim, maxChars, square){
+    let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+    if(square){ const s = Math.min(sw, sh); sx = (sw - s)/2; sy = (sh - s)/2; sw = sh = s; }
+    let scale = Math.min(1, maxDim / Math.max(sw, sh));
+    for(let tries = 0; tries < 8; tries++){
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      for(const q of [0.8, 0.7, 0.6, 0.5]){
+        const url = c.toDataURL('image/jpeg', q);
+        if(url.length <= maxChars) return url;
+      }
+      scale *= 0.8;
+    }
+    throw new Error('That picture is too large. Please try another one.');
+  }
+  function pickFile(){
+    return new Promise(resolve=>{
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = ()=>resolve(inp.files && inp.files[0]);
+      inp.click();
+    });
+  }
+  function modal(html){
+    const m = document.createElement('div');
+    m.className = 'px-modal';
+    m.innerHTML = '<div class="px-sheet" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(m);
+    const close = ()=>{ m.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = e=>{ if(e.key === 'Escape') close(); };
+    m.addEventListener('click', e=>{ if(e.target === m || e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', onKey);
+    return { el:m, close };
+  }
+
+  // ================= TEAM STATUS =================
+  const SEEN_KEY = 'lbStatusSeen';
+  let statusData = { me:null, isAdmin:false, statuses:[] };
+  let groups = [];
+  const imageCache = {};
+
+  function seenList(){ try{ const s = JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); return Array.isArray(s) ? s : []; }catch(e){ return []; } }
+  function markSeen(id){
+    const s = seenList();
+    if(s.indexOf(id) === -1){ s.push(id); try{ localStorage.setItem(SEEN_KEY, JSON.stringify(s.slice(-400))); }catch(e){} }
+  }
+
+  function buildGroups(){
+    const byUser = {};
+    statusData.statuses.forEach(st=>{
+      (byUser[st.userId] = byUser[st.userId] || { userId:st.userId, name:st.name, position:st.position, mine:st.mine, items:[] }).items.push(st);
+    });
+    const list = Object.keys(byUser).map(k=>byUser[k]);
+    const seen = seenList();
+    list.forEach(g=>{ g.allSeen = g.items.every(i=>seen.indexOf(i.id) !== -1); g.latest = g.items[g.items.length-1]; });
+    const mine = list.filter(g=>g.mine);
+    const others = list.filter(g=>!g.mine).sort((a,b)=> (a.allSeen - b.allSeen) || (new Date(b.latest.createdAt) - new Date(a.latest.createdAt)));
+    groups = mine.concat(others);
+  }
+
+  function renderStrip(){
+    const strip = document.getElementById('pxStrip');
+    const mineG = groups.find(g=>g.mine);
+    const photo = myPhotoUrl();
+    let h = '<button type="button" class="px-item" data-my="1" title="' + (mineG ? 'View my status' : 'Add a status') + '">' +
+      '<div class="px-ring ' + (mineG ? '' : 'none') + '"><div class="px-face" style="' +
+      (photo ? 'background-image:url(\'' + esc(photo) + '\')' : 'background-color:' + faceColor(statusData.me && statusData.me.id)) + '">' +
+      (photo ? '' : esc(initials(statusData.me ? statusData.me.name : '?'))) + '</div>' +
+      '<span class="px-plus" data-add="1" title="Add status">+</span></div>' +
+      '<div class="px-name">My status</div><div class="px-time">' + (mineG ? mineG.items.length + ' active' : 'Tap to add') + '</div></button>';
+    const others = groups.filter(g=>!g.mine);
+    others.forEach(g=>{
+      const t = g.latest.thumb;
+      h += '<button type="button" class="px-item" data-user="' + g.userId + '">' +
+        '<div class="px-ring ' + (g.allSeen ? 'seen' : '') + '"><div class="px-face" style="' +
+        (t ? 'background-image:url(\'' + esc(t) + '\')' : 'background-color:' + esc(g.latest.bg || faceColor(g.userId))) + '">' +
+        (t ? '' : esc(initials(g.name))) + '</div></div>' +
+        '<div class="px-name">' + esc(String(g.name).split(' ')[0]) + '</div>' +
+        '<div class="px-time">' + esc(ago(g.latest.createdAt)) + (g.items.length > 1 ? ' · <span class="px-count">' + g.items.length + '</span>' : '') + '</div></button>';
+    });
+    if(!others.length) h += '<div class="px-empty">No team statuses right now — be the first to share one! 🌸</div>';
+    strip.innerHTML = h;
+  }
+
+  async function loadStatuses(){
+    try{
+      const d = await apiGet('statusList');
+      if(!d.success) throw new Error(d.error || 'Could not load statuses.');
+      statusData = d;
+      buildGroups();
+      renderStrip();
+    }catch(e){
+      document.getElementById('pxStrip').innerHTML = '<div class="px-empty">Could not load team statuses. <a href="#" id="pxRetry">Try again</a></div>';
+      const r = document.getElementById('pxRetry');
+      if(r) r.onclick = ev=>{ ev.preventDefault(); loadStatuses(); };
+    }
+  }
+
+  document.getElementById('pxStrip').addEventListener('click', e=>{
+    const item = e.target.closest('.px-item');
+    if(!item) return;
+    if(item.dataset.my){
+      const mineIdx = groups.findIndex(g=>g.mine);
+      if(e.target.closest('[data-add]') || mineIdx === -1) openComposer();
+      else openViewer(mineIdx);
+      return;
+    }
+    const idx = groups.findIndex(g=>String(g.userId) === item.dataset.user);
+    if(idx !== -1) openViewer(idx);
+  });
+
+  // ---------- composer ----------
+  const BG_COLORS = ['#2f6570','#c9506b','#9e2f4a','#b07d2b','#5f8f63','#3a3530'];
+  function openComposer(){
+    const st = { img:null, dataUrl:'', bg:BG_COLORS[0] };
+    const m = modal(
+      '<h4>New status <button type="button" data-close aria-label="Close">✕</button></h4>' +
+      '<div class="px-preview textonly" id="pxcPrev" data-lb-theme-skip style="background:' + st.bg + '"><div class="px-ptext" id="pxcPText"></div></div>' +
+      '<div class="px-row"><button type="button" class="px-btn ghost" id="pxcPic">📷 Add picture</button>' +
+      '<span id="pxcSw">' + BG_COLORS.map((c,i)=>'<button type="button" class="px-sw' + (i===0?' on':'') + '" data-c="' + c + '" style="background:' + c + '" aria-label="Background colour"></button>').join(' ') + '</span></div>' +
+      '<textarea id="pxcText" maxlength="300" placeholder="What\'s happening? (optional with a picture)"></textarea>' +
+      '<div class="px-counter"><span id="pxcCount">0</span>/300 · visible to all staff for 24 hours</div>' +
+      '<div class="px-actions"><button type="button" class="px-btn ghost" data-close>Cancel</button><button type="button" class="px-btn" id="pxcPost">Post status</button></div>' +
+      '<div class="px-msg" id="pxcMsg"></div>'
+    );
+    const $ = id => m.el.querySelector('#' + id);
+    function draw(){
+      const prev = $('pxcPrev'), text = $('pxcText').value;
+      prev.classList.toggle('textonly', !st.dataUrl);
+      prev.style.background = st.dataUrl ? '#111' : st.bg;
+      prev.innerHTML = (st.dataUrl ? '<img src="' + st.dataUrl + '" alt=""><button type="button" class="px-rmimg" id="pxcRm" aria-label="Remove picture">✕</button>' : '') +
+        '<div class="px-ptext"></div>';
+      prev.querySelector('.px-ptext').textContent = text || (st.dataUrl ? '' : 'Your status…');
+      $('pxcSw').style.display = st.dataUrl ? 'none' : '';
+      $('pxcPic').textContent = st.dataUrl ? '📷 Change picture' : '📷 Add picture';
+      $('pxcCount').textContent = text.length;
+      const rm = $('pxcRm'); if(rm) rm.onclick = ()=>{ st.img = null; st.dataUrl = ''; draw(); };
+    }
+    $('pxcText').addEventListener('input', draw);
+    $('pxcSw').addEventListener('click', e=>{
+      const b = e.target.closest('.px-sw'); if(!b) return;
+      st.bg = b.dataset.c;
+      $('pxcSw').querySelectorAll('.px-sw').forEach(x=>x.classList.toggle('on', x === b));
+      draw();
+    });
+    $('pxcPic').addEventListener('click', async ()=>{
+      const f = await pickFile(); if(!f) return;
+      try{ st.img = await loadImage(f); st.dataUrl = toJpeg(st.img, 1080, 200000); $('pxcMsg').textContent = ''; }
+      catch(err){ $('pxcMsg').textContent = err.message; }
+      draw();
+    });
+    $('pxcPost').addEventListener('click', async ()=>{
+      const text = $('pxcText').value.trim();
+      if(!text && !st.dataUrl){ $('pxcMsg').textContent = 'Write something or add a picture.'; return; }
+      const btn = $('pxcPost'); btn.disabled = true; btn.textContent = 'Posting…'; $('pxcMsg').textContent = '';
+      try{
+        const fields = { text, bg:st.bg };
+        if(st.img){ fields.image = st.dataUrl; fields.thumb = toJpeg(st.img, 180, 22000, true); }
+        const d = await apiPost('statusAdd', fields);
+        if(!d.success) throw new Error(d.error || 'Could not post.');
+        m.close();
+        await loadStatuses();
+      }catch(err){
+        btn.disabled = false; btn.textContent = 'Post status';
+        $('pxcMsg').textContent = err.message || 'Connection error.';
+      }
+    });
+    draw();
+    setTimeout(()=>$('pxcText').focus(), 50);
+  }
+
+  // ---------- viewer ----------
+  const STATUS_MS = 6000;
+  function openViewer(startGroup){
+    let gi = startGroup, si = 0, timer = null, started = 0, elapsed = 0, paused = false, ready = false, closed = false;
+    if(groups[gi] && !groups[gi].mine){
+      // Start at the first unseen status of this person.
+      const seen = seenList();
+      const k = groups[gi].items.findIndex(i=>seen.indexOf(i.id) === -1);
+      si = k === -1 ? 0 : k;
+    }
+    const v = document.createElement('div');
+    v.className = 'pxv';
+    v.setAttribute('data-lb-theme-skip', '');   // keep status colours true in dark mode
+    v.innerHTML = '<div class="pxv-stage"><div class="pxv-bars"></div>' +
+      '<div class="pxv-head"><div class="pxv-av"></div><div class="pxv-who"><b></b><span></span></div>' +
+      '<button type="button" class="pxv-ico" data-del title="Delete status" style="display:none">🗑</button>' +
+      '<button type="button" class="pxv-ico" data-x title="Close">✕</button></div>' +
+      '<div class="pxv-body"></div><div class="pxv-cap"></div>' +
+      '<div class="pxv-tap l"></div><div class="pxv-tap r"></div></div>';
+    document.body.appendChild(v);
+    document.body.style.overflow = 'hidden';
+    const q = s => v.querySelector(s);
+
+    function close(){
+      if(closed) return; closed = true;
+      clearInterval(timer); v.remove(); document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      buildGroups(); renderStrip();
+    }
+    function tick(){
+      if(paused || !ready) return;
+      const p = Math.min(1, (elapsed + (Date.now() - started)) / STATUS_MS);
+      const bar = q('.pxv-bar.cur i'); if(bar) bar.style.width = (p*100) + '%';
+      if(p >= 1) next();
+    }
+    function show(){
+      const g = groups[gi]; if(!g){ close(); return; }
+      const st = g.items[si];
+      ready = false; elapsed = 0;
+      q('.pxv-bars').innerHTML = g.items.map((x,i)=>'<div class="pxv-bar' + (i===si?' cur':'') + '"><i style="width:' + (i<si?100:0) + '%"></i></div>').join('');
+      const av = q('.pxv-av');
+      const photo = g.mine ? myPhotoUrl() : '';
+      av.style.backgroundImage = photo ? 'url(\'' + photo + '\')' : '';
+      av.style.backgroundColor = faceColor(g.userId);
+      av.textContent = photo ? '' : initials(g.name);
+      q('.pxv-who b').textContent = g.mine ? 'My status' : g.name;
+      q('.pxv-who span').textContent = ago(st.createdAt) + (g.position && !g.mine ? ' · ' + g.position : '');
+      q('[data-del]').style.display = (st.mine || statusData.isAdmin) ? '' : 'none';
+      const body = q('.pxv-body'), cap = q('.pxv-cap');
+      markSeen(st.id);
+      if(st.hasImage){
+        cap.textContent = st.text || '';
+        body.style.background = '#000';
+        const put = src=>{
+          if(closed || groups[gi] !== g || g.items[si] !== st) return;
+          body.innerHTML = '<img alt="">';
+          const im = body.querySelector('img');
+          im.onload = ()=>{ ready = true; started = Date.now(); };
+          im.onerror = ()=>{ ready = true; started = Date.now(); };
+          im.src = src;
+        };
+        if(imageCache[st.id]) put(imageCache[st.id]);
+        else{
+          body.innerHTML = (st.thumb ? '<img alt="" src="' + st.thumb + '" style="filter:blur(12px);transform:scale(1.1)">' : '') +
+            '<div class="pxv-spin" style="position:absolute"></div>';
+          apiGet('statusImage', { id: st.id }).then(d=>{
+            if(d.success && d.image){ imageCache[st.id] = d.image; put(d.image); }
+            else { body.innerHTML = '<div class="pxv-textonly">' + esc(d.error || 'Picture unavailable.') + '</div>'; ready = true; started = Date.now(); }
+          }).catch(()=>{ body.innerHTML = '<div class="pxv-textonly">Could not load picture.</div>'; ready = true; started = Date.now(); });
+        }
+      }else{
+        cap.textContent = '';
+        body.style.background = st.bg || '#2f6570';
+        body.innerHTML = '<div class="pxv-textonly"></div>';
+        body.firstChild.textContent = st.text || '';
+        ready = true; started = Date.now();
+      }
+      // Preload the next picture.
+      const nx = g.items[si+1] || (groups[gi+1] && groups[gi+1].items[0]);
+      if(nx && nx.hasImage && !imageCache[nx.id]) apiGet('statusImage', { id: nx.id }).then(d=>{ if(d.success) imageCache[nx.id] = d.image; }).catch(()=>{});
+    }
+    function next(){
+      const g = groups[gi];
+      if(si < g.items.length - 1){ si++; show(); return; }
+      if(gi < groups.length - 1 && !g.mine){ gi++; si = 0; show(); return; }
+      close();
+    }
+    function prev(){
+      if(si > 0){ si--; show(); return; }
+      if(gi > 0 && !groups[gi-1].mine){ gi--; si = groups[gi].items.length - 1; show(); return; }
+      show();
+    }
+    function pause(){ if(!paused && ready){ elapsed += Date.now() - started; } paused = true; }
+    function resume(){ if(paused){ paused = false; started = Date.now(); } }
+    const onKey = e=>{
+      if(e.key === 'Escape') close();
+      else if(e.key === 'ArrowRight') next();
+      else if(e.key === 'ArrowLeft') prev();
+    };
+    document.addEventListener('keydown', onKey);
+
+    // Tap left/right to move, press and hold to pause.
+    let downAt = 0;
+    ['l','r'].forEach(side=>{
+      const z = q('.pxv-tap.' + side);
+      z.addEventListener('pointerdown', ()=>{ downAt = Date.now(); pause(); });
+      z.addEventListener('pointerup', ()=>{
+        const long = Date.now() - downAt > 350;
+        resume();
+        if(!long) (side === 'l' ? prev : next)();
+      });
+      z.addEventListener('pointerleave', resume);
+    });
+    q('[data-x]').addEventListener('click', close);
+    q('[data-del]').addEventListener('click', async ()=>{
+      const st = groups[gi].items[si];
+      pause();
+      if(!confirm('Delete this status?')){ resume(); return; }
+      try{
+        const d = await apiPost('statusDelete', { id: st.id });
+        if(!d.success) throw new Error(d.error || 'Could not delete.');
+        statusData.statuses = statusData.statuses.filter(x=>x.id !== st.id);
+        const g = groups[gi];
+        g.items.splice(si, 1);
+        if(!g.items.length){ close(); return; }
+        if(si >= g.items.length) si = g.items.length - 1;
+        paused = false; show();
+      }catch(err){ alert(err.message || 'Connection error.'); resume(); }
+    });
+
+    timer = setInterval(tick, 50);
+    show();
+  }
+
+  // ================= MY GALLERY =================
+  let banners = [];
+  function renderGallery(loadingSlots){
+    const box = document.getElementById('pxGallery');
+    const addBtn = document.getElementById('pxGalAdd');
+    const n = banners.length;
+    addBtn.disabled = n >= 6;
+    addBtn.textContent = n >= 6 ? 'Gallery full (6/6)' : '＋ Add picture (' + n + '/6)';
+    box.className = 'px-gallery n' + n;
+    if(!n && !loadingSlots){
+      box.innerHTML = '<div class="px-gallery-empty" id="pxGalEmpty"><b>🖼️</b>Add up to 6 pictures to decorate your profile — your team, your arrangements, your favourite moments.</div>';
+      document.getElementById('pxGalEmpty').onclick = addBanner;
+      return;
+    }
+    if(loadingSlots){
+      box.className = 'px-gallery n3';
+      box.innerHTML = '<div class="px-pic loading"></div><div class="px-pic loading"></div><div class="px-pic loading"></div>';
+      return;
+    }
+    box.innerHTML = banners.map(b=>'<button type="button" class="px-pic" data-slot="' + b.slot + '" style="background-image:url(\'' + esc(b.image) + '\')" aria-label="Gallery picture"></button>').join('');
+  }
+  async function loadBanners(){
+    renderGallery(true);
+    try{
+      const d = await apiGet('bannerList');
+      if(!d.success) throw new Error(d.error);
+      banners = d.banners || [];
+    }catch(e){ banners = []; }
+    renderGallery(false);
+  }
+  async function saveBannerTo(slot, file){
+    const img = await loadImage(file);
+    const dataUrl = toJpeg(img, 1400, 200000);
+    const d = await apiPost('bannerSave', { slot, image: dataUrl });
+    if(!d.success) throw new Error(d.error || 'Could not save picture.');
+    const i = banners.findIndex(b=>b.slot === slot);
+    if(i === -1) banners.push({ slot, image: dataUrl }); else banners[i].image = dataUrl;
+    banners.sort((a,b)=>a.slot - b.slot);
+    renderGallery(false);
+  }
+  async function addBanner(){
+    const used = banners.map(b=>b.slot);
+    let slot = 1; while(used.indexOf(slot) !== -1) slot++;
+    if(slot > 6) return;
+    const f = await pickFile(); if(!f) return;
+    const btn = document.getElementById('pxGalAdd');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    try{ await saveBannerTo(slot, f); }
+    catch(err){ alert(err.message || 'Connection error.'); renderGallery(false); }
+  }
+  document.getElementById('pxGalAdd').addEventListener('click', addBanner);
+  document.getElementById('pxGallery').addEventListener('click', e=>{
+    const pic = e.target.closest('.px-pic[data-slot]');
+    if(!pic) return;
+    const slot = Number(pic.dataset.slot);
+    const b = banners.find(x=>x.slot === slot); if(!b) return;
+    const m = modal('<div class="px-lightbox"><h4>Gallery picture <button type="button" data-close aria-label="Close">✕</button></h4>' +
+      '<img src="' + esc(b.image) + '" alt=""></div>' +
+      '<div class="px-actions"><button type="button" class="px-btn danger" id="pxgDel">🗑 Remove</button>' +
+      '<button type="button" class="px-btn" id="pxgRep">🔄 Replace</button></div><div class="px-msg" id="pxgMsg"></div>');
+    m.el.querySelector('#pxgRep').onclick = async ()=>{
+      const f = await pickFile(); if(!f) return;
+      const btn = m.el.querySelector('#pxgRep'); btn.disabled = true; btn.textContent = 'Uploading…';
+      try{ await saveBannerTo(slot, f); m.close(); }
+      catch(err){ btn.disabled = false; btn.textContent = '🔄 Replace'; m.el.querySelector('#pxgMsg').textContent = err.message || 'Connection error.'; }
+    };
+    m.el.querySelector('#pxgDel').onclick = async ()=>{
+      if(!confirm('Remove this picture from your gallery?')) return;
+      const btn = m.el.querySelector('#pxgDel'); btn.disabled = true;
+      try{
+        const d = await apiPost('bannerDelete', { slot });
+        if(!d.success) throw new Error(d.error || 'Could not remove.');
+        banners = banners.filter(x=>x.slot !== slot);
+        renderGallery(false); m.close();
+      }catch(err){ btn.disabled = false; m.el.querySelector('#pxgMsg').textContent = err.message || 'Connection error.'; }
+    };
+  });
+
+  // ---------- start ----------
+  loadStatuses();
+  loadBanners();
+  // Keep statuses fresh while the page is open (every 2 min, only when visible).
+  setInterval(()=>{ if(!document.hidden && !document.querySelector('.pxv, .px-modal')) loadStatuses(); }, 120000);
+  // Re-draw "My status" once the profile photo has loaded.
+  const av = document.getElementById('avatarImg');
+  if(window.MutationObserver) new MutationObserver(()=>renderStrip()).observe(av, { attributes:true, attributeFilter:['style'] });
+})();
+</script>
+
 </body>
 </html>
