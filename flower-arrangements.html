@@ -487,8 +487,57 @@ async function lookupByCode(code){
   try{
     const data=await api({ action:'getFlowerArrangementByCode', code });
     if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
-    body.innerHTML=cardHtml(data,false);
+    body.innerHTML = cardHtml(data,false) + fulfillSectionHtml(data);
+    wireFulfillSection(data);
   }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
+}
+
+function fulfillSectionHtml(a){
+  return `
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Deduct from branch</label>
+      <select id="fulfillBranchSelect" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0 10px;">
+        <option value="">Select branch…</option>
+        <option value="ModaMall">ModaMall</option>
+        <option value="Hamala">Hamala</option>
+        <option value="Galali">Galali</option>
+      </select>
+      <button type="button" id="fulfillBtn" class="scan-btn-big" style="width:100%;">🌸 Fulfill & Deduct Stock</button>
+      <div id="fulfillMsg" style="font-size:12.5px;margin-top:8px;"></div>
+    </div>
+  `;
+}
+
+function wireFulfillSection(a){
+  const btn = document.getElementById('fulfillBtn');
+  if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    const branch = document.getElementById('fulfillBranchSelect').value;
+    const msg = document.getElementById('fulfillMsg');
+    if(!branch){ msg.innerHTML = '<span style="color:#b9770e;">Please select a branch first.</span>'; return; }
+
+    const itemsList = (a.items||[]).map(it => it.qty + ' × ' + it.flowerName).join('\n');
+    const confirmed = confirm(
+      'Deduct these flowers from ' + branch + '?\n\n' + itemsList +
+      '\n\nThis cannot be undone.'
+    );
+    if(!confirmed) return;
+
+    btn.disabled = true; btn.textContent = 'Deducting…';
+    try{
+      const res = await api({ action:'fulfillFlowerArrangement', code: a.arrangementCode, branch });
+      if(!res.success){
+        msg.innerHTML = `<span style="color:#b9770e;">${esc(res.error||'Failed.')}</span>`;
+        btn.disabled = false; btn.textContent = '🌸 Fulfill & Deduct Stock';
+        return;
+      }
+      msg.innerHTML = `<span style="color:#3d7a4f;font-weight:600;">✓ Deducted from ${esc(branch)}.</span>`;
+      btn.textContent = '✓ Done';
+    }catch(e){
+      msg.innerHTML = '<span style="color:#b9770e;">Connection error.</span>';
+      btn.disabled = false; btn.textContent = '🌸 Fulfill & Deduct Stock';
+    }
+  });
 }
 
 /* ---------- start ---------- */
