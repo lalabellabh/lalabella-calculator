@@ -84,7 +84,8 @@
     color:var(--ink); outline:none;
   }
   input[type=text]{ }
-  #displayPrice[readonly]{ opacity:.75; cursor:default; }
+  #displayPrice[readonly], #displayLineTotal{ opacity:.85; cursor:default; }
+  #displayLineTotal{ font-weight:700; }
   input:focus{ border-color:var(--ink); }
 
   .category-pills{
@@ -524,9 +525,13 @@
           <label id="displayQtyLabel">Qty (pieces)</label>
           <input type="number" id="displayQty" min="0" step="1" value="1" />
         </div>
-        <div style="flex:1;">
+        <div style="flex:1;" id="displayPriceBox" hidden>
           <label id="displayPriceLabel">Price / Piece (BD)</label>
           <input type="number" id="displayPrice" min="0" step="0.001" readonly placeholder="Auto" title="Filled in automatically from the chocolate list" />
+        </div>
+        <div style="flex:1;">
+          <label>Total (BD)</label>
+          <input type="text" id="displayLineTotal" readonly placeholder="Auto" title="Qty × price from the chocolate list" />
         </div>
       </div>
       <div id="displayLineHint" style="font-size:12px; color:var(--ink-dim); margin-top:6px; min-height:1em;"></div>
@@ -1051,9 +1056,11 @@ function refreshDisplayUnitUI(){
     // for this unit can it be typed in by hand.
     priceEl.value = p > 0 ? (unit === 'g' ? p.toFixed(4) : p.toFixed(3)) : '';
     priceEl.readOnly = p > 0;
+    document.getElementById('displayPriceBox').hidden = p > 0;
   } else {
     priceEl.value = '';
     priceEl.readOnly = true;
+    document.getElementById('displayPriceBox').hidden = true;
   }
   updateDisplayLineHint();
 }
@@ -1061,15 +1068,24 @@ function refreshDisplayUnitUI(){
 function updateDisplayLineHint(){
   const unit = document.getElementById('displayUnit').value;
   const qty = parseFloat(document.getElementById('displayQty').value) || 0;
-  const price = parseFloat(document.getElementById('displayPrice').value) || 0;
+  const priceEl = document.getElementById('displayPrice');
+  const price = parseFloat(priceEl.value) || 0;
   const hint = document.getElementById('displayLineHint');
-  if(displayMatch && !document.getElementById('displayPrice').readOnly && price === 0){
+  const totalEl = document.getElementById('displayLineTotal');
+  totalEl.value = qty > 0 && price > 0 ? (qty * price).toFixed(3) : '';
+  if(displayMatch && !priceEl.readOnly && price === 0){
     hint.textContent = unit === 'piece'
       ? 'No grams per piece in the chocolate list — choose Kg or Grams, or type the price.'
       : 'No price in the chocolate list — type the price.';
     return;
   }
-  hint.textContent = qty > 0 && price > 0 ? ('Line total: ' + fmtBD(qty * price)) : '';
+  if(!displayMatch || price <= 0){ hint.textContent = ''; return; }
+  // Show where the total comes from, e.g. "0.029 BD / g · 29.000 BD / kg"
+  const perKg = displayPriceFor(displayMatch, 'kg');
+  const unitTxt = unit === 'g' ? price.toFixed(4).replace(/0+$/,'') + ' BD / g'
+                : unit === 'kg' ? price.toFixed(3) + ' BD / kg'
+                : price.toFixed(3) + ' BD / piece';
+  hint.textContent = unitTxt + ((unit !== 'kg' && perKg > 0) ? '  ·  ' + perKg.toFixed(3) + ' BD / kg' : '');
 }
 
 document.getElementById('displaySearch').addEventListener('input', function(){
@@ -1104,6 +1120,7 @@ document.getElementById('addToDisplayBtn').addEventListener('click', ()=>{
   document.getElementById('displaySearch').value = '';
   document.getElementById('displayQty').value = 1;
   document.getElementById('displayPrice').value = '';
+  document.getElementById('displayLineTotal').value = '';
   document.getElementById('displayUnit').value = 'piece';
   document.getElementById('displayUnit').querySelectorAll('option').forEach(o => o.disabled = false);
   displayMatch = null;
