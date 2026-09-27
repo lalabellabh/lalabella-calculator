@@ -60,7 +60,7 @@
   .search{max-width:280px;margin:0;}
   .arr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
   .arr-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 4px 14px rgba(158,47,74,.06);display:flex;flex-direction:column;}
-  .arr-card img.photo{width:100%;border-radius:10px;margin-bottom:10px;object-fit:cover;max-height:200px;}
+  .arr-card img.photo, .result-card img.photo{width:100%;border-radius:10px;margin-bottom:10px;object-fit:contain;max-height:280px;background:#faf5f4;}
   .arr-card .code-badge{align-self:flex-start;}
   .arr-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 4px;}
   .arr-card .display{font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;}
@@ -410,6 +410,7 @@ function cardHtml(a, withActions){
     <div class="totals"><span>Total stems: <b>${esc(a.totalStems)}</b></span><span>Est. value: <b>${esc(bhd(a.estValue))}</b></span></div>
     ${withActions ? `<div class="arr-actions">
       <button type="button" data-act="barcode" data-id="${a.id}">🏷️ Barcode</button>
+      <button type="button" data-act="print" data-id="${a.id}">🖨️ Print</button>
       ${manage ? `<button type="button" data-act="edit" data-id="${a.id}">✏️ Edit</button><button type="button" class="del" data-act="delete" data-id="${a.id}">🗑️ Delete</button>` : ''}
     </div>
     <div class="barcode-wrap" id="bc-${a.id}"><svg></svg></div>` : ''}`;
@@ -437,6 +438,7 @@ document.getElementById('arrGrid').addEventListener('click', async ev=>{
   const btn=ev.target.closest('button[data-act]'); if(!btn) return;
   const a=allArrangements.find(x=>String(x.id)===btn.dataset.id); if(!a) return;
   if(btn.dataset.act==='edit'){ startEdit(a); return; }
+  if(btn.dataset.act==='print'){ printArrangement(a); return; }
   if(btn.dataset.act==='barcode'){
     const box=document.getElementById('bc-'+a.id);
     const show=box.style.display!=='block'; box.style.display=show?'block':'none';
@@ -487,7 +489,10 @@ async function lookupByCode(code){
   try{
     const data=await api({ action:'getFlowerArrangementByCode', code });
     if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
-    body.innerHTML = cardHtml(data,false) + fulfillSectionHtml(data);
+    body.innerHTML = cardHtml(data,false)
+      + '<button type="button" class="ghost-btn" id="scanPrintBtn" style="width:100%;margin-top:10px;">🖨️ Print Receipt</button>'
+      + fulfillSectionHtml(data);
+    document.getElementById('scanPrintBtn').addEventListener('click', ()=>printArrangement(data));
     wireFulfillSection(data);
   }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
 }
@@ -538,6 +543,62 @@ function wireFulfillSection(a){
       btn.disabled = false; btn.textContent = '🌸 Fulfill & Deduct Stock';
     }
   });
+}
+
+/* ---------- print (receipt style, fits 80mm thermal paper or A4) ---------- */
+function printArrangement(a){
+  // Barcode is drawn here, then copied into the print page as plain SVG.
+  const tmp = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  try{ JsBarcode(tmp, a.arrangementCode || '', { format:'CODE128', width:1.6, height:44, displayValue:true, fontSize:12, margin:0 }); }catch(e){}
+  const barcodeSvg = a.arrangementCode ? tmp.outerHTML : '';
+  const u = currentUser();
+  const now = new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const lines = (a.items||[]).map(it => `
+    <tr><td>${esc(it.qty)} × ${esc(it.flowerName)}</td><td class="r">${it.hasRate ? (Number(it.qty)*Number(it.rate)).toFixed(3) : '—'}</td></tr>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(a.arrangementCode||'Arrangement')}</title>
+  <style>
+    @page{ size:80mm auto; margin:4mm; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; width:72mm; font-family:Arial,Helvetica,sans-serif; font-size:11.5px; color:#000; }
+    .c{ text-align:center; } .r{ text-align:right; white-space:nowrap; }
+    h1{ font-size:15px; letter-spacing:.25em; margin:0; }
+    .sub{ font-size:10px; letter-spacing:.12em; text-transform:uppercase; margin:2px 0 8px; }
+    .name{ font-size:14px; font-weight:700; margin:6px 0 2px; }
+    .dash{ border-top:1px dashed #000; margin:7px 0; }
+    table{ width:100%; border-collapse:collapse; } td{ padding:2px 0; vertical-align:top; }
+    .tot td{ font-weight:700; padding-top:4px; }
+    img.ph{ display:block; max-width:100%; max-height:48mm; margin:6px auto; object-fit:contain; }
+    svg{ max-width:100%; height:auto; }
+    .small{ font-size:9.5px; }
+  </style></head><body>
+    <div class="c"><h1>LALABELLA</h1><div class="sub">Flower Arrangement</div>${barcodeSvg}</div>
+    <div class="c name">${esc(a.arrangementName||'')}</div>
+    ${a.displayName && a.displayName !== a.arrangementName ? `<div class="c">${esc(a.displayName)}</div>` : ''}
+    ${a.photoData ? `<img class="ph" src="${esc(a.photoData)}" alt="">` : ''}
+    <div class="dash"></div>
+    <div>Florist: <b>${esc(a.florist || '—')}</b></div>
+    <div class="dash"></div>
+    <table>${lines}
+      <tr><td colspan="2"><div class="dash"></div></td></tr>
+      <tr class="tot"><td>Total stems</td><td class="r">${esc(a.totalStems)}</td></tr>
+      <tr class="tot"><td>Est. value</td><td class="r">${(Number(a.estValue)||0).toFixed(3)} BHD</td></tr>
+    </table>
+    ${a.notes ? `<div class="dash"></div><div>Notes: ${esc(a.notes)}</div>` : ''}
+    <div class="dash"></div>
+    <div class="c small">Printed ${esc(now)}${u.fullName || u.username ? ' by ' + esc(u.fullName || u.username) : ''}</div>
+  </body></html>`;
+
+  let frame = document.getElementById('printFrame');
+  if(frame) frame.remove();
+  frame = document.createElement('iframe');
+  frame.id = 'printFrame';
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  const go = () => { try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(e){ alert('Could not open the print window.'); } };
+  const img = doc.querySelector('img.ph');
+  if(img && !img.complete){ img.onload = go; img.onerror = go; } else { setTimeout(go, 150); }
 }
 
 /* ---------- start ---------- */
