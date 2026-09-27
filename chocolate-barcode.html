@@ -4,7 +4,6 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
-<meta name="lb-theme-keep" content=".preview-label, #labelPrintArea, #lookupPrintArea, .label-grid, .label-cell">
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -79,7 +78,7 @@
     color:var(--ink-dim); margin-bottom:5px; margin-top:14px;
   }
   label:first-child{ margin-top:0; }
-  input[type=text], input[type=number]{
+  input[type=text], input[type=number], #displayUnit{
     width:100%; background:var(--paper); border:1px solid var(--line); border-radius:3px;
     padding:11px 12px; font-family:'Space Grotesk',sans-serif; font-size:14px;
     color:var(--ink); outline:none;
@@ -187,6 +186,18 @@
     .label-cell .l-price{ font-size:7pt; }
     .label-cell .l-code{ font-size:6pt; }
   }
+
+/* ===== DESKTOP: design on the left, forms on the right =====
+   Phones keep the original single-column layout. */
+@media (min-width:1000px){
+  .wrap{ max-width:1240px; display:grid; grid-template-columns:minmax(380px,460px) minmax(0,1fr); column-gap:36px; align-items:start; }
+  .cb-left{ position:sticky; top:20px; }
+  .cb-left .atm-hero{ height:300px; margin-bottom:18px; }
+  .cb-left header{ text-align:left; margin-bottom:0; }
+  .cb-right{ padding-top:6px; }
+  .cb-right .tabs{ margin-top:0; }
+}
+@media print{ .wrap{ display:block !important; } }
 
 /* ===== LALABELLA ROSE + CHOCOLATE ATM UI =====
    Visual add-on only. Existing barcode / lookup / print logic remains untouched.
@@ -371,6 +382,7 @@
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
 <div class="wrap">
+ <div class="cb-left">
 
   <!-- Rose + Chocolate ATM visual layer: no existing barcode controls changed. -->
   <section class="atm-hero" id="roseChocolateATM">
@@ -411,6 +423,8 @@
     <h1>Chocolate Barcode</h1>
     <p class="sub">Print labels, or look up a release</p>
   </header>
+ </div>
+ <div class="cb-right">
 
   <div class="tabs" id="tabs">
     <button class="tab active" data-tab="labels">Print Labels</button>
@@ -496,16 +510,25 @@
       <input type="text" id="displaySearch" list="displayItemList" placeholder="Type a chocolate name…" autocomplete="off" />
       <datalist id="displayItemList"></datalist>
 
-      <div class="unit-row" style="display:flex; gap:8px; margin-top:10px;">
+      <div class="unit-row" style="display:flex; gap:8px; margin-top:10px; align-items:flex-end;">
         <div style="flex:1;">
-          <label>Qty (pieces)</label>
-          <input type="number" id="displayQty" min="1" value="1" />
+          <label>Unit</label>
+          <select id="displayUnit">
+            <option value="piece">Piece</option>
+            <option value="kg">Kg</option>
+            <option value="g">Grams</option>
+          </select>
         </div>
         <div style="flex:1;">
-          <label>Price / Piece (BD)</label>
+          <label id="displayQtyLabel">Qty (pieces)</label>
+          <input type="number" id="displayQty" min="0" step="1" value="1" />
+        </div>
+        <div style="flex:1;">
+          <label id="displayPriceLabel">Price / Piece (BD)</label>
           <input type="number" id="displayPrice" min="0" step="0.001" />
         </div>
       </div>
+      <div id="displayLineHint" style="font-size:12px; color:var(--ink-dim); margin-top:6px; min-height:1em;"></div>
       <button class="submit-btn" id="addToDisplayBtn" style="margin-top:10px;">+ Add to Display</button>
 
       <div id="displayCartList" style="margin-top:16px;"></div>
@@ -536,6 +559,7 @@
       <button class="submit-btn" id="exportOdooBtn">⬇️ Download Odoo CSV</button>
     </div>
   </div>
+ </div>
 </div>
 
 <div class="scanner-modal" id="scannerModal">
@@ -995,31 +1019,90 @@ function populateDisplayItemList(){
     items.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
 }
 
+// Unit-aware pricing (same idea as Release): Piece, Kg or Grams.
+// Price per Kg comes from the catalog; per piece uses the item's grams.
+let displayMatch = null;
+const DISPLAY_UNIT_TEXT = { piece:'pieces', kg:'kg', g:'grams' };
+const DISPLAY_UNIT_SHORT = { piece:'pcs', kg:'kg', g:'g' };
+const DISPLAY_PRICE_TEXT = { piece:'Piece', kg:'Kg', g:'Gram' };
+
+function displayPriceFor(match, unit){
+  if(!match) return 0;
+  const priceKg = Number(String(match['Standard Price / Kg']||'').replace(/[^0-9.]/g,'')) || 0;
+  const gramsPerPiece = Number(match['Grams']) || 0;
+  const isWholePackagedItem = String(match['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
+  if(unit === 'kg') return priceKg;
+  if(unit === 'g') return priceKg / 1000;
+  return isWholePackagedItem ? priceKg : (gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : 0);
+}
+
+function refreshDisplayUnitUI(){
+  const unit = document.getElementById('displayUnit').value;
+  document.getElementById('displayQtyLabel').textContent = 'Qty (' + DISPLAY_UNIT_TEXT[unit] + ')';
+  document.getElementById('displayPriceLabel').textContent = 'Price / ' + DISPLAY_PRICE_TEXT[unit] + ' (BD)';
+  const qtyEl = document.getElementById('displayQty');
+  qtyEl.step = unit === 'piece' ? '1' : (unit === 'kg' ? '0.001' : '1');
+  document.getElementById('displayPrice').step = unit === 'g' ? '0.0001' : '0.001';
+  if(displayMatch){
+    const p = displayPriceFor(displayMatch, unit);
+    document.getElementById('displayPrice').value = unit === 'g' ? p.toFixed(4) : p.toFixed(3);
+  }
+  updateDisplayLineHint();
+}
+
+function updateDisplayLineHint(){
+  const unit = document.getElementById('displayUnit').value;
+  const qty = parseFloat(document.getElementById('displayQty').value) || 0;
+  const price = parseFloat(document.getElementById('displayPrice').value) || 0;
+  const hint = document.getElementById('displayLineHint');
+  if(displayMatch && unit === 'piece' && price === 0){
+    hint.textContent = 'This chocolate has no grams per piece in the catalog — use Kg or Grams, or type the price.';
+    return;
+  }
+  hint.textContent = qty > 0 && price > 0 ? ('Line total: ' + fmtBD(qty * price)) : '';
+}
+
 document.getElementById('displaySearch').addEventListener('input', function(){
   const typed = this.value.trim().toLowerCase();
-  const match = items.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed);
-  if(match){
-    const priceKg = Number(String(match['Standard Price / Kg']||'').replace(/[^0-9.]/g,'')) || 0;
-    const gramsPerPiece = Number(match['Grams']) || 0;
-    const isWholePackagedItem = String(match['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
-    const pricePerPiece = isWholePackagedItem
-      ? priceKg
-      : (gramsPerPiece > 0 ? (priceKg * gramsPerPiece / 1000) : 0);
-    document.getElementById('displayPrice').value = pricePerPiece.toFixed(3);
+  displayMatch = items.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed) || null;
+  const unitEl = document.getElementById('displayUnit');
+  if(displayMatch){
+    // Boxed/whole items are sold per piece only.
+    const isWhole = String(displayMatch['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
+    unitEl.querySelector('option[value="kg"]').disabled = isWhole;
+    unitEl.querySelector('option[value="g"]').disabled = isWhole;
+    if(isWhole) unitEl.value = 'piece';
+  } else {
+    unitEl.querySelectorAll('option').forEach(o => o.disabled = false);
   }
+  refreshDisplayUnitUI();
 });
+document.getElementById('displayUnit').addEventListener('change', refreshDisplayUnitUI);
+document.getElementById('displayQty').addEventListener('input', updateDisplayLineHint);
+document.getElementById('displayPrice').addEventListener('input', updateDisplayLineHint);
 
 document.getElementById('addToDisplayBtn').addEventListener('click', ()=>{
   const name = document.getElementById('displaySearch').value.trim();
-  const qty = parseInt(document.getElementById('displayQty').value) || 0;
+  const unit = document.getElementById('displayUnit').value;
+  const qty = parseFloat(document.getElementById('displayQty').value) || 0;
   const price = parseFloat(document.getElementById('displayPrice').value) || 0;
   if(!name || qty <= 0){ alert('Select a chocolate and enter a Qty.'); return; }
-  displayCart.push({ name, qty, price });
+  if(unit === 'piece' && !Number.isInteger(qty)){ alert('Pieces must be a whole number.'); return; }
+  displayCart.push({ name, qty, price, unit });
   document.getElementById('displaySearch').value = '';
   document.getElementById('displayQty').value = 1;
   document.getElementById('displayPrice').value = '';
+  document.getElementById('displayUnit').value = 'piece';
+  document.getElementById('displayUnit').querySelectorAll('option').forEach(o => o.disabled = false);
+  displayMatch = null;
+  refreshDisplayUnitUI();
   renderDisplayCart();
 });
+
+function displayQtyText(c){
+  const u = c.unit || 'piece';
+  return c.qty + ' ' + DISPLAY_UNIT_SHORT[u];
+}
 
 function renderDisplayCart(){
   const el = document.getElementById('displayCartList');
@@ -1032,7 +1115,7 @@ function renderDisplayCart(){
     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--line);">
       <div>
         <div style="font-weight:600; font-size:13px;">${c.name}</div>
-        <div style="font-size:11px; color:var(--ink-dim);">${c.qty} pcs × ${fmtBD(c.price)} = ${fmtBD(c.qty * c.price)}</div>
+        <div style="font-size:11px; color:var(--ink-dim);">${displayQtyText(c)} × ${fmtBD(c.price)}${(c.unit && c.unit !== 'piece') ? ' / ' + DISPLAY_UNIT_SHORT[c.unit] : ''} = ${fmtBD(c.qty * c.price)}</div>
       </div>
       <button data-idx="${i}" class="remove-display-item" style="background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer;">✕</button>
     </div>
@@ -1149,7 +1232,7 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
   // even though Odoo shows it as one product, opening the product
   // record (not just scanning) reveals the breakdown.
   const displayRows = savedDisplays.map(d => {
-    const contents = (d['Items'] || []).map(it => it.qty + 'x ' + it.name).join(', ');
+    const contents = (d['Items'] || []).map(it => (!it.unit || it.unit === 'piece') ? (it.qty + 'x ' + it.name) : (it.qty + (it.unit === 'kg' ? 'kg ' : 'g ') + it.name)).join(', ');
     return [d['Display Name'], d['Display Code'], Number(d['Total Price']).toFixed(3), contents];
   });
 
