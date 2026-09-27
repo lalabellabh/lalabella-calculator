@@ -85,15 +85,21 @@
 
   /* name sits on the ruled line under "from:" */
   .name{position:absolute;left:14.5mm;width:30.5mm;top:50.4mm;height:6.9mm;
-        display:flex;align-items:center;justify-content:safe center;
-        font-family:var(--name-font,'Gochi Hand'),'Gochi Hand','Comic Sans MS',cursive;color:#262626;unicode-bidi:plaintext;
-        font-size:5.5mm;line-height:1;white-space:nowrap;overflow:hidden;
-        text-align:center;outline:none;border-radius:1mm}
+        display:flex;flex-direction:column;justify-content:center;
+        font-family:var(--name-font,'Gochi Hand'),'Gochi Hand','Comic Sans MS',cursive;color:#262626;
+        overflow:hidden;border-radius:1mm}
+  /* each name has two lines; the 2nd line only shows when it has text */
+  .name .ln{display:block;width:100%;white-space:nowrap;overflow:hidden;text-align:center;
+        line-height:1.1;outline:none;unicode-bidi:plaintext}
+  .name .l1{font-size:5.5mm}
+  .name .l2{font-size:2.7mm}
+  .name.one .l2{display:none}
   /* landscape: same spot on the card, turned with the art */
   .slot.l .name{left:38.65mm;top:16.8mm;transform:rotate(-90deg)}
-  .name:empty::before{content:attr(data-ph);color:#c9bba4}
-  .editing .name{cursor:text}
-  .editing .name:hover,.editing .name:focus{background:rgba(31,138,138,.10)}
+  .name .l1:empty::before{content:'Name';color:#c9bba4}
+  .editing .name .l2:empty::before{content:'2nd line';color:#c9bba4}
+  .editing .name .ln{cursor:text}
+  .editing .name:hover,.editing .name:focus-within{background:rgba(31,138,138,.10)}
 
   /* ---------- print ---------- */
   @page{size:A4 portrait;margin:0}
@@ -104,10 +110,8 @@
     .sheet-wrap{transform:none!important;height:auto!important}
     html,body{width:210mm;height:297mm;overflow:hidden}
     .sheet{box-shadow:none;height:296mm;overflow:hidden}
-    /* landscape: same spot on the card, turned with the art */
-  .slot.l .name{left:38.65mm;top:16.8mm;transform:rotate(-90deg)}
-  .name:empty::before{content:''}
-    .editing .name:hover,.editing .name:focus{background:none}
+    .name .ln:empty::before{content:''!important}
+    .editing .name:hover,.editing .name:focus-within{background:none}
   }
 </style>
 </head>
@@ -139,6 +143,10 @@
       <label for="allName">Name for all cards</label>
       <input type="text" id="allName" placeholder="e.g. Ms. Sara" maxlength="40" autocomplete="off">
     </div>
+    <div class="field">
+      <label for="allName2">2nd line (optional)</label>
+      <input type="text" id="allName2" placeholder="e.g. KG 2C" maxlength="40" autocomplete="off">
+    </div>
     <div class="field small">
       <label for="fontSel">Font</label>
       <select id="fontSel"></select>
@@ -152,7 +160,7 @@
     <label><input type="checkbox" id="perCard"> Different name per card</label>
     <label><input type="checkbox" id="cutLines" checked> Show cut lines</label>
   </div>
-  <p class="hint" id="perHint" hidden>Tap a card's name on the sheet below to type a different name for that card.</p>
+  <p class="hint" id="perHint" hidden>Tap a card's name on the sheet below to type a different name for that card. Press Enter to type a 2nd line under it.</p>
   <div class="btns">
     <button class="primary" id="printBtn">Print</button>
     <button class="ghost" id="clearBtn">Clear names</button>
@@ -190,16 +198,34 @@
     slot.className = 'slot ' + s.t;
     slot.style.left = s.x + 'mm';
     slot.style.top = s.y + 'mm';
-    slot.innerHTML = '<div class="card"><div class="name" dir="auto" data-ph="Name" spellcheck="false"></div></div>';
+    slot.innerHTML = '<div class="card"><div class="name one">' +
+      '<div class="ln l1" dir="auto" spellcheck="false"></div>' +
+      '<div class="ln l2" dir="auto" spellcheck="false"></div></div></div>';
     sheet.appendChild(slot);
     var n = slot.querySelector('.name');
-    n.addEventListener('input', function(){ fit(n); });
-    n.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); n.blur(); } });
-    n.addEventListener('paste', function(e){
-      e.preventDefault();
-      var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\s+/g,' ');
-      document.execCommand('insertText', false, t);
+    var l1 = n.querySelector('.l1'), l2 = n.querySelector('.l2');
+    [l1, l2].forEach(function(ln){
+      ln.addEventListener('input', function(){ fit(n); });
+      ln.addEventListener('paste', function(e){
+        e.preventDefault();
+        var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\s+/g,' ');
+        document.execCommand('insertText', false, t);
+      });
     });
+    // Enter on the 1st line opens the 2nd line; Enter on the 2nd line finishes
+    l1.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        n.classList.add('force2'); fit(n); l2.focus();
+      }
+    });
+    l2.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); l2.blur(); }
+      else if (e.key === 'Backspace' && l2.textContent === '') {
+        e.preventDefault(); n.classList.remove('force2'); fit(n); l1.focus();
+      }
+    });
+    l2.addEventListener('blur', function(){ n.classList.remove('force2'); fit(n); });
     names.push(n);
   });
 
@@ -244,26 +270,40 @@
   }
 
   // shrink long names so they stay on the line
-  function fit(el){
-    var size = 5.5;                               // mm
+  function fitLine(el, size, min){
     el.style.fontSize = size + 'mm';
-    while (el.scrollWidth > el.clientWidth + 1 && size > 2.2) {
+    while (el.scrollWidth > el.clientWidth + 1 && size > min) {
       size -= 0.2; el.style.fontSize = size + 'mm';
     }
   }
+  function fit(n){
+    var l1 = n.querySelector('.l1'), l2 = n.querySelector('.l2');
+    var two = l2.textContent.trim() !== '' || n.classList.contains('force2');
+    n.classList.toggle('one', !two);
+    if (two) { fitLine(l1, 3.5, 1.8); fitLine(l2, 2.7, 1.6); }   // mm, two lines fit the ruled line
+    else fitLine(l1, 5.5, 2.2);
+  }
   function fitAll(){ names.forEach(fit); }
 
+  var allName2 = document.getElementById('allName2');
   function applyAll(){
-    var v = allName.value.trim();
-    names.forEach(function(n){ n.textContent = v; fit(n); });
+    var v1 = allName.value.trim(), v2 = allName2.value.trim();
+    names.forEach(function(n){
+      n.querySelector('.l1').textContent = v1;
+      n.querySelector('.l2').textContent = v2;
+      fit(n);
+    });
   }
   allName.addEventListener('input', applyAll);
+  allName2.addEventListener('input', applyAll);
 
   perCard.addEventListener('change', function(){
     var on = perCard.checked;
     sheet.classList.toggle('editing', on);
     document.getElementById('perHint').hidden = !on;
-    names.forEach(function(n){ n.contentEditable = on ? 'true' : 'false'; });
+    names.forEach(function(n){
+      n.querySelectorAll('.ln').forEach(function(ln){ ln.contentEditable = on ? 'true' : 'false'; });
+    });
   });
 
   document.getElementById('cutLines').addEventListener('change', function(e){
@@ -276,7 +316,8 @@
   });
 
   document.getElementById('clearBtn').addEventListener('click', function(){
-    allName.value = ''; names.forEach(function(n){ n.textContent = ''; fit(n); });
+    allName.value = ''; allName2.value = '';
+    names.forEach(function(n){ n.querySelectorAll('.ln').forEach(function(ln){ ln.textContent = ''; }); fit(n); });
   });
 
   document.getElementById('printBtn').addEventListener('click', function(){
