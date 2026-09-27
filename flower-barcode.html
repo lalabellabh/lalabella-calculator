@@ -4,7 +4,6 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
-<meta name="lb-theme-keep" content=".preview-label, #labelPrintArea, .label-grid, .label-cell">
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -257,8 +256,15 @@
     <div class="card">
       <div class="card-title">📦 Export for Odoo</div>
       <div style="font-size:12.5px; color:var(--ink-dim); line-height:1.6; margin-bottom:14px;">
-        This creates a CSV file you can import directly into Odoo's Product import tool — including the Name, Barcode (Item Code), and Sales Price (Rate) of every active flower + origin variant.
+        This creates a CSV file you can import directly into Odoo's Product import tool — including the Name, Barcode (Item Code), and Sales Price (Rate) of every active flower + origin variant, plus your Flower Arrangements (FAR codes).
       </div>
+      <label style="display:flex; gap:8px; align-items:center; font-size:12.5px; margin-bottom:8px; cursor:pointer; text-transform:none; letter-spacing:0; font-weight:600;">
+        <input type="checkbox" id="odooIncludeArr" checked style="width:auto;"> Include Flower Arrangements (FAR codes)
+      </label>
+      <label style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin-bottom:12px; cursor:pointer; text-transform:none; letter-spacing:0; font-weight:400;">
+        <input type="checkbox" id="odooArrFlowersInName" checked style="width:auto; margin-top:2px;">
+        <span>Show the flowers in the product name — so when the arrangement barcode is scanned, Odoo POS shows e.g. <i>"red bloom — 10 Rose, 4 S-Rose, 1 Eucalyptus"</i> with the price below.</span>
+      </label>
       <div id="odooCount" style="font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;"></div>
       <button class="btn btn-primary" id="exportOdooBtn">⬇️ Download Odoo CSV</button>
     </div>
@@ -307,9 +313,7 @@
       tab.classList.add('active');
       const panelId = tab.dataset.tab === 'labels' ? 'panelLabels' : (tab.dataset.tab === 'lookup' ? 'panelLookup' : 'panelOdoo');
       document.getElementById(panelId).classList.add('active');
-      if(tab.dataset.tab === 'odoo'){
-        document.getElementById('odooCount').textContent = CATALOG.length + ' active flower + origin variants ready to export.';
-      }
+      if(tab.dataset.tab === 'odoo'){ loadArrangementsForOdoo(); }
     });
   });
 
@@ -517,14 +521,58 @@
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
-  document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
+  // Flower Arrangements (FAR-xxxxx) — same idea as Chocolate Displays:
+  // one Odoo product per arrangement, price = its est. value (company rate).
+  let ARRANGEMENTS = [], arrLoaded = false;
+  async function loadArrangementsForOdoo(){
+    const countEl = document.getElementById('odooCount');
+    const render = () => {
+      const incl = document.getElementById('odooIncludeArr').checked;
+      countEl.textContent = CATALOG.length + ' flower + origin variants' +
+        (incl ? ' + ' + ARRANGEMENTS.length + ' flower arrangement' + (ARRANGEMENTS.length === 1 ? '' : 's') : '') + ' ready to export.';
+    };
+    render();
+    if(arrLoaded) return;
+    try{
+      const data = await fetch(API_URL + '?action=getFlowerArrangements&_ts=' + Date.now()).then(r=>r.json());
+      if(Array.isArray(data)){ ARRANGEMENTS = data; arrLoaded = true; }
+    }catch(e){}
+    render();
+  }
+  document.getElementById('odooIncludeArr').addEventListener('change', loadArrangementsForOdoo);
+
+  function arrangementFlowersText(a){
+    return (a.items || []).map(it => it.qty + ' ' + it.flowerName).join(', ');
+  }
+
+  document.getElementById('exportOdooBtn').addEventListener('click', async ()=>{
     if(CATALOG.length === 0){ alert('The catalog is empty. Try refreshing the page.'); return; }
-    const header = ['Name', 'Barcode', 'Sales Price'];
+    const includeArr = document.getElementById('odooIncludeArr').checked;
+    const flowersInName = document.getElementById('odooArrFlowersInName').checked;
+    if(includeArr && !arrLoaded) await loadArrangementsForOdoo();
+
+    const header = ['Name', 'Barcode', 'Sales Price', 'Description'];
     const rows = CATALOG.map(f => [
       f.name + ' - ' + f.origin,
       f.itemCode,
-      f.rate.toFixed(3)
+      f.rate.toFixed(3),
+      ''
     ]);
+    const noPrice = [];
+    if(includeArr){
+      ARRANGEMENTS.forEach(a => {
+        const flowers = arrangementFlowersText(a);
+        const price = Number(a.estValue) || 0;
+        if(price <= 0) noPrice.push(a.arrangementCode + ' ' + a.arrangementName);
+        rows.push([
+          flowersInName && flowers ? (a.arrangementName + ' — ' + flowers) : a.arrangementName,
+          a.arrangementCode,
+          price.toFixed(3),
+          'Flower arrangement ' + a.arrangementCode + (a.florist ? ' by ' + a.florist : '') + ': ' + flowers
+        ]);
+      });
+    }
+    if(noPrice.length && !confirm('These arrangements have no price (their flowers have no rate in the Flower Catalog):\n\n• ' + noPrice.join('\n• ') + '\n\nExport anyway?')) return;
     const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
