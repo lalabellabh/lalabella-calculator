@@ -1820,70 +1820,70 @@ h1{
 
 
 <style id="flower-tools-mobile-header-final">
-/* Mobile header: three fixed slots with explicit gaps. */
+/* Final mobile header spacing: compact date + two compact action buttons. */
 @media(max-width:900px){
   .topbar{
-    height:56px !important;
+    height:52px !important;
     margin-top:0 !important;
-    padding:8px 10px 6px 58px !important;
+    padding:6px 8px !important;
   }
   .topbar .top-spacer{display:none !important;}
 
-  /* DATE SLOT */
   .topbar .today{
     display:flex !important;
     position:fixed !important;
-    left:60px !important;
+    left:8px !important;
     right:auto !important;
     top:8px !important;
     transform:none !important;
-    width:calc(100vw - 168px) !important;
-    max-width:120px !important;
+    width:calc(100vw - 94px) !important;
+    max-width:none !important;
     min-width:72px !important;
-    height:40px !important;
-    padding:7px 8px !important;
+    height:36px !important;
+    padding:6px 8px !important;
     box-sizing:border-box !important;
-    font-size:9px !important;
+    font-size:8px !important;
     white-space:nowrap !important;
     overflow:hidden !important;
     text-overflow:ellipsis !important;
     z-index:9400 !important;
   }
   .topbar .today span{
-    min-width:0 !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    white-space:nowrap !important;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
 
-  /* BELL SLOT — 6px gap after date */
-  .lala-bell-dock{
-    position:fixed !important;
-    top:8px !important;
-    right:58px !important;
-    z-index:9401 !important;
-  }
-  .lala-bell-btn{
-    width:44px !important;
-    height:44px !important;
-    min-width:44px !important;
-    min-height:44px !important;
-  }
-
-  /* CHAT SLOT — 6px gap after bell */
+  /* 36px chat button */
   .topbar .music-bar{
     position:fixed !important;
     top:8px !important;
     right:8px !important;
-    width:44px !important;
-    height:44px !important;
-    min-width:44px !important;
-    min-height:44px !important;
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
     z-index:9402 !important;
   }
+  .topbar .music-bar .big{font-size:15px !important;}
 
+  /* 36px bell button, with an 8px gap before chat */
+  .lala-bell-dock{
+    position:fixed !important;
+    top:8px !important;
+    right:50px !important;
+    z-index:9401 !important;
+  }
+  .lala-bell-btn{
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
+    font-size:15px !important;
+  }
   .lala-bell-panel{
-    top:60px !important;
+    top:52px !important;
     right:8px !important;
     width:min(280px,calc(100vw - 16px)) !important;
   }
