@@ -1998,6 +1998,48 @@ h1{
   .topbar .music-bar .big{font-size:15px !important;}
 }
 </style>
+<style id="flower-tools-final-spacing-and-tools">
+/* Final spacing cleanup: keep the mobile menu above the header divider,
+   center the desktop date, and remove the rectangular tool-card boxes. */
+@media(max-width:900px){
+  .nav-toggle{
+    top:8px !important;
+    z-index:9505 !important;
+  }
+  .topbar{
+    height:52px !important;
+  }
+}
+
+/* Desktop date is centered in the viewport; bell and chat stay at right. */
+@media(min-width:901px){
+  .topbar .today{
+    position:fixed !important;
+    left:50% !important;
+    right:auto !important;
+    top:14px !important;
+    width:150px !important;
+    min-width:150px !important;
+    max-width:150px !important;
+    transform:translateX(-50%) !important;
+    margin:0 !important;
+  }
+}
+
+/* Select a Tool: remove the rectangular/square card behind each icon.
+   Keep the circular icon treatment and active glow. */
+.tools-section .carousel .tool{
+  background:transparent !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+}
+.tools-section .carousel .tool.active{
+  background:transparent !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+</style>
 </head>
 
 <body>
