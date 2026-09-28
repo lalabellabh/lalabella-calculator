@@ -15,7 +15,16 @@
  *    each page re-implementing this check.
  */
 (function () {
-  const AUTH_API_URL = LB_CONFIG.AUTH_API;
+  // checkSession runs on every single page load — this is the one call
+  // that benefits most from skipping Apps Script's "waking up" delay, so
+  // it goes through the fast Supabase Edge Function path instead. Every
+  // other backend call this page makes (Chocolate, Flower, Item, etc.)
+  // is untouched — see the fetch wrapper below, which still targets
+  // Apps Script URLs only.
+  const AUTH_FAST_URL = LB_CONFIG.AUTH_FAST_API;
+  function fastAuthFetch(qs) {
+    return fetch(AUTH_FAST_URL + qs, { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } });
+  }
 
   // ---------------------------------------------------------------
   // GLOBAL FETCH WRAPPER — rather than hand-editing every individual
@@ -172,7 +181,7 @@
   // One retry after a short pause absorbs that kind of blip; only a
   // second consecutive failure is treated as a real "not logged in".
   function verifyTokenWithRetry(tok, attempt){
-    return fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(tok))
+    return fastAuthFetch('?action=checkSession&token=' + encodeURIComponent(tok))
       .then(r => r.json())
       .then(data => {
         if (!data.valid && attempt < 2) {
@@ -242,7 +251,7 @@
       wasHidden = false;
       const t = sessionStorage.getItem('lalabellaToken');
       if (!t) { goToLogin(); return; }
-      fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(t))
+      fastAuthFetch('?action=checkSession&token=' + encodeURIComponent(t))
         .then(r => r.json())
         .then(data => { if (!data.valid) goToLogin(); })
         .catch(() => {});
