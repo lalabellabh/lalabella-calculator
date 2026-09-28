@@ -31,7 +31,7 @@
   var KEY = 'lbTheme';
   // Pages already designed dark keep their own look.
   // (Other already-dark pages are detected automatically.)
-  var KEEP_AS_IS = ['index.html', 'nova-command-center.html'];
+  var KEEP_AS_IS = ['index.html', 'nova-command-center.html', 'chocolate-calc.html'];
   var page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   var native = KEEP_AS_IS.indexOf(page) !== -1 ? true : null;   // null = check the page once it loads
   var root = document.documentElement;
