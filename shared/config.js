@@ -10,6 +10,11 @@
  */
 window.LB_CONFIG = Object.freeze({
   AUTH_API:         'https://script.google.com/macros/s/AKfycbxKYKjmEfD7NXNmC5P9acKvvrTbUf3GE061VoKMUb0l_miYPVJ_JbpiyG7Nrjs2y2b2/exec',
+  // Fast path (Supabase Edge Function) for the Auth actions that run on
+  // every page load: checkSession, login, register, logout, getPositions.
+  // Everything else (profile photo, password change, User Management,
+  // Team Status) still goes through AUTH_API above — unchanged.
+  AUTH_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/auth-fast',
   CHOCOLATE_API:    'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec',
   FLOWER_API:       'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec',
   ITEM_API:         'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec',
