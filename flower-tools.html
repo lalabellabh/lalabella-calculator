@@ -188,10 +188,17 @@ a{text-decoration:none;color:inherit}
   font-size:10px;
 }
 .music-bar{
-  display:flex;align-items:center;gap:4px;
-  padding:8px 11px;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
   border:1px solid var(--line);
-  border-radius:20px;
+  border-radius:50%;
   background:var(--white);
   box-shadow:0 6px 16px rgba(0,0,0,.25);
   cursor:pointer;
@@ -928,7 +935,7 @@ kbd{
 </style>
 
 <style>
-.lala-bell-dock{ position:fixed; top:14px; right:68px; z-index:9300; }
+ .lala-bell-dock{ position:fixed; top:14px; right:74px; z-index:9300; }
 .lala-bell-btn{
   width:44px; height:44px; min-width:44px; min-height:44px;
   padding:0; border-radius:50%; border:none; cursor:pointer;
