@@ -1659,14 +1659,17 @@ h1{
     justify-content:flex-end;
   }
   .topbar .top-spacer{display:none}
+  /* Mobile header uses three isolated viewport slots.
+     This prevents the date, bell and chat from ever sharing flex space. */
   .topbar .today{
     display:flex;
-    position:absolute;
-    right:104px;
+    position:fixed;
+    left:8px;
+    right:auto;
     top:8px;
     transform:none;
-    width:auto;
-    max-width:calc(100vw - 114px);
+    width:calc(100vw - 120px);
+    max-width:none;
     min-width:0;
     padding:7px 8px;
     font-size:9px;
@@ -1674,16 +1677,22 @@ h1{
     overflow:hidden;
     text-overflow:ellipsis;
     box-sizing:border-box;
+    z-index:9400;
   }
   .topbar .music-bar{
-    width:40px;
-    height:40px;
-    min-width:40px;
-    min-height:40px;
+    position:fixed !important;
+    top:8px;
+    right:8px;
+    width:40px !important;
+    height:40px !important;
+    min-width:40px !important;
+    min-height:40px !important;
+    z-index:9400;
   }
   .lala-bell-dock{
     top:8px;
     right:57px;
+    z-index:9401;
   }
   .lala-bell-btn{
     width:40px;
