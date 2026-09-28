@@ -1060,7 +1060,11 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
 
 <script>
 (function(){
-  const AUTH_API_URL = LB_CONFIG.AUTH_API;
+  // The login screen's own session-check, login and register calls all
+  // go through the fast Supabase path (see shared/config.js) — the rest
+  // of this page's Auth calls (User Management etc.) are unaffected.
+  const AUTH_API_URL = LB_CONFIG.AUTH_FAST_API;
+  const AUTH_OPTS = { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } };
 
   const overlay = document.getElementById('lala-lock-overlay');
   const loginPanel = document.getElementById('loginPanel');
@@ -1139,7 +1143,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     // keep the user logged in.
     const controller = new AbortController();
     const verifyTimer = setTimeout(() => controller.abort(), 8000);
-    fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(existingToken), {signal: controller.signal})
+    fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(existingToken), {signal: controller.signal, headers: AUTH_OPTS.headers})
       .then(r => r.json())
       .then(data => {
         if(data && data.valid){
@@ -1182,7 +1186,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   let positionsLoaded = false;
   function loadPositions(){
     if(positionsLoaded) return;
-    fetch(AUTH_API_URL + '?action=getPositions')
+    fetch(AUTH_API_URL + '?action=getPositions', AUTH_OPTS)
       .then(r => r.json())
       .then(data => {
         if(!data || !data.success || !Array.isArray(data.positions)) return;
@@ -1221,7 +1225,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     const btn = document.getElementById('loginBtn');
     btn.disabled = true; btn.textContent = 'Logging in…';
 
-    fetch(AUTH_API_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password))
+    fetch(AUTH_API_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), AUTH_OPTS)
       .then(r => r.json())
       .then(data => {
         btn.disabled = false; btn.textContent = 'Login';
@@ -1281,7 +1285,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     btn.disabled = true; btn.textContent = 'Registering…';
 
     const params = new URLSearchParams({ action: 'register', username, password, fullName, branch, position, inviteCode });
-    fetch(AUTH_API_URL + '?' + params.toString())
+    fetch(AUTH_API_URL + '?' + params.toString(), AUTH_OPTS)
       .then(r => r.json())
       .then(data => {
         btn.disabled = false; btn.textContent = 'Register';
@@ -1313,7 +1317,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       wasHidden = false;
       const token = sessionStorage.getItem('lalabellaToken');
       if(!token){ showLock(); return; }
-      fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(token))
+      fetch(AUTH_API_URL + '?action=checkSession&token=' + encodeURIComponent(token), AUTH_OPTS)
         .then(r => r.json())
         .then(data => { if(!data.valid) showLock(); })
         .catch(() => {});
