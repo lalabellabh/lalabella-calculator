@@ -71,11 +71,23 @@
     const keyOf = opts.key || defaultKey;
     const els = Array.from(box.querySelectorAll(opts.item));
     // Master list (default order) with label + icon for the editor.
-    const master = els.map(el => ({
-      key: keyOf(el),
-      label: ((el.querySelector('h3') || el).textContent || '').trim(),
-      icon: Array.from(((el.firstElementChild || el).textContent || '').trim()).slice(0, 2).join('')
-    }));
+    const master = els.map(el => {
+      // Prefer the explicit icon/title elements used by Item Inventory.
+      // This prevents the editor from showing the icon and subtitle twice.
+      const iconEl = el.querySelector('.desktop-tool-icon, .tool-icon, .nav-icon, [data-tool-icon]');
+      const titleEl = el.querySelector('b, h3');
+      let label = titleEl ? (titleEl.textContent || '').trim() : '';
+      if (!label) {
+        const clone = el.cloneNode(true);
+        clone.querySelectorAll('.desktop-tool-icon, .tool-icon, .nav-icon, [data-tool-icon], small').forEach(n => n.remove());
+        label = (clone.textContent || '').trim();
+      }
+      return {
+        key: keyOf(el),
+        label,
+        icon: iconEl ? (iconEl.textContent || '').trim() : Array.from((el.firstElementChild?.textContent || '').trim()).slice(0, 2).join('')
+      };
+    });
     const prefs = read(opts.storageKey);
     const hidden = Array.isArray(prefs.hidden) ? prefs.hidden : [];
     const order = Array.isArray(prefs.order) ? prefs.order : [];
