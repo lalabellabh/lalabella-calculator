@@ -1820,7 +1820,7 @@ h1{
 
 
 <style id="flower-tools-mobile-header-final">
-/* Final mobile header spacing: compact date + two compact action buttons. */
+/* Mobile header: menu / date / bell / chat each have a clear lane. */
 @media(max-width:900px){
   .topbar{
     height:52px !important;
@@ -1829,16 +1829,17 @@ h1{
   }
   .topbar .top-spacer{display:none !important;}
 
+  /* Keep the date between the menu button and the notification buttons. */
   .topbar .today{
     display:flex !important;
     position:fixed !important;
-    left:8px !important;
-    right:auto !important;
+    left:104px !important;
+    right:96px !important;
     top:8px !important;
     transform:none !important;
-    width:calc(100vw - 94px) !important;
+    width:auto !important;
     max-width:none !important;
-    min-width:72px !important;
+    min-width:90px !important;
     height:36px !important;
     padding:6px 8px !important;
     box-sizing:border-box !important;
@@ -1849,13 +1850,12 @@ h1{
     z-index:9400 !important;
   }
   .topbar .today span{
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
   }
 
-  /* 36px chat button */
   .topbar .music-bar{
     position:fixed !important;
     top:8px !important;
@@ -1868,7 +1868,6 @@ h1{
   }
   .topbar .music-bar .big{font-size:15px !important;}
 
-  /* 36px bell button, with an 8px gap before chat */
   .lala-bell-dock{
     position:fixed !important;
     top:8px !important;
@@ -2064,7 +2063,7 @@ h1{
     <header class="topbar">
       <div class="breadcrumb"><b>FLOWER TOOLS GARDEN</b> &nbsp;•&nbsp; Lalabella Flowers</div>
       <div class="top-spacer"></div>
-      <div class="today">📅 <span id="todayText"></span></div>
+      <div class="today"><span id="todayText"></span></div>
 
       <a class="music-bar" id="chatBtn" href="chatbox.html?from=flower-tools" aria-label="Messages" style="text-decoration:none;color:inherit;position:relative;">
         <span class="big">💬</span><span id="msgBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--rose2,#c9506b);color:#fff;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px;">0</span>
