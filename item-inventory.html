@@ -694,6 +694,7 @@ body>.wrap{position:relative;z-index:1}
     <div class="choco-music-now" id="chocoMusicNow"></div>
   </div>
 </nav>
+<script src="shared/tool-edit.js"></script>
 <script src="shared/nav.js"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
@@ -717,6 +718,17 @@ body>.wrap{position:relative;z-index:1}
 
   <div class="carousel-shell">
     <div class="tool-carousel" id="toolCarousel">
+
+<script>
+// Restore per-device tool editor (hide / reorder).
+LBToolEdit.apply({
+  container: '#toolCarousel',
+  item: '.carousel-item',
+  key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
+  storageKey: 'lbToolsItem',
+  title: 'Item Inventory'
+});
+</script>
       <button class="carousel-item active" data-tab="add">
         <div class="carousel-circle">🆕</div>
         <h3>New Item</h3>
