@@ -1622,6 +1622,88 @@ h1{
   }
   .tool.active{box-shadow:0 10px 24px rgba(158,47,74,.13),0 0 0 3px rgba(201,80,107,.06)}
 }
+
+
+/* Final desktop balance — merged into the main visual layer. */
+@media(min-width:901px){
+  .content{
+    padding-left:24px;
+    padding-right:24px;
+  }
+  .stats{
+    margin-top:10px;
+  }
+  .tools-section{
+    margin-top:12px;
+  }
+}
+@media(min-width:901px) and (max-height:700px){
+  .content{
+    padding-bottom:8px;
+  }
+  .stats{
+    margin-top:7px;
+  }
+  .tools-section{
+    margin-top:8px;
+  }
+}
+
+/* Header controls — one responsive layout, not an extra override layer. */
+@media(max-width:900px){
+  .topbar{
+    height:56px;
+    margin-top:0;
+    padding:8px 10px 6px 58px;
+    gap:7px;
+    justify-content:flex-end;
+  }
+  .topbar .top-spacer{display:none}
+  .topbar .today{
+    display:flex;
+    transform:none;
+    width:auto;
+    max-width:100px;
+    min-width:0;
+    padding:7px 8px;
+    font-size:9px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .topbar .music-bar{
+    width:40px;
+    height:40px;
+    min-width:40px;
+    min-height:40px;
+  }
+  .lala-bell-dock{
+    top:8px;
+    right:57px;
+  }
+  .lala-bell-btn{
+    width:40px;
+    height:40px;
+    min-width:40px;
+    min-height:40px;
+    font-size:16px;
+  }
+  .lala-bell-panel{
+    top:55px;
+    right:10px;
+    width:min(280px,calc(100vw - 20px));
+  }
+}
+@media(min-width:901px) and (max-width:1400px){
+  .topbar .today{
+    transform:none;
+    margin-left:8px;
+  }
+  .topbar{
+    gap:10px;
+  }
+}
+
 </style>
 
 
@@ -1719,224 +1801,9 @@ h1{
 
 
 
-<style id="garden-balance-dark-fix">
-/* Final balance + dark-theme pass for Flower Tools Garden. */
-@media(min-width:901px){
-  .content{
-    padding-left:24px;
-    padding-right:24px;
-  }
-  .stats{
-    margin-top:10px;
-  }
-  .tools-section{
-    margin-top:12px;
-  }
-}
 
-html[data-lb-theme="dark"] body{
-  background:
-    radial-gradient(circle at 10% 5%,rgba(201,80,107,.10),transparent 40%),
-    radial-gradient(circle at 92% 12%,rgba(95,143,99,.09),transparent 40%),
-    linear-gradient(160deg,#171214 0%,#17201a 100%);
-  color:#eadde1;
-}
-html[data-lb-theme="dark"] .main{
-  background:
-    radial-gradient(circle at 82% 18%,rgba(217,164,65,.10),transparent 22%),
-    radial-gradient(circle at 18% 86%,rgba(95,143,99,.10),transparent 27%),
-    linear-gradient(145deg,rgba(28,21,24,.96),rgba(24,31,26,.96));
-}
-html[data-lb-theme="dark"] .topbar{
-  background:linear-gradient(180deg,rgba(25,19,22,.92),rgba(25,19,22,.45));
-  border-bottom-color:rgba(255,255,255,.08);
-}
-html[data-lb-theme="dark"] .breadcrumb,
-html[data-lb-theme="dark"] .subtitle,
-html[data-lb-theme="dark"] .stat-top,
-html[data-lb-theme="dark"] .stat span,
-html[data-lb-theme="dark"] .section-head p,
-html[data-lb-theme="dark"] .footer-hint,
-html[data-lb-theme="dark"] .tool p{
-  color:#b9a8ae;
-}
-html[data-lb-theme="dark"] h1{
-  color:#f0dfe5;
-}
-html[data-lb-theme="dark"] .hero{
-  border-color:rgba(255,255,255,.10);
-  background:
-    linear-gradient(135deg,rgba(42,31,35,.94),rgba(34,28,31,.88) 48%,rgba(29,43,33,.90));
-  box-shadow:0 18px 45px rgba(0,0,0,.28);
-}
-html[data-lb-theme="dark"] .hero::before{
-  border-color:rgba(201,80,107,.20);
-  box-shadow:0 0 0 18px rgba(201,80,107,.045),0 0 0 44px rgba(201,80,107,.025);
-}
-html[data-lb-theme="dark"] .badge,
-html[data-lb-theme="dark"] .today{
-  background:rgba(39,31,34,.86);
-  border-color:rgba(255,255,255,.10);
-  color:#c5b5ba;
-}
-html[data-lb-theme="dark"] .stat{
-  border-color:rgba(255,255,255,.10);
-  background:linear-gradient(145deg,rgba(42,31,35,.94),rgba(34,29,31,.88));
-  box-shadow:0 12px 28px rgba(0,0,0,.24);
-}
-html[data-lb-theme="dark"] .stat strong{
-  color:#f0dfe5;
-}
-html[data-lb-theme="dark"] .stat-icon{
-  background:linear-gradient(145deg,#33272b,#422a33);
-  border-color:rgba(201,80,107,.16);
-}
-html[data-lb-theme="dark"] .tools-section{
-  border-color:rgba(255,255,255,.10);
-  background:
-    radial-gradient(circle at 50% 0%,rgba(255,255,255,.08),transparent 44%),
-    linear-gradient(145deg,rgba(39,31,34,.94),rgba(28,39,31,.92));
-  box-shadow:0 18px 45px rgba(0,0,0,.25);
-}
-html[data-lb-theme="dark"] .section-head h2{
-  color:#ead7dd;
-}
-html[data-lb-theme="dark"] .section-head p{
-  background:rgba(255,255,255,.05);
-  border-color:rgba(201,80,107,.14);
-}
-html[data-lb-theme="dark"] .carousel-shell{
-  background:
-    radial-gradient(circle at 50% 48%,rgba(255,255,255,.07),transparent 38%),
-    linear-gradient(90deg,rgba(201,80,107,.06),transparent 20%,transparent 80%,rgba(95,143,99,.06));
-}
-html[data-lb-theme="dark"] .tool{
-  border-color:rgba(255,255,255,.10);
-  background:linear-gradient(145deg,rgba(48,38,42,.94),rgba(37,32,35,.86));
-  box-shadow:0 9px 24px rgba(0,0,0,.24);
-}
-html[data-lb-theme="dark"] .tool.active{
-  background:linear-gradient(145deg,#3b3034,#332b2e);
-  border-color:rgba(217,164,65,.28);
-  box-shadow:0 14px 30px rgba(0,0,0,.28),0 0 0 3px rgba(217,164,65,.07);
-}
-html[data-lb-theme="dark"] .tool-circle{
-  background:linear-gradient(145deg,#3a3034,#4a343a);
-  border-color:rgba(201,80,107,.20);
-  box-shadow:0 8px 18px rgba(0,0,0,.25);
-}
-html[data-lb-theme="dark"] .tool.active .tool-circle{
-  background:linear-gradient(145deg,#594b2b,#b08a36);
-  border-color:rgba(217,164,65,.42);
-}
-html[data-lb-theme="dark"] .tool h3{
-  color:#ead7dd;
-}
-html[data-lb-theme="dark"] .tool.active h3{
-  color:#efb7c6;
-}
-html[data-lb-theme="dark"] .lbte-btn{
-  background:rgba(39,32,35,.94) !important;
-  border-color:#3a3034 !important;
-  color:#e0879c !important;
-}
-@media(min-width:901px) and (max-height:700px){
-  .content{
-    padding-bottom:8px;
-  }
-  .stats{
-    margin-top:7px;
-  }
-  .tools-section{
-    margin-top:8px;
-  }
-}
-</style>
 
-<style id="flower-tools-responsive-theme-fix" data-lb-theme-skip>
-/* Stable responsive header + explicit dark theme. This block is skipped by
-   the generic theme converter because its dark selectors are intentional. */
 
-@media(max-width:900px){
-  .topbar{
-    height:56px !important;
-    margin-top:0 !important;
-    padding:8px 10px 6px 58px !important;
-    gap:7px !important;
-    justify-content:flex-end;
-  }
-  .topbar .top-spacer{display:none}
-  .topbar .today{
-    display:flex !important;
-    transform:none !important;
-    width:auto;
-    max-width:132px;
-    min-width:0;
-    padding:7px 10px !important;
-    font-size:9px !important;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .topbar .music-bar{
-    width:40px !important;
-    height:40px !important;
-    min-width:40px !important;
-    min-height:40px !important;
-  }
-  .lala-bell-dock{
-    top:8px !important;
-    right:57px !important;
-  }
-  .lala-bell-btn{
-    width:40px !important;
-    height:40px !important;
-    min-width:40px !important;
-    min-height:40px !important;
-    font-size:16px !important;
-  }
-  .lala-bell-panel{
-    top:55px !important;
-    right:10px !important;
-    width:min(280px,calc(100vw - 20px)) !important;
-  }
-}
-
-@media(min-width:901px) and (max-width:1400px){
-  .topbar .today{
-    transform:none !important;
-    margin-left:8px;
-  }
-  .topbar{
-    gap:10px;
-  }
-}
-
-html[data-lb-theme="dark"] .lala-bell-btn{
-  background:linear-gradient(135deg,#c89a3d,#8d681d) !important;
-  color:#21170b !important;
-  box-shadow:0 6px 18px rgba(0,0,0,.35) !important;
-}
-html[data-lb-theme="dark"] .lala-bell-panel{
-  background:#272023 !important;
-  border-color:#403238 !important;
-  color:#eadde1 !important;
-  box-shadow:0 16px 38px rgba(0,0,0,.45) !important;
-}
-html[data-lb-theme="dark"] .lala-bell-panel h4{
-  color:#e0879c !important;
-}
-html[data-lb-theme="dark"] .lala-bell-order{
-  border-bottom-color:#3a3034 !important;
-}
-html[data-lb-theme="dark"] .lala-bell-empty{
-  color:#b3a0a6 !important;
-}
-html[data-lb-theme="dark"] .lala-bell-link{
-  background:linear-gradient(135deg,#c9506b,#9e2f4a) !important;
-  color:#fff !important;
-}
-</style>
 
 </head>
 
