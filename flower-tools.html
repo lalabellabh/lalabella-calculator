@@ -1890,6 +1890,61 @@ h1{
 }
 </style>
 
+<style id="flower-tools-desktop-header-final">
+/* Desktop header: reserve a real lane for date + bell + chat so they cannot overlap. */
+@media(min-width:901px){
+  .topbar{
+    padding-right:18px !important;
+    gap:8px !important;
+  }
+  .topbar .today{
+    position:relative !important;
+    transform:none !important;
+    margin-left:0 !important;
+    width:min(180px,calc(100% - 120px)) !important;
+    max-width:180px !important;
+    min-width:80px !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:ellipsis !important;
+    flex:0 1 180px !important;
+  }
+  .topbar .today span{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .topbar .music-bar{
+    position:relative !important;
+    flex:0 0 36px !important;
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
+  }
+  .topbar .music-bar .big{font-size:15px !important;}
+
+  .lala-bell-dock{
+    position:fixed !important;
+    top:15px !important;
+    right:62px !important;
+    z-index:9401 !important;
+  }
+  .lala-bell-btn{
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
+    font-size:15px !important;
+  }
+
+  /* Give the chat its own 36px lane; the date cannot expand into it. */
+  .topbar .music-bar{
+    margin-right:0 !important;
+  }
+}
+</style>
 </head>
 
 <body>
