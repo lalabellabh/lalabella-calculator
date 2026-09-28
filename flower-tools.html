@@ -1401,16 +1401,7 @@ kbd{
         <div class="carousel-shell">
           <div class="carousel" id="carousel" tabindex="0" aria-label="Flower tools">
 
-<script>
-// Restore per-device tool editor (hide / reorder).
-LBToolEdit.apply({
-  container: '#carousel',
-  item: '.tool',
-  key: el => el.getAttribute('href')?.split('?')[0] || el.dataset.title || el.textContent.trim(),
-  storageKey: 'lbToolsFlower',
-  title: 'Flower Tools'
-});
-</script>
+
             <a class="tool" href="flower-dashboard.html" data-title="Dashboard">
               <div class="tool-circle">📊</div><h3>Dashboard</h3>
             </a>
@@ -1444,6 +1435,16 @@ LBToolEdit.apply({
             <a class="tool" href="item-inventory.html?from=flower-tools" data-title="Item Inventory">
               <div class="tool-circle">📦</div><h3>Item Inventory</h3>
             </a>
+<script>
+  // Restore per-device tool editor (hide / reorder).
+  LBToolEdit.apply({
+    container: '#carousel',
+    item: '.tool',
+    key: el => el.getAttribute('href')?.split('?')[0] || el.dataset.title || el.textContent.trim(),
+    storageKey: 'lbToolsFlower',
+    title: 'Flower Tools'
+  });
+</script>
           </div>
         </div>
       </section>
