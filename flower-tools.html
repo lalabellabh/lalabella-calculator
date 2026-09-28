@@ -1999,8 +1999,9 @@ h1{
 }
 </style>
 <style id="flower-tools-final-spacing-and-tools">
-/* Final spacing cleanup: keep the mobile menu above the header divider,
-   center the desktop date, and remove the rectangular tool-card boxes. */
+/* Final spacing cleanup: keep the mobile menu clear of the header divider,
+   put the date pill right next to the bell (not floating mid-screen),
+   properly center its text, and remove the squarish halo behind each tool icon. */
 @media(max-width:900px){
   .nav-toggle{
     top:8px !important;
@@ -2011,18 +2012,27 @@ h1{
   }
 }
 
-/* Desktop date is centered in the viewport; bell and chat stay at right. */
+/* Desktop date: sits directly beside the bell/chat cluster (not centered on
+   the whole viewport, which stranded it far from them on wide screens), and
+   its text is centered inside the pill instead of hugging the left edge. */
 @media(min-width:901px){
   .topbar .today{
     position:fixed !important;
-    left:50% !important;
-    right:auto !important;
+    left:auto !important;
+    right:158px !important;
     top:14px !important;
     width:150px !important;
     min-width:150px !important;
     max-width:150px !important;
-    transform:translateX(-50%) !important;
+    transform:none !important;
     margin:0 !important;
+    display:flex !important;
+    justify-content:center !important;
+  }
+}
+@media(max-width:900px){
+  .topbar .today{
+    justify-content:center !important;
   }
 }
 
@@ -2032,12 +2042,21 @@ h1{
   background:transparent !important;
   border-color:transparent !important;
   box-shadow:none !important;
-  backdrop-filter:none !important;
 }
 .tools-section .carousel .tool.active{
   background:transparent !important;
   border-color:transparent !important;
   box-shadow:none !important;
+}
+/* The circle's own shadow used to be a one-sided "drop" shadow (only offset
+   downward), which reads as a soft rounded-square smudge behind it rather
+   than a clean circular halo — especially with several icons in a row.
+   A centered, symmetric glow keeps it looking like a circle. */
+.tools-section .carousel .tool-circle{
+  box-shadow:0 0 14px rgba(158,47,74,.10) !important;
+}
+.tools-section .carousel .tool.active .tool-circle{
+  box-shadow:0 0 0 4px rgba(201,79,107,.16),0 0 20px rgba(201,79,107,.18) !important;
 }
 </style>
 </head>
