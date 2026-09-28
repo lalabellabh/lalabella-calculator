@@ -1307,7 +1307,8 @@ kbd{
     <nav class="nav">
       <div data-lb-menu data-hub-class="nav-hub-grid" data-title-class="nav-title" data-icon-class="nav-icon"></div>
     </nav>
-    <script src="shared/nav.js"></script>
+    <script src="shared/tool-edit.js"></script>
+<script src="shared/nav.js"></script>
 
     <div class="side-bottom" style="margin-bottom:12px;">
       <b>FLOWER TOOLS GARDEN</b><br>
@@ -1399,6 +1400,17 @@ kbd{
 
         <div class="carousel-shell">
           <div class="carousel" id="carousel" tabindex="0" aria-label="Flower tools">
+
+<script>
+// Restore per-device tool editor (hide / reorder).
+LBToolEdit.apply({
+  container: '#carousel',
+  item: '.tool',
+  key: el => el.getAttribute('href')?.split('?')[0] || el.dataset.title || el.textContent.trim(),
+  storageKey: 'lbToolsFlower',
+  title: 'Flower Tools'
+});
+</script>
             <a class="tool" href="flower-dashboard.html" data-title="Dashboard">
               <div class="tool-circle">📊</div><h3>Dashboard</h3>
             </a>
