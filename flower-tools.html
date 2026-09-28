@@ -1945,6 +1945,60 @@ h1{
   }
 }
 </style>
+<style id="flower-tools-desktop-header-slot-fix">
+/* Desktop: fixed three-slot header. Date, bell and chat each own a non-overlapping lane. */
+@media (min-width:901px){
+  .topbar .today{
+    position:fixed !important;
+    top:14px !important;
+    right:104px !important;
+    left:auto !important;
+    width:150px !important;
+    max-width:150px !important;
+    min-width:150px !important;
+    height:36px !important;
+    margin:0 !important;
+    padding:7px 10px !important;
+    transform:none !important;
+    box-sizing:border-box !important;
+    z-index:9400 !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+  }
+  .topbar .today span{
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+  .lala-bell-dock{
+    position:fixed !important;
+    top:14px !important;
+    right:62px !important;
+    z-index:9401 !important;
+  }
+  .lala-bell-btn{
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
+    font-size:15px !important;
+  }
+  .topbar .music-bar{
+    position:fixed !important;
+    top:14px !important;
+    right:18px !important;
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    min-height:36px !important;
+    margin:0 !important;
+    padding:0 !important;
+    z-index:9402 !important;
+  }
+  .topbar .music-bar .big{font-size:15px !important;}
+}
+</style>
 </head>
 
 <body>
