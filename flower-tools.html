@@ -1853,6 +1853,91 @@ html[data-lb-theme="dark"] .lbte-btn{
 }
 </style>
 
+<style id="flower-tools-responsive-theme-fix" data-lb-theme-skip>
+/* Stable responsive header + explicit dark theme. This block is skipped by
+   the generic theme converter because its dark selectors are intentional. */
+
+@media(max-width:900px){
+  .topbar{
+    height:56px !important;
+    margin-top:0 !important;
+    padding:8px 10px 6px 58px !important;
+    gap:7px !important;
+    justify-content:flex-end;
+  }
+  .topbar .top-spacer{display:none}
+  .topbar .today{
+    display:flex !important;
+    transform:none !important;
+    width:auto;
+    max-width:132px;
+    min-width:0;
+    padding:7px 10px !important;
+    font-size:9px !important;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .topbar .music-bar{
+    width:40px !important;
+    height:40px !important;
+    min-width:40px !important;
+    min-height:40px !important;
+  }
+  .lala-bell-dock{
+    top:8px !important;
+    right:57px !important;
+  }
+  .lala-bell-btn{
+    width:40px !important;
+    height:40px !important;
+    min-width:40px !important;
+    min-height:40px !important;
+    font-size:16px !important;
+  }
+  .lala-bell-panel{
+    top:55px !important;
+    right:10px !important;
+    width:min(280px,calc(100vw - 20px)) !important;
+  }
+}
+
+@media(min-width:901px) and (max-width:1400px){
+  .topbar .today{
+    transform:none !important;
+    margin-left:8px;
+  }
+  .topbar{
+    gap:10px;
+  }
+}
+
+html[data-lb-theme="dark"] .lala-bell-btn{
+  background:linear-gradient(135deg,#c89a3d,#8d681d) !important;
+  color:#21170b !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.35) !important;
+}
+html[data-lb-theme="dark"] .lala-bell-panel{
+  background:#272023 !important;
+  border-color:#403238 !important;
+  color:#eadde1 !important;
+  box-shadow:0 16px 38px rgba(0,0,0,.45) !important;
+}
+html[data-lb-theme="dark"] .lala-bell-panel h4{
+  color:#e0879c !important;
+}
+html[data-lb-theme="dark"] .lala-bell-order{
+  border-bottom-color:#3a3034 !important;
+}
+html[data-lb-theme="dark"] .lala-bell-empty{
+  color:#b3a0a6 !important;
+}
+html[data-lb-theme="dark"] .lala-bell-link{
+  background:linear-gradient(135deg,#c9506b,#9e2f4a) !important;
+  color:#fff !important;
+}
+</style>
+
 </head>
 
 <body>
