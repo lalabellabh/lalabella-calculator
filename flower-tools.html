@@ -1661,15 +1661,19 @@ h1{
   .topbar .top-spacer{display:none}
   .topbar .today{
     display:flex;
+    position:absolute;
+    right:104px;
+    top:8px;
     transform:none;
     width:auto;
-    max-width:100px;
+    max-width:calc(100vw - 114px);
     min-width:0;
     padding:7px 8px;
     font-size:9px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+    box-sizing:border-box;
   }
   .topbar .music-bar{
     width:40px;
