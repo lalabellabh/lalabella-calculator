@@ -2050,11 +2050,59 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     }catch(_){}
   }
 
+  // ============================================================
+  // LALABELLA PIANO — DESKTOP HOVER + CLICK / MOBILE TAP
+  // Browsers require a user gesture before Web Audio can play.
+  // The first click/tap unlocks the AudioContext; after that,
+  // desktop hover notes work normally.
+  // ============================================================
+
+  let pianoUnlocked = false;
+
+  async function unlockPianoAudio(){
+    try{
+      if(!itemAudioCtx){
+        itemAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if(itemAudioCtx.state === 'suspended'){
+        await itemAudioCtx.resume();
+      }
+
+      pianoUnlocked = itemAudioCtx.state === 'running';
+    }catch(_){}
+  }
+
+  // First real user interaction unlocks the piano.
+  document.addEventListener('pointerdown', unlockPianoAudio, {
+    once: true,
+    passive: true
+  });
+
+  // Desktop hover + click/tap.
   document.querySelectorAll('.carousel-item, .tool-card').forEach(el=>{
-    el.addEventListener('mouseenter', ()=>{
-      if(matchMedia('(hover: hover) and (pointer: fine)').matches) playPianoTone(false);
+
+    el.addEventListener('mouseenter', async ()=>{
+      if(matchMedia('(hover: hover) and (pointer: fine)').matches){
+        await unlockPianoAudio();
+        if(pianoUnlocked) playPianoTone(false);
+      }
     });
-    el.addEventListener('click', ()=>playPianoTone(true));
+
+    el.addEventListener('click', async ()=>{
+      await unlockPianoAudio();
+      playPianoTone(true);
+    });
+
+    // Extra pointer support for desktop/laptop browsers.
+    el.addEventListener('pointerenter', async ()=>{
+      if(
+        pianoUnlocked &&
+        matchMedia('(hover: hover) and (pointer: fine)').matches
+      ){
+        playPianoTone(false);
+      }
+    });
   });
 
   // Small playful touch matching the hero flower on Index/Flower Tools —
