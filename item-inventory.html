@@ -1905,27 +1905,56 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   // NOVA voice assistant lives in its own module — nova-assistant.js
 
 
-  // Soft piano-like note on hover/click for the carousel and hero
-  // icon — same style as Index.html / Flower Tools' hover sound.
+  // Gentle Lalabella piano sound on hover + click.
+  // Hover is desktop-only; click/tap works everywhere.
   let itemAudioCtx = null;
-  function playPianoTone(){
+  let lastPianoAt = 0;
+  function playPianoTone(force=false){
     try{
+      const nowMs = performance.now();
+      if(!force && nowMs - lastPianoAt < 90) return;
+      lastPianoAt = nowMs;
+
       if(!itemAudioCtx) itemAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      if(itemAudioCtx.state === 'suspended') itemAudioCtx.resume();
+
+      // Small rotating C-major voicing: C5 / E5 / G5 / C6.
+      const notes = [523.25, 659.25, 783.99, 1046.50];
       const freq = notes[Math.floor(Math.random()*notes.length)];
-      const o = itemAudioCtx.createOscillator(), g = itemAudioCtx.createGain();
-      o.type = 'triangle'; o.frequency.value = freq;
       const start = itemAudioCtx.currentTime;
-      g.gain.setValueAtTime(0, start);
-      g.gain.linearRampToValueAtTime(0.09, start + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.45);
-      o.connect(g).connect(itemAudioCtx.destination);
-      o.start(start); o.stop(start + 0.46);
+
+      const master = itemAudioCtx.createGain();
+      master.gain.setValueAtTime(0.0001, start);
+      master.gain.exponentialRampToValueAtTime(0.055, start + 0.012);
+      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
+      master.connect(itemAudioCtx.destination);
+
+      // Main piano-like tone.
+      const o1 = itemAudioCtx.createOscillator();
+      o1.type = 'triangle';
+      o1.frequency.setValueAtTime(freq, start);
+      o1.connect(master);
+
+      // Very soft upper harmonic gives it a bell/piano character.
+      const o2 = itemAudioCtx.createOscillator();
+      const g2 = itemAudioCtx.createGain();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(freq * 2, start);
+      g2.gain.value = 0.12;
+      o2.connect(g2).connect(master);
+
+      o1.start(start);
+      o2.start(start);
+      o1.stop(start + 0.40);
+      o2.stop(start + 0.40);
     }catch(_){}
   }
+
   document.querySelectorAll('.carousel-item, .tool-card').forEach(el=>{
-    el.addEventListener('mouseenter', playPianoTone);
-    el.addEventListener('click', playPianoTone);
+    el.addEventListener('mouseenter', ()=>{
+      if(matchMedia('(hover: hover) and (pointer: fine)').matches) playPianoTone(false);
+    });
+    el.addEventListener('click', ()=>playPianoTone(true));
   });
 
   // Small playful touch matching the hero flower on Index/Flower Tools —
