@@ -2080,7 +2080,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   });
 
   // Desktop hover + click/tap.
-  document.querySelectorAll('.carousel-item, .tool-card').forEach(el=>{
+  document.querySelectorAll('.carousel-item, .tool-card, .desktop-tool-btn').forEach(el=>{
 
     el.addEventListener('mouseenter', async ()=>{
       if(matchMedia('(hover: hover) and (pointer: fine)').matches){
