@@ -190,6 +190,25 @@
 
   .loading{ text-align:center; padding:40px 0; color:var(--ink-dim); }
 
+  /* Keep the variants card anchored while long category lists scroll inside it. */
+  #categoryBreakdownList{
+    max-height:260px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:5px;
+    scrollbar-width:thin;
+    scrollbar-color:var(--gold) transparent;
+  }
+  #categoryBreakdownList::-webkit-scrollbar{width:7px;}
+  #categoryBreakdownList::-webkit-scrollbar-track{background:transparent;}
+  #categoryBreakdownList::-webkit-scrollbar-thumb{
+    background:rgba(198,138,31,.55);
+    border-radius:10px;
+  }
+  #categoryBreakdownList::-webkit-scrollbar-thumb:hover{
+    background:rgba(198,138,31,.8);
+  }
+
   .cat-breakdown-row{ border-top:1px solid var(--line); }
   .cat-breakdown-row:first-child{ border-top:none; }
   .cat-breakdown-toggle{
