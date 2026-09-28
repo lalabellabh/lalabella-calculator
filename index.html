@@ -81,6 +81,14 @@ header{ padding-top:52px; }
 </style>
 <script src="shared/chat-badge.js"></script>
 <style id="chocoSharedNavStyles">
+/* ---- Menu (☰) button, backdrop and drawer ----
+   index.html itself keeps its own dark "Chocolate ATM" hero design at all
+   times (see shared/theme.js — it's a "native dark" page), but the ☰ menu
+   is a normal control, so it follows Light/Dark/Auto like every other
+   page's menu: light (white drawer) by default, dark to match the hero
+   when Dark is chosen. The small script near the closing </body> tag adds
+   "idx-dark-ui" to <body> when the setting means dark — see shared/theme.js's
+   'lb:theme-changed' event (wantDark field). */
 .choco-nav-toggle{
   position:fixed; top:16px; left:16px; z-index:9210;
   width:44px; height:44px; border-radius:12px; border:1px solid rgba(158,47,74,.16);
@@ -89,57 +97,71 @@ header{ padding-top:52px; }
   box-shadow:0 5px 16px rgba(60,30,40,.16);
   transition:background .2s ease, color .2s ease, border-color .2s ease;
 }
-/* Dark mode (or Auto following a dark device): matches the page's own
-   dark "Chocolate ATM" look. Set by the small script near the closing
-   </body> tag, since this page's colours are otherwise fixed (see
-   shared/theme.js — index.html is a "native dark" page). */
-.choco-nav-toggle.is-dark{
+body.idx-dark-ui .choco-nav-toggle{
   background:rgba(20,10,7,0.85); color:#f1d38c; border-color:rgba(255,255,255,0.15); box-shadow:none;
 }
 .choco-nav-backdrop{
-  position:fixed; inset:0; z-index:9205; background:rgba(5,2,3,0.55); backdrop-filter:blur(3px);
-  opacity:0; pointer-events:none; transition:opacity .2s ease;
+  position:fixed; inset:0; z-index:9205; background:rgba(60,30,40,.28); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease, background .2s ease;
 }
+body.idx-dark-ui .choco-nav-backdrop{ background:rgba(5,2,3,0.55); }
 .choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
 .choco-drawer{
   position:fixed; top:0; left:0; bottom:0; width:min(320px,80vw); z-index:9206;
-  background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
-  border-right:1px solid rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
-  transform:translateX(-100%); transition:transform .25s ease;
+  background:rgba(255,255,255,.97);
+  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
+  transform:translateX(-100%); transition:transform .25s ease, background .2s ease, border-color .2s ease;
   padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
   font-family:Arial,sans-serif;
+}
+body.idx-dark-ui .choco-drawer{
+  background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
+  border-right-color:rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
 }
 .choco-drawer.show{ transform:translateX(0); }
 .choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
 .choco-hub-grid a{
   flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
-  font-size:10.5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
-  min-height:76px; justify-content:center; white-space:nowrap;
+  font-size:10.5px; background:rgba(201,80,107,.05); border:1px solid #f0dede;
+  min-height:76px; justify-content:center; white-space:nowrap; color:#3a2530;
+}
+body.idx-dark-ui .choco-hub-grid a{
+  background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.08); color:#f1e4d8;
 }
 .choco-hub-grid a span.hub-icon{ font-size:20px; }
 .choco-drawer a{
   display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
-  color:#f1e4d8; text-decoration:none; font-size:14px; font-weight:600;
+  color:#3a2530; text-decoration:none; font-size:14px; font-weight:600;
 }
-.choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
+.choco-drawer a:hover{ background:rgba(201,80,107,.08); }
+body.idx-dark-ui .choco-drawer a{ color:#f1e4d8; }
+body.idx-dark-ui .choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
 .choco-drawer .choco-drawer-title{
-  color:#f1d38c; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
   padding:0 12px 8px; opacity:0.8;
 }
+body.idx-dark-ui .choco-drawer .choco-drawer-title{ color:#f1d38c; }
 .choco-drawer .choco-music-box{
-  margin-top:10px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
+  margin-top:10px; padding:12px; border-radius:12px; background:rgba(201,80,107,.05);
+  border:1px solid #f0dede;
+}
+body.idx-dark-ui .choco-drawer .choco-music-box{
+  background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08);
 }
 .choco-drawer .choco-music-box input{
-  width:100%; padding:9px 10px; border:1px solid rgba(255,255,255,0.14); border-radius:9px;
-  background:rgba(255,255,255,0.05); color:#f1e4d8; font-size:12px; outline:none; margin-bottom:8px;
+  width:100%; padding:9px 10px; border:1px solid #f0dede; border-radius:9px;
+  background:#fdf6f6; color:#3a2530; font-size:12px; outline:none; margin-bottom:8px;
   box-sizing:border-box;
+}
+body.idx-dark-ui .choco-drawer .choco-music-box input{
+  border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:#f1e4d8;
 }
 .choco-drawer .choco-music-box button{
   width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
   background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
 }
-.choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
+.choco-drawer .choco-music-now{ font-size:10.5px; color:#8a7078; margin-top:8px; word-break:break-all; line-height:1.4; }
+body.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 /* hamburger stays visible on mobile too now */
 </style>
 
@@ -1250,14 +1272,15 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
 // setting: white in Light, matching-dark in Dark, and Auto follows the
 // device. shared/theme.js reports this via 'lb:theme-changed' (wantDark).
 (function () {
-  const toggle = document.getElementById('chocoNavToggle');
-  if (!toggle) return;
   function wantsDark() {
     if (!window.LBTheme) return false;
     const m = LBTheme.get();
     return m === 'dark' || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
-  function apply() { toggle.classList.toggle('is-dark', wantsDark()); }
+  // One flag on <body> drives the ☰ button, the backdrop and the whole
+  // drawer (see the CSS above) — Light = white drawer, Dark = matches
+  // the page's own dark hero.
+  function apply() { document.body.classList.toggle('idx-dark-ui', wantsDark()); }
   apply();
   window.addEventListener('lb:theme-changed', apply);
   if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply);
