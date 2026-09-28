@@ -277,6 +277,137 @@
   .nova-quick-actions button:active{ background:var(--blush); }
   @media(max-width:400px){ .nova-quick-actions{ grid-template-columns:1fr 1fr; } }
 </style>
+<style id="inventoryLightTheme">
+/* ============================================================
+   LALABELLA INVENTORY — LIGHT / DARK THEME BRIDGE
+   Light is the default. The existing shared/theme.js remains
+   responsible for the user's global Light/Dark setting.
+   ============================================================ */
+body.inventory-light{
+  background:
+    radial-gradient(circle at 4% 8%, rgba(255,170,190,.20), transparent 25%),
+    radial-gradient(circle at 96% 14%, rgba(232,194,112,.18), transparent 24%),
+    radial-gradient(circle at 18% 88%, rgba(180,215,190,.20), transparent 25%),
+    linear-gradient(145deg,#fff8f7 0%,#f9e8e5 58%,#edf6ef 100%);
+  color:#3a2530;
+}
+body.inventory-light header{
+  background:
+    radial-gradient(circle at 18% 100%, rgba(224,104,132,.18), transparent 27%),
+    radial-gradient(circle at 84% 18%, rgba(235,205,143,.22), transparent 24%),
+    linear-gradient(135deg,#fffdfc 0%,#fff3f1 48%,#f8e3df 100%);
+  border:1px solid rgba(255,255,255,.92);
+  box-shadow:0 16px 40px rgba(158,47,74,.12), inset 0 1px 0 rgba(255,255,255,.9);
+}
+body.inventory-light header::before{
+  display:block;
+  content:'🎀  🌿  🌸';
+  position:absolute; left:10px; bottom:-18px; top:auto;
+  font-size:48px; letter-spacing:3px; opacity:.28;
+  transform:rotate(-8deg); filter:saturate(.82);
+}
+body.inventory-light header::after{
+  display:block;
+  content:'🌿  🌸';
+  position:absolute; right:-5px; bottom:-12px; top:auto;
+  font-size:50px; opacity:.24; transform:rotate(8deg);
+}
+body.inventory-light header .eyebrow{color:#bd4964;}
+body.inventory-light header h1{color:#7e2741; text-shadow:0 2px 0 rgba(255,255,255,.7);}
+body.inventory-light header .sub{color:#806b72;}
+body.inventory-light .hero-center{
+  background:linear-gradient(145deg,#fff7d7,#e9b84e 58%,#bf812d);
+  border-color:rgba(177,121,34,.35);
+  box-shadow:0 16px 32px rgba(138,90,31,.18),0 0 0 8px rgba(217,164,65,.10);
+}
+body.inventory-light .branch-tabs,
+body.inventory-light .card{
+  background:rgba(255,255,255,.92);
+  border-color:#efd9d8;
+  box-shadow:0 10px 28px rgba(158,47,74,.07);
+}
+body.inventory-light .desktop-tool-nav{
+  background:linear-gradient(160deg,rgba(255,255,255,.97),rgba(fff,0,0,0));
+  background:linear-gradient(160deg,#fffdfd 0%,#fff5f3 58%,#f9e8e4 100%);
+  border-color:#efd8d7;
+  box-shadow:0 18px 50px rgba(158,47,74,.13),0 0 0 1px rgba(255,255,255,.8);
+}
+body.inventory-light .desktop-tool-nav-title{color:#bd4964;}
+body.inventory-light .desktop-tool-btn{
+  color:#3a2530;
+  background:rgba(255,255,255,.68);
+  border-color:rgba(240,217,217,.75);
+}
+body.inventory-light .desktop-tool-btn:hover{
+  background:#fff;
+  border-color:#e7b9c1;
+  box-shadow:0 7px 18px rgba(158,47,74,.08);
+}
+body.inventory-light .desktop-tool-btn.active{
+  background:linear-gradient(135deg,#d45d78,#b53b59);
+  border-color:#c6506b;
+  color:#fff;
+  box-shadow:0 9px 22px rgba(181,59,89,.22);
+}
+body.inventory-light .desktop-tool-btn small{color:#8a7078;}
+body.inventory-light .desktop-tool-btn.active small{color:rgba(255,255,255,.82);}
+body.inventory-light .desktop-tool-icon{
+  box-shadow:0 5px 12px rgba(158,47,74,.14);
+}
+
+/* Dark theme: preserve the existing Lalabella dark aesthetic. */
+body.inventory-dark{
+  background:
+    radial-gradient(circle at 8% 18%, rgba(170,45,78,.18), transparent 25%),
+    radial-gradient(circle at 92% 28%, rgba(217,164,65,.12), transparent 22%),
+    linear-gradient(145deg,#070405 0%,#12090b 55%,#080405 100%);
+  color:#f7eee5;
+}
+body.inventory-dark header{
+  background:radial-gradient(circle at 50% 30%,rgba(170,45,78,.22),transparent 55%),linear-gradient(145deg,#070405 0%,#12090b 55%,#0d0709 100%);
+  border-color:rgba(230,196,122,.28);
+}
+body.inventory-dark header::before,
+body.inventory-dark header::after{display:none;}
+body.inventory-dark header h1{color:#f7eee5;}
+body.inventory-dark header .sub{color:#b39a98;}
+body.inventory-dark .desktop-tool-nav{
+  background:radial-gradient(circle at 50% 0%,rgba(170,45,78,.18),transparent 48%),linear-gradient(160deg,#0a0607 0%,#12090b 55%,#0d0709 100%);
+  border-color:rgba(230,196,122,.24);
+}
+body.inventory-dark .desktop-tool-btn{color:#f7eee5;background:rgba(255,255,255,.035);border-color:transparent;}
+body.inventory-dark .desktop-tool-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(230,196,122,.20);}
+body.inventory-dark .desktop-tool-btn.active{background:linear-gradient(135deg,rgba(201,80,107,.34),rgba(158,47,74,.20));border-color:rgba(230,196,122,.34);}
+body.inventory-dark .desktop-tool-btn small{color:#b39a98;}
+
+/* Keep the phone version airy in Light mode too. */
+@media(max-width:900px){
+  body.inventory-light .carousel-circle{
+    background:linear-gradient(145deg,#fff,#f7e4df);
+    border-color:rgba(201,80,107,.20);
+    box-shadow:0 10px 22px rgba(158,47,74,.10);
+  }
+  body.inventory-light .carousel-item.active .carousel-circle{
+    border-color:#9e2f4a;
+    box-shadow:0 0 0 4px rgba(201,80,107,.13),0 12px 26px rgba(201,80,107,.16);
+  }
+}
+</style>
+<script>
+(function(){
+  function syncInventoryTheme(){
+    var r=document.documentElement, b=document.body;
+    if(!b) return;
+    var attrs=[r.getAttribute('data-theme'),b.getAttribute('data-theme')].filter(Boolean).join(' ').toLowerCase();
+    var dark = attrs.includes('dark') || r.classList.contains('dark') || b.classList.contains('dark') || b.classList.contains('dark-mode') || r.classList.contains('dark-mode');
+    b.classList.toggle('inventory-dark', dark);
+    b.classList.toggle('inventory-light', !dark);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',syncInventoryTheme); else syncInventoryTheme();
+  new MutationObserver(syncInventoryTheme).observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme']});
+  new MutationObserver(syncInventoryTheme).observe(document.body,{attributes:true,attributeFilter:['class','data-theme']});
+})();
+</script>
 </head>
 <body>
 
