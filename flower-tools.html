@@ -930,11 +930,14 @@ kbd{
 <style>
 .lala-bell-dock{ position:fixed; top:14px; right:78px; z-index:9300; }
 .lala-bell-btn{
-  width:44px; height:44px; border-radius:50%; border:none; cursor:pointer;
-  background:linear-gradient(135deg,#d9a441,#b8860b); color:#2a1a0a; font-size:20px;
+  width:44px; height:44px; min-width:44px; min-height:44px;
+  padding:0; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#d9a441,#b8860b); color:#2a1a0a;
+  font-size:18px; line-height:1;
   display:flex; align-items:center; justify-content:center; position:relative;
   box-shadow:0 6px 16px rgba(0,0,0,.2);
 }
+.lala-bell-btn::first-line{line-height:1;}
 .lala-bell-badge{
   position:absolute; top:-4px; right:-4px; background:#c0392b; color:#fff;
   font-size:10px; font-weight:700; border-radius:10px; min-width:18px; height:18px;
