@@ -773,7 +773,12 @@
     });
 
     try{
-      const dashData = await fetch(API_URL + '?action=getFlowerDashboard&branch=' + encodeURIComponent(branch) + '&_ts=' + t).then(r=>r.json());
+      const dashData = await fetch(
+        LB_CONFIG.FLOWER_FAST_API + '?action=getFlowerDashboard&branch=' + encodeURIComponent(branch) +
+          '&token=' + encodeURIComponent(window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || '') +
+          '&_ts=' + t,
+        { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } }
+      ).then(r=>r.json());
       if(seq !== loadSeq) return;
       if(dashData && dashData.error) throw new Error(dashData.error);
       data = dashData;
