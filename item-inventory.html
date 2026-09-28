@@ -433,6 +433,106 @@ body>.wrap{position:relative;z-index:1}
 @keyframes inventoryDecorSway{to{transform:rotate(-17deg) translateY(-14px)}}
 @keyframes inventoryDecorSwayRight{to{transform:scaleX(-1) rotate(-10deg) translateY(13px)}}
 </style>
+
+<style id="lalabellaNavExactSize">
+/* =========================================================
+   LALABELLA SHARED NAV — EXACT SAME SIZE ACROSS PAGES
+   Matches Chocolate / Flower navigation
+   ========================================================= */
+
+.choco-nav-toggle{
+  position:fixed !important;
+  top:16px !important;
+  left:16px !important;
+
+  width:44px !important;
+  height:44px !important;
+  min-width:44px !important;
+  min-height:44px !important;
+
+  padding:0 !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+
+  border-radius:12px !important;
+  border:1px solid var(--line) !important;
+
+  background:rgba(255,255,255,.90) !important;
+  color:var(--rose-deep) !important;
+
+  font-size:20px !important;
+  line-height:1 !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  cursor:pointer !important;
+  backdrop-filter:blur(6px) !important;
+  -webkit-backdrop-filter:blur(6px) !important;
+
+  box-shadow:0 6px 16px rgba(158,47,74,.12) !important;
+
+  z-index:9210 !important;
+}
+
+/* Keep the hamburger itself centered */
+.choco-nav-toggle::before{
+  display:none !important;
+}
+
+/* Same touch size on phones — do not shrink */
+@media(max-width:900px){
+  .choco-nav-toggle{
+    top:16px !important;
+    left:16px !important;
+    width:44px !important;
+    height:44px !important;
+    min-width:44px !important;
+    min-height:44px !important;
+  }
+}
+
+/* Make the three hub shortcuts use the same proportions */
+.choco-hub-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+
+.choco-hub-grid a{
+  min-height:78px !important;
+  box-sizing:border-box !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  flex-direction:column !important;
+  text-align:center !important;
+  gap:4px !important;
+  padding:10px 4px !important;
+  border-radius:10px !important;
+  font-size:10.5px !important;
+}
+
+.choco-hub-grid a span.hub-icon{
+  width:24px !important;
+  height:24px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:20px !important;
+  line-height:1 !important;
+}
+
+/* Same drawer spacing as the shared Lalabella navigation */
+.choco-drawer{
+  padding-top:70px !important;
+  padding-left:16px !important;
+  padding-right:16px !important;
+  padding-bottom:20px !important;
+  gap:6px !important;
+}
+</style>
+
 </head>
 <body>
 <div class="inventory-backdrop" aria-hidden="true">
