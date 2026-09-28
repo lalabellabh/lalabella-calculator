@@ -305,19 +305,30 @@
     'html.lb-theme-boot body{visibility:hidden!important}html.lb-theme-boot{background:#141113!important}';
   (document.head || root).appendChild(base);
 
-  var isDarkNow = false, domReady = document.readyState !== 'loading', printing = false;
+  var isDarkNow = false, lastWantRaw = null, domReady = document.readyState !== 'loading', printing = false;
   function apply() {
+    // rawWant: does the person's setting mean "dark", regardless of whether THIS
+    // page needs converting (native-dark pages like index.html never need
+    // conversion, but page code there can still use this to theme its own
+    // small UI chips — see the 'lb:theme-changed' event's wantDark field).
+    var rawWant = getMode() === 'dark' || (getMode() === 'auto' && !!(mq && mq.matches));
     var dark = wantDark() && !printing;
     root.setAttribute('data-lb-theme', dark ? 'dark' : 'light');
-    if (dark === isDarkNow) return;
+    var changed = dark !== isDarkNow;
     if (!domReady) {                          // first paint: hide until the page's CSS is converted
       if (dark) root.classList.add('lb-theme-boot');
+      if (changed || rawWant !== lastWantRaw) { lastWantRaw = rawWant; }
       return;
     }
-    if (dark && !darkOn()) dark = false; else if (!dark) darkOff();
-    isDarkNow = dark;
-    root.classList.remove('lb-theme-boot');
-    try { window.dispatchEvent(new CustomEvent('lb:theme-changed', { detail: { mode: getMode(), dark: dark } })); } catch (e) {}
+    if (changed) {
+      if (dark && !darkOn()) dark = false; else if (!dark) darkOff();
+      isDarkNow = dark;
+      root.classList.remove('lb-theme-boot');
+    }
+    if (changed || rawWant !== lastWantRaw) {
+      lastWantRaw = rawWant;
+      try { window.dispatchEvent(new CustomEvent('lb:theme-changed', { detail: { mode: getMode(), dark: dark, wantDark: rawWant } })); } catch (e) {}
+    }
   }
 
   if (!domReady) {
