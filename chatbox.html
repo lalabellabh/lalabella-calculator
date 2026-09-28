@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Lalabella Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f9dfe0; --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --green:#3d9a5f;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; color:var(--ink); font-family:'Space Grotesk',sans-serif;
+    /* default background: soft floral pattern (can be replaced with your own photo) */
+    background-color:#f7e3e3;
+    background-image:
+      radial-gradient(ellipse at 0% 0%, rgba(255,255,255,.55), transparent 55%),
+      radial-gradient(ellipse at 100% 100%, rgba(201,80,107,.18), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg transform='translate(48 52)'%3E%3Ccircle r='14' fill='%23e7a3b3' fill-opacity='.35'/%3E%3Cpath d='M-8-4c4-9 12-9 16 0M-10 4c5 6 15 6 20 0' stroke='%23c9506b' stroke-opacity='.35' stroke-width='2'/%3E%3Cpath d='M0 14c0 18-6 30-16 40' stroke='%235f8b6e' stroke-opacity='.3' stroke-width='2'/%3E%3Cpath d='M-6 34c-10-2-16 4-18 10 8 2 14-2 18-10z' fill='%235f8b6e' fill-opacity='.22'/%3E%3C/g%3E%3Cg transform='translate(160 150) rotate(20)'%3E%3Ccircle r='11' fill='%23f1d38c' fill-opacity='.35'/%3E%3Cpath d='M-6-3c3-7 9-7 12 0M-7 3c4 5 10 5 14 0' stroke='%239e2f4a' stroke-opacity='.3' stroke-width='2'/%3E%3Cpath d='M0 11c2 14 8 22 16 30' stroke='%235f8b6e' stroke-opacity='.28' stroke-width='2'/%3E%3C/g%3E%3Ccircle cx='170' cy='40' r='4' fill='%23c9506b' fill-opacity='.25'/%3E%3Ccircle cx='30' cy='170' r='3' fill='%23d9a441' fill-opacity='.3'/%3E%3Ccircle cx='110' cy='110' r='2.5' fill='%23c9506b' fill-opacity='.25'/%3E%3C/g%3E%3C/svg%3E");
+    background-size:auto, auto, 220px 220px;
+    background-attachment:fixed;
+  }
+  body.custom-bg{ background-size:cover; background-position:center; background-repeat:no-repeat; }
+  body.custom-bg::before{ content:''; position:fixed; inset:0; background:rgba(40,20,28,.18); pointer-events:none; }
+
+  .page{ position:relative; max-width:1180px; margin:0 auto; padding:14px 14px 16px; height:100dvh; display:flex; flex-direction:column; }
+  .topline{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; padding-left:52px; }
+  .back-link{ white-space:nowrap; color:var(--ink); background:rgba(255,255,255,.8); padding:6px 12px; border-radius:20px; text-decoration:none; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; backdrop-filter:blur(6px); }
+  .top-tools{ display:flex; gap:8px; align-items:center; min-width:0; }
+  .pill-btn{ border:1px solid var(--line); background:rgba(255,255,255,.88); backdrop-filter:blur(6px); border-radius:20px; padding:6px 12px; font-size:12px; cursor:pointer; color:var(--ink); font-family:inherit; white-space:nowrap; }
+
+  /* music (kept) */
+  .music-bar{ display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.9); border:1px solid var(--line); border-radius:30px; padding:4px 10px 4px 4px; max-width:300px; min-width:0; backdrop-filter:blur(6px); }
+  .music-toggle-btn{ width:26px; height:26px; border-radius:50%; border:none; cursor:pointer; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; font-size:10px; flex-shrink:0; }
+  .music-info{ flex:1; min-width:0; }
+  .music-title{ font-size:10.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .music-sub{ font-size:9.5px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .music-url-toggle{ background:none; border:none; color:var(--rose-deep); font-size:10.5px; cursor:pointer; text-decoration:underline; flex-shrink:0; }
+  .music-url-panel{ display:none; position:absolute; right:14px; top:52px; z-index:60; width:min(340px,92vw); background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:0 14px 34px rgba(158,47,74,.18); }
+  .music-url-panel.show{ display:block; }
+  .music-url-panel label{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--rose-deep); display:block; margin-bottom:6px; }
+  .music-url-panel input{ width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px; font-family:inherit; font-size:12.5px; outline:none; background:var(--blush); }
+  .music-url-panel .hint{ font-size:10px; color:var(--ink-dim); margin-top:6px; line-height:1.5; }
+  .music-url-panel .apply-btn{ margin-top:10px; width:100%; padding:9px 0; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:11.5px; cursor:pointer; }
+
+  .settings-panel{ display:none; position:absolute; right:14px; top:52px; z-index:61; width:min(320px,92vw); background:#fff; border:1px solid var(--line); border-radius:16px; padding:6px 14px 14px; box-shadow:0 14px 34px rgba(90,30,50,.2); }
+  .settings-panel.show{ display:block; }
+  .stg-tabs{ display:flex; gap:4px; margin:8px 0 12px; border-bottom:1px solid var(--line); }
+  .stg-tabs button{ flex:1; border:none; background:none; padding:9px 4px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; font-family:inherit; border-bottom:2px solid transparent; }
+  .stg-tabs button.on{ color:var(--rose-deep); border-bottom-color:var(--rose-deep); }
+  .sp-hint{ font-size:10.5px; color:var(--ink-dim); margin:2px 0 10px; }
+  .sp-list{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .sp-list button{ border:1px solid var(--line); background:var(--blush); border-radius:10px; padding:8px 6px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--ink); text-align:left; }
+  .sp-list button.on{ background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; border-color:transparent; }
+  .sp-vol{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; }
+  .sp-vol input{ flex:1; accent-color:var(--rose); }
+  .sp-upload{ margin-top:10px; width:100%; border:1px dashed var(--rose); background:none; color:var(--rose-deep); border-radius:10px; padding:8px; font-size:11.5px; cursor:pointer; font-family:inherit; }
+  .sp-upload.sp-danger{ border-color:#c0392b; color:#c0392b; }
+
+  .layout{ flex:1; min-height:0; display:flex; gap:14px; }
+  .card{ background:rgba(255,255,255,var(--card-op,.94)); backdrop-filter:blur(calc(var(--card-op,.94) * 10px)); border:1px solid var(--line); border-radius:18px; box-shadow:0 14px 40px rgba(90,30,50,.14); }
+
+  /* ---- conversation list ---- */
+  .convs{ width:300px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; }
+  .convs-head{ padding:16px 16px 10px; border-bottom:1px solid var(--line); }
+  .convs-head h2{ font-family:'Fraunces',serif; font-size:18px; margin:0 0 8px; }
+  .convs-head input{ width:100%; padding:8px 12px; border:1px solid var(--line); border-radius:12px; background:var(--blush); font-family:inherit; font-size:12.5px; outline:none; }
+  .conv-list{ flex:1; overflow-y:auto; padding:6px; }
+  .conv-sep{ font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); padding:10px 10px 4px; }
+  .conv{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:12px; cursor:pointer; }
+  .conv:hover{ background:var(--blush); }
+  .conv.active{ background:linear-gradient(135deg,#fbe4e8,#f6d3da); }
+  .conv .txt{ min-width:0; flex:1; }
+  .conv .cname{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .conv .csub{ font-size:10.5px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ubadge{ min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:var(--rose); color:#fff; font-size:11px; font-weight:700; display:none; align-items:center; justify-content:center; }
+  .ubadge.show{ display:flex; }
+  .group-icon{ width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+
+  /* ---- avatar ---- */
+  .av{ position:relative; width:38px; height:38px; flex-shrink:0; border-radius:50%; background:linear-gradient(135deg,#f3b0bf,var(--rose)); color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .av img{ width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
+  .av.sm{ width:30px; height:30px; font-size:11px; }
+  .av .dot{ position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; background:#c9bfc2; border:2px solid #fff; }
+  .av .dot.on{ background:var(--green); }
+
+  /* ---- chat panel ---- */
+  .chat{ flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+  .chat-head{ padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; }
+  .back-conv{ display:none; border:none; background:none; font-size:24px; color:var(--rose-deep); cursor:pointer; padding:0 6px 0 0; }
+  .chat-head h1{ font-family:'Fraunces',serif; font-size:18px; margin:0; }
+  .chat-sub{ font-size:10.5px; color:var(--ink-dim); margin-top:1px; }
+  .chat-sub.live{ color:var(--green); }
+  .private-tag{ margin-left:auto; font-size:10.5px; color:var(--ink-dim); background:var(--blush); border-radius:20px; padding:4px 10px; white-space:nowrap; }
+
+  .chat-messages{ flex:1; overflow-y:auto; padding:14px 16px 8px; }
+  .day-sep{ text-align:center; margin:14px 0 10px; }
+  .day-sep span{ font-size:10.5px; color:var(--ink-dim); background:var(--blush); border-radius:20px; padding:4px 12px; }
+  .msg{ display:flex; gap:8px; align-items:flex-end; margin-top:10px; }
+  .msg.cont{ margin-top:3px; }
+  .msg.me{ flex-direction:row-reverse; }
+  .msg .av-slot{ width:30px; flex-shrink:0; }
+  .msg.me .av-slot{ display:none; }
+  .msg .body{ max-width:min(72%,520px); display:flex; flex-direction:column; }
+  .msg.me .body{ align-items:flex-end; }
+  .msg .who{ font-size:11px; font-weight:600; color:var(--rose-deep); margin:0 0 3px 4px; }
+  .msg .who small{ font-weight:400; color:var(--ink-dim); margin-left:4px; }
+  .bubble-row{ display:flex; align-items:center; gap:6px; }
+  .msg.me .bubble-row{ flex-direction:row-reverse; }
+  .bubble{ padding:9px 13px; border-radius:16px 16px 16px 5px; background:var(--blush); font-size:14px; line-height:1.5; word-break:break-word; white-space:pre-wrap; }
+  .bubble.emoji-only{ font-size:34px; line-height:1.2; background:none !important; padding:2px 4px; }
+  .msg.me .bubble{ background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; border-radius:16px 16px 5px 16px; }
+  .msg.me .bubble.emoji-only{ color:inherit; }
+  .bubble .t{ display:block; font-size:9.5px; opacity:.6; margin-top:3px; text-align:right; }
+  .del-btn{ opacity:0; background:#fff; border:1px solid var(--line); color:#b23a3a; border-radius:50%; width:26px; height:26px; font-size:12px; cursor:pointer; flex-shrink:0; transition:opacity .15s; }
+  .msg:hover .del-btn, .msg.show-del .del-btn{ opacity:1; }
+  .empty-chat{ text-align:center; color:var(--ink-dim); font-size:13px; padding:40px 10px; }
+
+  .composer{ position:relative; border-top:1px solid var(--line); padding:10px 12px; display:flex; gap:8px; align-items:flex-end; }
+  .emoji-btn{ width:40px; height:44px; border:1px solid var(--line); border-radius:14px; background:var(--blush); font-size:20px; cursor:pointer; flex-shrink:0; }
+  .composer textarea{ flex:1; min-width:0; resize:none; max-height:120px; padding:11px 14px; border-radius:16px; border:1px solid var(--line); outline:none; background:var(--blush); color:var(--ink); font-family:inherit; font-size:14px; line-height:1.4; }
+  .composer textarea:focus{ border-color:var(--rose); }
+  .send-btn{ width:46px; height:44px; border:none; border-radius:14px; cursor:pointer; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; font-size:17px; flex-shrink:0; }
+  .send-btn:disabled{ opacity:.6; }
+
+  .emoji-panel{ display:none; position:absolute; left:12px; bottom:64px; z-index:40; width:min(340px,calc(100% - 24px)); background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 14px 34px rgba(90,30,50,.2); overflow:hidden; }
+  .emoji-panel.show{ display:block; }
+  .emoji-tabs{ display:flex; border-bottom:1px solid var(--line); }
+  .emoji-tabs button{ flex:1; border:none; background:none; padding:8px 0; font-size:18px; cursor:pointer; }
+  .emoji-tabs button.on{ background:var(--blush); }
+  .emoji-grid{ display:grid; grid-template-columns:repeat(8,1fr); gap:2px; padding:8px; max-height:220px; overflow-y:auto; }
+  .emoji-grid button{ border:none; background:none; font-size:22px; padding:4px 0; cursor:pointer; border-radius:8px; }
+  .emoji-grid button:hover{ background:var(--blush); }
+
+  /* phones: list OR chat */
+  @media (max-width:820px){
+    .page{ padding:10px 8px 8px; }
+    .music-bar .music-info{ display:none; }
+    .music-bar{ padding:4px; }
+    .music-url-toggle{ display:none; }
+    .bg-lbl{ display:none; }
+    .topline{ padding-left:50px; }
+    .convs{ width:100%; }
+    .layout.in-chat .convs{ display:none; }
+    .layout:not(.in-chat) .chat{ display:none; }
+    .back-conv{ display:block; }
+    .msg .body{ max-width:82%; }
+    .private-tag{ display:none; }
+  }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<script src="shared/chat-live.js"></script>
+<script src="shared/chat-sounds.js"></script>
+
+<div class="page">
+  <div class="topline">
+    <a class="back-link" href="index.html">&larr; Tools</a>
+    <div class="top-tools">
+      <button class="pill-btn" id="settingsBtn" title="Chat settings">⚙️<span class="bg-lbl"> Settings</span></button>
+      <input type="file" id="bgFile" accept="image/*" hidden>
+      <div class="music-bar">
+        <button class="music-toggle-btn" id="musicToggleBtn">▶</button>
+        <div class="music-info">
+          <div class="music-title" id="musicTitle">No sound source set</div>
+          <div class="music-sub" id="musicSub">Tap "Set Sound" to add one</div>
+        </div>
+        <button class="music-url-toggle" id="musicUrlToggleBtn">Set Sound</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <div class="stg-tabs">
+      <button type="button" class="on" data-tab="sound">🔔 Sound</button>
+      <button type="button" data-tab="bg">🖼 Background</button>
+    </div>
+
+    <div class="stg-pane" data-pane="sound">
+      <div class="sp-hint">Tap a sound to hear it. Saved on this device.</div>
+      <div class="sp-list" id="soundList"></div>
+      <label class="sp-vol">🔈 <input type="range" id="soundVol" min="0" max="1" step="0.05"> 🔊</label>
+      <button type="button" class="sp-upload" id="soundUploadBtn">⬆️ Use my own sound (mp3, short)</button>
+      <input type="file" id="soundFile" accept="audio/*" hidden>
+    </div>
+
+    <div class="stg-pane" data-pane="bg" hidden>
+      <div class="sp-hint">Pick a picture for the page background. Saved on this device.</div>
+      <button type="button" class="sp-upload" id="bgUploadBtn">🖼 Choose a picture…</button>
+      <button type="button" class="sp-upload sp-danger" id="bgResetBtn" hidden>✕ Use the default flower background</button>
+      <label class="sp-vol" style="margin-top:14px;">👁 Chat panel <input type="range" id="chatOpacity" min="0.3" max="1" step="0.02"> 🌸</label>
+      <div class="sp-hint" style="margin:-2px 0 0;">Lower = the background picture shows through the chat more.</div>
+    </div>
+  </div>
+
+  <div class="music-url-panel" id="musicUrlPanel">
+    <label>Sound URL — YouTube link or direct mp3</label>
+    <input type="text" id="musicUrlInput" placeholder="Paste a YouTube link or an mp3 URL" />
+    <div class="hint">Paste a YouTube video link (easiest), or a direct mp3 link you own the rights to. On phones, sound needs a tap to start — that's a browser rule, not a bug.</div>
+    <button class="apply-btn" id="musicUrlApplyBtn">Play This Sound</button>
+    <div class="music-now" id="musicNow" style="font-size:10px; color:var(--ink-dim); margin-top:8px;"></div>
+  </div>
+  <audio id="audioPlayer" loop></audio>
+  <div id="ytPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+  <div class="layout" id="layout">
+    <aside class="convs card">
+      <div class="convs-head">
+        <h2>💬 Chats</h2>
+        <input type="search" id="convSearch" placeholder="Search people…">
+      </div>
+      <div class="conv-list" id="convList"></div>
+    </aside>
+
+    <section class="chat card">
+      <div class="chat-head">
+        <button class="back-conv" id="backConv" aria-label="Back to chats">‹</button>
+        <div id="headAvatar"></div>
+        <div style="min-width:0;">
+          <h1 id="headName">Lalabella Team</h1>
+          <div class="chat-sub" id="headSub">Everyone</div>
+        </div>
+        <span class="private-tag" id="privateTag" hidden>🔒 Only you two can see this</span>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <form class="composer" id="chatForm">
+        <button type="button" class="emoji-btn" id="emojiBtn" aria-label="Emoji">😊</button>
+        <div class="emoji-panel" id="emojiPanel">
+          <div class="emoji-tabs" id="emojiTabs"></div>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <textarea id="chatInput" rows="1" maxlength="1000" placeholder="Write a message…" title="Enter to send · Shift+Enter for a new line"></textarea>
+        <button type="submit" class="send-btn" aria-label="Send">➤</button>
+      </form>
+    </section>
+  </div>
+</div>
+<script>
+// Lalabella staff chat — group + private (1-to-1) chats.
+// Backend: Supabase Edge Function "chat" (fast) + Realtime pings (instant).
+// Private chats are filtered on the server: only the two people see them.
+(function(){
+  const $ = id => document.getElementById(id);
+  const box = $('chatMessages'), input = $('chatInput'), form = $('chatForm');
+  const FALLBACK_MS = 30000, PEOPLE_MS = 60000;
+
+  let meId = null, isAdmin = false, people = [], peopleById = {};
+  let conv = { peerId: null };          // null = group chat
+  let lastId = 0, delSince = '', lastMsg = null, busy = false, firstLoad = true, liveOn = false;
+  const nodes = {};
+  let unread = { group: 0, dm: {} };
+
+  // ---------- seen markers (per device) ----------
+  function loadSeen(){ try{ return JSON.parse(localStorage.getItem('lbChatSeen') || '{}') || {}; }catch(e){ return {}; } }
+  function saveSeen(s){ try{ localStorage.setItem('lbChatSeen', JSON.stringify(s)); }catch(e){} }
+  function markSeen(id){
+    const s = loadSeen(); s.dm = s.dm || {};
+    if(conv.peerId){ if(id > (s.dm[conv.peerId] || 0)) s.dm[conv.peerId] = id; }
+    else { if(id > (s.group || 0)) s.group = id; try{ localStorage.setItem('lalabellaChatLastSeenId', String(Math.max(id, Number(localStorage.getItem('lalabellaChatLastSeenId'))||0))); }catch(e){} }
+    saveSeen(s);
+  }
+
+  // ---------- helpers ----------
+  const call = (action, params) => lbChatApi(action, params || {});
+  function initials(n){ return String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+  function avatarEl(personOrName, small, dot){
+    const p = typeof personOrName === 'object' ? personOrName : { name: personOrName };
+    const el = document.createElement('div'); el.className = 'av' + (small ? ' sm' : '');
+    if(p && p.avatar){
+      const img = document.createElement('img'); img.src = p.avatar; img.alt = ''; img.referrerPolicy = 'no-referrer';
+      img.onerror = () => { img.remove(); el.insertBefore(document.createTextNode(initials(p.name)), el.firstChild); };
+      el.appendChild(img);
+    } else el.textContent = initials(p && p.name);
+    if(dot){ const d = document.createElement('span'); d.className = 'dot' + (p.online ? ' on' : ''); el.appendChild(d); }
+    return el;
+  }
+  function lastSeenText(iso){
+    if(!iso) return 'Offline';
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if(m < 60) return 'seen ' + Math.max(m,1) + 'm ago';
+    const h = Math.round(m / 60); if(h < 24) return 'seen ' + h + 'h ago';
+    return 'seen ' + new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+  }
+  const EMOJI_RE = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\s)+$/u;
+
+  // ---------- sounds (chosen in the 🔔 panel, saved on this device) ----------
+  function ensureAudio(){}
+  function beep(kind){ lbChatSound.play(kind === 'send' ? 'send' : 'receive'); }
+
+  function renderSoundPanel(){
+    const cur = lbChatSound.get(), list = $('soundList'); list.innerHTML = '';
+    lbChatSound.list().forEach(sd => {
+      if(sd.id === 'custom' && !lbChatSound.hasCustom()) return;
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = sd.label;
+      if(sd.id === cur) b.className = 'on';
+      b.onclick = () => { lbChatSound.set(sd.id); lbChatSound.preview(sd.id); renderSoundPanel(); };
+      list.appendChild(b);
+    });
+    $('soundVol').value = lbChatSound.volume();
+  }
+  $('soundVol').addEventListener('change', function(){ lbChatSound.setVolume(parseFloat(this.value)); lbChatSound.preview(lbChatSound.get()); });
+  $('soundUploadBtn').addEventListener('click', () => $('soundFile').click());
+  $('soundFile').addEventListener('change', function(){
+    const f = this.files[0]; this.value = ''; if(!f) return;
+    if(f.size > 400 * 1024){ alert('Please pick a short sound (under 400 KB).'); return; }
+    const r = new FileReader();
+    r.onload = ev => {
+      if(!lbChatSound.setCustom(ev.target.result)){ alert('Could not save that sound on this device.'); return; }
+      lbChatSound.set('custom'); lbChatSound.preview('custom'); renderSoundPanel();
+    };
+    r.readAsDataURL(f);
+  });
+
+  // ---------- conversation list ----------
+  function renderConvs(){
+    const q = $('convSearch').value.trim().toLowerCase();
+    const list = $('convList'); list.innerHTML = '';
+    // Group
+    const g = document.createElement('div'); g.className = 'conv' + (!conv.peerId ? ' active' : '');
+    g.innerHTML = '<div class="group-icon">🌹</div><div class="txt"><div class="cname">Lalabella Team</div><div class="csub">Group chat · everyone</div></div>';
+    const gb = document.createElement('span'); gb.className = 'ubadge' + (unread.group ? ' show' : ''); gb.textContent = unread.group > 99 ? '99+' : unread.group;
+    g.appendChild(gb); g.addEventListener('click', () => openConv(null)); list.appendChild(g);
+
+    const others = people.filter(p => !p.me && (!q || (p.name + ' ' + p.position + ' ' + p.username).toLowerCase().includes(q)));
+    const addSection = (title, arr) => {
+      if(!arr.length) return;
+      const h = document.createElement('div'); h.className = 'conv-sep'; h.textContent = title; list.appendChild(h);
+      arr.forEach(p => {
+        const c = document.createElement('div'); c.className = 'conv' + (conv.peerId === p.id ? ' active' : '');
+        c.appendChild(avatarEl(p, false, true));
+        const t = document.createElement('div'); t.className = 'txt';
+        const n = document.createElement('div'); n.className = 'cname'; n.textContent = p.name;
+        const s = document.createElement('div'); s.className = 'csub';
+        s.textContent = (p.position ? p.position + ' · ' : '') + (p.online ? 'Active now' : lastSeenText(p.lastSeen));
+        t.appendChild(n); t.appendChild(s); c.appendChild(t);
+        const cnt = unread.dm[p.id] || 0;
+        const b = document.createElement('span'); b.className = 'ubadge' + (cnt ? ' show' : ''); b.textContent = cnt > 99 ? '99+' : cnt; c.appendChild(b);
+        c.addEventListener('click', () => openConv(p.id));
+        list.appendChild(c);
+      });
+    };
+    addSection('Online now', others.filter(p => p.online));
+    addSection('Private messages', others.filter(p => !p.online));
+  }
+  $('convSearch').addEventListener('input', renderConvs);
+
+  function renderHead(){
+    const ha = $('headAvatar'); ha.innerHTML = '';
+    if(!conv.peerId){
+      ha.innerHTML = '<div class="group-icon">🌹</div>';
+      $('headName').textContent = 'Lalabella Team';
+      const on = people.filter(p => p.online).length;
+      $('headSub').textContent = (liveOn ? '● Live · ' : '') + people.length + ' members · ' + on + ' online';
+      $('privateTag').hidden = true;
+    } else {
+      const p = peopleById[conv.peerId] || { name:'…' };
+      ha.appendChild(avatarEl(p, false, true));
+      $('headName').textContent = p.name;
+      $('headSub').textContent = (p.position ? p.position + ' · ' : '') + (p.online ? 'Active now' : lastSeenText(p.lastSeen));
+      $('privateTag').hidden = false;
+    }
+    $('headSub').classList.toggle('live', liveOn && !conv.peerId);
+  }
+
+  function openConv(peerId){
+    conv = { peerId: peerId || null };
+    lastId = 0; delSince = ''; lastMsg = null; firstLoad = true;
+    Object.keys(nodes).forEach(k => delete nodes[k]);
+    box.innerHTML = '<div class="empty-chat">Loading…</div>';
+    $('layout').classList.add('in-chat');
+    input.placeholder = peerId ? 'Private message to ' + ((peerId && peopleById[peerId]) ? peopleById[peerId].name.split(' ')[0] : '') + '…' : 'Message the team…';
+    renderHead(); renderConvs(); poll();
+    if(window.innerWidth > 820) input.focus();
+  }
+  $('backConv').addEventListener('click', () => { $('layout').classList.remove('in-chat'); refreshUnread(); });
+
+  // ---------- messages ----------
+  function dayLabel(d){
+    const t = new Date(); t.setHours(0,0,0,0); const x = new Date(d); x.setHours(0,0,0,0);
+    const diff = Math.round((t - x) / 86400000);
+    if(diff === 0) return 'Today'; if(diff === 1) return 'Yesterday';
+    return new Date(d).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  }
+  function add(v){
+    if(!v || !v.text || v.id <= lastId) return;
+    lastId = v.id;
+    const empty = box.querySelector('.empty-chat'); if(empty) empty.remove();
+    const t = new Date(v.time), mine = v.userId === meId;
+    if(!lastMsg || new Date(lastMsg.time).toDateString() !== t.toDateString()){
+      const sep = document.createElement('div'); sep.className = 'day-sep';
+      const sp = document.createElement('span'); sp.textContent = dayLabel(t); sep.appendChild(sp); box.appendChild(sep); lastMsg = null;
+    }
+    const cont = lastMsg && lastMsg.userId === v.userId && (t - new Date(lastMsg.time)) < 5 * 60000;
+    const row = document.createElement('div'); row.className = 'msg' + (mine ? ' me' : '') + (cont ? ' cont' : ''); row.dataset.id = v.id;
+    const slot = document.createElement('div'); slot.className = 'av-slot';
+    const sender = peopleById[v.userId] || { name: v.name };
+    if(!mine && !cont && !conv.peerId) slot.appendChild(avatarEl(sender, true, false));
+    row.appendChild(slot);
+    const body = document.createElement('div'); body.className = 'body';
+    if(!mine && !cont && !conv.peerId){
+      const who = document.createElement('div'); who.className = 'who'; who.textContent = v.name || v.username;
+      if(sender.position){ const sm = document.createElement('small'); sm.textContent = sender.position; who.appendChild(sm); }
+      body.appendChild(who);
+    }
+    const br = document.createElement('div'); br.className = 'bubble-row';
+    const b = document.createElement('div'); b.className = 'bubble' + (EMOJI_RE.test(v.text) && [...v.text.trim()].length <= 8 ? ' emoji-only' : '');
+    b.appendChild(document.createTextNode(v.text));
+    const tm = document.createElement('span'); tm.className = 't'; tm.textContent = t.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); b.appendChild(tm);
+    br.appendChild(b);
+    if(mine || (isAdmin && !conv.peerId)){
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'del-btn'; del.title = 'Delete message'; del.textContent = '🗑';
+      del.addEventListener('click', ev => { ev.stopPropagation(); deleteMsg(v.id); });
+      br.appendChild(del);
+      b.addEventListener('click', () => row.classList.toggle('show-del'));
+    }
+    body.appendChild(br); row.appendChild(body); box.appendChild(row);
+    nodes[v.id] = row; lastMsg = v;
+    if(!mine && !firstLoad) beep('receive');
+  }
+  function removeMsg(id){
+    const row = nodes[id]; if(!row) return;
+    const next = row.nextElementSibling;
+    if(next && next.classList.contains('cont') && !row.classList.contains('cont')) next.classList.remove('cont');
+    const prev = row.previousElementSibling;
+    row.remove(); delete nodes[id];
+    if(prev && prev.classList.contains('day-sep')){ const after = prev.nextElementSibling; if(!after || after.classList.contains('day-sep')) prev.remove(); }
+  }
+  async function deleteMsg(id){
+    if(!confirm(conv.peerId ? 'Delete this message?' : 'Delete this message for everyone?')) return;
+    try{ const d = await call('delete', { id }); if(!d.success){ alert(d.error || 'Could not delete.'); return; } removeMsg(id); }
+    catch(e){ alert('Connection error — please try again.'); }
+  }
+
+  async function poll(){
+    if(busy) return; busy = true;
+    const myConv = conv.peerId;
+    try{
+      const params = { peerId: conv.peerId || undefined };
+      if(lastId) params.sinceId = lastId; else params.limit = 100;
+      if(delSince) params.delSince = delSince;
+      const d = await call('list', params);
+      if(myConv !== conv.peerId){ busy = false; return; }      // switched chats meanwhile
+      if(!d.success) throw new Error(d.error || 'failed');
+      meId = d.meId; isAdmin = !!d.isAdmin; if(d.serverTime) delSince = d.serverTime;
+      const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+      if(firstLoad) box.innerHTML = '';
+      (d.messages || []).forEach(add);
+      (d.deletedIds || []).forEach(removeMsg);
+      if(firstLoad && !box.children.length){
+        box.innerHTML = '<div class="empty-chat">' + (conv.peerId ? '🔒 This is a private chat. Say hi 👋' : 'No messages yet — say hi to the team 🌹') + '</div>';
+      }
+      if(firstLoad || nearBottom) box.scrollTop = box.scrollHeight;
+      if(lastId) markSeen(lastId);
+      firstLoad = false;
+    }catch(e){ $('headSub').textContent = 'Reconnecting…'; }
+    busy = false;
+    refreshUnread();
+  }
+
+  async function refreshUnread(){
+    try{
+      const s = loadSeen();
+      const d = await call('unread', { seenGroup: s.group || 0, seenDm: s.dm || {} });
+      if(!d.success) return;
+      unread = { group: conv.peerId === null && $('layout').classList.contains('in-chat') ? 0 : d.group, dm: d.dm || {} };
+      if(conv.peerId && $('layout').classList.contains('in-chat')) unread.dm[conv.peerId] = 0;
+      const beforeTotal = Number(document.title.match(/^\((\d+)\)/)?.[1] || 0);
+      const total = Object.values(unread.dm).reduce((a,b)=>a+b,0) + unread.group;
+      document.title = (total ? '(' + total + ') ' : '') + 'Lalabella Chat';
+      if(total > beforeTotal && !firstLoad) beep('receive');
+      renderConvs();
+    }catch(e){}
+  }
+
+  async function loadPeople(){
+    try{
+      const d = await call('people');
+      if(!d.success) return;
+      meId = d.meId; people = d.people || []; peopleById = {}; people.forEach(p => peopleById[p.id] = p);
+      renderConvs(); renderHead();
+    }catch(e){}
+  }
+
+  // ---------- composer ----------
+  function autosize(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; }
+  input.addEventListener('input', autosize);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); form.requestSubmit(); } });
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); ensureAudio();
+    const text = input.value.trim(); if(!text) return;
+    const btn = form.querySelector('.send-btn'); btn.disabled = true;
+    try{
+      const d = await call('send', { text, peerId: conv.peerId || undefined });
+      if(!d.success) throw new Error(d.error || 'failed');
+      input.value = ''; autosize(); input.focus(); beep('send');
+      $('emojiPanel').classList.remove('show');
+      await poll(); box.scrollTop = box.scrollHeight;
+    }catch(err){ alert(err.message && err.message !== 'failed' ? err.message : 'Could not send — please try again.'); }
+    btn.disabled = false;
+  });
+
+  // ---------- emoji picker ----------
+  const EMOJI = {
+    '😊': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😗 😋 😜 🤪 😎 🤩 🥳 😏 😌 😴 🤔 🤗 🤭 😮 😯 😲 😳 🥺 😢 😭 😤 😡 🤯 😱 😬 🙄 😷 🤒 🤧 🥱',
+    '👍': '👍 👎 👌 ✌️ 🤞 🤟 🤙 👏 🙌 👐 🙏 💪 👋 🤝 ✋ 👊 ✊ 🫶 👀 💃 🕺 🏃 🙋 🙆 🙅 🤷 🤦',
+    '🌸': '🌹 🥀 🌷 🌸 🌺 🌻 🌼 💐 🌿 🍀 🌱 🍃 🎀 🎁 🍫 🍬 🍭 🧁 🎂 🍰 🍩 🍪 ☕ 🧋 🍓 🍒 🍉',
+    '❤️': '❤️ 🧡 💛 💚 💙 💜 🤍 🖤 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ⚠️ ❗ ❓ 📦 🚚 🛵 📍 ⏰ 📅 📝 📸 💰 🎉 🎊'
+  };
+  let emojiTab = Object.keys(EMOJI)[0];
+  function renderEmoji(){
+    const tabs = $('emojiTabs'); tabs.innerHTML = '';
+    Object.keys(EMOJI).forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = k; if(k === emojiTab) b.className = 'on'; b.onclick = () => { emojiTab = k; renderEmoji(); }; tabs.appendChild(b); });
+    const grid = $('emojiGrid'); grid.innerHTML = '';
+    EMOJI[emojiTab].split(' ').forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.onclick = () => insertEmoji(e); grid.appendChild(b); });
+  }
+  function insertEmoji(e){
+    const s = input.selectionStart ?? input.value.length, en = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, s) + e + input.value.slice(en);
+    const pos = s + e.length; input.setSelectionRange(pos, pos); input.focus(); autosize();
+  }
+  $('emojiBtn').addEventListener('click', ev => { ev.stopPropagation(); renderEmoji(); $('emojiPanel').classList.toggle('show'); });
+  $('emojiPanel').addEventListener('click', ev => ev.stopPropagation());   // clicks inside keep it open
+  document.addEventListener('click', ev => { if(!ev.target.closest('#emojiBtn')) $('emojiPanel').classList.remove('show'); });
+
+  // ---------- background picture + chat transparency (saved on this device) ----------
+  function applyBg(){
+    let bg = ''; try{ bg = localStorage.getItem('lbChatBg') || ''; }catch(e){}
+    if(bg){ document.body.style.backgroundImage = 'url("' + bg + '")'; document.body.classList.add('custom-bg'); }
+    else { document.body.style.backgroundImage = ''; document.body.classList.remove('custom-bg'); }
+    $('bgResetBtn').hidden = !bg;
+  }
+  function applyOpacity(v){ document.documentElement.style.setProperty('--card-op', v); }
+  function loadOpacity(){
+    let v = 0.94; try{ const s = localStorage.getItem('lbChatOpacity'); if(s) v = parseFloat(s); }catch(e){}
+    $('chatOpacity').value = v; applyOpacity(v);
+  }
+  $('chatOpacity').addEventListener('input', function(){
+    applyOpacity(this.value); try{ localStorage.setItem('lbChatOpacity', this.value); }catch(e){}
+  });
+  $('bgUploadBtn').addEventListener('click', () => $('bgFile').click());
+  $('bgResetBtn').addEventListener('click', () => {
+    if(confirm('Go back to the default flower background?')){ try{ localStorage.removeItem('lbChatBg'); }catch(e){} applyBg(); }
+  });
+  $('bgFile').addEventListener('change', function(){
+    const f = this.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1600, sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        try{ localStorage.setItem('lbChatBg', c.toDataURL('image/jpeg', 0.72)); }catch(e){ alert('That picture is too big to save on this device. Try a smaller one.'); }
+        applyBg();
+      };
+      img.src = ev.target.result;
+    };
+    r.readAsDataURL(f); this.value = '';
+  });
+  applyBg(); loadOpacity();
+
+  // ---------- ⚙️ Settings panel (Sound / Background tabs) ----------
+  $('settingsBtn').addEventListener('click', ev => {
+    ev.stopPropagation(); renderSoundPanel();
+    $('settingsPanel').classList.toggle('show');
+  });
+  $('settingsPanel').addEventListener('click', ev => ev.stopPropagation());
+  document.addEventListener('click', () => $('settingsPanel').classList.remove('show'));
+  document.querySelectorAll('.stg-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.stg-tabs button').forEach(b => b.classList.toggle('on', b === btn));
+      document.querySelectorAll('.stg-pane').forEach(p => p.hidden = p.dataset.pane !== btn.dataset.tab);
+    });
+  });
+
+  // ---------- start ----------
+  lbChatLive.onPing(() => poll());
+  lbChatLive.onStatus(on => { liveOn = on; renderHead(); });
+  setInterval(() => { if(!document.hidden) poll(); }, FALLBACK_MS);
+  setInterval(() => { if(!document.hidden) loadPeople(); }, PEOPLE_MS);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden){ poll(); loadPeople(); } });
+
+  loadPeople().then(() => {
+    renderHead();
+    if(window.innerWidth > 820) openConv(null);    // desktop: open the group chat
+    else { renderConvs(); refreshUnread(); }       // phone: start on the chat list
+  });
+})();
+</script>
+<script>
+  const musicPanel = document.getElementById('musicUrlPanel');
+  const audio = document.getElementById('audioPlayer');
+  const soundBtn = document.getElementById('musicToggleBtn');
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){
+      const m = url.match(p);
+      if(m) return m[1];
+    }
+    return null;
+  }
+
+  function playYouTube(id){
+    const wrap = document.getElementById('ytPlayerWrap');
+    wrap.innerHTML = `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){
+    document.getElementById('ytPlayerWrap').innerHTML = '';
+  }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+        document.getElementById('musicNow').textContent = 'Saved: YouTube track (tap ▶ to play)';
+      } else {
+        audio.src = savedUrl;
+        document.getElementById('musicNow').textContent = 'Saved: ' + (savedUrl.length > 46 ? savedUrl.slice(0,46) + '…' : savedUrl);
+      }
+      document.getElementById('musicUrlInput').value = savedUrl;
+      document.getElementById('musicTitle').textContent = 'Saved sound ready';
+      document.getElementById('musicSub').textContent = 'Tap ▶ to play';
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  soundBtn.addEventListener('click', ()=>{
+    if(!audio.src && !ytVideoId){
+      musicPanel.classList.toggle('show');
+      return;
+    }
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      soundBtn.textContent = '▶';
+      isPlaying = false;
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      soundBtn.textContent = '⏸';
+      isPlaying = true;
+    }
+  });
+
+  document.getElementById('musicUrlToggleBtn').addEventListener('click', ()=>{
+    musicPanel.classList.toggle('show');
+  });
+
+  document.getElementById('musicUrlApplyBtn').addEventListener('click', ()=>{
+    const url = document.getElementById('musicUrlInput').value.trim();
+    if(!url){ alert('Paste a sound URL first.'); return; }
+
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id;
+      audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      document.getElementById('musicTitle').textContent = 'Now playing YouTube track';
+      document.getElementById('musicSub').textContent = 'Tap ⏸ to stop';
+      isPlaying = true;
+      soundBtn.textContent = '⏸';
+      musicPanel.classList.remove('show');
+      saveSoundChoice(url, true);
+      return;
+    }
+
+    ytVideoId = null;
+    stopYouTube();
+    audio.src = url;
+    document.getElementById('musicTitle').textContent = 'Now playing';
+    document.getElementById('musicSub').textContent = url.length > 40 ? url.slice(0,40) + '…' : url;
+    saveSoundChoice(url, false);
+    audio.play().then(()=>{
+      isPlaying = true;
+      soundBtn.textContent = '⏸';
+      musicPanel.classList.remove('show');
+    }).catch(()=>{
+      soundBtn.textContent = '▶';
+    });
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(musicPanel.classList.contains('show') && !musicPanel.contains(e.target) && e.target !== soundBtn && !e.target.closest('#musicUrlToggleBtn')){
+      musicPanel.classList.remove('show');
+    }
+  });
+</script>
+
+</body>
+</html>
