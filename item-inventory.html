@@ -748,16 +748,6 @@ body>.wrap{position:relative;z-index:1}
         <div class="carousel-circle">🔐</div>
         <h3>Admin</h3>
       </a>
-<script>
-  // Restore per-device tool editor (hide / reorder).
-  LBToolEdit.apply({
-    container: '#toolCarousel',
-    item: '.carousel-item',
-    key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
-    storageKey: 'lbToolsItem',
-    title: 'Item Inventory'
-  });
-</script>
     </div>
   </div>
 
@@ -786,6 +776,26 @@ body>.wrap{position:relative;z-index:1}
       <span class="desktop-tool-icon">🔐</span><span><b>Admin</b><small>Inventory admin</small></span>
     </a>
   </aside>
+
+  <script>
+    // Restore per-device tool editor for both responsive Item Inventory tool layouts.
+    // Both use the same saved preferences so hide/reorder stays in sync.
+    LBToolEdit.apply({
+      container: '#toolCarousel',
+      item: '.carousel-item',
+      key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
+      storageKey: 'lbToolsItem',
+      title: 'Item Inventory'
+    });
+    LBToolEdit.apply({
+      container: '#desktopToolNav',
+      item: '.desktop-tool-btn',
+      key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
+      buttonIn: '#desktopToolNav',
+      storageKey: 'lbToolsItem',
+      title: 'Item Inventory'
+    });
+  </script>
 
   <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
   <div class="panel active" id="panelAdd">
