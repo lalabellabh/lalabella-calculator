@@ -250,14 +250,14 @@ body{background:
   box-shadow:0 5px 16px rgba(158,47,74,.14);
 }
 .choco-nav-backdrop{
-  position:fixed; inset:0; z-index:9205; background:rgba(5,2,3,0.55); backdrop-filter:blur(3px);
+  position:fixed; inset:0; z-index:9205; background:rgba(60,30,40,0.28); backdrop-filter:blur(3px);
   opacity:0; pointer-events:none; transition:opacity .2s ease;
 }
 .choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
 .choco-drawer{
   position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
-  background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
-  border-right:1px solid rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
+  background:rgba(255,255,255,.96);
+  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
   transform:translateX(-100%); transition:transform .25s ease;
   padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
   font-family:Arial,sans-serif;
@@ -265,27 +265,27 @@ body{background:
 .choco-drawer.show{ transform:translateX(0); }
 .choco-drawer a{
   display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
-  color:#f1e4d8; text-decoration:none; font-size:14px; font-weight:600;
+  color:#3a2530; text-decoration:none; font-size:14px; font-weight:600;
 }
-.choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
+.choco-drawer a:hover{ background:rgba(201,80,107,.08); }
 .choco-drawer .choco-drawer-title{
-  color:#f1d38c; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
   padding:0 12px 8px; opacity:0.8;
 }
 .choco-drawer .choco-music-box{
-  margin-top:10px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
+  margin-top:10px; padding:12px; border-radius:12px; background:rgba(201,80,107,.05);
+  border:1px solid #f0dede;
 }
 .choco-drawer .choco-music-box input{
-  width:100%; padding:9px 10px; border:1px solid rgba(255,255,255,0.14); border-radius:9px;
-  background:rgba(255,255,255,0.05); color:#f1e4d8; font-size:12px; outline:none; margin-bottom:8px;
+  width:100%; padding:9px 10px; border:1px solid #f0dede; border-radius:9px;
+  background:#fdf6f6; color:#3a2530; font-size:12px; outline:none; margin-bottom:8px;
   box-sizing:border-box;
 }
 .choco-drawer .choco-music-box button{
   width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
   background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
 }
-.choco-drawer .choco-music-now{ font-size:10.5px; color:#c9b6ac; margin-top:8px; word-break:break-all; line-height:1.4; }
+.choco-drawer .choco-music-now{ font-size:10.5px; color:#8a7078; margin-top:8px; word-break:break-all; line-height:1.4; }
 /* hamburger stays visible on mobile too now */
 /* The fixed hamburger button sits at top:16px, extending to about
    60px tall — without extra clearance it was sitting on top of (and
@@ -294,7 +294,7 @@ body{background:
 .choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
 .choco-hub-grid a{
   flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
-  font-size:10.5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+  font-size:10.5px; background:rgba(201,80,107,.05); border:1px solid #f0dede;
   min-height:76px; justify-content:center; white-space:nowrap;
 }
 .choco-hub-grid a span.hub-icon{ font-size:20px; }
@@ -310,7 +310,7 @@ body{background:
 <nav class="choco-drawer" id="chocoDrawer">
   <div data-lb-menu></div>
   <div class="choco-music-box">
-    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9e2f4a;margin-bottom:6px;">Music</label>
     <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
     <button id="chocoMusicToggleBtn">♫ Music</button>
     <div style="display:flex;gap:6px;margin-top:8px;">
