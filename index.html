@@ -57,7 +57,7 @@ html.idx-dark-ui .flower{filter:drop-shadow(0 25px 45px rgba(0,0,0,.7));}
   box-shadow:0 0 22px var(--lit-color,#f1a6b8),0 0 40px var(--lit-color,#f1a6b8);
   transform:scale(1.5);
 }.petal-big{position:absolute;width:88px;height:132px;border-radius:75% 25% 75% 25%;transform-origin:50% 100%;background:linear-gradient(135deg,#f3b0bf,#a93658 55%,#5d172e);box-shadow:inset -10px -15px 20px rgba(74,7,25,.28),0 4px 20px rgba(150,25,65,.22)}.p1{transform:rotate(0deg) translateY(-50px)}.p2{transform:rotate(45deg) translateY(-50px)}.p3{transform:rotate(90deg) translateY(-50px)}.p4{transform:rotate(135deg) translateY(-50px)}.p5{transform:rotate(180deg) translateY(-50px)}.p6{transform:rotate(225deg) translateY(-50px)}.p7{transform:rotate(270deg) translateY(-50px)}.p8{transform:rotate(315deg) translateY(-50px)}.petal-mid{position:absolute;width:70px;height:112px;border-radius:70% 30% 70% 30%;transform-origin:50% 100%;background:linear-gradient(135deg,#ffccd6,#c44b6b 58%,#6e1935)}.m1{transform:rotate(22deg) translateY(-38px)}.m2{transform:rotate(82deg) translateY(-38px)}.m3{transform:rotate(142deg) translateY(-38px)}.m4{transform:rotate(202deg) translateY(-38px)}.m5{transform:rotate(262deg) translateY(-38px)}.m6{transform:rotate(322deg) translateY(-38px)}.rose-core{position:absolute;top:calc(50% + 43px);left:50%;transform:translate(-50%,-50%);width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#ffdbe3 0 5%,#e77994 6% 18%,#a82e51 35%,#551226 72%);box-shadow:0 0 35px rgba(238,105,137,.4)}.rose-core:before{content:"";position:absolute;inset:20px;border-radius:50%;border:9px solid rgba(255,193,207,.38);transform:rotate(28deg)}.stem{position:absolute;width:14px;height:110px;background:linear-gradient(90deg,#243c25,#5b7b46,#1d321e);bottom:-70px;border-radius:10px;transform:rotate(-7deg)}.leaf{position:absolute;width:65px;height:32px;background:linear-gradient(135deg,#6f944e,#213c25);border-radius:100% 0 100% 0}.leaf.l{bottom:-22px;left:45px;transform:rotate(20deg)}.leaf.r{bottom:8px;right:34px;transform:rotate(155deg)}
-.butterfly{position:absolute;font-size:34px;filter:drop-shadow(0 0 9px rgba(255,120,170,.65));animation:butterflyFly 8s ease-in-out infinite}.butterfly.b1{top:22%;left:4%}.butterfly.b2{right:5%;bottom:20%;animation-delay:-4s;font-size:28px}@keyframes butterflyFly{0%,100%{transform:translate(0,0) rotate(-10deg)}25%{transform:translate(45px,-28px) rotate(8deg)}50%{transform:translate(8px,-60px) rotate(-5deg)}75%{transform:translate(-42px,-18px) rotate(10deg)}}
+.butterfly{position:absolute;font-size:34px;filter:drop-shadow(0 0 9px rgba(255,120,170,.65));animation:butterflyFly 14s ease-in-out infinite}.butterfly.b1{top:22%;left:4%}.butterfly.b2{right:5%;bottom:20%;animation-delay:-7s;font-size:28px}@keyframes butterflyFly{0%,100%{transform:translate(0,0) rotate(-6deg)}25%{transform:translate(16px,-10px) rotate(4deg)}50%{transform:translate(3px,-20px) rotate(-3deg)}75%{transform:translate(-14px,-6px) rotate(5deg)}}
 .tools{width:min(1240px,calc(100% - 34px));margin:0 auto 70px}.section-title{text-align:center;font-family:"Cormorant Garamond",serif;font-size:38px;margin:0 0 8px}.section-sub{text-align:center;color:var(--muted);font-size:12px;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;max-height:400px;overflow-y:auto;padding:4px;scrollbar-width:thin;scrollbar-color:rgba(240,166,184,.5) transparent;}
 .grid::-webkit-scrollbar{width:6px;}
 .grid::-webkit-scrollbar-thumb{background:rgba(240,166,184,.5);border-radius:3px;}
@@ -229,7 +229,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
    art. Nothing here moves per-element (the old bouncing flower/chocolate
    emoji were repainting 6 layers every frame, which looked janky on
    phones); the whole group gets one gentle, GPU-cheap breathing glow. */
-#lala-lock-emoji-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;animation:lalaBgBreathe 10s ease-in-out infinite;}
+#lala-lock-emoji-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 #lala-lock-emoji-bg .lala-lock-glow{position:absolute;border-radius:50%;filter:blur(50px);}
 #lala-lock-emoji-bg .lala-lock-glow.g1{width:280px;height:280px;left:-90px;top:-70px;background:rgba(201,80,107,.20);}
 #lala-lock-emoji-bg .lala-lock-glow.g2{width:260px;height:260px;right:-80px;top:10%;background:rgba(217,164,65,.20);}
@@ -238,7 +238,6 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 #lala-lock-emoji-bg svg{position:absolute;opacity:.5;}
 #lala-lock-emoji-bg svg.lala-lock-vine-left{left:-40px;top:-30px;width:220px;height:340px;transform:rotate(-8deg);}
 #lala-lock-emoji-bg svg.lala-lock-vine-right{right:-40px;bottom:-30px;width:220px;height:340px;transform:scaleX(-1) rotate(-8deg);}
-@keyframes lalaBgBreathe{0%,100%{opacity:1;}50%{opacity:.85;}}
 @media(max-width:640px){
   #lala-lock-emoji-bg svg.lala-lock-vine-left{width:150px;height:230px;}
   #lala-lock-emoji-bg svg.lala-lock-vine-right{width:150px;height:230px;}
@@ -568,12 +567,12 @@ function end(e){if(!dragging)return;e.preventDefault();dragging=false;rose.class
   bx=a.x-(s.left+s.width/2); by=a.y-(s.top+s.height/2);
   const flingSpeed=Math.hypot(flingVx,flingVy);
   if(flingSpeed>0.03){
-    const scale=Math.min(6,Math.max(1,flingSpeed*40));
+    const scale=Math.min(4,Math.max(1,flingSpeed*26));
     const nx=flingVx/flingSpeed,ny=flingVy/flingSpeed;
-    bvx=nx*0.75*scale; bvy=ny*0.55*scale;
+    bvx=nx*0.30*scale; bvy=ny*0.22*scale;
   }else{
     const ang=Math.random()*Math.PI*2;
-    bvx=Math.cos(ang)*0.75; bvy=Math.sin(ang)*0.55;
+    bvx=Math.cos(ang)*0.30; bvy=Math.sin(ang)*0.22;
   }
   hint.classList.remove('ready');
 }}
@@ -582,7 +581,7 @@ rose.addEventListener('pointerdown',begin,{passive:false});window.addEventListen
 const bounceTargets=Array.from(document.querySelectorAll('.bounce-target'));
 const orbitDots=Array.from(document.querySelectorAll('.orbit-dot'));
 const targetColors=['#f1a6b8','#f4d06f','#e77994','#a6c8f4','#f4906f','#c9a6f4'];
-let bx=0,by=0,bvx=0.75,bvy=0.55,boundsReady=false;
+let bx=0,by=0,bvx=0.30,bvy=0.22,boundsReady=false;
 
 function positionTargets(s){
   if(orbitDots.length===0)return;
