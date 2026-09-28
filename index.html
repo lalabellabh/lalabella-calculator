@@ -218,10 +218,31 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 </style>
 <style>
 /* ---------- Real Login/Register gate — split-panel design ---------- */
-#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#fdf1f0 0%,#f6e0da 50%,#eaf3ec 100%);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;overflow:hidden;padding:16px;}
-#lala-lock-emoji-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
-#lala-lock-emoji-bg span{position:absolute;opacity:0.14;animation:lalaFloat 8s ease-in-out infinite;}
-@keyframes lalaFloat{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-22px) rotate(4deg);}}
+#lala-lock-overlay{position:fixed;inset:0;z-index:999999;background:
+    radial-gradient(circle at 12% 8%, rgba(201,80,107,.12), transparent 34%),
+    radial-gradient(circle at 90% 14%, rgba(217,164,65,.14), transparent 30%),
+    radial-gradient(circle at 20% 92%, rgba(95,143,99,.10), transparent 32%),
+    radial-gradient(circle at 82% 88%, rgba(201,80,107,.10), transparent 30%),
+    linear-gradient(135deg,#fdf1f0 0%,#f6e0da 50%,#eaf3ec 100%);
+  display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;overflow:hidden;padding:16px;}
+/* Special login background — soft blurred glows + still botanical line
+   art. Nothing here moves per-element (the old bouncing flower/chocolate
+   emoji were repainting 6 layers every frame, which looked janky on
+   phones); the whole group gets one gentle, GPU-cheap breathing glow. */
+#lala-lock-emoji-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;animation:lalaBgBreathe 10s ease-in-out infinite;}
+#lala-lock-emoji-bg .lala-lock-glow{position:absolute;border-radius:50%;filter:blur(50px);}
+#lala-lock-emoji-bg .lala-lock-glow.g1{width:280px;height:280px;left:-90px;top:-70px;background:rgba(201,80,107,.20);}
+#lala-lock-emoji-bg .lala-lock-glow.g2{width:260px;height:260px;right:-80px;top:10%;background:rgba(217,164,65,.20);}
+#lala-lock-emoji-bg .lala-lock-glow.g3{width:300px;height:300px;left:8%;bottom:-140px;background:rgba(95,143,99,.16);}
+#lala-lock-emoji-bg .lala-lock-glow.g4{width:240px;height:240px;right:6%;bottom:-110px;background:rgba(201,80,107,.14);}
+#lala-lock-emoji-bg svg{position:absolute;opacity:.5;}
+#lala-lock-emoji-bg svg.lala-lock-vine-left{left:-40px;top:-30px;width:220px;height:340px;transform:rotate(-8deg);}
+#lala-lock-emoji-bg svg.lala-lock-vine-right{right:-40px;bottom:-30px;width:220px;height:340px;transform:scaleX(-1) rotate(-8deg);}
+@keyframes lalaBgBreathe{0%,100%{opacity:1;}50%{opacity:.85;}}
+@media(max-width:640px){
+  #lala-lock-emoji-bg svg.lala-lock-vine-left{width:150px;height:230px;}
+  #lala-lock-emoji-bg svg.lala-lock-vine-right{width:150px;height:230px;}
+}
 
 .auth-shell{position:relative;z-index:2;width:100%;max-width:760px;min-height:460px;background:#fff;border-radius:26px;box-shadow:0 24px 60px rgba(158,47,74,.22);overflow:hidden;display:grid;grid-template-columns:1fr 1fr;}
 .auth-panel{padding:38px 34px;display:flex;flex-direction:column;justify-content:center;}
@@ -269,12 +290,28 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <body>
 <div id="lala-lock-overlay">
   <div id="lala-lock-emoji-bg">
-    <span style="left:8%;top:12%;font-size:64px;animation-delay:0s;">🌸</span>
-    <span style="left:80%;top:18%;font-size:80px;animation-delay:1.2s;">🍫</span>
-    <span style="left:15%;top:70%;font-size:70px;animation-delay:2.1s;">✨</span>
-    <span style="left:75%;top:68%;font-size:56px;animation-delay:0.6s;">🌷</span>
-    <span style="left:45%;top:8%;font-size:48px;animation-delay:1.8s;">💐</span>
-    <span style="left:50%;top:80%;font-size:60px;animation-delay:3s;">🎀</span>
+    <div class="lala-lock-glow g1"></div>
+    <div class="lala-lock-glow g2"></div>
+    <div class="lala-lock-glow g3"></div>
+    <div class="lala-lock-glow g4"></div>
+    <svg class="lala-lock-vine-left" viewBox="0 0 220 340" xmlns="http://www.w3.org/2000/svg">
+      <path d="M30 330 Q80 200 60 60" fill="none" stroke="#9e2f4a" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+      <g fill="#c9506b" opacity=".3"><ellipse cx="52" cy="210" rx="14" ry="34" transform="rotate(-40 52 210)"/><ellipse cx="82" cy="140" rx="13" ry="32" transform="rotate(35 82 140)"/></g>
+      <g transform="translate(60 55)" fill="#f3b0bf" opacity=".4">
+        <ellipse cx="0" cy="-24" rx="13" ry="28"/><ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(144)"/><ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(288)"/><circle r="11" fill="#d9a441"/>
+      </g>
+    </svg>
+    <svg class="lala-lock-vine-right" viewBox="0 0 220 340" xmlns="http://www.w3.org/2000/svg">
+      <path d="M30 330 Q80 200 60 60" fill="none" stroke="#5f8f63" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+      <g fill="#7ea87f" opacity=".3"><ellipse cx="52" cy="210" rx="14" ry="34" transform="rotate(-40 52 210)"/><ellipse cx="82" cy="140" rx="13" ry="32" transform="rotate(35 82 140)"/></g>
+      <g transform="translate(60 55)" fill="#e6c47a" opacity=".4">
+        <ellipse cx="0" cy="-24" rx="13" ry="28"/><ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(144)"/><ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-24" rx="13" ry="28" transform="rotate(288)"/><circle r="11" fill="#9e2f4a"/>
+      </g>
+    </svg>
   </div>
 
   <div class="auth-shell">
