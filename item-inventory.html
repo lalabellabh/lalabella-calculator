@@ -465,6 +465,32 @@
     </div>
   </div>
 
+  <!-- ===================== DESKTOP TOOL NAV ===================== -->
+  <aside class="desktop-tool-nav" id="desktopToolNav" aria-label="Inventory tools">
+    <div class="desktop-tool-nav-title">Inventory Tools</div>
+    <button class="desktop-tool-btn active" data-tab="add" type="button">
+      <span class="desktop-tool-icon">🆕</span><span><b>New Item</b><small>Add a new item</small></span>
+    </button>
+    <button class="desktop-tool-btn" data-tab="receive" type="button">
+      <span class="desktop-tool-icon">📥</span><span><b>Receiving</b><small>Add stock</small></span>
+    </button>
+    <button class="desktop-tool-btn" data-tab="release" type="button">
+      <span class="desktop-tool-icon">📤</span><span><b>Release</b><small>Use / release</small></span>
+    </button>
+    <button class="desktop-tool-btn" data-tab="transfer" type="button">
+      <span class="desktop-tool-icon">🔄</span><span><b>Transfer</b><small>Move branch stock</small></span>
+    </button>
+    <button class="desktop-tool-btn" data-tab="view" type="button">
+      <span class="desktop-tool-icon">🔎</span><span><b>View / Barcode</b><small>Browse items</small></span>
+    </button>
+    <button class="desktop-tool-btn" data-tab="nova" type="button">
+      <span class="desktop-tool-icon">🎙️</span><span><b>NOVA Count</b><small>Voice counting</small></span>
+    </button>
+    <a class="desktop-tool-btn" href="item-admin.html">
+      <span class="desktop-tool-icon">🔐</span><span><b>Admin</b><small>Inventory admin</small></span>
+    </a>
+  </aside>
+
   <!-- ===================== ADD NEW ITEM (baseline) ===================== -->
   <div class="panel active" id="panelAdd">
     <div class="card">
@@ -833,6 +859,123 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
  .carousel-shell{max-width:680px;margin-left:auto;margin-right:auto;}
  .panel,.section-card,.card,.summary-card,.table-wrap{max-width:620px;margin-left:auto;margin-right:auto;}
 }
+
+  /* ============================================================
+     INVENTORY RESPONSIVE NAV REBUILD
+     PHONE/TABLET: original carousel
+     DESKTOP/LAPTOP: independent tool rail
+     ============================================================ */
+  .desktop-tool-nav{display:none;}
+
+  @media (min-width:901px){
+    body{overflow-x:hidden;}
+
+    .wrap{
+      max-width:1080px;
+      padding-left:230px !important;
+      padding-right:42px !important;
+      padding-top:76px !important;
+    }
+
+    .wrap > header,
+    .wrap > .branch-tabs,
+    .wrap > .panel,
+    .wrap > .carousel-shell{
+      max-width:none;
+    }
+
+    header{margin-left:0;margin-right:0;}
+    .carousel-shell{display:none !important;}
+
+    .desktop-tool-nav{
+      display:flex;
+      position:fixed;
+      z-index:9100;
+      left:22px;
+      top:92px;
+      width:190px;
+      max-height:calc(100vh - 116px);
+      overflow:hidden;
+      flex-direction:column;
+      gap:7px;
+      padding:12px;
+      border:1px solid rgba(230,196,122,.24);
+      border-radius:20px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(170,45,78,.18), transparent 48%),
+        linear-gradient(160deg,#0a0607 0%,#12090b 55%,#0d0709 100%);
+      box-shadow:0 18px 50px rgba(0,0,0,.25),0 0 0 1px rgba(255,255,255,.02);
+      backdrop-filter:blur(14px);
+    }
+
+    .desktop-tool-nav-title{
+      padding:5px 8px 9px;
+      color:#e6c47a;
+      font-size:9px;
+      font-weight:800;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+    }
+
+    .desktop-tool-btn{
+      width:100%;
+      min-height:58px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:9px 10px;
+      border:1px solid transparent;
+      border-radius:13px;
+      background:rgba(255,255,255,.035);
+      color:#f7eee5;
+      text-decoration:none;
+      cursor:pointer;
+      text-align:left;
+      font-family:'Space Grotesk',sans-serif;
+      transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease;
+    }
+
+    .desktop-tool-btn:hover{
+      transform:translateX(3px);
+      background:rgba(255,255,255,.08);
+      border-color:rgba(230,196,122,.20);
+    }
+
+    .desktop-tool-btn.active{
+      background:linear-gradient(135deg,rgba(201,80,107,.34),rgba(158,47,74,.20));
+      border-color:rgba(230,196,122,.34);
+      box-shadow:0 8px 22px rgba(0,0,0,.20);
+    }
+
+    .desktop-tool-icon{
+      width:38px;height:38px;flex:0 0 38px;
+      display:grid;place-items:center;
+      border-radius:11px;font-size:20px;
+      background:linear-gradient(145deg,#fff3d0,#d9a441 58%,#8a5a1f);
+      box-shadow:0 5px 12px rgba(0,0,0,.22);
+    }
+
+    .desktop-tool-btn > span:last-child{
+      min-width:0;display:flex;flex-direction:column;gap:2px;
+    }
+    .desktop-tool-btn b{font-size:11.5px;line-height:1.15;white-space:nowrap;}
+    .desktop-tool-btn small{color:#b39a98;font-size:9px;line-height:1.15;white-space:nowrap;}
+
+    .panel .card{max-width:none !important;}
+    #panelView.active #itemListContainer{
+      max-height:calc(100vh - 390px);
+      min-height:260px;
+    }
+  }
+
+  @media (max-width:900px){
+    .desktop-tool-nav{display:none !important;}
+    .tool-carousel{
+      overflow:hidden;
+      overscroll-behavior-y:auto;
+    }
+  }
+
 @media(prefers-reduced-motion:reduce){header,.tool-card,.tool-card-icon,.hero-center{animation:none!important}}
 </style>
 <div id="receiptPrintArea" style="display:none;">
@@ -970,8 +1113,15 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   });
 
   carousel.addEventListener('wheel', e=>{
+    // Desktop/laptop has a separate tool rail. Never hijack normal page scroll.
+    if(window.matchMedia('(min-width:901px)').matches) return;
+
     const amount = Math.abs(e.deltaX)>Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if(Math.abs(amount)<4 || wheelLock) return;
+
+    // Vertical page scrolling stays with the page on mobile too.
+    if(Math.abs(e.deltaY) > Math.abs(e.deltaX) * 1.25) return;
+
     e.preventDefault();
     wheelLock = true;
     move(amount>0?1:-1);
@@ -1029,6 +1179,21 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     window.visualViewport.addEventListener('resize', ()=>renderCarousel(false));
   }
   renderCarousel(false);
+
+  // ---------- Desktop tool rail ----------
+  document.querySelectorAll('.desktop-tool-btn[data-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      switchToTab(btn.dataset.tab);
+    });
+  });
+
+  const _switchToTab = switchToTab;
+  switchToTab = function(tabName){
+    _switchToTab(tabName);
+    document.querySelectorAll('.desktop-tool-btn[data-tab]').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+  };
 
   // ---------- Load items ----------
   function loadItems(force=false){
