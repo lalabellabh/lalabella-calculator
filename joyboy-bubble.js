@@ -13,14 +13,14 @@
   style.textContent = `
     #joyboy-bubble-btn{
       position:fixed; bottom:20px; right:20px; z-index:9500;
-      width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
-      background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c; font-size:26px;
+      width:48px; height:48px; border-radius:50%; border:none; cursor:pointer;
+      background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c; font-size:22px;
       display:flex; align-items:center; justify-content:center;
       box-shadow:0 8px 24px rgba(0,0,0,.35);
     }
     #joyboy-bubble-btn:active{ transform:scale(.94); }
     #joyboy-panel{
-      position:fixed; bottom:88px; right:20px; z-index:9500;
+      position:fixed; bottom:80px; right:20px; z-index:9500;
       width:min(340px, calc(100vw - 32px)); height:min(460px, calc(100vh - 140px));
       background:#fff; border-radius:18px; box-shadow:0 16px 44px rgba(0,0,0,.35);
       display:none; flex-direction:column; overflow:hidden;
@@ -47,7 +47,7 @@
     #joyboy-input:focus{ border-color:#c9506b; }
     #joyboy-send{ width:38px; height:38px; border-radius:50%; border:none; background:#c9506b; color:#fff; font-size:15px; cursor:pointer; flex:0 0 auto; }
     #joyboy-send:disabled{ opacity:.5; }
-    @media(max-width:420px){ #joyboy-panel{ right:12px; } #joyboy-bubble-btn{ right:12px; } }
+    @media(max-width:420px){ #joyboy-panel{ right:12px; } #joyboy-bubble-btn{ right:12px; width:46px; height:46px; font-size:21px; } }
   `;
   document.head.appendChild(style);
 
