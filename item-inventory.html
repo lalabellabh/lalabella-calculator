@@ -719,16 +719,7 @@ body>.wrap{position:relative;z-index:1}
   <div class="carousel-shell">
     <div class="tool-carousel" id="toolCarousel">
 
-<script>
-// Restore per-device tool editor (hide / reorder).
-LBToolEdit.apply({
-  container: '#toolCarousel',
-  item: '.carousel-item',
-  key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
-  storageKey: 'lbToolsItem',
-  title: 'Item Inventory'
-});
-</script>
+
       <button class="carousel-item active" data-tab="add">
         <div class="carousel-circle">🆕</div>
         <h3>New Item</h3>
@@ -757,6 +748,16 @@ LBToolEdit.apply({
         <div class="carousel-circle">🔐</div>
         <h3>Admin</h3>
       </a>
+<script>
+  // Restore per-device tool editor (hide / reorder).
+  LBToolEdit.apply({
+    container: '#toolCarousel',
+    item: '.carousel-item',
+    key: el => el.dataset.tab || el.getAttribute('href')?.split('?')[0] || el.textContent.trim(),
+    storageKey: 'lbToolsItem',
+    title: 'Item Inventory'
+  });
+</script>
     </div>
   </div>
 
