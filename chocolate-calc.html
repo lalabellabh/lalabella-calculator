@@ -14,7 +14,7 @@
 <style>
   :root{
     /* Light (default). Dark — the original "Chocolate ATM" look — is
-       restored via body.idx-dark-ui, toggled by the small script near
+       restored via html.idx-dark-ui, toggled by the small script near
        the closing </body> tag (see shared/theme.js — this page is a
        "native dark" page, so it owns its own Light/Dark colours here
        instead of the automatic per-page conversion). */
@@ -26,7 +26,7 @@
     --dim:#7a6653;
     --line:#e6d7b8;
   }
-  body.idx-dark-ui{
+  html.idx-dark-ui{
     --cacao:#0d0806;
     --cacao-2:#1a100c;
     --foil:#e8c46a;
@@ -45,6 +45,7 @@
     font-family:'Space Grotesk',sans-serif;
     min-height:100vh;
     overflow-x:hidden;
+    display:flow-root;
   }
   /* foil ribbon signature */
   .ribbon{
@@ -186,7 +187,7 @@
     transition:border-color .15s ease;
   }
   #search::placeholder{color:var(--dim); opacity:.75;}
-  body.idx-dark-ui #search::placeholder{color:#5a463a; opacity:1;}
+  html.idx-dark-ui #search::placeholder{color:#5a463a; opacity:1;}
   #search:focus{border-color:var(--foil);}
   #clearBtn{
     position:absolute;
@@ -923,14 +924,14 @@
 }
 /* This page owns its own Light/Dark colours (see the :root block above) —
    match the hamburger to whichever is active. */
-body.idx-dark-ui .choco-nav-toggle{
+html.idx-dark-ui .choco-nav-toggle{
   background:rgba(26,16,12,0.85); color:#e8c46a; border-color:rgba(255,255,255,0.15); box-shadow:none;
 }
 .choco-nav-backdrop{
   position:fixed; inset:0; z-index:9205; background:rgba(60,30,40,.28); backdrop-filter:blur(3px);
   opacity:0; pointer-events:none; transition:opacity .2s ease, background .2s ease;
 }
-body.idx-dark-ui .choco-nav-backdrop{ background:rgba(5,2,3,0.55); }
+html.idx-dark-ui .choco-nav-backdrop{ background:rgba(5,2,3,0.55); }
 .choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
 .choco-drawer{
   position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
@@ -940,7 +941,7 @@ body.idx-dark-ui .choco-nav-backdrop{ background:rgba(5,2,3,0.55); }
   padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
   font-family:Arial,sans-serif;
 }
-body.idx-dark-ui .choco-drawer{
+html.idx-dark-ui .choco-drawer{
   background:linear-gradient(160deg,rgba(30,14,10,.98),rgba(15,7,9,.98));
   border-right-color:rgba(255,255,255,0.08); box-shadow:12px 0 40px rgba(0,0,0,.4);
 }
@@ -950,18 +951,18 @@ body.idx-dark-ui .choco-drawer{
   color:#3a2530; text-decoration:none; font-size:14px; font-weight:600;
 }
 .choco-drawer a:hover{ background:rgba(201,80,107,.08); }
-body.idx-dark-ui .choco-drawer a{ color:#f1e4d8; }
-body.idx-dark-ui .choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
+html.idx-dark-ui .choco-drawer a{ color:#f1e4d8; }
+html.idx-dark-ui .choco-drawer a:hover{ background:rgba(255,255,255,0.06); }
 .choco-drawer .choco-drawer-title{
   color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
   padding:0 12px 8px; opacity:0.8;
 }
-body.idx-dark-ui .choco-drawer .choco-drawer-title{ color:#f1d38c; }
+html.idx-dark-ui .choco-drawer .choco-drawer-title{ color:#f1d38c; }
 .choco-drawer .choco-music-box{
   margin-top:10px; padding:12px; border-radius:12px; background:rgba(201,80,107,.05);
   border:1px solid #f0dede;
 }
-body.idx-dark-ui .choco-drawer .choco-music-box{
+html.idx-dark-ui .choco-drawer .choco-music-box{
   background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08);
 }
 .choco-drawer .choco-music-box input{
@@ -969,7 +970,7 @@ body.idx-dark-ui .choco-drawer .choco-music-box{
   background:#fdf6f6; color:#3a2530; font-size:12px; outline:none; margin-bottom:8px;
   box-sizing:border-box;
 }
-body.idx-dark-ui .choco-drawer .choco-music-box input{
+html.idx-dark-ui .choco-drawer .choco-music-box input{
   border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:#f1e4d8;
 }
 .choco-drawer .choco-music-box button{
@@ -977,7 +978,7 @@ body.idx-dark-ui .choco-drawer .choco-music-box input{
   background:linear-gradient(135deg,#f1d38c,#c79a4d); color:#24150c;
 }
 .choco-drawer .choco-music-now{ font-size:10.5px; color:#8a7078; margin-top:8px; word-break:break-all; line-height:1.4; }
-body.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
+html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 /* hamburger stays visible on mobile too now */
 /* The fixed hamburger button sits at top:16px, extending to about
    60px tall — without extra clearance it was sitting on top of (and
@@ -2146,7 +2147,7 @@ body.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     const m = LBTheme.get();
     return m === 'dark' || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
-  function apply() { document.body.classList.toggle('idx-dark-ui', wantsDark()); }
+  function apply() { document.documentElement.classList.toggle('idx-dark-ui', wantsDark()); }
   apply();
   window.addEventListener('lb:theme-changed', apply);
   if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply);
