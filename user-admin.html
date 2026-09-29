@@ -328,4 +328,65 @@ tbody.addEventListener('change',ev=>{
   const changed=['position','role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==u[f];});
   tr.classList.toggle('dirty',changed); tr.querySelector('[data-a="save"]').disabled=!changed;
 });
-tbod
+tbody.addEventListener('click',async ev=>{
+  const btn=ev.target.closest('button[data-a]'); if(!btn) return;
+  const tr=btn.closest('tr[data-u]'); const u=users.find(x=>x.username===tr.dataset.u); if(!u) return;
+  const act=btn.dataset.a;
+  if(act==='reset'){ openPw(u); return; }
+  if(act==='unlock'){
+    btn.disabled=true;
+    const d=await api({action:'adminUnlockUser',username:u.username});
+    setMsg('tableMsg',d.success?(u.username+': '+d.message):(d.error||'Could not unlock.'),d.success);
+    if(d.success) loadUsers(); else btn.disabled=false;
+    return;
+  }
+  if(act==='save'){
+    const params={action:'adminUpdateUser',username:u.username};
+    ['position','role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==u[f])params[f]=el.value;});
+    if(params.role==='Admin'&&!confirm('Give '+(u.fullName||u.username)+' full Admin access?')) return;
+    if(params.status==='Inactive'&&!confirm('Disable '+(u.fullName||u.username)+'? They will be logged out and cannot log in.')) return;
+    btn.disabled=true; btn.textContent='Saving…';
+    const d=await api(params);
+    setMsg('tableMsg',d.success?(u.username+': saved.'+(params.role?' They need to log in again to see the new role.':'')):(d.error||'Could not save.'),d.success);
+    btn.textContent='Save';
+    if(d.success) loadUsers(); else btn.disabled=false;
+  }
+});
+
+/* ---------- reset password modal ---------- */
+let pwUser=null;
+function openPw(u){
+  pwUser=u; document.getElementById('pwFor').textContent='For '+(u.fullName||u.username)+' (@'+u.username+')';
+  document.getElementById('pwInput').value=''; setMsg('pwMsg','',true);
+  document.getElementById('pwModal').classList.add('show'); document.getElementById('pwInput').focus();
+}
+function closePw(){ document.getElementById('pwModal').classList.remove('show'); pwUser=null; }
+document.getElementById('pwCancel').addEventListener('click',closePw);
+document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target.id==='pwModal') closePw(); });
+document.getElementById('pwSave').addEventListener('click',async()=>{
+  const pw=document.getElementById('pwInput').value;
+  if(pw.length<6){ setMsg('pwMsg','At least 6 characters.',false); return; }
+  const btn=document.getElementById('pwSave'); btn.disabled=true;
+  const d=await api({action:'adminResetPassword',username:pwUser.username,newPassword:pw});
+  btn.disabled=false;
+  if(!d.success){ setMsg('pwMsg',d.error||'Could not reset.',false); return; }
+  setMsg('tableMsg',d.message,true); closePw(); loadUsers();
+});
+
+/* start: always ask for the password first */
+function startAdmin(){
+  loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
+    document.getElementById('adminArea').style.display='block';
+    setMsg('tableMsg','Connection error — please check your connection.',false);
+  });
+}
+document.getElementById('unlockBtn').addEventListener('click',unlock);
+document.getElementById('unlockPw').addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+(function(){
+  let u={}; try{ u=window.LALABELLA_USER||JSON.parse(sessionStorage.getItem('lalabellaUser')||localStorage.getItem('lalabellaUser')||'{}')||{}; }catch(e){}
+  if(u.role && String(u.role).toLowerCase()!=='admin'){ document.getElementById('denied').style.display='block'; return; }
+  showLock();
+})();
+</script>
+</body>
+</html>
