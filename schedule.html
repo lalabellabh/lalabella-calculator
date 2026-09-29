@@ -151,6 +151,9 @@
       </select>
       <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
     </div>
+    <div id="scheduleAdminLinkWrap" style="display:none;margin-top:12px;">
+      <a href="schedule-admin.html" style="font-size:12px;color:var(--rose-dark);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;display:inline-block;">📤 Upload New Schedule</a>
+    </div>
   </div>
 
   <h2 class="cal-title">
@@ -488,6 +491,16 @@ document.getElementById('myScheduleBtn').addEventListener('click', async () => {
 
 renderMonthGrid();
 loadEmployees();
+
+(function showAdminUploadLink(){
+  try{
+    const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
+    const user = userStr ? JSON.parse(userStr) : (window.LALABELLA_USER || {});
+    if(user && String(user.role||'').toLowerCase() === 'admin'){
+      document.getElementById('scheduleAdminLinkWrap').style.display = 'block';
+    }
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
