@@ -80,10 +80,18 @@
         let handled = false;
         try {
           const parsed = JSON.parse(init.body);
-          if (parsed && typeof parsed === 'object' && !('token' in parsed)) {
-            parsed.token = token;
-            init = Object.assign({}, init, { body: JSON.stringify(parsed) });
+          if (parsed && typeof parsed === 'object') {
+            // Valid JSON body — this is definitely handled either way, so the
+            // form-encoded fallback below must never also touch it (that
+            // fallback's own "already has a token?" check looks for a
+            // "?token=" or "&token=" pattern, which a JSON body's
+            // "token":"..." field never matches — appending onto a JSON
+            // string corrupts it into invalid JSON either way).
             handled = true;
+            if (!('token' in parsed)) {
+              parsed.token = token;
+              init = Object.assign({}, init, { body: JSON.stringify(parsed) });
+            }
           }
         } catch (e) { /* not JSON — fall through */ }
         // Otherwise treat as form-encoded (URLSearchParams.toString() shape).
