@@ -242,12 +242,7 @@ body{padding-bottom:0}
 <div class="section-card"><div class="card-head"><h3 class="section-title">🔒 Privacy</h3><p class="card-sub">Who can see your profile.</p></div><label class="px-switch"><input type="checkbox" id="pxPrivate"><span class="trk"></span><span class="txt"><b>Private profile</b><span>When on, other staff only see your name — not your photo, position, branch or gallery. Statuses you post are still shared.</span></span></label><div class="card-actions" style="margin-top:14px"><button type="button" class="px-btn ghost" id="pxPreviewMe">👁 See how others see me</button><div class="msg" id="pxPrivMsg" style="display:none"></div></div></div></div></div>
 </main></div></div>
 <script>
-// CORRECTED — the previous version of this UI accidentally pointed at
-// the Joyboy/NOVA API URL instead of the Auth backend, which is why
-// every single action here (getProfile, updateProfile, changePassword)
-// was failing: it was asking the wrong backend entirely, one that has
-// no idea what "getProfile" even means.
-const AUTH_API_URL=LB_CONFIG.AUTH_API;
+const AUTH_API_URL=LB_CONFIG.AUTH_FAST_API;
 function getToken(){return window.LALABELLA_TOKEN||sessionStorage.getItem('lalabellaToken')||localStorage.getItem('lalabellaToken')||''}
 function setupPwToggle(inputId,btnId){const input=document.getElementById(inputId),btn=document.getElementById(btnId);btn.addEventListener('click',()=>{const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁':'🙈'})}
 setupPwToggle('currentPw','toggleCurrentPw');setupPwToggle('newPw','toggleNewPw');setupPwToggle('confirmPw','toggleConfirmPw');
@@ -445,7 +440,7 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
 <script>
 /* =================================================================
    Account Settings panel · Team Status (24 h) · My Gallery
-   Backend: ProfileExtras.gs in the Auth Apps Script project.
+   Backend: auth-fast Edge Function (was ProfileExtras.gs).
    ================================================================= */
 (function(){
   // ---------- Account Settings (⚙️) ----------
@@ -458,7 +453,7 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
   acctModal.addEventListener('click', e=>{ if(e.target === acctModal) closeAcct(); });
 
   // ---------- helpers ----------
-  const API = LB_CONFIG.AUTH_API;
+  const API = LB_CONFIG.AUTH_FAST_API;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function apiGet(action, extra){
     const q = new URLSearchParams(Object.assign({action, token:getToken(), _ts:Date.now()}, extra||{}));
