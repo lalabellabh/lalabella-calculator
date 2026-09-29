@@ -207,6 +207,19 @@
   .cat-item-line.available{ color:var(--ok); }
   .cat-item-line.missing{ color:var(--ink-dim); }
 
+  /* Fixed-height scroll box: opening a category's detail no longer grows
+     the whole card (and pushes everything below it down/around) — the
+     list just scrolls inside its own space instead. */
+  #categoryBreakdownList{
+    max-height:360px;
+    overflow-y:auto;
+    padding-right:6px;
+  }
+  #categoryBreakdownList::-webkit-scrollbar{ width:6px; }
+  #categoryBreakdownList::-webkit-scrollbar-track{ background:transparent; }
+  #categoryBreakdownList::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
+  #categoryBreakdownList::-webkit-scrollbar-thumb:hover{ background:var(--gold); }
+
 /* ===== CHOCOLATE FERRIS WHEEL — VISUAL LAYER ONLY ===== */
 .choco-scene{
   position:relative;
