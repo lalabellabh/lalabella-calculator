@@ -416,6 +416,12 @@
   let countedByNames = [];
   let itemSearchText = '';
   let activeCategory = null;
+  // Physical Count + Variance Reason a person has already typed for an
+  // item, keyed by that item's position in stockItems (stable across a
+  // branch's session). Switching category or search filter used to just
+  // rebuild the whole list from blank inputs — this is what a typed
+  // count actually lives in now, so it survives that and gets put back.
+  let enteredCounts = {};
 
   function fmtDate(d){
     if(!d) return '—';
@@ -644,7 +650,7 @@
         <div class="count-inputs">
           <div>
             <label>Physical Count ${it.Unit ? `(${it.Unit})` : ''}</label>
-            <input type="number" min="0" step="0.01" class="physicalInput" id="physical-${idx}" placeholder="0" />
+            <input type="number" min="0" step="0.01" class="physicalInput" id="physical-${idx}" placeholder="0" value="${enteredCounts[idx] && enteredCounts[idx].physical !== undefined ? enteredCounts[idx].physical : ''}" />
           </div>
           <div>
             <label>+</label>
@@ -653,7 +659,7 @@
           <div>
             <label>Variance Reason</label>
             <select class="reasonSelect">
-              ${REASONS.map(r => `<option value="${r}">${r || 'Select if variance...'}</option>`).join('')}
+              ${REASONS.map(r => `<option value="${r}"${enteredCounts[idx] && enteredCounts[idx].reason === r ? ' selected' : ''}>${r || 'Select if variance...'}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -662,6 +668,27 @@
     `).join('');
     el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', updateGarden));
     el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', ()=>updateRowVariance(input.closest('.count-row'))));
+    // Keep what's typed even if the category filter or search changes
+    // before this item is saved.
+    el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', ()=>{
+      const idx = input.closest('.count-row').dataset.idx;
+      enteredCounts[idx] = enteredCounts[idx] || {};
+      enteredCounts[idx].physical = input.value;
+    }));
+    el.querySelectorAll('.reasonSelect').forEach(select=>select.addEventListener('change', ()=>{
+      const idx = select.closest('.count-row').dataset.idx;
+      enteredCounts[idx] = enteredCounts[idx] || {};
+      enteredCounts[idx].reason = select.value;
+    }));
+    // Restore the variance line for any row that already has a saved
+    // count, and refresh the overall summary to match — a re-render
+    // (from switching category, searching, etc.) shouldn't reset either.
+    visible.forEach(({idx}) => {
+      if(enteredCounts[idx] && enteredCounts[idx].physical !== '' && enteredCounts[idx].physical !== undefined){
+        updateRowVariance(el.querySelector(`.count-row[data-idx="${idx}"]`));
+      }
+    });
+    updateGarden();
 
     // "+" additional-count input: type a batch amount, press Enter (or
     // tap away) to add it onto the existing Physical Count — then it
@@ -676,11 +703,14 @@
       const current = parseFloat(physicalInput.value) || 0;
       const newTotal = current + addVal;
       physicalInput.value = newTotal;
+      enteredCounts[idx] = enteredCounts[idx] || {};
+      enteredCounts[idx].physical = String(newTotal);
       physicalInput.classList.remove('count-flash');
       void physicalInput.offsetWidth; // restart the animation
       physicalInput.classList.add('count-flash');
       addInput.value = '';
       updateGarden();
+      updateRowVariance(row);
     }
 
     el.querySelectorAll('.addInput').forEach(input=>{
