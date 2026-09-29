@@ -38,6 +38,10 @@
   // ---------------------------------------------------------------
   const originalFetch = window.fetch.bind(window);
   const BACKEND_PATTERN = /script\.google\.com\/macros\/s\//;
+  // Same idea, for our newer Supabase Edge Function "fast path" backends
+  // (auth-fast, chocolate-fast, etc.) — they need a token too, plus an
+  // apikey header Apps Script never needed.
+  const SUPABASE_FAST_PATTERN = /supabase\.co\/functions\/v1\//;
 
   window.fetch = function (input, init) {
     const token = window.LALABELLA_TOKEN
@@ -46,7 +50,19 @@
       || '';
 
     let url = typeof input === 'string' ? input : (input && input.url) || '';
-    const isBackendCall = token && BACKEND_PATTERN.test(url);
+    const isAppsScriptCall = token && BACKEND_PATTERN.test(url);
+    const isSupabaseFastCall = token && SUPABASE_FAST_PATTERN.test(url);
+    const isBackendCall = isAppsScriptCall || isSupabaseFastCall;
+
+    if (isSupabaseFastCall) {
+      const apikey = (window.LB_CONFIG && window.LB_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
+      if (apikey) {
+        const existingHeaders = (init && init.headers) || (typeof input !== 'string' && input && input.headers) || {};
+        const headers = new Headers(existingHeaders);
+        if (!headers.has('apikey')) headers.set('apikey', apikey);
+        init = Object.assign({}, init, { headers: headers });
+      }
+    }
 
     if (isBackendCall && !/[?&]token=/.test(url)) {
       const sep = url.includes('?') ? '&' : '?';
