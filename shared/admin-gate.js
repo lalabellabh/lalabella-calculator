@@ -44,7 +44,7 @@
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
-      const res = await fetch(LB_CONFIG.AUTH_API + '?' + p.toString(), { signal: ctrl.signal });
+      const res = await fetch(LB_CONFIG.AUTH_FAST_API + '?' + p.toString(), { signal: ctrl.signal });
       const text = await res.text();
       try { return JSON.parse(text); }
       catch (e) { throw new Error('bad-response'); }
