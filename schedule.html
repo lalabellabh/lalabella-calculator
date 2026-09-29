@@ -68,6 +68,8 @@
 
   .date-cell{position:relative;border-radius:12px;min-height:74px;padding:6px 6px 8px;background:#fdfbfa;border:1px solid transparent;transition:box-shadow .2s;}
   .date-cell.pad{background:transparent;}
+  .date-cell.adj-month .dnum{color:#cbb8ba;}
+  .date-cell.adj-month:not(.hit){opacity:.55;}
   .date-cell.today{border-color:var(--rose);}
   .date-cell .dnum{font-size:13px;color:var(--ink);font-weight:800;position:relative;z-index:2;}
   .date-cell .off-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 6px rgba(158,47,74,.25);display:block;margin:3px auto 0;}
@@ -169,7 +171,7 @@
 </div>
 
 <script>
-const SCHEDULE_API_URL = LB_CONFIG.SCHEDULE_API;
+const SCHEDULE_API_URL = LB_CONFIG.SCHEDULE_FAST_API;
 const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const DAY_FULL = {SUN:'Sunday',MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
 
@@ -270,10 +272,20 @@ function renderMonthGrid(){
   const isCurrentMonth = today.getFullYear()===viewYear && today.getMonth()===viewMonth;
 
   monthGrid.innerHTML = '';
+  // Leading cells (tail of the previous month) and trailing cells (start
+  // of the next month) now get a real date and cell too, instead of an
+  // empty "pad" div — a week that spans a month boundary (its last 2-3
+  // days fall in the next month) used to have nowhere to render those
+  // days, so part of that week silently never showed up unless someone
+  // happened to click over to the next month. Dimmed (.adj-month) so it
+  // still reads as "not quite this month".
   for(let i=0;i<startWeekday;i++){
-    const pad = document.createElement('div');
-    pad.className = 'date-cell pad';
-    monthGrid.appendChild(pad);
+    const d = new Date(viewYear, viewMonth, i - startWeekday + 1);
+    const cell = document.createElement('div');
+    cell.className = 'date-cell adj-month';
+    cell.dataset.date = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    cell.innerHTML = `<div class="dnum">${d.getDate()}</div>`;
+    monthGrid.appendChild(cell);
   }
   for(let d=1; d<=daysInMonth; d++){
     const cell = document.createElement('div');
@@ -281,6 +293,16 @@ function renderMonthGrid(){
     cell.dataset.date = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
     if(isCurrentMonth && d===today.getDate()) cell.classList.add('today');
     cell.innerHTML = `<div class="dnum">${d}</div>`;
+    monthGrid.appendChild(cell);
+  }
+  const totalSoFar = startWeekday + daysInMonth;
+  const trailingCount = (7 - (totalSoFar % 7)) % 7;
+  for(let i=1;i<=trailingCount;i++){
+    const d = new Date(viewYear, viewMonth + 1, i);
+    const cell = document.createElement('div');
+    cell.className = 'date-cell adj-month';
+    cell.dataset.date = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    cell.innerHTML = `<div class="dnum">${d.getDate()}</div>`;
     monthGrid.appendChild(cell);
   }
 
@@ -430,7 +452,7 @@ document.getElementById('employeeSelect').addEventListener('change', (e) => {
   if(e.target.value) loadScheduleFor(e.target.value);
 });
 
-const AUTH_API_URL = LB_CONFIG.AUTH_API;
+const AUTH_API_URL = LB_CONFIG.AUTH_FAST_API;
 let myPhotoDataUri = null;
 let viewingIsMe = false;
 
