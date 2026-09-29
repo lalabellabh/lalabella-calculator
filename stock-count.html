@@ -124,6 +124,9 @@
   .count-row:first-child{ border-top:none; }
   .count-row-head{ display:flex; justify-content:space-between; align-items:baseline; font-weight:600; font-size:13.5px; }
   .count-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .count-row-variance{ font-size:12px; font-weight:700; margin-top:6px; font-family:'Space Mono',monospace; }
+  .count-row-variance.ok{ color:var(--ok); }
+  .count-row-variance.warn{ color:var(--rust); }
   .garden-caption strong{ color:var(--gold); }
   .count-inputs{ display:grid; grid-template-columns:1.4fr 0.8fr 1.4fr; gap:8px; margin-top:10px; align-items:end; }
   .count-inputs label{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-dim); margin-bottom:5px; }
@@ -505,6 +508,23 @@
     document.getElementById('gVariance').textContent=variance;
   }
 
+  // Shows the difference (physical − system) right on the item's own row
+  // as the person types, instead of only in the overall garden summary —
+  // so it's clear per-item whether they're short, over, or matching.
+  function updateRowVariance(row){
+    if(!row) return;
+    const idx = Number(row.dataset.idx);
+    const input = row.querySelector('.physicalInput');
+    const out = document.getElementById('variance-' + idx);
+    if(!out) return;
+    if(input.value === ''){ out.textContent = ''; out.className = 'count-row-variance'; return; }
+    const unit = stockItems[idx]?.Unit || '';
+    const diff = Number(input.value) - Number(stockItems[idx]?.SystemStock || 0);
+    const sign = diff > 0 ? '+' : '';
+    out.textContent = 'Variance: ' + sign + diff.toFixed(3).replace(/\.?0+$/, '') + (unit ? ' ' + unit : '');
+    out.className = 'count-row-variance' + (diff === 0 ? ' ok' : ' warn');
+  }
+
   function selectTallyRow(idx){
     selectedTallyIdx = idx;
     document.querySelectorAll('.count-row').forEach(r => r.classList.toggle('tally-selected', Number(r.dataset.idx) === idx));
@@ -618,12 +638,12 @@
       <div class="count-row" data-idx="${idx}">
         <div class="count-row-head">
           <span>${it.ChocolateName}</span>
-          <span>System: ${it.SystemStock}</span>
+          <span>System: ${it.SystemStock} ${it.Unit || ''}</span>
         </div>
         <div class="count-row-meta">Batch: ${it.Batch || '—'} · Expiry: ${fmtDate(it.ExpiryDate)}</div>
         <div class="count-inputs">
           <div>
-            <label>Physical Count</label>
+            <label>Physical Count ${it.Unit ? `(${it.Unit})` : ''}</label>
             <input type="number" min="0" step="0.01" class="physicalInput" id="physical-${idx}" placeholder="0" />
           </div>
           <div>
@@ -637,9 +657,11 @@
             </select>
           </div>
         </div>
+        <div class="count-row-variance" id="variance-${idx}"></div>
       </div>
     `).join('');
     el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', updateGarden));
+    el.querySelectorAll('.physicalInput').forEach(input=>input.addEventListener('input', ()=>updateRowVariance(input.closest('.count-row'))));
 
     // "+" additional-count input: type a batch amount, press Enter (or
     // tap away) to add it onto the existing Physical Count — then it
