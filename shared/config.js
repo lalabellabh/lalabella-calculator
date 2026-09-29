@@ -25,6 +25,10 @@ window.LB_CONFIG = Object.freeze({
   // slice #1. Every other Flower action still uses FLOWER_API above.
   FLOWER_FAST_API:  'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flower-fast',
   ITEM_API:         'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec',
+  // Fast path (Supabase Edge Function) — full Item Inventory module.
+  // Photos now upload to Supabase Storage (bucket "item-photos") instead
+  // of Google Drive; older Drive-linked photos still resolve fine.
+  ITEM_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/item-fast',
   ORDER_ASSIGN_API: 'https://script.google.com/macros/s/AKfycbyD9RV8ATs0uLjjkyCVcRiM4aYZPttDredD3BZsE1vbv61gER6A3oT00_BkMUR5FPE/exec',
   ORDER_FORM_API:   'https://script.google.com/macros/s/AKfycbxK3UQUK0xUGT545Y294raGz9IOFrTtNNaUvRA8XeEmNtZewJJ4XXX16zpEcVGTo3I/exec',
   NOTES_API:        'https://script.google.com/macros/s/AKfycbxlbXl4V2PPYKVp7rjbJaGG7lYX_7Bc28MhkzOcUoSoEhLfTIu3c3BH0gxwFZf5AE2x/exec',
