@@ -125,6 +125,14 @@
   .count-row-head{ display:flex; justify-content:space-between; align-items:baseline; font-weight:600; font-size:13.5px; }
   .count-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
   .count-row-variance{ font-size:12px; font-weight:700; margin-top:6px; font-family:'Space Mono',monospace; }
+  /* The items list can run to 30+ rows on a full category — a fixed-
+     height scroll box keeps the Save/Print buttons reachable without
+     endless scrolling past every item first. */
+  .items-scroll{ max-height:60vh; overflow-y:auto; padding-right:6px; margin:10px -4px 14px; }
+  .items-scroll::-webkit-scrollbar{ width:6px; }
+  .items-scroll::-webkit-scrollbar-track{ background:transparent; }
+  .items-scroll::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
+  .items-scroll::-webkit-scrollbar-thumb:hover{ background:var(--gold); }
   .count-row-variance.ok{ color:var(--ok); }
   .count-row-variance.warn{ color:var(--rust); }
   .garden-caption strong{ color:var(--gold); }
@@ -356,7 +364,7 @@
     <input type="text" id="fItemSearch" placeholder="Type to filter..." autocomplete="off" />
     <label>Category</label>
     <div id="categoryPills" class="category-pills"></div>
-    <div id="itemsList"></div>
+    <div id="itemsList" class="items-scroll"></div>
     <button class="submit-btn" id="saveBtn">Save Count Session</button>
     <button class="print-btn" id="printBtn">🖨️ Print Count Sheet</button>
     <button class="print-btn" id="shareBtn" style="display:none;">📤 Send to WhatsApp</button>
