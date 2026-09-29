@@ -164,7 +164,11 @@
     <div class="panel active" id="panelChocolate">
       <div class="fields">
         <div class="field full"><label>Chocolate Name</label><input id="chocName" placeholder="e.g. Dark Almond Rocher"></div>
-        <div class="field"><label>Category</label><input id="chocCategory" placeholder="e.g. Praline"></div>
+        <div class="field">
+          <label>Category</label>
+          <select id="chocCategory"><option value="">Loading…</option></select>
+          <input id="chocCategoryNew" type="text" placeholder="New category name" style="display:none;margin-top:6px;">
+        </div>
         <div class="field"><label>Brand</label><input id="chocBrand" placeholder="e.g. Lindt"></div>
         <div class="field">
           <label>Unit</label>
@@ -222,8 +226,16 @@
         <input id="editItemName" type="text" list="editItemDatalist" placeholder="Start typing to search…">
         <datalist id="editItemDatalist"></datalist>
       </div>
+      <div class="field">
+        <label>Rename to <span style="text-transform:none;font-weight:400;">(optional — leave blank to keep the same name)</span></label>
+        <input id="editItemNewName" type="text" placeholder="New chocolate name">
+      </div>
       <div class="grid">
-        <div class="field"><label>Category</label><input id="editItemCategory" type="text"></div>
+        <div class="field">
+          <label>Category</label>
+          <select id="editItemCategory"><option value="">Loading…</option></select>
+          <input id="editItemCategoryNew" type="text" placeholder="New category name" style="display:none;margin-top:6px;">
+        </div>
         <div class="field"><label>Brand</label><input id="editItemBrand" type="text"></div>
         <div class="field"><label>Grams (per piece)</label><input id="editItemGrams" type="number" min="0" step="0.1"></div>
         <div class="field"><label>Standard Price / Kg (BHD)</label><input id="editItemPrice" type="number" min="0" step="0.001"></div>
@@ -248,6 +260,52 @@
 
 const CHOCOLATE_API = LB_CONFIG.CHOCOLATE_FAST_API;
 
+// ---------- Category dropdowns (shared list, "+ Add New" reveals a text box) ----------
+const NEW_CATEGORY_VALUE = '__new__';
+function wireCategorySelect(selectId, newInputId){
+  const sel = document.getElementById(selectId);
+  const newInput = document.getElementById(newInputId);
+  sel.addEventListener('change', ()=>{
+    const isNew = sel.value === NEW_CATEGORY_VALUE;
+    newInput.style.display = isNew ? 'block' : 'none';
+    if(isNew) newInput.focus();
+  });
+}
+function categoryValue(selectId, newInputId){
+  const sel = document.getElementById(selectId);
+  if(sel.value === NEW_CATEGORY_VALUE) return document.getElementById(newInputId).value.trim();
+  return sel.value;
+}
+function fillCategorySelect(selectId, categories, selected){
+  const sel = document.getElementById(selectId);
+  const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.innerHTML = options + `<option value="${NEW_CATEGORY_VALUE}">+ Add New Category…</option>`;
+  const newInput = document.getElementById(selectId === 'chocCategory' ? 'chocCategoryNew' : 'editItemCategoryNew');
+  if(selected && categories.includes(selected)){
+    sel.value = selected;
+    newInput.style.display = 'none';
+  } else if(selected){
+    sel.value = NEW_CATEGORY_VALUE;
+    newInput.style.display = 'block';
+    newInput.value = selected;
+  } else {
+    sel.value = categories[0] || NEW_CATEGORY_VALUE;
+    newInput.style.display = sel.value === NEW_CATEGORY_VALUE ? 'block' : 'none';
+  }
+}
+let chocolateCategories = [];
+async function loadCategories(){
+  try{
+    chocolateCategories = lalabellaCheckResponse(await (await fetch(CHOCOLATE_API + '?action=getCategories&_ts=' + Date.now())).json());
+    chocolateCategories.sort((a,b)=>a.localeCompare(b));
+    fillCategorySelect('chocCategory', chocolateCategories, '');
+    fillCategorySelect('editItemCategory', chocolateCategories, '');
+  }catch(e){ console.error('[Lalabella] loadCategories failed:', e.message); }
+}
+loadCategories();
+wireCategorySelect('chocCategory', 'chocCategoryNew');
+wireCategorySelect('editItemCategory', 'editItemCategoryNew');
+
 // ---------- Chocolate save ----------
 document.getElementById('saveChocolateBtn').addEventListener('click', ()=>{
   const name = document.getElementById('chocName').value.trim();
@@ -263,7 +321,7 @@ document.getElementById('saveChocolateBtn').addEventListener('click', ()=>{
   const body = new URLSearchParams({
     action: 'addChocolateItem',
     chocolateName: name,
-    category: document.getElementById('chocCategory').value,
+    category: categoryValue('chocCategory', 'chocCategoryNew'),
     brand: document.getElementById('chocBrand').value,
     unit: document.getElementById('chocUnit').value,
     grams: document.getElementById('chocGrams').value,
@@ -284,11 +342,15 @@ document.getElementById('saveChocolateBtn').addEventListener('click', ()=>{
       resultBox.className = 'result ok';
       resultBox.textContent = '✓ Added — Product Code: ' + res.productCode;
       document.getElementById('chocName').value = '';
-      document.getElementById('chocCategory').value = '';
+      fillCategorySelect('chocCategory', chocolateCategories, '');
       document.getElementById('chocBrand').value = '';
       document.getElementById('chocGrams').value = 0;
       document.getElementById('chocPricePerKg').value = 0;
       document.getElementById('chocMinStock').value = 0;
+      // A brand-new category just got used — refresh the shared list.
+      if(!chocolateCategories.includes((body.get('category')||''))){
+        loadCategories();
+      }
     })
     .catch(err => {
       btn.disabled = false; btn.textContent = 'Add Chocolate Item';
@@ -362,19 +424,21 @@ document.getElementById('checkBarcodesBtn').addEventListener('click', ()=>{
 
 // ---------- Fix an Existing Catalog Item ----------
 let editableItems = [];
-(async function loadEditableItems(){
+async function loadEditableItems(){
   try{
     editableItems = lalabellaCheckResponse(await (await fetch(CHOCOLATE_API + '?action=getItems&_ts=' + Date.now())).json());
     document.getElementById('editItemDatalist').innerHTML =
       editableItems.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
   }catch(e){ console.error('[Lalabella] loadEditableItems failed:', e.message); }
-})();
+}
+loadEditableItems();
 
 document.getElementById('editItemName').addEventListener('input', function(){
   const typed = this.value.trim().toLowerCase();
   const match = editableItems.find(it => String(it['Chocolate Name']||'').trim().toLowerCase() === typed);
+  document.getElementById('editItemNewName').value = '';
   if(match){
-    document.getElementById('editItemCategory').value = match['Category'] || '';
+    fillCategorySelect('editItemCategory', chocolateCategories, match['Category'] || '');
     document.getElementById('editItemBrand').value = match['Brand'] || '';
     document.getElementById('editItemGrams').value = match['Grams'] || '';
     document.getElementById('editItemPrice').value = match['Standard Price / Kg'] || '';
@@ -396,10 +460,12 @@ document.getElementById('saveEditItemBtn').addEventListener('click', ()=>{
   btn.disabled = true; btn.textContent = 'Saving…';
   resultBox.className = 'result'; resultBox.textContent = '';
 
+  const newName = document.getElementById('editItemNewName').value.trim();
   const params = new URLSearchParams({
     action: 'updateChocolateItem',
     chocolateName: name,
-    category: document.getElementById('editItemCategory').value,
+    newChocolateName: newName,
+    category: categoryValue('editItemCategory', 'editItemCategoryNew'),
     brand: document.getElementById('editItemBrand').value,
     grams: document.getElementById('editItemGrams').value,
     pricePerKg: document.getElementById('editItemPrice').value,
@@ -418,7 +484,8 @@ document.getElementById('saveEditItemBtn').addEventListener('click', ()=>{
         return;
       }
       resultBox.className = 'result ok';
-      resultBox.textContent = '✓ Saved — ' + name + ' updated.';
+      resultBox.textContent = res.renamedTo ? ('✓ Saved — renamed to "' + res.renamedTo + '".') : ('✓ Saved — ' + name + ' updated.');
+      if(res.renamedTo) loadEditableItems();
     })
     .catch(err => {
       btn.disabled = false; btn.textContent = 'Save Changes';
