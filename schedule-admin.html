@@ -326,8 +326,16 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Saving…'; saveStatus.style.color = 'var(--muted)'; saveStatus.textContent = 'Saving — this replaces this week\u2019s existing schedule.';
   try{
-    const params = new URLSearchParams({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(usable) });
-    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API + '?' + params.toString());
+    // POST with a JSON body — a GET with the full rows array packed into
+    // the URL's query string can exceed the browser/server's maximum URL
+    // length once there are more than a handful of rows, which fails
+    // silently as a network-level "Failed to fetch" rather than a normal
+    // error response.
+    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(usable) })
+    });
     const data = await res.json();
     btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
     if(!data.success){
