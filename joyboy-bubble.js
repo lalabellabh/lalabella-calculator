@@ -6,7 +6,7 @@
    NOVA Command Center page already uses.
    ========================================================== */
 (function(){
-  const NOVA_API_URL = LB_CONFIG.NOVA_API;
+  const NOVA_API_URL = LB_CONFIG.NOVA_FAST_API;
 
   // ---------- Inject styles ----------
   const style = document.createElement('style');
@@ -145,14 +145,18 @@
       const lalabellaToken = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
       const sessionStr = JSON.stringify(session || {});
       const contextStr = JSON.stringify({ page: document.title || location.pathname, app: 'Joyboy Bubble' });
-      const url = NOVA_API_URL
-        + '?action=chat'
-        + '&message=' + encodeURIComponent(message)
-        + '&token=' + encodeURIComponent(lalabellaToken)
-        + '&session=' + encodeURIComponent(sessionStr)
-        + '&context=' + encodeURIComponent(contextStr);
 
-      const r = await fetch(url);
+      // POST with a JSON body — a growing conversation session packed
+      // into a GET query string can exceed the browser/server's max URL
+      // length, which fails silently as a network error rather than a
+      // normal error response. apikey is set directly here (not left to
+      // auth-guard.js's fetch wrapper) since this bubble also runs on
+      // pages like index.html that don't load auth-guard.js at all.
+      const r = await fetch(NOVA_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: (window.LB_CONFIG && LB_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '' },
+        body: JSON.stringify({ action: 'chat', message, token: lalabellaToken, session: sessionStr, context: contextStr })
+      });
       clearTimeout(slowTimer);
       thinkingEl.remove();
       if(!r.ok){
