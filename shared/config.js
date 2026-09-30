@@ -30,8 +30,11 @@ window.LB_CONFIG = Object.freeze({
   // of Google Drive; older Drive-linked photos still resolve fine.
   ITEM_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/item-fast',
   ORDER_ASSIGN_API: 'https://script.google.com/macros/s/AKfycbyD9RV8ATs0uLjjkyCVcRiM4aYZPttDredD3BZsE1vbv61gER6A3oT00_BkMUR5FPE/exec',
+  ORDER_ASSIGN_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/orderassign-fast',
   ORDER_FORM_API:   'https://script.google.com/macros/s/AKfycbxK3UQUK0xUGT545Y294raGz9IOFrTtNNaUvRA8XeEmNtZewJJ4XXX16zpEcVGTo3I/exec',
+  ORDER_FORM_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/orderform-fast',
   NOTES_API:        'https://script.google.com/macros/s/AKfycbxlbXl4V2PPYKVp7rjbJaGG7lYX_7Bc28MhkzOcUoSoEhLfTIu3c3BH0gxwFZf5AE2x/exec',
+  NOTES_FAST_API:   'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/notes-fast',
   SCHEDULE_API:     'https://script.google.com/macros/s/AKfycbwp9vFxJFCfQtBZY0VQVMxXNw3BxPnfFSAzNrqVC-WBq3h7-YlzuhHBWucte6pcSf4/exec',
   SCHEDULE_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/schedule-fast',
   SUPPLY_LOG_API:   'https://script.google.com/macros/s/AKfycbyvQl0VEx-SObaV5CMeKK-sDEopFH0X-rauQkElWPW7N_Hraxsuth-odm_rW-SVMzk/exec',
