@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="index, follow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lalabella — Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rose:#c9506b;--rose-dark:#9e2f4a;--ink:#2f2024;--muted:#8a766a;--line:#efe2dd;--bg:#fdf8f6;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Space Grotesk',sans-serif;line-height:1.65;}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 20px 80px;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--rose);font-weight:700;}
+  h1{font-family:'Fraunces',serif;font-size:32px;margin:6px 0 4px;color:var(--rose-dark);}
+  .updated{color:var(--muted);font-size:13px;margin-bottom:36px;}
+  h2{font-family:'Fraunces',serif;font-size:19px;color:var(--rose-dark);margin:36px 0 10px;}
+  p,li{font-size:14.5px;color:#4a3a3e;}
+  ul{padding-left:20px;}
+  .note{background:#fff6f0;border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:13px;color:var(--muted);margin-bottom:32px;}
+  a{color:var(--rose-dark);}
+  .back{display:inline-block;margin-bottom:24px;font-size:12.5px;color:var(--muted);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to Lalabella</a>
+  <div class="eyebrow">Lalabella</div>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: 30 September 2026</div>
+
+  <div class="note">
+    <strong>Draft — for legal review before publishing.</strong> This is a starting template covering the topics a privacy policy for this system needs. Before this is linked from an app store listing or made public, it should be reviewed by a lawyer familiar with Bahrain's Personal Data Protection Law (Law No. 30 of 2018), which applies to any business handling personal data of people in Bahrain, staff included.
+  </div>
+
+  <h2>What this system is</h2>
+  <p>Lalabella is an internal business management system for Lalabella's flower, chocolate and gift boutique branches (ModaMall, Hamala, Galali) in Bahrain. It is used only by Lalabella staff and management to manage inventory, orders, scheduling, and related operations. It is not a public consumer product.</p>
+
+  <h2>Information we collect</h2>
+  <p>To operate the system, we collect and store the following about staff who use it:</p>
+  <ul>
+    <li><strong>Account information:</strong> full name, username, a securely hashed password (never the password itself), assigned branch, role and job position.</li>
+    <li><strong>Profile information (optional, self-provided):</strong> a profile photo, status updates, and cover photos a staff member chooses to add.</li>
+    <li><strong>Work activity:</strong> duty schedules, attendance-related records, inventory actions (receiving, releasing, stock counts), order records, petty cash entries, and notes entered while using the system.</li>
+    <li><strong>Technical information:</strong> login session tokens (stored on the staff member's own device to keep them signed in), and basic activity timestamps (such as last login, last seen) used to keep the system secure and functioning.</li>
+  </ul>
+  <p>We do not knowingly collect information from children, and this system is not directed at or available to the public.</p>
+
+  <h2>How we use this information</h2>
+  <ul>
+    <li>To operate day-to-day business functions: inventory, orders, scheduling, cash handling and reporting.</li>
+    <li>To authenticate staff and keep accounts secure (locking accounts after repeated failed logins, for example).</li>
+    <li>To let staff see who else is on shift or online, and to attribute actions (such as who received a delivery or counted stock) for accountability.</li>
+  </ul>
+
+  <h2>How this information is stored and protected</h2>
+  <ul>
+    <li>Data is stored in a secured Supabase (PostgreSQL) database, accessed only through the system's own server-side functions — never directly from a staff member's browser.</li>
+    <li>Passwords are never stored in plain text; they are salted and hashed before being saved.</li>
+    <li>Access to management functions (such as viewing or editing other staff members' accounts) is restricted to specifically authorized people, separate from general "Admin" permissions.</li>
+    <li>Photos and uploaded files are stored in access-controlled storage.</li>
+  </ul>
+
+  <h2>Who can see this information</h2>
+  <p>Information is visible only to authorized Lalabella staff and management as needed to do their jobs. We do not sell, rent, or share staff or business information with outside companies for marketing purposes. Some parts of the system use third-party infrastructure providers (see below) solely to run the system — they do not use the data for their own purposes.</p>
+
+  <h2>Third-party services used to run this system</h2>
+  <ul>
+    <li><strong>Supabase</strong> — database, secure backend functions, and file storage.</li>
+    <li><strong>OpenAI</strong> — powers the "Joyboy" assistant's chat responses. Messages sent to the assistant may be processed by OpenAI to generate a reply.</li>
+    <li><strong>GitHub Pages</strong> — hosts the website itself.</li>
+    <li><strong>Google Fonts</strong> — loads typefaces used in the design.</li>
+  </ul>
+  <p>See our <a href="licenses.html">third-party software page</a> for the open-source libraries this system is built with.</p>
+
+  <h2>Data retention and deletion</h2>
+  <p>Account information is kept for as long as a staff member is active with Lalabella, plus a reasonable period afterward for business records. A staff member who resigns can have their account disabled or permanently deleted by an authorized administrator on request.</p>
+
+  <h2>Your choices</h2>
+  <p>Staff can update their own full name, username, branch and profile photo directly in the system. To request a correction or deletion of other information, contact your administrator.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We may update this policy as the system changes. The "Last updated" date at the top will reflect the most recent revision.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy can be directed to Lalabella management.</p>
+</div>
+</body>
+</html>
