@@ -769,6 +769,7 @@
         ${lastActivityRow('Last Receiving', data.lastReceiving)}
         ${lastActivityRow('Last Release', data.lastRelease)}
         ${lastActivityRow('Last Transfer', data.lastTransfer)}
+        ${lastInventoryRow(data.lastInventoryCount)}
       </div>
     `;
 
@@ -883,6 +884,22 @@
       return `<div class="stat-row"><span>${label}</span><span class="val" style="color:var(--ink-dim);">No activity yet</span></div>`;
     }
     return `<div class="stat-row"><span>${label}</span><span class="val">${info.chocolateName || '—'} · ${fmtDate(info.date)}</span></div>`;
+  }
+
+  // Latest Stock Count session — items counted, how many had a variance,
+  // and the total BD value of that variance, as a quick reference next
+  // to the other Last Activity rows.
+  function lastInventoryRow(info){
+    if(!info){
+      return `<div class="stat-row"><span>Last Inventory Count</span><span class="val" style="color:var(--ink-dim);">No activity yet</span></div>`;
+    }
+    const hasVariance = info.itemsWithVariance > 0;
+    const varColor = hasVariance ? 'var(--rust)' : 'var(--ok)';
+    const sign = info.totalVarianceValue > 0 ? '+' : '';
+    return `<div class="stat-row"><span>Last Inventory Count</span><span class="val">${info.branch} · ${fmtDate(info.date)}</span></div>
+      <div class="stat-row"><span style="padding-left:14px;color:var(--ink-dim);font-size:12px;">Items counted</span><span class="val" style="font-size:12px;">${info.itemsCounted}</span></div>
+      <div class="stat-row"><span style="padding-left:14px;color:var(--ink-dim);font-size:12px;">Items with variance</span><span class="val" style="font-size:12px;color:${varColor};">${info.itemsWithVariance}</span></div>
+      <div class="stat-row"><span style="padding-left:14px;color:var(--ink-dim);font-size:12px;">Total variance value</span><span class="val" style="font-size:12px;color:${varColor};">${sign}${fmtBD(info.totalVarianceValue)}</span></div>`;
   }
 
   function renderList(list, rowFn, emptyText){
