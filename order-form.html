@@ -360,7 +360,7 @@ function playAdd(){
   }catch(e){}
 }
 
-const FLOWER_API = LB_CONFIG.ORDER_FORM_API;
+const FLOWER_API = LB_CONFIG.ORDER_FORM_FAST_API;
 function formatNo(n){ return String(n).padStart(5, '0'); }
 
 fetch(FLOWER_API + '?action=getNextOrderNumber')
