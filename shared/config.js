@@ -41,6 +41,7 @@ window.LB_CONFIG = Object.freeze({
   PETTY_CASH_API:   'https://script.google.com/macros/s/AKfycbxz53pJEQIEOgvfUIxwhcOcdZtu7An4qXwShP7a58bVjvJSPm8ORs4eP6lv-kdKJBdT/exec',
   PETTY_CASH_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/pettycash-fast',
   NOVA_API:         'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec',
+  NOVA_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/nova-fast',
 
   // Supabase (fast path). The publishable key is MEANT to be public: the
   // browser still cannot read or write any table (no grants + RLS) — it is
