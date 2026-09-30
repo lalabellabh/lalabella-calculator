@@ -173,9 +173,17 @@
 
   function logout() {
     const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-    // Also end the session on the server, not just in this browser.
+    // Also end the session on the server, not just in this browser. Calls
+    // AUTH_FAST_API directly with its own apikey header (not left to
+    // auth-guard.js's fetch wrapper) since nav.js runs on pages that don't
+    // always load auth-guard.js.
     if (token && window.LB_CONFIG) {
-      try { fetch(LB_CONFIG.AUTH_API + '?action=logout&token=' + encodeURIComponent(token), { keepalive: true }).catch(() => {}); } catch (e) {}
+      try {
+        fetch(LB_CONFIG.AUTH_FAST_API + '?action=logout&token=' + encodeURIComponent(token), {
+          keepalive: true,
+          headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY || '' }
+        }).catch(() => {});
+      } catch (e) {}
     }
     ['lalabellaToken', 'lalabellaUser', 'lalabellaVerifiedToken', 'lalabellaVerifiedAt'].forEach(k => {
       sessionStorage.removeItem(k); localStorage.removeItem(k);
