@@ -120,8 +120,8 @@
   </div>
 
   <div id="denied" class="card denied" style="display:none;">
-    <h2>🔒 Admins only</h2>
-    <p class="muted">Ask an admin to give your account the Admin role.</p>
+    <h2>🔒 Restricted</h2>
+    <p class="muted">Only people with User Management access can open this. Ask Bench or IT to grant it to your account.</p>
   </div>
 
   <div id="adminArea" style="display:none;">
@@ -208,7 +208,7 @@ async function unlock(){
     const d=await api({action:'adminUnlock',password:pw});
     btn.disabled=false; btn.textContent='Unlock';
     if(!d.success){
-      if(/admin/i.test(d.error||'')){ document.getElementById('lockCard').style.display='none'; document.getElementById('denied').style.display='block'; return; }
+      if(/admin|access to user management/i.test(d.error||'')){ document.getElementById('lockCard').style.display='none'; document.getElementById('denied').style.display='block'; return; }
       setMsg('unlockMsg',d.error||'Could not unlock.',false); document.getElementById('unlockPw').value=''; return;
     }
     setMsg('unlockMsg','',true);
@@ -289,8 +289,19 @@ function rowHtml(u){
   const branches=BRANCHES.indexOf(u.branch)===-1&&u.branch?BRANCHES.concat([u.branch]):BRANCHES;
   const self=u.isMe;
   return `<tr data-u="${esc(u.username)}" class="${u.status==='Inactive'?'inactive':''}">
-    <td data-label="User" class="name"><b>${esc(u.fullName||u.username)}</b><span>@${esc(u.username)} · joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
-      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}</td>
+    <td data-label="User" class="name">
+      <input type="text" data-f="fullName" value="${esc(u.fullName||'')}" placeholder="Full name" style="font-weight:700;font-size:13.5px;padding:5px 7px;margin-bottom:3px;width:100%;max-width:170px;">
+      <div style="display:flex;align-items:center;gap:2px;margin-bottom:2px;">
+        <span class="muted" style="font-size:11.5px;">@</span>
+        <input type="text" data-f="username" value="${esc(u.username)}" style="font-size:11.5px;padding:4px 5px;width:100%;max-width:140px;color:var(--muted);">
+      </div>
+      <span>joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
+      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}
+      <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:600;cursor:${self?'default':'pointer'};">
+        <input type="checkbox" data-a="toggleCanManage" ${u.canManageUsers?'checked':''} ${self?'disabled title="You cannot remove your own access"':''}>
+        User Management access
+      </label>
+    </td>
     <td data-label="Position"><select data-f="position"><option value="">— Not set —</option>${opt(posOptions(u.position),u.position)}</select></td>
     <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(['Staff','Admin'],u.role)}</select></td>
     <td data-label="Branch"><select data-f="branch">${opt(branches,u.branch)}</select></td>
@@ -300,6 +311,7 @@ function rowHtml(u){
       <button class="primary" data-a="save" disabled>Save</button>
       ${u.locked||u.failedAttempts?'<button class="warn" data-a="unlock">Unlock</button>':''}
       <button data-a="reset">Reset Password</button>
+      ${self?'':'<button class="danger" data-a="delete">Delete</button>'}
     </div></td>
   </tr>`;
 }
@@ -312,7 +324,7 @@ function render(){
 async function loadUsers(){
   const d=await api({action:'adminListUsers'});
   if(!d.success){
-    if(/admin/i.test(d.error||'')){ document.getElementById('denied').style.display='block'; return false; }
+    if(/admin|access to user management/i.test(d.error||'')){ document.getElementById('denied').style.display='block'; return false; }
     document.getElementById('adminArea').style.display='block';
     setMsg('tableMsg',d.error||'Could not load users.',false); return true;
   }
@@ -322,12 +334,18 @@ async function loadUsers(){
 document.getElementById('searchBox').addEventListener('input',render);
 
 const tbody=document.getElementById('userRows');
-tbody.addEventListener('change',ev=>{
+// 'input' too, not just 'change' — a text field (fullName/username) only
+// fires 'change' on blur, so typing a new name and clicking Save right
+// away (without clicking elsewhere first) left Save disabled the whole
+// time even though the value had genuinely changed.
+function checkDirty(ev){
   const tr=ev.target.closest('tr[data-u]'); if(!tr) return;
   const u=users.find(x=>x.username===tr.dataset.u);
-  const changed=['position','role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==u[f];});
+  const changed=['fullName','username','position','role','branch','status'].some(f=>{const el=tr.querySelector(`[data-f="${f}"]`);return el&&el.value!==(u[f]||'');});
   tr.classList.toggle('dirty',changed); tr.querySelector('[data-a="save"]').disabled=!changed;
-});
+}
+tbody.addEventListener('input',checkDirty);
+tbody.addEventListener('change',checkDirty);
 tbody.addEventListener('click',async ev=>{
   const btn=ev.target.closest('button[data-a]'); if(!btn) return;
   const tr=btn.closest('tr[data-u]'); const u=users.find(x=>x.username===tr.dataset.u); if(!u) return;
@@ -340,9 +358,21 @@ tbody.addEventListener('click',async ev=>{
     if(d.success) loadUsers(); else btn.disabled=false;
     return;
   }
+  if(act==='delete'){
+    const typed=prompt('Type "'+u.username+'" to permanently delete this account. This cannot be undone.');
+    if(typed===null) return;
+    if(typed.trim()!==u.username){ setMsg('tableMsg','Typed name didn\'t match — nothing deleted.',false); return; }
+    btn.disabled=true; btn.textContent='Deleting…';
+    const d=await api({action:'adminDeleteUser',username:u.username});
+    setMsg('tableMsg',d.success?d.message:(d.error||'Could not delete.'),d.success);
+    if(d.success) loadUsers(); else { btn.disabled=false; btn.textContent='Delete'; }
+    return;
+  }
   if(act==='save'){
     const params={action:'adminUpdateUser',username:u.username};
-    ['position','role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==u[f])params[f]=el.value;});
+    ['fullName','position','role','branch','status'].forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&!el.disabled&&el.value!==(u[f]||''))params[f]=el.value;});
+    const usernameEl=tr.querySelector('[data-f="username"]');
+    if(usernameEl&&usernameEl.value!==u.username)params.newUsername=usernameEl.value;
     if(params.role==='Admin'&&!confirm('Give '+(u.fullName||u.username)+' full Admin access?')) return;
     if(params.status==='Inactive'&&!confirm('Disable '+(u.fullName||u.username)+'? They will be logged out and cannot log in.')) return;
     btn.disabled=true; btn.textContent='Saving…';
@@ -351,6 +381,18 @@ tbody.addEventListener('click',async ev=>{
     btn.textContent='Save';
     if(d.success) loadUsers(); else btn.disabled=false;
   }
+});
+
+/* ---------- User Management access toggle (own instant save) ---------- */
+tbody.addEventListener('change',async ev=>{
+  const cb=ev.target.closest('input[data-a="toggleCanManage"]'); if(!cb) return;
+  const tr=cb.closest('tr[data-u]'); const u=users.find(x=>x.username===tr.dataset.u); if(!u) return;
+  const grant=cb.checked;
+  if(!grant&&!confirm('Remove '+(u.fullName||u.username)+'\u2019s access to User Management?')){ cb.checked=true; return; }
+  cb.disabled=true;
+  const d=await api({action:'adminSetCanManageUsers',username:u.username,value:grant?'true':'false'});
+  setMsg('tableMsg',d.success?d.message:(d.error||'Could not update.'),d.success);
+  if(d.success) loadUsers(); else { cb.checked=!grant; cb.disabled=false; }
 });
 
 /* ---------- reset password modal ---------- */
@@ -384,7 +426,11 @@ document.getElementById('unlockBtn').addEventListener('click',unlock);
 document.getElementById('unlockPw').addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
 (function(){
   let u={}; try{ u=window.LALABELLA_USER||JSON.parse(sessionStorage.getItem('lalabellaUser')||localStorage.getItem('lalabellaUser')||'{}')||{}; }catch(e){}
-  if(u.role && String(u.role).toLowerCase()!=='admin'){ document.getElementById('denied').style.display='block'; return; }
+  // Only block here on a POSITIVE, fresh "no" — a stale cached session
+  // (logged in before this access flag existed) simply won't have this
+  // field yet, so it defers to the server, which is the real gate on
+  // every action anyway.
+  if(u.canManageUsers === false){ document.getElementById('denied').style.display='block'; return; }
   showLock();
 })();
 </script>
