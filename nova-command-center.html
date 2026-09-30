@@ -182,7 +182,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
   - After activation, normal conversation can be sent to your NOVA API.
   - Replace NOVA_API_URL after deploying nova-api.gs.
 */
-const NOVA_API_URL = LB_CONFIG.NOVA_API;
+const NOVA_API_URL = LB_CONFIG.NOVA_FAST_API;
 const app=document.getElementById('app'), core=document.getElementById('core'), state=document.getElementById('state');
 const transcript=document.getElementById('transcript'), activity=document.getElementById('activity'), wave=document.getElementById('wave');
 let listening=false, awake=false, recognition=null, wakeRecognition=null, session={};
@@ -573,38 +573,20 @@ async function askNova(message){
   thinkingAbort = abortController;
   try{ startInterruptListener(); }catch(e){}
   try{
-    // GET, not POST — Google Apps Script Web Apps deliver every
-    // response via an internal redirect, and browsers convert a POST
-    // to GET when following that kind of redirect. That meant doPost()
-    // was never actually reached; every real chat request was quietly
-    // landing back on the backend's default "online" response instead
-    // of the real answer. GET sidesteps this entirely and matches the
-    // pattern every other Lalabella backend already relies on — all
-    // parameters travel as URL query parameters instead of a POST body.
+    // POST with a JSON body — a growing conversation session packed into
+    // a GET query string can exceed the browser/server's max URL length
+    // (the previous version had to actively monitor for this). POST has
+    // no such limit and needs no monitoring.
     const lalabellaToken = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
     const sessionStr = JSON.stringify(session || {});
     const contextStr = JSON.stringify({page:'NOVA Command Center',app:'Flower Tools'});
-    const url = NOVA_API_URL
-      + '?action=chat'
-      + '&message=' + encodeURIComponent(message)
-      + '&token=' + encodeURIComponent(lalabellaToken)
-      + '&session=' + encodeURIComponent(sessionStr)
-      + '&context=' + encodeURIComponent(contextStr);
 
-    // URL-length monitoring — GET requests have a practical safe limit
-    // around 2000 characters across browsers/servers. A long-running
-    // conversation (growing `session`) could eventually approach that
-    // and get silently truncated by some intermediary, so this warns
-    // in Live Activity well before that actually happens, rather than
-    // failing mysteriously later. 1500 = getting close; 1900 = right
-    // at the edge, this specific message may already be at risk.
-    if(url.length >= 1900){
-      log('⚠️ Request URL is ' + url.length + ' chars — very close to the safe GET limit (~2000). This message may get cut off. Consider starting a fresh conversation.', 'SYSTEM');
-    } else if(url.length >= 1500){
-      log('Request URL is ' + url.length + ' chars and growing (safe limit ~2000) — conversation is getting long.', 'SYSTEM');
-    }
-
-    const r=await fetch(url, { signal: abortController.signal });
+    const r=await fetch(NOVA_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: (window.LB_CONFIG && LB_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '' },
+      body: JSON.stringify({ action: 'chat', message, token: lalabellaToken, session: sessionStr, context: contextStr }),
+      signal: abortController.signal
+    });
     if(!r.ok){
       log('NOVA API HTTP error ' + r.status + ': ' + (await r.text()).slice(0,300), 'SYSTEM');
       return 'The AI connection had a server error, Boss. Check Live Activity for the details.';
