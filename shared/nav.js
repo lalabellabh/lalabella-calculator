@@ -194,6 +194,26 @@
   }
   window.lbLogout = logout;
 
+  // Small circular avatar + name + branch at the top of the drawer —
+  // the user's own photo comes straight from the cached session object
+  // (publicUser() on the backend now includes it), so this never needs
+  // its own fetch. Falls back to a plain initial-letter circle when no
+  // photo is set, same idea as every avatar fallback elsewhere in the
+  // app. Tapping it opens My Profile, same as tapping your name there.
+  function profileHeaderHtml() {
+    const u = currentUser();
+    const name = u.fullName || u.username || '';
+    if (!name) return '';
+    const sub = [u.branch, u.position].filter(Boolean).join(' · ');
+    const initial = esc(name.trim().charAt(0).toUpperCase() || '?');
+    const avatar = u.photo
+      ? '<img class="lb-menu-avatar" src="' + esc(u.photo) + '" alt="">'
+      : '<span class="lb-menu-avatar lb-menu-avatar-fallback">' + initial + '</span>';
+    return '<a href="profile.html" class="lb-menu-profile">' + avatar +
+      '<span class="lb-menu-profile-text"><span class="lb-menu-profile-name">' + esc(name) + '</span>' +
+      (sub ? '<span class="lb-menu-profile-sub">' + esc(sub) + '</span>' : '') + '</span></a>';
+  }
+
   function render(el) {
     const hubClass = el.getAttribute('data-hub-class') || 'choco-hub-grid';
     const titleClass = el.getAttribute('data-title-class') || 'choco-drawer-title';
@@ -201,7 +221,8 @@
     const modKey = moduleOf(page);
     const mod = moduleAllowed(modKey) ? MODULES[modKey] : null;
     const hub = HUB.filter(h => moduleAllowed(h[3]));
-    let html = (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
+    let html = profileHeaderHtml() +
+      (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
       hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
 
@@ -232,7 +253,14 @@
   if (!document.getElementById('lb-nav-style')) {
     const st = document.createElement('style');
     st.id = 'lb-nav-style';
-    st.textContent = '[data-lb-menu] a.lb-menu-active{font-weight:700;box-shadow:inset 3px 0 0 currentColor;}';
+    st.textContent = '[data-lb-menu] a.lb-menu-active{font-weight:700;box-shadow:inset 3px 0 0 currentColor;}' +
+      '.lb-menu-profile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 10px;border-radius:12px;' +
+        'text-decoration:none;color:inherit;background:rgba(127,127,127,.06);}' +
+      '.lb-menu-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:0 0 40px;}' +
+      '.lb-menu-avatar-fallback{display:flex;align-items:center;justify-content:center;background:var(--teal,#1f8a8a);color:#fff;font-weight:700;font-size:16px;}' +
+      '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
+      '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}';
     document.head.appendChild(st);
   }
   // ---- Standalone drawer (pages that don't have their own) ----
