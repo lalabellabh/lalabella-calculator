@@ -319,6 +319,13 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       <div class="auth-eyebrow">Lalabella</div>
       <h2 class="auth-title" id="loginTitle">Login</h2>
       <div class="auth-sub" id="loginSub">Sign in to access Chocolate, Flower, Item Inventory, and Joyboy.</div>
+      <!-- A real <form> (not just floating inputs) is what lets the
+           browser's own password manager recognize this as a login and
+           offer to save/autofill the password — without it, our own
+           "Remember me" (which keeps the SESSION alive) still works,
+           but the browser never prompts to remember the password text
+           itself, which is what people usually mean by that. -->
+      <form id="loginForm">
       <div class="auth-field">
         <label>Username</label>
         <input type="text" id="loginUsername" autocomplete="username" placeholder="Your username">
@@ -334,8 +341,9 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <input type="checkbox" id="rememberMe" style="width:15px;height:15px;cursor:pointer;">
         <label for="rememberMe" style="font-size:12px;color:#8a7078;cursor:pointer;margin:0;text-transform:none;letter-spacing:normal;font-weight:400;">Remember me on this device</label>
       </div>
-      <button class="auth-btn" id="loginBtn">Login</button>
+      <button class="auth-btn" id="loginBtn" type="submit">Login</button>
       <div class="auth-error" id="loginError"></div>
+      </form>
       <button type="button" class="auth-switch-user" id="switchUserBtn" style="display:none;">Not you? Use another account</button>
     </div>
 
@@ -344,6 +352,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       <div class="auth-eyebrow">Lalabella</div>
       <h2 class="auth-title">Register</h2>
       <div class="auth-sub">New staff account — role starts as Staff by default.</div>
+      <form id="regForm">
       <div class="auth-field">
         <label>Full Name</label>
         <input type="text" id="regFullName" placeholder="Your full name">
@@ -375,9 +384,10 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <label>Invite Code</label>
         <input type="text" id="regInviteCode" autocomplete="off" placeholder="Ask your admin for the code">
       </div>
-      <button class="auth-btn" id="regBtn">Register</button>
+      <button class="auth-btn" id="regBtn" type="submit">Register</button>
       <div class="auth-error" id="regError"></div>
       <div class="auth-success" id="regSuccess"></div>
+      </form>
     </div>
 
     <!-- SIDE PANEL — switches messaging depending on which form is showing -->
@@ -1262,8 +1272,11 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         errEl.style.display = 'block';
       });
   }
-  document.getElementById('loginBtn').addEventListener('click', doLogin);
-  document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  // A real form submit (not just a button click) is what makes Enter
+  // work from any field, not only the password one, and — more
+  // importantly — is what the browser's own password manager needs to
+  // see in order to offer saving/autofilling the password at all.
+  document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
 
   function doRegister(){
     const fullName = document.getElementById('regFullName').value.trim();
@@ -1303,7 +1316,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         errEl.style.display = 'block';
       });
   }
-  document.getElementById('regBtn').addEventListener('click', doRegister);
+  document.getElementById('regForm').addEventListener('submit', e => { e.preventDefault(); doRegister(); });
 
   // Re-verify the session whenever the tab regains focus — catches a
   // token that expired or was logged out from another device while
