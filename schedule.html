@@ -5,502 +5,526 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/admin-gate.js" data-title="Schedule Admin"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lalabella — Duty Schedule</title>
+<title>Lalabella — Upload New Schedule</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
     --cream:#fdf1f0; --ink:#2f2024; --muted:#8a7078; --line:#f0dede;
-    --panel:#ffffff; --bg:#fdf1f0;
+    --ok:#3d7a4f; --err:#c0392b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
   body{padding:22px 16px 60px;}
-
-  .wrap{max-width:1000px;margin:0 auto;}
-
+  .wrap{max-width:980px;margin:0 auto;}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
   .brand{display:flex;align-items:center;gap:10px;}
   .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;font-weight:800;color:#3a2a10;}
   .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
   .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
 
-  .hero{display:grid;grid-template-columns:1.3fr 1fr;gap:0;border-radius:24px;overflow:hidden;box-shadow:0 18px 46px rgba(158,47,74,.16);margin-bottom:26px;}
-  .clock-panel{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);color:#fff;padding:34px 30px;position:relative;overflow:hidden;}
-  .clock-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 15%,rgba(217,164,65,.22),transparent 55%);}
-  .clock-date{position:relative;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-light);margin-bottom:6px;}
-  .clock-time{position:relative;font-family:'Fraunces',serif;font-weight:700;font-size:clamp(38px,7vw,58px);line-height:1;letter-spacing:-.01em;}
-  .clock-time span{font-size:.42em;color:rgba(255,255,255,.55);margin-left:6px;}
-  .clock-sub{position:relative;margin-top:10px;font-size:12px;color:rgba(255,255,255,.7);}
+  .intro{margin:0 0 22px;}
+  .intro h1{font-family:'Fraunces',serif;font-size:26px;margin:0 0 6px;}
+  .intro p{font-size:13px;color:var(--muted);line-height:1.6;margin:0;max-width:640px;}
 
-  .weather-panel{background:#fff;padding:30px 26px;display:flex;flex-direction:column;justify-content:center;gap:6px;}
-  .weather-loc{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
-  .weather-main{display:flex;align-items:center;gap:14px;margin:6px 0;}
-  .weather-emoji{font-size:44px;line-height:1;}
-  .weather-temp{font-family:'Fraunces',serif;font-weight:700;font-size:40px;color:var(--rose-dark);}
-  .weather-desc{font-size:13px;color:var(--muted);}
-  .weather-extra{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);}
-  .weather-extra b{color:var(--ink);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:20px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .card h2{font-family:'Fraunces',serif;font-size:17px;margin:0 0 4px;}
+  .card .sub{font-size:12px;color:var(--muted);margin:0 0 16px;line-height:1.55;}
 
-  @media(max-width:680px){ .hero{grid-template-columns:1fr;} }
+  .upload-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+  .field{flex:1;min-width:180px;}
+  .field label{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600;}
+  .field input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:#fdf9f8;}
+  .drop{border:2px dashed #e6c8c8;border-radius:14px;padding:26px 18px;text-align:center;background:#fffaf9;cursor:pointer;transition:.2s;flex:1.4;min-width:220px;}
+  .drop:hover{border-color:var(--rose);background:#fff3f3;}
+  .drop.dragover{border-color:var(--rose);background:#ffe9e9;}
+  .drop b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:3px;}
+  .drop span{font-size:11.5px;color:var(--muted);}
+  input[type=file]{display:none;}
 
-  .selector-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:22px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
-  .selector-card label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-  .selector-row{display:flex;gap:10px;flex-wrap:wrap;}
-  select#employeeSelect{flex:1;min-width:180px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;}
-  select#employeeSelect:focus{border-color:var(--rose);}
-  .my-schedule-btn{padding:12px 18px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
-  .my-schedule-btn:active{transform:scale(.97);}
+  .status{margin-top:14px;font-size:12.5px;padding:10px 13px;border-radius:10px;display:none;}
+  .status.show{display:block;}
+  .status.info{background:#f3eef7;color:#5b4a75;}
+  .status.ok{background:#e9f5ec;color:var(--ok);}
+  .status.err{background:#fdecea;color:var(--err);}
 
-  .cal-title{font-family:'Fraunces',serif;font-size:19px;margin:0 0 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;}
-  .cal-title .role-tag{font-size:11px;background:var(--gold-light);color:#5c4416;padding:3px 10px;border-radius:20px;font-family:'Space Grotesk',sans-serif;font-weight:600;}
-  .cal-nav{display:flex;align-items:center;gap:10px;font-size:13px;}
-  .cal-nav button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;color:var(--rose-dark);}
-  .cal-nav button:hover{background:var(--cream);}
+  table.preview{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.preview th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:2px solid var(--line);}
+  table.preview td{padding:5px 6px;border-bottom:1px solid #f5ebeb;vertical-align:middle;}
+  table.preview input,table.preview select{width:100%;border:1px solid transparent;border-radius:6px;padding:6px 7px;font:inherit;font-size:12.5px;background:transparent;color:var(--ink);}
+  table.preview input:hover,table.preview select:hover{border-color:var(--line);background:#fffaf9;}
+  table.preview input:focus,table.preview select:focus{border-color:var(--rose);background:#fff;outline:none;}
+  table.preview tr.bad td{background:#fdecea;}
+  .rm-btn{border:0;background:none;color:#c0392b;cursor:pointer;font-size:15px;padding:4px 6px;}
+  .table-wrap{overflow-x:auto;margin:0 -4px;}
+  .row-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+  .btn{border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;}
+  .btn.primary{background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;}
+  .btn.ghost{background:#f6eeee;color:var(--rose-dark);}
+  .btn:disabled{opacity:.55;cursor:default;}
+  .empty-preview{padding:26px 10px;text-align:center;color:var(--muted);font-size:12.5px;}
 
-  .month-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
-  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px;}
-  .weekday-row span{text-align:center;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;}
-  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-
-  .date-cell{position:relative;border-radius:12px;min-height:74px;padding:6px 6px 8px;background:#fdfbfa;border:1px solid transparent;transition:box-shadow .2s;}
-  .date-cell.pad{background:transparent;}
-  .date-cell.adj-month .dnum{color:#cbb8ba;}
-  .date-cell.adj-month:not(.hit){opacity:.55;}
-  .date-cell.today{border-color:var(--rose);}
-  .date-cell .dnum{font-size:13px;color:var(--ink);font-weight:800;position:relative;z-index:2;}
-  .date-cell .off-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 6px rgba(158,47,74,.25);display:block;margin:3px auto 0;}
-  .date-cell.today .dnum{color:var(--rose-dark);}
-
-  .date-cell.hit{background:linear-gradient(160deg,#fff 0%,#ffe3e3 100%);border:2px solid #e5342f;box-shadow:0 6px 14px rgba(229,52,47,.22);opacity:0;transform:scale(.85) translateY(6px);animation:hopIn .5s cubic-bezier(.34,1.56,.64,1) forwards;}
-  .date-cell.hit.off{background:#faf6f5;border-color:var(--line);box-shadow:none;}
-  @keyframes hopIn{ 60%{ transform:scale(1.06) translateY(-3px); opacity:1; } 100%{ transform:scale(1) translateY(0); opacity:1; } }
-  .date-cell.hit::before{content:'';position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold);}
-  .date-cell .shift-txt{margin-top:5px;font-size:10.5px;line-height:1.35;color:var(--ink);font-weight:600;}
-  .date-cell .shift-txt.off-txt{color:var(--muted);font-weight:500;}
-  .date-cell .branch-txt{margin-top:3px;font-size:9.5px;color:#3a5c46;background:#eef2ee;display:inline-block;padding:1px 6px;border-radius:8px;}
-
-  .date-cell.hit:not(:first-child)::after{content:'';position:absolute;left:-9px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold-light);opacity:0;animation:dotFade .3s ease forwards .15s;}
-  @keyframes dotFade{ to{ opacity:1; } }
-
-  @media(max-width:600px){
-    .date-cell{min-height:60px;}
-    .date-cell .shift-txt{font-size:9px;}
-  }
-
-  .empty-state{padding:20px;}
-  .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
-
-  .empty-hero{position:relative;min-height:280px;border-radius:22px;background:linear-gradient(160deg,#fff 0%,#fdf6f5 100%);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:30px 20px;}
-  .empty-hero-float{position:absolute;font-size:26px;opacity:.5;animation:emptyFloat 6s ease-in-out infinite;}
-  @keyframes emptyFloat{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-14px) rotate(4deg); } }
-
-  .empty-cal-icon{width:88px;height:88px;position:relative;animation:calBreathe 3.4s ease-in-out infinite;z-index:1;}
-  @keyframes calBreathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
-  .empty-cal-icon .cal-top{position:absolute;top:0;left:8px;right:8px;height:20px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:10px 10px 0 0;}
-  .empty-cal-icon .cal-ring{position:absolute;top:-6px;width:8px;height:16px;border-radius:4px;background:var(--gold);box-shadow:0 0 0 2px #fff;}
-  .empty-cal-icon .cal-ring.l{left:22px;}
-  .empty-cal-icon .cal-ring.r{right:22px;}
-  .empty-cal-icon .cal-body{position:absolute;top:16px;left:0;right:0;bottom:0;background:#fff;border:2px solid var(--rose);border-top:none;border-radius:0 0 14px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:16px 10px 10px;}
-  .empty-cal-icon .cal-dot{width:9px;height:9px;border-radius:3px;background:#f1dede;}
-  .empty-cal-icon .cal-dot.hi{background:var(--gold);animation:dotPulse 1.8s ease-in-out infinite;}
-  @keyframes dotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
-
-  .empty-hero-title{font-family:'Fraunces',serif;font-size:17px;margin:18px 0 4px;color:var(--ink);z-index:1;}
-  .empty-hero-sub{font-size:12.5px;color:var(--muted);z-index:1;}
+  details.raw{margin-top:16px;}
+  details.raw summary{cursor:pointer;font-size:11.5px;color:var(--muted);}
+  details.raw pre{white-space:pre-wrap;font-size:10.5px;background:#fbf7f6;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:220px;overflow:auto;margin-top:8px;color:#6b5a5e;}
 </style>
 </head>
 <body>
 <script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
 <div class="wrap">
   <div class="topbar">
-    <div class="brand"><div class="logo">L</div><b>Duty Schedule</b></div>
-    <a class="backlink" href="index.html">← Back to Lalabella</a>
+    <div class="brand"><div class="logo">L</div><b>Upload New Schedule</b></div>
+    <a class="backlink" href="schedule.html">← Back to Duty Schedule</a>
   </div>
 
-  <div class="hero">
-    <div class="clock-panel">
-      <div class="clock-date" id="clockDate">—</div>
-      <div class="clock-time" id="clockTime">--:--<span id="clockSec">--</span></div>
-      <div class="clock-sub">Bahrain time (AST)</div>
+  <div class="intro">
+    <h1>Upload a week's schedule</h1>
+    <p>Upload one PDF per week. Lalabella reads the text and its position on the page to rebuild the table — review and fix anything below before saving. Saving replaces only the week you pick; other weeks are untouched, so uploading week after week builds up the full month.</p>
+  </div>
+
+  <div class="card" id="patternCard">
+    <h2>Quick option — someone with the same shift every week</h2>
+    <p class="sub">For staff whose schedule doesn't change week to week (one day off, the same shift every other day), skip the PDF entirely: pick their day(s) off and shift text once, choose the month, and the whole month is generated and saved in one go — including the first/last few days that spill into the week before or after, so nothing in the calendar is left blank.</p>
+    <div class="upload-row">
+      <div class="field">
+        <label>Employee name</label>
+        <input type="text" id="patEmployee" list="patEmployeeList" placeholder="e.g. Benjamin">
+        <datalist id="patEmployeeList"></datalist>
+      </div>
+      <div class="field">
+        <label>Role (optional)</label>
+        <input type="text" id="patRole" placeholder="e.g. Senior Florist">
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="patBranch" placeholder="e.g. ModaMall">
+      </div>
     </div>
-    <div class="weather-panel">
-      <div class="weather-loc">Bahrain</div>
-      <div class="weather-main">
-        <div class="weather-emoji" id="weatherEmoji">☁️</div>
-        <div>
-          <div class="weather-temp" id="weatherTemp">—°C</div>
-          <div class="weather-desc" id="weatherDesc">Loading weather…</div>
+    <div class="upload-row" style="margin-top:12px;">
+      <div class="field">
+        <label>Month</label>
+        <input type="month" id="patMonth">
+      </div>
+      <div class="field" style="flex:2;min-width:260px;">
+        <label>Day(s) off</label>
+        <div id="patDayOff" style="display:flex;gap:10px;flex-wrap:wrap;padding:11px 0 0;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="SUN"> Sun</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="MON"> Mon</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="TUE"> Tue</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="WED"> Wed</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="THU"> Thu</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="FRI"> Fri</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="SAT"> Sat</label>
         </div>
       </div>
-      <div class="weather-extra">
-        <span>Feels like <b id="weatherFeels">—°</b></span>
-        <span>Humidity <b id="weatherHumidity">—%</b></span>
+    </div>
+    <div class="upload-row" style="margin-top:12px;">
+      <div class="field" style="flex:2;">
+        <label>Shift text for every working day</label>
+        <input type="text" id="patShift" placeholder="e.g. 10AM to 2PM / 3PM to 10PM (1HR break)">
       </div>
     </div>
-  </div>
-
-  <div class="selector-card">
-    <label>Whose schedule do you want to see?</label>
-    <div class="selector-row">
-      <select id="employeeSelect">
-        <option value="">Loading employees…</option>
-      </select>
-      <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
-    </div>
-    <div id="scheduleAdminLinkWrap" style="display:none;margin-top:12px;">
-      <a href="schedule-admin.html" style="font-size:12px;color:var(--rose-dark);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;display:inline-block;">📤 Upload New Schedule</a>
+    <div class="row-actions">
+      <button type="button" class="btn primary" id="patGenerateBtn">Generate &amp; save this month</button>
+      <span id="patStatus" style="font-size:12.5px;"></span>
     </div>
   </div>
 
-  <h2 class="cal-title">
-    <span id="calTitleText">Select a name to see their schedule <span class="role-tag" id="calRoleTag" style="display:none;"></span></span>
-    <span class="cal-nav">
-      <button id="prevMonthBtn" aria-label="Previous month">‹</button>
-      <span id="monthLabel">—</span>
-      <button id="nextMonthBtn" aria-label="Next month">›</button>
-    </span>
-  </h2>
-
-  <div class="month-card">
-    <div class="weekday-row">
-      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+  <div class="card">
+    <h2>Or: upload a PDF for a week that varies</h2>
+    <p class="sub">Pick the Sunday the schedule starts on, then drop in the PDF.</p>
+    <div class="upload-row">
+      <div class="field">
+        <label>Week starting (Sunday)</label>
+        <input type="date" id="weekOfInput">
+      </div>
+      <div class="drop" id="dropZone">
+        <b id="dropTitle">📄 Drop the PDF here, or click to choose</b>
+        <span id="dropSub">Text-based PDF (exported from Excel/Sheets/Word) works best</span>
+        <input type="file" id="fileInput" accept="application/pdf">
+      </div>
     </div>
-    <div class="month-grid" id="monthGrid"></div>
+    <div class="status" id="parseStatus"></div>
+  </div>
+
+  <div class="card" id="previewCard" style="display:none;">
+    <h2>Review before saving</h2>
+    <p class="sub">Fix any name, day, or shift text that came out wrong. Add rows for anything missed.</p>
+    <div class="table-wrap">
+      <table class="preview" id="previewTable">
+        <thead><tr><th style="width:22%">Employee</th><th style="width:16%">Role</th><th style="width:16%">Branch</th><th style="width:10%">Day</th><th>Shift</th><th></th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+    <div class="row-actions">
+      <button type="button" class="btn ghost" id="addRowBtn">＋ Add row</button>
+      <button type="button" class="btn primary" id="saveBtn">Save this week's schedule</button>
+      <span id="saveStatus" style="font-size:12.5px;"></span>
+    </div>
+    <details class="raw" id="rawDetails" style="display:none;">
+      <summary>Show the raw text Lalabella read from the PDF (for checking anything that looks off)</summary>
+      <pre id="rawText"></pre>
+    </details>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script>
-const SCHEDULE_API_URL = LB_CONFIG.SCHEDULE_FAST_API;
-const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const DAY_FULL = {SUN:'Sunday',MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-// Parses a "YYYY-MM-DD" date-only string as a LOCAL-time Date,
-// matching how every other date on this page is built (via the
-// (year, month, day) constructor in renderMonthGrid). The plain
-// `new Date("2026-09-06")` string form is parsed as UTC MIDNIGHT per
-// the JS spec — mixing that with local-time dates elsewhere caused
-// the generated calendar-cell keys and the schedule's own date keys
-// to disagree whenever the browser's timezone isn't at/ahead of UTC,
-// so no cell ever matched and the calendar looked completely empty
-// even though the backend was returning correct data the whole time.
-function parseDateOnly_(dateStr){
-  if(!dateStr) return null;
-  const parts = String(dateStr).slice(0,10).split('-');
-  if(parts.length !== 3) return null;
-  const [y, m, d] = parts.map(Number);
-  if(!y || !m || !d) return null;
-  return new Date(y, m - 1, d); // local time, same as everywhere else on this page
-}
-
-// Safe wrapper around the (now-removed) empty-state note box — a
-// no-op if the element isn't in the page, so removing that box from
-// the HTML doesn't crash any of the calls below that used to show
-// messages in it.
-function showCalEmptyMessage(title, message){
-  const el = document.getElementById('calEmptyNote');
-  if(!el) return;
-  el.style.display = 'block';
-  const titleEl = el.querySelector('.empty-hero-title');
-  const subEl = el.querySelector('.empty-hero-sub');
-  if(titleEl && title) titleEl.textContent = title;
-  if(subEl && message) subEl.textContent = message;
-}
-function hideCalEmptyMessage(){
-  const el = document.getElementById('calEmptyNote');
-  if(el) el.style.display = 'none';
-}
-
-// ---------- Real-time clock ----------
-function tickClock(){
-  const now = new Date();
-  const opts = { timeZone: 'Asia/Bahrain' };
-  const dateStr = now.toLocaleDateString('en-US', { ...opts, weekday:'long', month:'long', day:'numeric', year:'numeric' });
-  const timeStr = now.toLocaleTimeString('en-US', { ...opts, hour:'numeric', minute:'2-digit', hour12:true });
-  const [main, ampm] = timeStr.split(' ');
-  document.getElementById('clockDate').textContent = dateStr;
-  document.getElementById('clockTime').innerHTML = main + '<span>' + (ampm||'') + '</span>';
-}
-tickClock();
-setInterval(tickClock, 1000);
-
-// ---------- Weather (Open-Meteo — free, no API key required) ----------
-const WEATHER_ICONS = {
-  0:['☀️','Clear sky'], 1:['🌤️','Mostly clear'], 2:['⛅','Partly cloudy'], 3:['☁️','Overcast'],
-  45:['🌫️','Fog'], 48:['🌫️','Fog'],
-  51:['🌦️','Light drizzle'], 61:['🌧️','Light rain'], 63:['🌧️','Rain'], 65:['🌧️','Heavy rain'],
-  80:['🌦️','Rain showers'], 95:['⛈️','Thunderstorm']
+const DAY_TOKENS = {
+  SUN:'SUN', SUNDAY:'SUN', MON:'MON', MONDAY:'MON', TUE:'TUE', TUES:'TUE', TUESDAY:'TUE',
+  WED:'WED', WEDNESDAY:'WED', THU:'THU', THUR:'THU', THURS:'THU', THURSDAY:'THU',
+  FRI:'FRI', FRIDAY:'FRI', SAT:'SAT', SATURDAY:'SAT'
 };
-async function loadWeather(){
-  try{
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FBahrain';
-    const res = await fetch(url);
-    const data = await res.json();
-    const c = data.current;
-    const [emoji, desc] = WEATHER_ICONS[c.weather_code] || ['🌡️','—'];
-    document.getElementById('weatherEmoji').textContent = emoji;
-    document.getElementById('weatherTemp').textContent = Math.round(c.temperature_2m) + '°C';
-    document.getElementById('weatherDesc').textContent = desc;
-    document.getElementById('weatherFeels').textContent = Math.round(c.apparent_temperature) + '°C';
-    document.getElementById('weatherHumidity').textContent = Math.round(c.relative_humidity_2m) + '%';
-  }catch(e){
-    document.getElementById('weatherDesc').textContent = 'Weather unavailable';
-  }
-}
-loadWeather();
-setInterval(loadWeather, 15 * 60 * 1000);
+const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-// ---------- Schedule data ----------
-let allEmployees = [];
-let currentSchedule = null;
-let currentEmployeeName = null;
-let viewMonth = new Date().getMonth();
-let viewYear = new Date().getFullYear();
+function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
 
-function pad2(n){ return String(n).padStart(2,'0'); }
+// ---------- default week: the upcoming (or current) Sunday ----------
+(function setDefaultWeek(){
+  const d = new Date(); const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  const iso = d.toISOString().slice(0,10);
+  document.getElementById('weekOfInput').value = iso;
+})();
 
-function renderMonthGrid(){
-  const monthGrid = document.getElementById('monthGrid');
-  const monthLabel = document.getElementById('monthLabel');
-  const firstOfMonth = new Date(viewYear, viewMonth, 1);
-  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
-  const startWeekday = firstOfMonth.getDay();
-
-  monthLabel.textContent = firstOfMonth.toLocaleDateString('en-US', { month:'long', year:'numeric' });
-
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear()===viewYear && today.getMonth()===viewMonth;
-
-  monthGrid.innerHTML = '';
-  // Leading cells (tail of the previous month) and trailing cells (start
-  // of the next month) now get a real date and cell too, instead of an
-  // empty "pad" div — a week that spans a month boundary (its last 2-3
-  // days fall in the next month) used to have nowhere to render those
-  // days, so part of that week silently never showed up unless someone
-  // happened to click over to the next month. Dimmed (.adj-month) so it
-  // still reads as "not quite this month".
-  for(let i=0;i<startWeekday;i++){
-    const d = new Date(viewYear, viewMonth, i - startWeekday + 1);
-    const cell = document.createElement('div');
-    cell.className = 'date-cell adj-month';
-    cell.dataset.date = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-    cell.innerHTML = `<div class="dnum">${d.getDate()}</div>`;
-    monthGrid.appendChild(cell);
-  }
-  for(let d=1; d<=daysInMonth; d++){
-    const cell = document.createElement('div');
-    cell.className = 'date-cell';
-    cell.dataset.date = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
-    if(isCurrentMonth && d===today.getDate()) cell.classList.add('today');
-    cell.innerHTML = `<div class="dnum">${d}</div>`;
-    monthGrid.appendChild(cell);
-  }
-  const totalSoFar = startWeekday + daysInMonth;
-  const trailingCount = (7 - (totalSoFar % 7)) % 7;
-  for(let i=1;i<=trailingCount;i++){
-    const d = new Date(viewYear, viewMonth + 1, i);
-    const cell = document.createElement('div');
-    cell.className = 'date-cell adj-month';
-    cell.dataset.date = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-    cell.innerHTML = `<div class="dnum">${d.getDate()}</div>`;
-    monthGrid.appendChild(cell);
-  }
-
-  if(currentSchedule) applyScheduleToGrid(currentSchedule, employeeIsOnScreen());
-}
-function employeeIsOnScreen(){ return true; }
-
-document.getElementById('prevMonthBtn').addEventListener('click', () => {
-  viewMonth--; if(viewMonth<0){ viewMonth=11; viewYear--; }
-  renderMonthGrid();
+// ---------- drop zone wiring ----------
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', ()=>fileInput.click());
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) handleFile(f);
 });
-document.getElementById('nextMonthBtn').addEventListener('click', () => {
-  viewMonth++; if(viewMonth>11){ viewMonth=0; viewYear++; }
-  renderMonthGrid();
-});
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
 
-async function loadEmployees(){
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-  try{
-    const res = await fetch(SCHEDULE_API_URL + '?action=getEmployees&token=' + encodeURIComponent(token));
-    const data = await res.json();
-    if(!data.success){ throw new Error(data.error||'Failed to load employees'); }
-    allEmployees = data.employees;
-    const sel = document.getElementById('employeeSelect');
-    sel.innerHTML = '<option value="">— Select a name —</option>' +
-      allEmployees.map(e => `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`).join('');
-  }catch(e){
-    document.getElementById('employeeSelect').innerHTML = '<option value="">Could not load — check connection</option>';
-  }
+function setStatus(text, kind){
+  const el = document.getElementById('parseStatus');
+  el.textContent = text; el.className = 'status show ' + (kind||'info');
 }
 
-async function loadScheduleFor(employeeName){
-  hideCalEmptyMessage();
-  currentSchedule = null;
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
-  const titleEl0 = document.getElementById('calTitleText');
-  if(titleEl0) titleEl0.innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
-  const roleTagEl0 = document.getElementById('calRoleTag');
-  if(roleTagEl0) roleTagEl0.style.display = 'none';
-
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+async function handleFile(file){
+  document.getElementById('dropTitle').textContent = '📄 ' + file.name;
+  setStatus('Reading the PDF…', 'info');
+  document.getElementById('previewCard').style.display = 'none';
   try{
-    const res = await fetch(SCHEDULE_API_URL + '?action=getSchedule&employee=' + encodeURIComponent(employeeName) + '&token=' + encodeURIComponent(token));
-    const data = await res.json();
-    if(!data.success || !data.schedule.length){
-      showCalEmptyMessage('No schedule found', 'No entry for "' + employeeName + '" — check the spelling on the schedule sheet.');
-      const t1 = document.getElementById('calTitleText');
-      if(t1) t1.innerHTML = 'No schedule found for ' + employeeName;
-      currentSchedule = null;
-      renderMonthGrid();
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let allLines = [];
+    for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      allLines = allLines.concat(linesFromTextContent(content));
+    }
+    if(!allLines.length){
+      setStatus('No selectable text was found in this PDF — it may be a scanned image rather than a text-based export. Try exporting the schedule directly from Excel/Sheets/Word as a PDF instead.', 'err');
       return;
     }
-    currentSchedule = data.schedule;
-    currentEmployeeName = employeeName;
+    const rawText = allLines.map(l => l.cells.map(c=>c.text).join('   ')).join('\n');
+    document.getElementById('rawText').textContent = rawText;
+    document.getElementById('rawDetails').style.display = 'block';
 
-    const emp = allEmployees.find(e => e.name === employeeName);
-    const t2 = document.getElementById('calTitleText');
-    if(t2) t2.innerHTML = `${employeeName}'s schedule`;
-    const roleTag = document.getElementById('calRoleTag');
-    if(roleTag){
-      if(emp && emp.role){ roleTag.textContent = emp.role; roleTag.style.display = 'inline-block'; }
-      else { roleTag.style.display = 'none'; }
+    const rows = parseScheduleLines(allLines);
+    if(!rows.length){
+      setStatus('Found text in the PDF, but could not automatically match it to a weekly schedule table. Open "Show the raw text" below to see what was read, then add rows by hand.', 'err');
+      showPreview([]);
+      return;
     }
-
-    // Jump the calendar view to the month the schedule's week falls
-    // in — now using the same local-time parser as everywhere else.
-    if(data.schedule[0] && data.schedule[0].WeekOf){
-      const wk = parseDateOnly_(data.schedule[0].WeekOf);
-      if(wk){ viewMonth = wk.getMonth(); viewYear = wk.getFullYear(); }
-    }
-    renderMonthGrid();
-    applyScheduleToGrid(currentSchedule, true);
+    setStatus('Read ' + rows.length + ' shift' + (rows.length===1?'':'s') + ' from the PDF. Check each row below before saving.', 'ok');
+    showPreview(rows);
   }catch(e){
-    if(!currentSchedule){
-      showCalEmptyMessage('Connection error', 'Could not load schedule — check your connection.');
-      const t3 = document.getElementById('calTitleText');
-      if(t3) t3.innerHTML = 'Could not load ' + employeeName + '\u2019s schedule <span style="color:#c0392b;font-size:12px;">(tap the name again to retry)</span>';
-    }
+    console.error(e);
+    setStatus('Could not read that PDF: ' + e.message, 'err');
   }
 }
 
-function applyScheduleToGrid(records, animate){
-  // Group by "WeekOf|Day" instead of just "Day" — with multiple
-  // weeks of data now on file, keying by Day alone meant every
-  // week's Sunday overwrote the previous week's Sunday in this map,
-  // so only the LAST week survived while still being drawn using the
-  // FIRST week's dates. Keying by week+day keeps every week distinct.
-  const byWeekDay = {};
-  records.forEach(r => {
-    if(!r.WeekOf) return;
-    byWeekDay[r.WeekOf + '|' + r.Day] = r;
+// Groups a page's text items into lines (by Y position), then into cells
+// within each line (by X gaps) — this reconstructs the table's rows and
+// columns from the PDF's real character positions, which is far more
+// reliable for a table than just reading the text in a straight line.
+function linesFromTextContent(content){
+  const items = content.items.filter(it => it.str && it.str.trim());
+  if(!items.length) return [];
+  const withPos = items.map(it => ({ text: it.str, x: it.transform[4], y: it.transform[5] }));
+  withPos.sort((a,b) => b.y - a.y || a.x - b.x); // PDF y grows upward — top of page first
+  const lines = [];
+  const Y_TOL = 3;
+  withPos.forEach(it => {
+    let line = lines.find(l => Math.abs(l.y - it.y) <= Y_TOL);
+    if(!line){ line = { y: it.y, items: [] }; lines.push(line); }
+    line.items.push(it);
   });
-  const distinctWeeks = [...new Set(records.map(r => r.WeekOf).filter(Boolean))];
-
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
-
-  let step = 0;
-  distinctWeeks.forEach(weekOfStr => {
-    const weekOf = parseDateOnly_(weekOfStr);
-    if(!weekOf) return;
-    DAY_ORDER.forEach((day, idx) => {
-      const rec = byWeekDay[weekOfStr + '|' + day];
-      if(!rec) return;
-      const cellDate = new Date(weekOf);
-      cellDate.setDate(weekOf.getDate() + idx);
-      const key = `${cellDate.getFullYear()}-${pad2(cellDate.getMonth()+1)}-${pad2(cellDate.getDate())}`;
-      const cell = document.querySelector(`.date-cell[data-date="${key}"]`);
-      if(!cell) return; // that date isn't in the currently-viewed month
-
-      const isOff = /^off$/i.test(String(rec.ScheduleDetail).trim());
-      cell.classList.add('hit');
-      if(isOff) cell.classList.add('off');
-      if(animate) cell.style.animationDelay = (step * 0.12) + 's';
-      step++;
-
-      const detail = String(rec.ScheduleDetail);
-      const [mainPart, ...noteParts] = detail.split(';');
-      const shiftEl = document.createElement('div');
-      shiftEl.className = 'shift-txt' + (isOff ? ' off-txt' : '');
-      shiftEl.textContent = isOff ? '🌴 Off' : mainPart.trim();
-      cell.appendChild(shiftEl);
-
-      // Your own face on your own day-off cells — a small personal
-      // touch, only shown when viewing your own schedule (via the
-      // "My Schedule" button) and only you have a photo on file.
-      // Placed below the date number, never over it.
-      if(isOff && viewingIsMe && myPhotoDataUri){
-        const avatarEl = document.createElement('img');
-        avatarEl.className = 'off-avatar';
-        avatarEl.src = myPhotoDataUri;
-        avatarEl.alt = 'You';
-        cell.appendChild(avatarEl);
-      }
-
-      if(rec.HomeBranch){
-        const branchEl = document.createElement('div');
-        branchEl.className = 'branch-txt';
-        branchEl.textContent = rec.HomeBranch;
-        cell.appendChild(branchEl);
+  lines.sort((a,b) => b.y - a.y);
+  return lines.map(line => {
+    line.items.sort((a,b) => a.x - b.x);
+    const cells = [];
+    const GAP = 14; // px gap that counts as a new column rather than a space within one cell
+    line.items.forEach(it => {
+      const last = cells[cells.length-1];
+      if(last && (it.x - last.endX) < GAP){
+        last.text += (it.text.startsWith(' ') ? '' : ' ') + it.text.trim();
+        last.endX = it.x + (it.width||0) + it.text.length*4;
+      } else {
+        cells.push({ text: it.text.trim(), x: it.x, endX: it.x + (it.width||0) + it.text.length*4 });
       }
     });
-  });
+    return { y: line.y, cells: cells.filter(c=>c.text) };
+  }).filter(l => l.cells.length);
 }
 
-document.getElementById('employeeSelect').addEventListener('change', (e) => {
-  viewingIsMe = false;
-  if(e.target.value) loadScheduleFor(e.target.value);
-});
-
-const AUTH_API_URL = LB_CONFIG.AUTH_FAST_API;
-let myPhotoDataUri = null;
-let viewingIsMe = false;
-
-async function fetchMyPhoto(){
-  if(myPhotoDataUri !== null) return myPhotoDataUri; // already fetched (or confirmed none) this session
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-  try{
-    const res = await fetch(AUTH_API_URL + '?action=getProfile&token=' + encodeURIComponent(token));
-    const data = await res.json();
-    myPhotoDataUri = (data.success && data.profile && data.profile.photoDataUri) ? data.profile.photoDataUri : '';
-  }catch(e){
-    myPhotoDataUri = '';
-  }
-  return myPhotoDataUri;
+// Real Lalabella schedule PDFs are messier than a plain table: one PDF
+// holds THREE branch sections (each with its own "Duty Hours (...)"
+// header and its own SUN–SAT header row), an employee's name is often
+// followed by a role/note on the NEXT line(s) — e.g. "Stephen" then
+// "(Galali branch" then "driver)" — and a single shift is often split
+// across two lines too — e.g. "8AM to 8PM" then "(1HR break)". This
+// walks the page line by line, keeping a "current employee" row open
+// and merging every following line into it (by nearest day column)
+// until a new employee name starts, a new branch section begins, or a
+// trailing "Note:" / "Drivers Cars:" legend line ends the table.
+function detectBranchFromHeader(text){
+  const t = text.toUpperCase();
+  if(t.includes('GALALI')) return 'Galali';
+  if(t.includes('MODA MALL') || t.includes('MODAMALL')) return 'ModaMall';
+  if(t.includes('HAMALA')) return 'Hamala';
+  return '';
 }
+function parseScheduleLines(lines){
+  const allRows = [];
+  let currentBranch = '';
+  let headerCols = null;
+  let pendingRow = null;
 
-document.getElementById('myScheduleBtn').addEventListener('click', async () => {
-  const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
-  if(!userStr){ return; }
-  const user = JSON.parse(userStr);
-  const firstName = (user.fullName || '').split(' ')[0];
-  const sel = document.getElementById('employeeSelect');
-  const match = allEmployees.find(e => e.name.toLowerCase() === firstName.toLowerCase());
-  if(match){
-    sel.value = match.name;
-    viewingIsMe = true;
-    await fetchMyPhoto();
-    loadScheduleFor(match.name);
-  } else {
-    showCalEmptyMessage('No match found', 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.');
+  function flushPendingRow(){
+    if(!pendingRow) return;
+    const role = pendingRow.role.replace(/^\(+|\)+$/g,'').replace(/\s+/g,' ').trim();
+    DAY_ORDER.forEach(day => {
+      const text = (pendingRow.dayCells[day] || []).join(' ').replace(/\s+/g,' ').trim();
+      if(text) allRows.push({ employee: pendingRow.employeeName, role, branch: currentBranch, day, scheduleDetail: text });
+    });
+    pendingRow = null;
   }
-});
 
-renderMonthGrid();
-loadEmployees();
+  for(const line of lines){
+    const cells = line.cells;
+    if(!cells.length) continue;
+    const joined = cells.map(c=>c.text).join(' ');
+    const joinedUpper = joined.toUpperCase();
 
-(function showAdminUploadLink(){
-  try{
-    const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
-    const user = userStr ? JSON.parse(userStr) : (window.LALABELLA_USER || {});
-    if(user && String(user.role||'').toLowerCase() === 'admin'){
-      document.getElementById('scheduleAdminLinkWrap').style.display = 'block';
+    if(joinedUpper.includes('DUTY HOURS')){
+      flushPendingRow();
+      currentBranch = detectBranchFromHeader(joinedUpper) || currentBranch;
+      headerCols = null;
+      continue;
     }
-  }catch(e){}
+
+    const dayHeaderCols = cells.map(c => ({ x:c.x, day: DAY_TOKENS[c.text.trim().toUpperCase().replace(/[^A-Z]/g,'')] })).filter(c=>c.day);
+    if(dayHeaderCols.length >= 3){
+      flushPendingRow();
+      headerCols = dayHeaderCols;
+      continue;
+    }
+    if(!headerCols) continue; // nothing usable until we've seen a day header
+
+    if(/^note\s*:/i.test(cells[0].text) || /drivers cars\s*:/i.test(joinedUpper)){
+      flushPendingRow(); // trailing legend — not a schedule row
+      continue;
+    }
+    if(/^employee\b/i.test(cells[0].text) && /duty timing/i.test(joinedUpper)) continue; // "Employee / Duty timing" sub-label
+
+    const firstDayX = Math.min(...headerCols.map(h=>h.x));
+    const leftCell = cells.find(c => c.x < firstDayX - 20);
+    const dayCellsOnLine = cells.filter(c => c.x >= firstDayX - 20);
+
+    if(leftCell){
+      const t = leftCell.text.trim();
+      if(pendingRow && pendingRow.roleOpen){
+        // Continuing an already-open "(...)" role note across lines
+        // (e.g. "(Galali branch" then "driver)") — the CLOSING line
+        // rarely starts with "(" itself, so this has to be tracked
+        // rather than re-detected from the line's own text.
+        pendingRow.role = (pendingRow.role + ' ' + t).trim();
+        if(t.includes(')')) pendingRow.roleOpen = false;
+      } else if(/^\(/.test(t)){
+        if(pendingRow){
+          pendingRow.role = (pendingRow.role + ' ' + t).trim();
+          pendingRow.roleOpen = !t.includes(')');
+        }
+      } else if(/^[A-Za-z]/.test(t)){
+        // A new employee name — starts a fresh row.
+        flushPendingRow();
+        pendingRow = { employeeName: t, role: '', roleOpen: false, dayCells: {} };
+      }
+    }
+
+    if(pendingRow){
+      dayCellsOnLine.forEach(cell => {
+        let nearest = null, bestDist = Infinity;
+        headerCols.forEach(h => { const d = Math.abs(h.x - cell.x); if(d < bestDist){ bestDist = d; nearest = h; } });
+        if(!nearest) return;
+        (pendingRow.dayCells[nearest.day] = pendingRow.dayCells[nearest.day] || []).push(cell.text);
+      });
+    }
+  }
+  flushPendingRow();
+  return allRows;
+}
+
+// ---------- editable preview table ----------
+function dayOptions(selected){
+  return DAY_ORDER.map(d => `<option value="${d}"${d===selected?' selected':''}>${d}</option>`).join('');
+}
+function rowHtml(r){
+  return `<tr>
+    <td><input type="text" class="f-emp" value="${escAttr(r.employee||'')}" placeholder="Name"></td>
+    <td><input type="text" class="f-role" value="${escAttr(r.role||'')}" placeholder="e.g. Florist"></td>
+    <td><input type="text" class="f-branch" value="${escAttr(r.branch||'')}" placeholder="e.g. ModaMall"></td>
+    <td><select class="f-day">${dayOptions(r.day||'SUN')}</select></td>
+    <td><input type="text" class="f-detail" value="${escAttr(r.scheduleDetail||'')}" placeholder="e.g. 9AM-6PM or Off"></td>
+    <td><button type="button" class="rm-btn" title="Remove row">🗑</button></td>
+  </tr>`;
+}
+function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function showPreview(rows){
+  const card = document.getElementById('previewCard');
+  const body = document.getElementById('previewBody');
+  card.style.display = 'block';
+  body.innerHTML = rows.length ? rows.map(rowHtml).join('') : '';
+  if(!rows.length){
+    body.innerHTML = `<tr><td colspan="6" class="empty-preview">No rows yet — use "Add row" below, or check the raw text.</td></tr>`;
+  }
+}
+document.getElementById('addRowBtn').addEventListener('click', ()=>{
+  const body = document.getElementById('previewBody');
+  const emptyMsg = body.querySelector('.empty-preview');
+  if(emptyMsg) body.innerHTML = '';
+  body.insertAdjacentHTML('beforeend', rowHtml({ employee:'', role:'', branch:'', day:'SUN', scheduleDetail:'' }));
+});
+document.getElementById('previewBody').addEventListener('click', e=>{
+  const btn = e.target.closest('.rm-btn');
+  if(!btn) return;
+  const tr = btn.closest('tr'); tr.remove();
+  const body = document.getElementById('previewBody');
+  if(!body.children.length) body.innerHTML = `<tr><td colspan="6" class="empty-preview">No rows — use "Add row" to add one.</td></tr>`;
+});
+
+// ---------- save ----------
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const weekOf = document.getElementById('weekOfInput').value;
+  const saveStatus = document.getElementById('saveStatus');
+  saveStatus.style.color = 'var(--err)';
+  if(!weekOf){ saveStatus.textContent = 'Pick the week\u2019s Sunday first.'; return; }
+
+  const trs = [...document.querySelectorAll('#previewBody tr')].filter(tr => !tr.querySelector('.empty-preview'));
+  const rows = trs.map(tr => ({
+    employee: tr.querySelector('.f-emp').value.trim(),
+    role: tr.querySelector('.f-role').value.trim(),
+    homeBranch: tr.querySelector('.f-branch').value.trim(),
+    day: tr.querySelector('.f-day').value,
+    scheduleDetail: tr.querySelector('.f-detail').value.trim()
+  }));
+  const usable = rows.filter(r => r.employee && r.scheduleDetail);
+  if(!usable.length){ saveStatus.textContent = 'Add at least one row with a name and a shift.'; return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…'; saveStatus.style.color = 'var(--muted)'; saveStatus.textContent = 'Saving — this replaces this week\u2019s existing schedule.';
+  try{
+    // POST with a JSON body — a GET with the full rows array packed into
+    // the URL's query string can exceed the browser/server's maximum URL
+    // length once there are more than a handful of rows, which fails
+    // silently as a network-level "Failed to fetch" rather than a normal
+    // error response.
+    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(usable) })
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
+    if(!data.success){
+      saveStatus.style.color = 'var(--err)'; saveStatus.textContent = data.error || 'Could not save.';
+      return;
+    }
+    saveStatus.style.color = 'var(--ok)';
+    saveStatus.textContent = '✓ Saved ' + data.saved + ' shifts for the week of ' + weekOf + '.';
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
+    saveStatus.style.color = 'var(--err)'; saveStatus.textContent = 'Connection error: ' + e.message;
+  }
+});
+
+// ---------- quick pattern (no PDF) ----------
+(function setDefaultPatternMonth(){
+  const d = new Date();
+  document.getElementById('patMonth').value = d.toISOString().slice(0,7);
 })();
+fetch(LB_CONFIG.SCHEDULE_FAST_API + '?action=getEmployees&token=' + encodeURIComponent(token()), {
+  headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }
+})
+  .then(r => r.json())
+  .then(data => {
+    if(!data || !data.success || !Array.isArray(data.employees)) return;
+    const list = document.getElementById('patEmployeeList');
+    const seen = new Set();
+    data.employees.forEach(e => {
+      if(!e.name || seen.has(e.name)) return;
+      seen.add(e.name);
+      const o = document.createElement('option'); o.value = e.name; list.appendChild(o);
+    });
+  })
+  .catch(()=>{});
+
+document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
+  const status = document.getElementById('patStatus');
+  const employee = document.getElementById('patEmployee').value.trim();
+  const role = document.getElementById('patRole').value.trim();
+  const homeBranch = document.getElementById('patBranch').value.trim();
+  const monthVal = document.getElementById('patMonth').value; // "YYYY-MM"
+  const shiftText = document.getElementById('patShift').value.trim();
+  const dayOff = [...document.querySelectorAll('#patDayOff input:checked')].map(i => i.value);
+
+  status.style.color = 'var(--err)';
+  if(!employee){ status.textContent = 'Enter the employee\u2019s name.'; return; }
+  if(!monthVal){ status.textContent = 'Pick a month.'; return; }
+  if(!shiftText){ status.textContent = 'Enter the shift text for working days.'; return; }
+  if(!dayOff.length && !confirm('No day off is checked — this employee will be scheduled to work every single day this month. Continue?')) return;
+
+  const [yearStr, monthStr] = monthVal.split('-');
+  const btn = document.getElementById('patGenerateBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  status.style.color = 'var(--muted)'; status.textContent = 'Generating and saving — this replaces ' + employee + '\u2019s existing schedule for any week touched by this month.';
+  try{
+    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY },
+      body: JSON.stringify({
+        action: 'generateMonthSchedule', token: token(),
+        employee, role, homeBranch, year: yearStr, month: monthStr,
+        dayOff: dayOff.join(','), shiftText
+      })
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Generate & save this month';
+    if(!data.success){
+      status.style.color = 'var(--err)'; status.textContent = data.error || 'Could not generate the schedule.';
+      return;
+    }
+    status.style.color = 'var(--ok)';
+    status.textContent = '✓ Saved ' + data.daysGenerated + ' days across ' + data.weeksTouched + ' week' + (data.weeksTouched===1?'':'s') + ' for ' + employee + '.';
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Generate & save this month';
+    status.style.color = 'var(--err)'; status.textContent = 'Connection error: ' + e.message;
+  }
+});
 </script>
 </body>
 </html>
