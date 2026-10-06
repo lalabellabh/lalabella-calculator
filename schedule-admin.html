@@ -86,8 +86,56 @@
     <p>Upload one PDF per week. Lalabella reads the text and its position on the page to rebuild the table — review and fix anything below before saving. Saving replaces only the week you pick; other weeks are untouched, so uploading week after week builds up the full month.</p>
   </div>
 
+  <div class="card" id="patternCard">
+    <h2>Quick option — someone with the same shift every week</h2>
+    <p class="sub">For staff whose schedule doesn't change week to week (one day off, the same shift every other day), skip the PDF entirely: pick their day(s) off and shift text once, choose the month, and the whole month is generated and saved in one go — including the first/last few days that spill into the week before or after, so nothing in the calendar is left blank.</p>
+    <div class="upload-row">
+      <div class="field">
+        <label>Employee name</label>
+        <input type="text" id="patEmployee" list="patEmployeeList" placeholder="e.g. Benjamin">
+        <datalist id="patEmployeeList"></datalist>
+      </div>
+      <div class="field">
+        <label>Role (optional)</label>
+        <input type="text" id="patRole" placeholder="e.g. Senior Florist">
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="patBranch" placeholder="e.g. ModaMall">
+      </div>
+    </div>
+    <div class="upload-row" style="margin-top:12px;">
+      <div class="field">
+        <label>Month</label>
+        <input type="month" id="patMonth">
+      </div>
+      <div class="field" style="flex:2;min-width:260px;">
+        <label>Day(s) off</label>
+        <div id="patDayOff" style="display:flex;gap:10px;flex-wrap:wrap;padding:11px 0 0;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="SUN"> Sun</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="MON"> Mon</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="TUE"> Tue</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="WED"> Wed</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="THU"> Thu</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="FRI"> Fri</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;"><input type="checkbox" value="SAT"> Sat</label>
+        </div>
+      </div>
+    </div>
+    <div class="upload-row" style="margin-top:12px;">
+      <div class="field" style="flex:2;">
+        <label>Shift text for every working day</label>
+        <input type="text" id="patShift" placeholder="e.g. 10AM to 2PM / 3PM to 10PM (1HR break)">
+      </div>
+    </div>
+    <div class="row-actions">
+      <button type="button" class="btn primary" id="patGenerateBtn">Generate &amp; save this month</button>
+      <span id="patStatus" style="font-size:12.5px;"></span>
+    </div>
+  </div>
+
   <div class="card">
-    <h2>1. Choose the week and file</h2>
+    <h2>Or: upload a PDF for a week that varies</h2>
     <p class="sub">Pick the Sunday the schedule starts on, then drop in the PDF.</p>
     <div class="upload-row">
       <div class="field">
@@ -104,7 +152,7 @@
   </div>
 
   <div class="card" id="previewCard" style="display:none;">
-    <h2>2. Review before saving</h2>
+    <h2>Review before saving</h2>
     <p class="sub">Fix any name, day, or shift text that came out wrong. Add rows for anything missed.</p>
     <div class="table-wrap">
       <table class="preview" id="previewTable">
@@ -232,38 +280,102 @@ function linesFromTextContent(content){
   }).filter(l => l.cells.length);
 }
 
-// Finds a header line (several cells whose text matches a day name),
-// then reads each following line as one employee's row, matching each
-// of that row's later cells to the nearest header day by X position.
+// Real Lalabella schedule PDFs are messier than a plain table: one PDF
+// holds THREE branch sections (each with its own "Duty Hours (...)"
+// header and its own SUN–SAT header row), an employee's name is often
+// followed by a role/note on the NEXT line(s) — e.g. "Stephen" then
+// "(Galali branch" then "driver)" — and a single shift is often split
+// across two lines too — e.g. "8AM to 8PM" then "(1HR break)". This
+// walks the page line by line, keeping a "current employee" row open
+// and merging every following line into it (by nearest day column)
+// until a new employee name starts, a new branch section begins, or a
+// trailing "Note:" / "Drivers Cars:" legend line ends the table.
+function detectBranchFromHeader(text){
+  const t = text.toUpperCase();
+  if(t.includes('GALALI')) return 'Galali';
+  if(t.includes('MODA MALL') || t.includes('MODAMALL')) return 'ModaMall';
+  if(t.includes('HAMALA')) return 'Hamala';
+  return '';
+}
 function parseScheduleLines(lines){
-  let headerIdx = -1, headerCols = null;
-  for(let i=0;i<lines.length;i++){
-    const cols = lines[i].cells.map(c => ({ x: c.x, day: DAY_TOKENS[c.text.trim().toUpperCase().replace(/[^A-Z]/g,'')] })).filter(c=>c.day);
-    if(cols.length >= 3){ headerIdx = i; headerCols = cols; break; }
+  const allRows = [];
+  let currentBranch = '';
+  let headerCols = null;
+  let pendingRow = null;
+
+  function flushPendingRow(){
+    if(!pendingRow) return;
+    const role = pendingRow.role.replace(/^\(+|\)+$/g,'').replace(/\s+/g,' ').trim();
+    DAY_ORDER.forEach(day => {
+      const text = (pendingRow.dayCells[day] || []).join(' ').replace(/\s+/g,' ').trim();
+      if(text) allRows.push({ employee: pendingRow.employeeName, role, branch: currentBranch, day, scheduleDetail: text });
+    });
+    pendingRow = null;
   }
-  if(headerIdx === -1) return [];
 
-  const rows = [];
-  for(let i=headerIdx+1;i<lines.length;i++){
-    const cells = lines[i].cells;
+  for(const line of lines){
+    const cells = line.cells;
     if(!cells.length) continue;
-    const first = cells[0].text.trim();
-    if(!first || DAY_TOKENS[first.toUpperCase().replace(/[^A-Z]/g,'')]) continue; // skip stray header-ish lines
-    let employee = first, role = '', branch = '';
-    const roleMatch = employee.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-    if(roleMatch){ employee = roleMatch[1].trim(); role = roleMatch[2].trim(); }
-    if(!employee) continue;
+    const joined = cells.map(c=>c.text).join(' ');
+    const joinedUpper = joined.toUpperCase();
 
-    for(let c=1;c<cells.length;c++){
-      const cell = cells[c];
-      if(!cell.text || /^(off|-|—)$/i.test(cell.text.trim()) === false && !cell.text.trim()) continue;
-      let nearest = null, bestDist = Infinity;
-      headerCols.forEach(h => { const d = Math.abs(h.x - cell.x); if(d < bestDist){ bestDist = d; nearest = h; } });
-      if(!nearest) continue;
-      rows.push({ employee, role, branch, day: nearest.day, scheduleDetail: cell.text.trim() });
+    if(joinedUpper.includes('DUTY HOURS')){
+      flushPendingRow();
+      currentBranch = detectBranchFromHeader(joinedUpper) || currentBranch;
+      headerCols = null;
+      continue;
+    }
+
+    const dayHeaderCols = cells.map(c => ({ x:c.x, day: DAY_TOKENS[c.text.trim().toUpperCase().replace(/[^A-Z]/g,'')] })).filter(c=>c.day);
+    if(dayHeaderCols.length >= 3){
+      flushPendingRow();
+      headerCols = dayHeaderCols;
+      continue;
+    }
+    if(!headerCols) continue; // nothing usable until we've seen a day header
+
+    if(/^note\s*:/i.test(cells[0].text) || /drivers cars\s*:/i.test(joinedUpper)){
+      flushPendingRow(); // trailing legend — not a schedule row
+      continue;
+    }
+    if(/^employee\b/i.test(cells[0].text) && /duty timing/i.test(joinedUpper)) continue; // "Employee / Duty timing" sub-label
+
+    const firstDayX = Math.min(...headerCols.map(h=>h.x));
+    const leftCell = cells.find(c => c.x < firstDayX - 20);
+    const dayCellsOnLine = cells.filter(c => c.x >= firstDayX - 20);
+
+    if(leftCell){
+      const t = leftCell.text.trim();
+      if(pendingRow && pendingRow.roleOpen){
+        // Continuing an already-open "(...)" role note across lines
+        // (e.g. "(Galali branch" then "driver)") — the CLOSING line
+        // rarely starts with "(" itself, so this has to be tracked
+        // rather than re-detected from the line's own text.
+        pendingRow.role = (pendingRow.role + ' ' + t).trim();
+        if(t.includes(')')) pendingRow.roleOpen = false;
+      } else if(/^\(/.test(t)){
+        if(pendingRow){
+          pendingRow.role = (pendingRow.role + ' ' + t).trim();
+          pendingRow.roleOpen = !t.includes(')');
+        }
+      } else if(/^[A-Za-z]/.test(t)){
+        // A new employee name — starts a fresh row.
+        flushPendingRow();
+        pendingRow = { employeeName: t, role: '', roleOpen: false, dayCells: {} };
+      }
+    }
+
+    if(pendingRow){
+      dayCellsOnLine.forEach(cell => {
+        let nearest = null, bestDist = Infinity;
+        headerCols.forEach(h => { const d = Math.abs(h.x - cell.x); if(d < bestDist){ bestDist = d; nearest = h; } });
+        if(!nearest) return;
+        (pendingRow.dayCells[nearest.day] = pendingRow.dayCells[nearest.day] || []).push(cell.text);
+      });
     }
   }
-  return rows;
+  flushPendingRow();
+  return allRows;
 }
 
 // ---------- editable preview table ----------
@@ -347,6 +459,70 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   }catch(e){
     btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
     saveStatus.style.color = 'var(--err)'; saveStatus.textContent = 'Connection error: ' + e.message;
+  }
+});
+
+// ---------- quick pattern (no PDF) ----------
+(function setDefaultPatternMonth(){
+  const d = new Date();
+  document.getElementById('patMonth').value = d.toISOString().slice(0,7);
+})();
+fetch(LB_CONFIG.SCHEDULE_FAST_API + '?action=getEmployees&token=' + encodeURIComponent(token()), {
+  headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }
+})
+  .then(r => r.json())
+  .then(data => {
+    if(!data || !data.success || !Array.isArray(data.employees)) return;
+    const list = document.getElementById('patEmployeeList');
+    const seen = new Set();
+    data.employees.forEach(e => {
+      if(!e.name || seen.has(e.name)) return;
+      seen.add(e.name);
+      const o = document.createElement('option'); o.value = e.name; list.appendChild(o);
+    });
+  })
+  .catch(()=>{});
+
+document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
+  const status = document.getElementById('patStatus');
+  const employee = document.getElementById('patEmployee').value.trim();
+  const role = document.getElementById('patRole').value.trim();
+  const homeBranch = document.getElementById('patBranch').value.trim();
+  const monthVal = document.getElementById('patMonth').value; // "YYYY-MM"
+  const shiftText = document.getElementById('patShift').value.trim();
+  const dayOff = [...document.querySelectorAll('#patDayOff input:checked')].map(i => i.value);
+
+  status.style.color = 'var(--err)';
+  if(!employee){ status.textContent = 'Enter the employee\u2019s name.'; return; }
+  if(!monthVal){ status.textContent = 'Pick a month.'; return; }
+  if(!shiftText){ status.textContent = 'Enter the shift text for working days.'; return; }
+  if(!dayOff.length && !confirm('No day off is checked — this employee will be scheduled to work every single day this month. Continue?')) return;
+
+  const [yearStr, monthStr] = monthVal.split('-');
+  const btn = document.getElementById('patGenerateBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  status.style.color = 'var(--muted)'; status.textContent = 'Generating and saving — this replaces ' + employee + '\u2019s existing schedule for any week touched by this month.';
+  try{
+    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY },
+      body: JSON.stringify({
+        action: 'generateMonthSchedule', token: token(),
+        employee, role, homeBranch, year: yearStr, month: monthStr,
+        dayOff: dayOff.join(','), shiftText
+      })
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Generate & save this month';
+    if(!data.success){
+      status.style.color = 'var(--err)'; status.textContent = data.error || 'Could not generate the schedule.';
+      return;
+    }
+    status.style.color = 'var(--ok)';
+    status.textContent = '✓ Saved ' + data.daysGenerated + ' days across ' + data.weeksTouched + ' week' + (data.weeksTouched===1?'':'s') + ' for ' + employee + '.';
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Generate & save this month';
+    status.style.color = 'var(--err)'; status.textContent = 'Connection error: ' + e.message;
   }
 });
 </script>
