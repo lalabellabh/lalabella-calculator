@@ -370,11 +370,21 @@ async function loadScheduleFor(employeeName){
       else { roleTag.style.display = 'none'; }
     }
 
-    // Jump the calendar view to the month the schedule's week falls
-    // in — now using the same local-time parser as everywhere else.
-    if(data.schedule[0] && data.schedule[0].WeekOf){
-      const wk = parseDateOnly_(data.schedule[0].WeekOf);
-      if(wk){ viewMonth = wk.getMonth(); viewYear = wk.getFullYear(); }
+    // Open on the CURRENT month when this schedule covers it; otherwise on
+    // the most recent week on file. (It used to jump to the first row's
+    // week, which is the oldest one — so old months kept showing up.)
+    {
+      const weeks = Array.from(new Set(data.schedule.map(r => r.WeekOf).filter(Boolean))).map(parseDateOnly_).filter(Boolean);
+      const now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+      const coversNow = weeks.some(w => {
+        const end = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 6);
+        return (w.getFullYear() === cy && w.getMonth() === cm) || (end.getFullYear() === cy && end.getMonth() === cm);
+      });
+      if (coversNow) { viewMonth = cm; viewYear = cy; }
+      else if (weeks.length) {
+        const latest = weeks.reduce((a, b) => (b > a ? b : a));
+        viewMonth = latest.getMonth(); viewYear = latest.getFullYear();
+      }
     }
     renderMonthGrid();
     applyScheduleToGrid(currentSchedule, true);
