@@ -147,6 +147,21 @@ window.schedName = function(full){ const f = String(full).split(' ')[0]; return 
     </div>
   </div>
 
+  <div class="card" id="cleanCard">
+    <h2>Check &amp; clean up</h2>
+    <p class="sub">See who has missing days in the month shown above, and delete old schedules you no longer need.</p>
+    <div class="row-actions">
+      <button type="button" class="btn ghost" id="gapBtn">🔎 Check missing days</button>
+    </div>
+    <div id="gapOut" style="font-size:12.5px;line-height:1.7;margin-top:10px;"></div>
+    <hr style="border:none;border-top:1px solid #f0dede;margin:16px 0;">
+    <div class="wk-bar" style="margin-bottom:8px;">
+      <div class="field"><label>Delete all weeks before</label><input type="date" id="delBefore"></div>
+      <button type="button" class="btn ghost" id="delOldBtn" style="color:var(--err);">🗑 Delete old schedule</button>
+    </div>
+    <div id="delOut" style="font-size:12.5px;"></div>
+  </div>
+
   <div class="card" id="patternCard">
     <h2>Quick option — someone with the same shift every week</h2>
     <p class="sub">For staff whose schedule doesn't change week to week (one day off, the same shift every other day), skip the PDF entirely: pick their day(s) off and shift text once, choose the month, and the whole month is generated and saved in one go — including the first/last few days that spill into the week before or after, so nothing in the calendar is left blank.</p>
@@ -481,6 +496,61 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
   $('wkDate').addEventListener('change', refreshRepeatText);
   ['wkPrev','wkNext'].forEach(id => $(id).addEventListener('click', () => setTimeout(refreshRepeatText, 50)));
   setTimeout(refreshRepeatText, 100);
+
+  // ---------- check missing days + delete old schedule ----------
+  function gapMonth(){
+    const sun = curSunday(), ws = monthSundays(sun), mo = monthOf(sun);
+    const names = []; const seen = new Set();
+    const add = n => { const k = n.toLowerCase(); if(!seen.has(k)){ seen.add(k); names.push(n); } };
+    STAFF_ROSTER.forEach(f => add(schedName(f)));
+    (all || []).forEach(r => { const n = String(r.Employee||'').trim(); if(n) add(n); });
+    const have = {};
+    (all || []).forEach(r => { const k = String(r.Employee||'').trim().toLowerCase() + '|' + String(r.WeekOf).slice(0,10); (have[k] = have[k] || new Set()).add(String(r.Day).toUpperCase().slice(0,3)); });
+    const lines = [];
+    names.forEach(n => {
+      const bits = [];
+      ws.forEach(w => {
+        const got = have[n.toLowerCase() + '|' + ymd(w)] || new Set();
+        const miss = DAYS.filter(d => !got.has(d));
+        if(miss.length) bits.push({ w, txt: ymd(w).slice(5) + (miss.length === 7 ? ' (nothing)' : ': ' + miss.join(' ')) });
+      });
+      if(bits.length) lines.push({ n, bits });
+    });
+    return { mo, ws, lines };
+  }
+  $('gapBtn').addEventListener('click', async () => {
+    const out = $('gapOut'); out.textContent = 'Checking…';
+    await loadAll();
+    const g = gapMonth();
+    const title = MONTHS[g.mo.m] + ' ' + g.mo.y + ' — weeks ' + g.ws.map(w => ymd(w).slice(5)).join(', ');
+    if(!g.lines.length){ out.innerHTML = '<span style="color:var(--ok)">✓ Everyone has all 7 days in every week of ' + title + '.</span>'; return; }
+    out.innerHTML = '<div style="color:var(--muted);margin-bottom:6px;">' + title + '. A missing day means nothing is saved for that day. Click a week to open it.</div>';
+    g.lines.forEach(l => {
+      const row = document.createElement('div');
+      row.innerHTML = '<b>' + l.n + '</b> — ';
+      l.bits.forEach((b, i) => {
+        const a = document.createElement('a'); a.href = '#'; a.textContent = b.txt; a.style.color = 'var(--rose-dark,#9e2f4a)';
+        a.addEventListener('click', ev => { ev.preventDefault(); goWeek(b.w); $('weekGridCard').scrollIntoView({ behavior:'smooth' }); });
+        row.appendChild(a); if(i < l.bits.length - 1) row.appendChild(document.createTextNode('  ·  '));
+      });
+      out.appendChild(row);
+    });
+  });
+  $('delBefore').value = ymd(monthSundays(sundayOf(new Date()))[0]);
+  $('delOldBtn').addEventListener('click', async () => {
+    const before = $('delBefore').value, out = $('delOut');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(before)){ out.style.color = 'var(--err)'; out.textContent = 'Pick a date first.'; return; }
+    if(!confirm('Delete EVERY saved schedule for weeks that start before ' + before + ', for all staff? This cannot be undone.')) return;
+    out.style.color = 'var(--muted)'; out.textContent = 'Deleting…';
+    try{
+      const body = new URLSearchParams({ action:'deleteOldSchedule', token: token(), before });
+      const res = await fetch(API, { method:'POST', body });
+      const data = await res.json();
+      if(!data.success) throw new Error(data.error || 'Could not delete.');
+      out.style.color = 'var(--ok)'; out.textContent = '✓ Deleted ' + data.deleted + ' old ' + (data.deleted === 1 ? 'entry' : 'entries') + ' (weeks before ' + before + ').';
+      await loadAll(); render(weekData(curSunday()));
+    }catch(e){ out.style.color = 'var(--err)'; out.textContent = e.message; }
+  });
 
   window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
   goWeek(new Date());
