@@ -14,6 +14,12 @@
 (function(){
   if (document.getElementById('lbcb-btn')) return; // already on the page
 
+  // Pages that already have their own chat button at the top — no floating bubble here.
+  // To add/remove a page, just edit this list (file name without .html).
+  const HIDE_ON = ['index', 'flower-tools', 'item-inventory'];
+  const page = (location.pathname.split('/').pop() || 'index').replace(/\.html?$/i, '') || 'index';
+  if (HIDE_ON.indexOf(page.toLowerCase()) !== -1) return;
+
   function loadScriptOnce(src){
     return new Promise(function(resolve){
       const existing = document.querySelector('script[src="' + src + '"]');
