@@ -105,6 +105,7 @@
       #lbcb-input:focus{ border-color:#c9506b; }
       #lbcb-send{ width:34px; height:34px; border-radius:50%; border:none; background:#c9506b; color:#fff; font-size:13px; cursor:pointer; flex:0 0 auto; }
       #lbcb-send:disabled{ opacity:.5; }
+      @media print{ #lbcb-btn, #lbcb-panel{ display:none !important; } }
       @media(max-width:420px){ #lbcb-panel{ left:12px; } #lbcb-btn{ left:12px; width:46px; height:46px; font-size:19px; } }
     `;
     document.head.appendChild(style);
