@@ -883,10 +883,16 @@
         countDate,
         lines: JSON.stringify(lines)
       });
-      await fetch(`${API_URL}?${params.toString()}`);
-      playJazzClose();
-      document.getElementById('fCountedBy').value = '';
-      await loadData();
+      const res = await fetch(`${API_URL}?${params.toString()}`);
+      let d = {};
+      try{ d = await res.json(); }catch(_){ d = { error: 'No answer from the server. Refresh and check the history before saving again.' }; }
+      if(d && d.error){
+        alert(d.error);
+      } else {
+        playJazzClose();
+        document.getElementById('fCountedBy').value = '';
+        await loadData();
+      }
     }catch(e){
       alert('Could not save the count session. Check your connection and try again.');
     }
