@@ -138,7 +138,7 @@ window.schedName = function(full){ const f = String(full).split(' ')[0]; return 
     <datalist id="wkBranches"><option value="ModaMall"><option value="Hamala"><option value="Galali"></datalist>
     <datalist id="wkShifts"><option value="Off"></datalist>
     <label id="wkRepeatRow" style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;cursor:pointer;">
-      <input type="checkbox" id="wkRepeat"> <span id="wkRepeatTxt">Also use this same schedule for the following weeks until the end of the month</span>
+      <input type="checkbox" id="wkRepeat" checked> <span id="wkRepeatTxt">Save for the whole month</span>
     </label>
     <div class="row-actions" style="margin-top:12px;">
       <button type="button" class="btn primary" id="wkSave">Save this week</button>
@@ -411,7 +411,7 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
     const rows = readTable();
     if(!rows.length){ say('Nothing to save — fill in at least one shift.', 'err'); return; }
     const first = curSunday();
-    const weeks = [first].concat($('wkRepeat').checked ? followingSundays(first) : []);
+    const weeks = weeksToSave();
     const list = weeks.map(ymd);
     if(!confirm('Save ' + rows.length + ' shifts for ' + (list.length === 1 ? 'the week of ' + list[0] : list.length + ' weeks (' + list[0] + ' … ' + list[list.length-1] + ')') + '?\nThis replaces everything already saved for ' + (list.length === 1 ? 'that week' : 'those weeks') + '.')) return;
     const btn = $('wkSave'); btn.disabled = true; btn.textContent = 'Saving…'; say('');
@@ -424,9 +424,9 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
         done++;
         all = (all||[]).filter(r => String(r.WeekOf).slice(0,10) !== weekOf).concat(rows.map(r => ({ Employee:r.employee, Role:r.role, HomeBranch:r.homeBranch, Day:r.day, ScheduleDetail:r.scheduleDetail, WeekOf:weekOf })));
       }
-      if(done === list.length){ say('✓ Saved ' + rows.length + ' shifts for ' + (done === 1 ? 'the week of ' + list[0] : done + ' weeks (' + list[0] + ' … ' + list[done-1] + ')') + '.', 'ok'); dirty = false; $('wkRepeat').checked = false; }
+      if(done === list.length){ refreshRepeatText(); say('✓ Saved ' + rows.length + ' shifts for ' + (done === 1 ? 'the week of ' + list[0] : done + ' weeks (' + list[0] + ' … ' + list[done-1] + ')') + '.', 'ok'); dirty = false; }
     }catch(e){ say('Connection error: ' + e.message, 'err'); }
-    btn.disabled = false; btn.textContent = 'Save this week';
+    btn.disabled = false; refreshRepeatText();
   });
 
   // ---- fill from a PDF ----
@@ -459,17 +459,25 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
     }catch(e){ console.error(e); pdfSay('Could not read that PDF: ' + escH(e.message), 'err'); }
   });
 
-  // ---- repeat for the rest of the month ----
-  function followingSundays(sun){
-    const end = addDays(sun, 6), last = new Date(end.getFullYear(), end.getMonth() + 1, 0), out = [];
-    for(let d = addDays(sun, 7); d <= last; d = addDays(d, 7)) out.push(new Date(d));
+  // ---- whole month ----
+  // A week belongs to the month its THURSDAY falls in (so Sep 27–Oct 3 is an
+  // October week, and every week of the month is covered with no gaps).
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function monthOf(sun){ const t = addDays(sun, 4); return { y: t.getFullYear(), m: t.getMonth() }; }
+  function monthSundays(sun){
+    const mo = monthOf(sun); let s0 = sun;
+    while(true){ const p = addDays(s0, -7), pm = monthOf(p); if(pm.y === mo.y && pm.m === mo.m) s0 = p; else break; }
+    const out = [];
+    for(let d = s0; ; d = addDays(d, 7)){ const dm = monthOf(d); if(dm.y !== mo.y || dm.m !== mo.m) break; out.push(new Date(d)); }
     return out;
   }
+  function weeksToSave(){ return $('wkRepeat').checked ? monthSundays(curSunday()) : [curSunday()]; }
   function refreshRepeatText(){
-    const n = followingSundays(curSunday()).length;
-    $('wkRepeatTxt').textContent = n ? 'Also use this same schedule for the ' + n + ' following week' + (n===1?'':'s') + ' until the end of the month (replaces what is saved for those weeks)' : 'This is the last week of the month — nothing further to repeat';
-    $('wkRepeat').disabled = !n; if(!n) $('wkRepeat').checked = false;
+    const sun = curSunday(), mo = monthOf(sun), ws = monthSundays(sun);
+    $('wkRepeatTxt').innerHTML = 'Save for the <b>whole month of ' + MONTHS[mo.m] + ' ' + mo.y + '</b> (' + ws.length + ' weeks: ' + ymd(ws[0]) + ' … ' + ymd(ws[ws.length-1]) + ') — the same schedule every week, replacing what is saved for those weeks. Untick to save only this week.';
+    $('wkSave').textContent = $('wkRepeat').checked ? 'Save the whole month' : 'Save this week';
   }
+  $('wkRepeat').addEventListener('change', refreshRepeatText);
   $('wkDate').addEventListener('change', refreshRepeatText);
   ['wkPrev','wkNext'].forEach(id => $(id).addEventListener('click', () => setTimeout(refreshRepeatText, 50)));
   setTimeout(refreshRepeatText, 100);
