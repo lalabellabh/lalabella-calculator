@@ -254,7 +254,6 @@ See [[System map]] and [[Usage limits & storage]].
     const body = new URLSearchParams(Object.assign({}, params, { token: token() }));
     const res = await fetch(LB_CONFIG.BRAIN_API, { method: 'POST', body });
     const d = await res.json();
-    if(d && d.reauth) location.reload();      // unlock expired → the admin gate asks for the password again
     return d;
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -399,8 +398,16 @@ See [[System map]] and [[Usage limits & storage]].
     if(nw){ return showEdit({ id: '', title: nw[1] ? decodeURIComponent(nw[1]) : '', tags: [], body: '' }); }
     showHome();
   }
+  const gateLocked = () => document.documentElement.classList.contains('lbgate-locked');
   async function load(){
-    const d = await api({ action: 'noteList' });
+    let d = await api({ action: 'noteList' });
+    // Not unlocked yet (password box is showing) → wait for the password, then try again. No page reload.
+    for(let i = 0; d && d.reauth && i < 400; i++){
+      $('main').innerHTML = '<div class="empty">Enter your password to open the vault…</div>';
+      await new Promise(r => setTimeout(r, 1000));
+      if(gateLocked()) continue;
+      d = await api({ action: 'noteList' });
+    }
     if(!d.success){ $('main').innerHTML = '<div class="empty">' + esc(d.error || 'Could not load the vault.') + '</div>'; return false; }
     notes = d.notes || []; renderList(); return true;
   }
