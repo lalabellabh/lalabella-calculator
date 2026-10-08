@@ -527,6 +527,14 @@
     document.body.appendChild(cb);
   }
 
+  // System "brain" (reminders + smart alerts) — loaded here once, same
+  // one-file-change reasoning as the bubbles above. See shared/brain.js.
+  if (!window.LBBrain && !document.querySelector('script[src="shared/brain.js"]')) {
+    const br = document.createElement('script');
+    br.src = 'shared/brain.js';
+    document.body.appendChild(br);
+  }
+
   // Unread-chat dot on the hamburger profile header — chat-bubble.js
   // dispatches this event whenever the unread total changes (and so
   // will chatbox.html's own page script, once it's wired the same
