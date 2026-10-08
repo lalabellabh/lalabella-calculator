@@ -114,6 +114,19 @@
   .mine-status{font-size:12.5px;margin-top:10px;} .mine-status.err{color:#c0392b;} .mine-status.ok{color:#2e7d4f;}
   .edit-mine-btn{display:none;padding:12px 16px;border:1px solid var(--rose);border-radius:12px;background:#fff;color:var(--rose-dark);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
 
+
+  #monthGrid.editable .date-cell{cursor:pointer;}
+  #monthGrid.editable .date-cell:not(.hit):hover{border-color:var(--rose);background:#fff6f6;}
+  .day-modal{position:fixed;inset:0;z-index:9998;background:rgba(47,32,36,.45);display:none;align-items:center;justify-content:center;padding:16px;}
+  .day-modal .box{background:#fff;border-radius:18px;padding:20px 20px 18px;width:100%;max-width:380px;box-shadow:0 18px 50px rgba(0,0,0,.3);}
+  .day-modal h4{font-family:'Fraunces',serif;font-size:17px;margin:0 0 2px;} .day-modal .who{font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  .day-modal input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14px;background:#fdf9f8;outline:none;margin-bottom:10px;}
+  .day-modal input[type=text]:focus{border-color:var(--rose);}
+  .day-modal .quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .day-modal .quick button,.day-modal .acts .ghost{padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;cursor:pointer;}
+  .day-modal .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .day-modal .msg{font-size:12.5px;margin-top:10px;min-height:16px;} .day-modal .msg.err{color:#c0392b;}
+
   .empty-state{padding:20px;}
   .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
 
@@ -215,6 +228,20 @@
   </div>
 </div>
 
+<div class="day-modal" id="dayModal">
+  <div class="box">
+    <h4 id="dayTitle">—</h4>
+    <div class="who" id="dayWho"></div>
+    <input type="text" id="dayInput" maxlength="300" placeholder="e.g. 10AM to 10PM" autocomplete="off">
+    <div class="quick" id="dayQuick"><button type="button" data-v="Off">🌴 Off</button></div>
+    <div class="acts">
+      <button class="my-schedule-btn" id="daySave" type="button">Save</button>
+      <button class="ghost" id="dayClear" type="button">Clear day</button>
+      <button class="ghost" id="dayCancel" type="button">Cancel</button>
+    </div>
+    <div class="msg" id="dayMsg"></div>
+  </div>
+</div>
 <script>
 const SCHEDULE_API_URL = LB_CONFIG.SCHEDULE_FAST_API;
 const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -352,6 +379,7 @@ function renderMonthGrid(){
   }
 
   if(currentSchedule) applyScheduleToGrid(currentSchedule, employeeIsOnScreen());
+  if(typeof refreshEditable_ === 'function') refreshEditable_();
 }
 function employeeIsOnScreen(){ return true; }
 
@@ -650,7 +678,7 @@ async function showMySchedule_(keepForm){
     await loadScheduleFor(mineName);
     if(keepForm) mineRenderWeek_(); else document.getElementById('mineCard').style.display = 'none';
   } else {
-    viewingIsMe = true;
+    viewingIsMe = true; mineName = data.matchedName || mineName;
     currentSchedule = null; renderMonthGrid();
     const t = document.getElementById('calTitleText'); if(t) t.textContent = 'No schedule yet';
     openMineForm_('You have no schedule yet — please enter it here. Type your shift for each day (or tap Off). It is saved for you only.');
@@ -661,6 +689,65 @@ document.getElementById('myScheduleBtn').addEventListener('click', () => {
   if(!userStr){ return; }
   showMySchedule_(false);
 });
+
+
+// ---------- click a day to add / edit that day ----------
+const IS_ADMIN_ = (function(){ try{ const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}'); return String(u.role||'').toLowerCase() === 'admin'; }catch(e){ return false; } })();
+function editTarget_(){
+  const sel = document.getElementById('employeeSelect').value;
+  const name = viewingIsMe ? (mineName || sel) : sel;
+  return (name && (IS_ADMIN_ || viewingIsMe)) ? name : '';
+}
+function refreshEditable_(){
+  const g = document.getElementById('monthGrid'); if(g) g.classList.toggle('editable', !!editTarget_());
+}
+let dayEdit_ = null;
+function dayRecord_(dateStr){
+  const d = parseDateOnly_(dateStr); if(!d) return null;
+  const wk = ymdLocal_(sundayOfL_(d)), day = DAY_ORDER[d.getDay()];
+  return (currentSchedule || []).find(r => String(r.WeekOf).slice(0,10) === wk && r.Day === day) || null;
+}
+function dayMsg_(t, err){ const m = document.getElementById('dayMsg'); m.textContent = t || ''; m.className = 'msg' + (err ? ' err' : ''); }
+document.getElementById('monthGrid').addEventListener('click', ev => {
+  const cell = ev.target.closest('.date-cell'); if(!cell || ev.target.closest('.note-txt')) return;
+  const who = editTarget_(); if(!who) return;
+  const d = parseDateOnly_(cell.dataset.date); if(!d) return;
+  const rec = dayRecord_(cell.dataset.date);
+  dayEdit_ = { date: cell.dataset.date, who };
+  document.getElementById('dayTitle').textContent = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('dayWho').textContent = who + (rec ? '' : ' — no schedule yet for this day');
+  document.getElementById('dayInput').value = rec ? rec.ScheduleDetail : '';
+  document.getElementById('dayClear').style.display = rec ? '' : 'none';
+  dayMsg_('');
+  document.getElementById('dayModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('dayInput').focus(), 50);
+});
+document.querySelectorAll('#dayQuick button').forEach(b => b.addEventListener('click', () => { document.getElementById('dayInput').value = b.dataset.v; }));
+document.getElementById('dayCancel').addEventListener('click', () => { document.getElementById('dayModal').style.display = 'none'; });
+document.getElementById('dayModal').addEventListener('click', e => { if(e.target.id === 'dayModal') e.target.style.display = 'none'; });
+async function saveDay_(detail){
+  if(!dayEdit_) return;
+  const btns = document.querySelectorAll('#dayModal button'); btns.forEach(b => b.disabled = true); dayMsg_('Saving…');
+  try{
+    const body = new URLSearchParams({ action:'saveDay', token: tokenNow_(), date: dayEdit_.date, detail, employee: dayEdit_.who });
+    const res = await fetch(SCHEDULE_API_URL, { method:'POST', body });
+    const data = await res.json();
+    if(!data.success){ dayMsg_(data.error || 'Could not save. Please try again.', true); return; }
+    const keepM = viewMonth, keepY = viewYear;
+    if(viewingIsMe) await showMySchedule_(false); else await loadScheduleFor(dayEdit_.who);
+    viewMonth = keepM; viewYear = keepY; renderMonthGrid();
+    document.getElementById('dayModal').style.display = 'none';
+  }catch(e){ dayMsg_('Connection problem — please try again.', true); }
+  finally{ btns.forEach(b => b.disabled = false); }
+}
+document.getElementById('daySave').addEventListener('click', () => {
+  const v = document.getElementById('dayInput').value.trim();
+  if(!v){ dayMsg_('Type a shift, tap Off, or use Clear day.', true); return; }
+  saveDay_(v);
+});
+document.getElementById('dayClear').addEventListener('click', () => { if(confirm('Clear this day?')) saveDay_(''); });
+document.getElementById('dayInput').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('daySave').click(); });
+document.getElementById('employeeSelect').addEventListener('change', refreshEditable_);
 
 renderMonthGrid();
 loadEmployees();
