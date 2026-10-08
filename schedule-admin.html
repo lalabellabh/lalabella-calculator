@@ -104,6 +104,10 @@ window.STAFF_ROSTER = [
   'Vincent Khadulo Ouma', 'Rhene Dungca Fabia', 'Antonio Ligtas Custodio', 'Benjamin Gutierrez Jr',
   'Baneesh Kumar Chalatha Nkandy'
 ];
+// A few people are written differently on the duty-schedule PDF than in their
+// full name — the schedule uses the PDF's spelling.
+window.STAFF_ALIAS = { aguinaldo:'Aldo', mohammed:'Mohamed', mahmoud:'Mahmood', nabadda:'Zaharah' };
+window.schedName = function(full){ const f = String(full).split(' ')[0]; return window.STAFF_ALIAS[f.toLowerCase()] || f; };
 </script>
 
 <script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
@@ -126,11 +130,17 @@ window.STAFF_ROSTER = [
       <div class="field"><label>Week starting (Sunday)</label><input type="date" id="wkDate"></div>
       <button type="button" class="btn ghost" id="wkNext">Next week ›</button>
       <button type="button" class="btn ghost" id="wkCopyPrev" title="Fill this table with last week's shifts">⧉ Copy from previous week</button>
+      <button type="button" class="btn ghost" id="wkPdfBtn" title="Read a duty-schedule PDF and fill this table">📄 Fill from a PDF</button>
+      <input type="file" id="wkPdfInput" accept="application/pdf">
     </div>
+    <div id="wkPdfMsg" style="display:none;font-size:12.5px;line-height:1.55;margin:-4px 0 12px;"></div>
     <div class="wk-scroll"><table class="wk" id="wkTable"><thead></thead><tbody></tbody></table></div>
     <datalist id="wkBranches"><option value="ModaMall"><option value="Hamala"><option value="Galali"></datalist>
     <datalist id="wkShifts"><option value="Off"></datalist>
-    <div class="row-actions" style="margin-top:14px;">
+    <label id="wkRepeatRow" style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;cursor:pointer;">
+      <input type="checkbox" id="wkRepeat"> <span id="wkRepeatTxt">Also use this same schedule for the following weeks until the end of the month</span>
+    </label>
+    <div class="row-actions" style="margin-top:12px;">
       <button type="button" class="btn primary" id="wkSave">Save this week</button>
       <button type="button" class="btn ghost" id="wkClear">Clear table</button>
       <span id="wkStatus" style="font-size:12.5px;"></span>
@@ -185,333 +195,14 @@ window.STAFF_ROSTER = [
     </div>
   </div>
 
-  <div class="card">
-    <h2>Or: upload a PDF for a week that varies</h2>
-    <p class="sub">Pick the Sunday the schedule starts on, then drop in the PDF.</p>
-    <div class="upload-row">
-      <div class="field">
-        <label>Week starting (Sunday)</label>
-        <input type="date" id="weekOfInput">
-      </div>
-      <div class="drop" id="dropZone">
-        <b id="dropTitle">📄 Drop the PDF here, or click to choose</b>
-        <span id="dropSub">Text-based PDF (exported from Excel/Sheets/Word) works best</span>
-        <input type="file" id="fileInput" accept="application/pdf">
-      </div>
-    </div>
-    <div class="status" id="parseStatus"></div>
-  </div>
-
-  <div class="card" id="previewCard" style="display:none;">
-    <h2>Review before saving</h2>
-    <p class="sub">Fix any name, day, or shift text that came out wrong. Add rows for anything missed.</p>
-    <div class="table-wrap">
-      <table class="preview" id="previewTable">
-        <thead><tr><th style="width:22%">Employee</th><th style="width:16%">Role</th><th style="width:16%">Branch</th><th style="width:10%">Day</th><th>Shift</th><th></th></tr></thead>
-        <tbody id="previewBody"></tbody>
-      </table>
-    </div>
-    <div class="row-actions">
-      <button type="button" class="btn ghost" id="addRowBtn">＋ Add row</button>
-      <button type="button" class="btn primary" id="saveBtn">Save this week's schedule</button>
-      <span id="saveStatus" style="font-size:12.5px;"></span>
-    </div>
-    <details class="raw" id="rawDetails" style="display:none;">
-      <summary>Show the raw text Lalabella read from the PDF (for checking anything that looks off)</summary>
-      <pre id="rawText"></pre>
-    </details>
-  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="shared/schedule-pdf.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-const DAY_TOKENS = {
-  SUN:'SUN', SUNDAY:'SUN', MON:'MON', MONDAY:'MON', TUE:'TUE', TUES:'TUE', TUESDAY:'TUE',
-  WED:'WED', WEDNESDAY:'WED', THU:'THU', THUR:'THU', THURS:'THU', THURSDAY:'THU',
-  FRI:'FRI', FRIDAY:'FRI', SAT:'SAT', SATURDAY:'SAT'
-};
-const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-
 function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
-
-// ---------- default week: the upcoming (or current) Sunday ----------
-(function setDefaultWeek(){
-  const d = new Date(); const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  const iso = d.toISOString().slice(0,10);
-  document.getElementById('weekOfInput').value = iso;
-})();
-
-// ---------- drop zone wiring ----------
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-dropZone.addEventListener('click', ()=>fileInput.click());
-dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e=>{
-  e.preventDefault(); dropZone.classList.remove('dragover');
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if(f) handleFile(f);
-});
-fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
-
-function setStatus(text, kind){
-  const el = document.getElementById('parseStatus');
-  el.textContent = text; el.className = 'status show ' + (kind||'info');
-}
-
-async function handleFile(file){
-  document.getElementById('dropTitle').textContent = '📄 ' + file.name;
-  setStatus('Reading the PDF…', 'info');
-  document.getElementById('previewCard').style.display = 'none';
-  try{
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    let allLines = [];
-    for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
-      const page = await pdf.getPage(pageNum);
-      const content = await page.getTextContent();
-      allLines = allLines.concat(linesFromTextContent(content));
-    }
-    if(!allLines.length){
-      setStatus('No selectable text was found in this PDF — it may be a scanned image rather than a text-based export. Try exporting the schedule directly from Excel/Sheets/Word as a PDF instead.', 'err');
-      return;
-    }
-    const rawText = allLines.map(l => l.cells.map(c=>c.text).join('   ')).join('\n');
-    document.getElementById('rawText').textContent = rawText;
-    document.getElementById('rawDetails').style.display = 'block';
-
-    const rows = parseScheduleLines(allLines);
-    if(!rows.length){
-      setStatus('Found text in the PDF, but could not automatically match it to a weekly schedule table. Open "Show the raw text" below to see what was read, then add rows by hand.', 'err');
-      showPreview([]);
-      return;
-    }
-    setStatus('Read ' + rows.length + ' shift' + (rows.length===1?'':'s') + ' from the PDF. Check each row below before saving.', 'ok');
-    showPreview(rows);
-  }catch(e){
-    console.error(e);
-    setStatus('Could not read that PDF: ' + e.message, 'err');
-  }
-}
-
-// Groups a page's text items into lines (by Y position), then into cells
-// within each line (by X gaps) — this reconstructs the table's rows and
-// columns from the PDF's real character positions, which is far more
-// reliable for a table than just reading the text in a straight line.
-function linesFromTextContent(content){
-  const items = content.items.filter(it => it.str && it.str.trim());
-  if(!items.length) return [];
-  const withPos = items.map(it => ({ text: it.str, x: it.transform[4], y: it.transform[5] }));
-  withPos.sort((a,b) => b.y - a.y || a.x - b.x); // PDF y grows upward — top of page first
-  const lines = [];
-  const Y_TOL = 3;
-  withPos.forEach(it => {
-    let line = lines.find(l => Math.abs(l.y - it.y) <= Y_TOL);
-    if(!line){ line = { y: it.y, items: [] }; lines.push(line); }
-    line.items.push(it);
-  });
-  lines.sort((a,b) => b.y - a.y);
-  return lines.map(line => {
-    line.items.sort((a,b) => a.x - b.x);
-    const cells = [];
-    const GAP = 14; // px gap that counts as a new column rather than a space within one cell
-    line.items.forEach(it => {
-      const last = cells[cells.length-1];
-      if(last && (it.x - last.endX) < GAP){
-        last.text += (it.text.startsWith(' ') ? '' : ' ') + it.text.trim();
-        last.endX = it.x + (it.width||0) + it.text.length*4;
-      } else {
-        cells.push({ text: it.text.trim(), x: it.x, endX: it.x + (it.width||0) + it.text.length*4 });
-      }
-    });
-    return { y: line.y, cells: cells.filter(c=>c.text) };
-  }).filter(l => l.cells.length);
-}
-
-// Real Lalabella schedule PDFs are messier than a plain table: one PDF
-// holds THREE branch sections (each with its own "Duty Hours (...)"
-// header and its own SUN–SAT header row), an employee's name is often
-// followed by a role/note on the NEXT line(s) — e.g. "Stephen" then
-// "(Galali branch" then "driver)" — and a single shift is often split
-// across two lines too — e.g. "8AM to 8PM" then "(1HR break)". This
-// walks the page line by line, keeping a "current employee" row open
-// and merging every following line into it (by nearest day column)
-// until a new employee name starts, a new branch section begins, or a
-// trailing "Note:" / "Drivers Cars:" legend line ends the table.
-function detectBranchFromHeader(text){
-  const t = text.toUpperCase();
-  if(t.includes('GALALI')) return 'Galali';
-  if(t.includes('MODA MALL') || t.includes('MODAMALL')) return 'ModaMall';
-  if(t.includes('HAMALA')) return 'Hamala';
-  return '';
-}
-function parseScheduleLines(lines){
-  const allRows = [];
-  let currentBranch = '';
-  let headerCols = null;
-  let pendingRow = null;
-
-  function flushPendingRow(){
-    if(!pendingRow) return;
-    const role = pendingRow.role.replace(/^\(+|\)+$/g,'').replace(/\s+/g,' ').trim();
-    DAY_ORDER.forEach(day => {
-      const text = (pendingRow.dayCells[day] || []).join(' ').replace(/\s+/g,' ').trim();
-      if(text) allRows.push({ employee: pendingRow.employeeName, role, branch: currentBranch, day, scheduleDetail: text });
-    });
-    pendingRow = null;
-  }
-
-  for(const line of lines){
-    const cells = line.cells;
-    if(!cells.length) continue;
-    const joined = cells.map(c=>c.text).join(' ');
-    const joinedUpper = joined.toUpperCase();
-
-    if(joinedUpper.includes('DUTY HOURS')){
-      flushPendingRow();
-      currentBranch = detectBranchFromHeader(joinedUpper) || currentBranch;
-      headerCols = null;
-      continue;
-    }
-
-    const dayHeaderCols = cells.map(c => ({ x:c.x, day: DAY_TOKENS[c.text.trim().toUpperCase().replace(/[^A-Z]/g,'')] })).filter(c=>c.day);
-    if(dayHeaderCols.length >= 3){
-      flushPendingRow();
-      headerCols = dayHeaderCols;
-      continue;
-    }
-    if(!headerCols) continue; // nothing usable until we've seen a day header
-
-    if(/^note\s*:/i.test(cells[0].text) || /drivers cars\s*:/i.test(joinedUpper)){
-      flushPendingRow(); // trailing legend — not a schedule row
-      continue;
-    }
-    if(/^employee\b/i.test(cells[0].text) && /duty timing/i.test(joinedUpper)) continue; // "Employee / Duty timing" sub-label
-
-    const firstDayX = Math.min(...headerCols.map(h=>h.x));
-    const leftCell = cells.find(c => c.x < firstDayX - 20);
-    const dayCellsOnLine = cells.filter(c => c.x >= firstDayX - 20);
-
-    if(leftCell){
-      const t = leftCell.text.trim();
-      if(pendingRow && pendingRow.roleOpen){
-        // Continuing an already-open "(...)" role note across lines
-        // (e.g. "(Galali branch" then "driver)") — the CLOSING line
-        // rarely starts with "(" itself, so this has to be tracked
-        // rather than re-detected from the line's own text.
-        pendingRow.role = (pendingRow.role + ' ' + t).trim();
-        if(t.includes(')')) pendingRow.roleOpen = false;
-      } else if(/^\(/.test(t)){
-        if(pendingRow){
-          pendingRow.role = (pendingRow.role + ' ' + t).trim();
-          pendingRow.roleOpen = !t.includes(')');
-        }
-      } else if(/^[A-Za-z]/.test(t)){
-        // A new employee name — starts a fresh row.
-        flushPendingRow();
-        pendingRow = { employeeName: t, role: '', roleOpen: false, dayCells: {} };
-      }
-    }
-
-    if(pendingRow){
-      dayCellsOnLine.forEach(cell => {
-        let nearest = null, bestDist = Infinity;
-        headerCols.forEach(h => { const d = Math.abs(h.x - cell.x); if(d < bestDist){ bestDist = d; nearest = h; } });
-        if(!nearest) return;
-        (pendingRow.dayCells[nearest.day] = pendingRow.dayCells[nearest.day] || []).push(cell.text);
-      });
-    }
-  }
-  flushPendingRow();
-  return allRows;
-}
-
-// ---------- editable preview table ----------
-function dayOptions(selected){
-  return DAY_ORDER.map(d => `<option value="${d}"${d===selected?' selected':''}>${d}</option>`).join('');
-}
-function rowHtml(r){
-  return `<tr>
-    <td><input type="text" class="f-emp" value="${escAttr(r.employee||'')}" placeholder="Name"></td>
-    <td><input type="text" class="f-role" value="${escAttr(r.role||'')}" placeholder="e.g. Florist"></td>
-    <td><input type="text" class="f-branch" value="${escAttr(r.branch||'')}" placeholder="e.g. ModaMall"></td>
-    <td><select class="f-day">${dayOptions(r.day||'SUN')}</select></td>
-    <td><input type="text" class="f-detail" value="${escAttr(r.scheduleDetail||'')}" placeholder="e.g. 9AM-6PM or Off"></td>
-    <td><button type="button" class="rm-btn" title="Remove row">🗑</button></td>
-  </tr>`;
-}
-function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-
-function showPreview(rows){
-  const card = document.getElementById('previewCard');
-  const body = document.getElementById('previewBody');
-  card.style.display = 'block';
-  body.innerHTML = rows.length ? rows.map(rowHtml).join('') : '';
-  if(!rows.length){
-    body.innerHTML = `<tr><td colspan="6" class="empty-preview">No rows yet — use "Add row" below, or check the raw text.</td></tr>`;
-  }
-}
-document.getElementById('addRowBtn').addEventListener('click', ()=>{
-  const body = document.getElementById('previewBody');
-  const emptyMsg = body.querySelector('.empty-preview');
-  if(emptyMsg) body.innerHTML = '';
-  body.insertAdjacentHTML('beforeend', rowHtml({ employee:'', role:'', branch:'', day:'SUN', scheduleDetail:'' }));
-});
-document.getElementById('previewBody').addEventListener('click', e=>{
-  const btn = e.target.closest('.rm-btn');
-  if(!btn) return;
-  const tr = btn.closest('tr'); tr.remove();
-  const body = document.getElementById('previewBody');
-  if(!body.children.length) body.innerHTML = `<tr><td colspan="6" class="empty-preview">No rows — use "Add row" to add one.</td></tr>`;
-});
-
-// ---------- save ----------
-document.getElementById('saveBtn').addEventListener('click', async ()=>{
-  const weekOf = document.getElementById('weekOfInput').value;
-  const saveStatus = document.getElementById('saveStatus');
-  saveStatus.style.color = 'var(--err)';
-  if(!weekOf){ saveStatus.textContent = 'Pick the week\u2019s Sunday first.'; return; }
-
-  const trs = [...document.querySelectorAll('#previewBody tr')].filter(tr => !tr.querySelector('.empty-preview'));
-  const rows = trs.map(tr => ({
-    employee: tr.querySelector('.f-emp').value.trim(),
-    role: tr.querySelector('.f-role').value.trim(),
-    homeBranch: tr.querySelector('.f-branch').value.trim(),
-    day: tr.querySelector('.f-day').value,
-    scheduleDetail: tr.querySelector('.f-detail').value.trim()
-  }));
-  const usable = rows.filter(r => r.employee && r.scheduleDetail);
-  if(!usable.length){ saveStatus.textContent = 'Add at least one row with a name and a shift.'; return; }
-
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving…'; saveStatus.style.color = 'var(--muted)'; saveStatus.textContent = 'Saving — this replaces this week\u2019s existing schedule.';
-  try{
-    // POST with a JSON body — a GET with the full rows array packed into
-    // the URL's query string can exceed the browser/server's maximum URL
-    // length once there are more than a handful of rows, which fails
-    // silently as a network-level "Failed to fetch" rather than a normal
-    // error response.
-    const res = await fetch(LB_CONFIG.SCHEDULE_FAST_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(usable) })
-    });
-    const data = await res.json();
-    btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
-    if(!data.success){
-      saveStatus.style.color = 'var(--err)'; saveStatus.textContent = data.error || 'Could not save.';
-      return;
-    }
-    saveStatus.style.color = 'var(--ok)';
-    saveStatus.textContent = '✓ Saved ' + data.saved + ' shifts for the week of ' + weekOf + '.';
-  }catch(e){
-    btn.disabled = false; btn.textContent = 'Save this week\u2019s schedule';
-    saveStatus.style.color = 'var(--err)'; saveStatus.textContent = 'Connection error: ' + e.message;
-  }
-});
 
 // ---------- quick pattern (no PDF) ----------
 (function setDefaultPatternMonth(){
@@ -531,7 +222,7 @@ fetch(LB_CONFIG.SCHEDULE_FAST_API + '?action=getEmployees&token=' + encodeURICom
 // Staff roster — suggested names for the Quick option even when nobody has a
 // schedule saved yet. Use the FIRST NAME as the schedule name: "My Schedule"
 // matches a login's first name against it.
-// (STAFF_ROSTER is defined in its own script near the top of <body>)
+// (STAFF_ROSTER / schedName() are defined in their own script near the top of <body>)
 function fillEmployeeList(existing){
   const list = document.getElementById('patEmployeeList');
   list.innerHTML = '';
@@ -541,7 +232,7 @@ function fillEmployeeList(existing){
     const o = document.createElement('option'); o.value = value; if(label) o.label = label; list.appendChild(o);
   };
   (existing || []).forEach(n => add(n));
-  STAFF_ROSTER.forEach(full => add(full.split(' ')[0], full));
+  STAFF_ROSTER.forEach(full => add(schedName(full), full));
 }
 
 document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
@@ -645,14 +336,14 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
     });
     return out;
   }
-  function fullNameOf(first){ return (STAFF_ROSTER.find(f => f.split(' ')[0].toLowerCase() === first.toLowerCase()) || ''); }
+  function fullNameOf(first){ return (STAFF_ROSTER.find(f => schedName(f).toLowerCase() === first.toLowerCase()) || ''); }
 
   function render(data){
     const sun = curSunday(); drawHead(sun);
     tbody.innerHTML = '';
     const names = []; const seen = new Set();
     const add = n => { const k = n.toLowerCase(); if(!seen.has(k)){ seen.add(k); names.push(n); } };
-    STAFF_ROSTER.forEach(f => add(f.split(' ')[0]));
+    STAFF_ROSTER.forEach(f => add(schedName(f)));
     Object.keys(data).forEach(add);
     names.forEach(n => {
       const key = Object.keys(data).find(k => k.toLowerCase() === n.toLowerCase());
@@ -719,20 +410,69 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
   $('wkSave').addEventListener('click', async () => {
     const rows = readTable();
     if(!rows.length){ say('Nothing to save — fill in at least one shift.', 'err'); return; }
-    const weekOf = ymd(curSunday());
-    if(!confirm('Save ' + rows.length + ' shifts for the week of ' + weekOf + '? This replaces everything saved for that week.')) return;
+    const first = curSunday();
+    const weeks = [first].concat($('wkRepeat').checked ? followingSundays(first) : []);
+    const list = weeks.map(ymd);
+    if(!confirm('Save ' + rows.length + ' shifts for ' + (list.length === 1 ? 'the week of ' + list[0] : list.length + ' weeks (' + list[0] + ' … ' + list[list.length-1] + ')') + '?\nThis replaces everything already saved for ' + (list.length === 1 ? 'that week' : 'those weeks') + '.')) return;
     const btn = $('wkSave'); btn.disabled = true; btn.textContent = 'Saving…'; say('');
+    let done = 0;
     try{
-      const res = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(rows) }) });
-      const data = await res.json();
-      if(!data.success){ say(data.error || 'Could not save.', 'err'); }
-      else {
-        say('✓ Saved ' + data.saved + ' shifts for the week of ' + weekOf + '.', 'ok'); dirty = false;
+      for(const weekOf of list){
+        const res = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(rows) }) });
+        const data = await res.json();
+        if(!data.success){ say((done ? 'Saved ' + done + ' week(s), then stopped at ' + weekOf + ': ' : '') + (data.error || 'Could not save.'), 'err'); break; }
+        done++;
         all = (all||[]).filter(r => String(r.WeekOf).slice(0,10) !== weekOf).concat(rows.map(r => ({ Employee:r.employee, Role:r.role, HomeBranch:r.homeBranch, Day:r.day, ScheduleDetail:r.scheduleDetail, WeekOf:weekOf })));
       }
+      if(done === list.length){ say('✓ Saved ' + rows.length + ' shifts for ' + (done === 1 ? 'the week of ' + list[0] : done + ' weeks (' + list[0] + ' … ' + list[done-1] + ')') + '.', 'ok'); dirty = false; $('wkRepeat').checked = false; }
     }catch(e){ say('Connection error: ' + e.message, 'err'); }
     btn.disabled = false; btn.textContent = 'Save this week';
   });
+
+  // ---- fill from a PDF ----
+  const pdfInput = $('wkPdfInput'), pdfMsg = $('wkPdfMsg');
+  $('wkPdfBtn').addEventListener('click', () => pdfInput.click());
+  function pdfSay(html, kind){ pdfMsg.style.display = html ? 'block' : 'none'; pdfMsg.style.color = kind==='err' ? 'var(--err)' : kind==='ok' ? 'var(--ok)' : 'var(--muted)'; pdfMsg.innerHTML = html; }
+  const escH = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  pdfInput.addEventListener('change', async () => {
+    const f = pdfInput.files[0]; pdfInput.value = ''; if(!f) return;
+    if(dirty && !confirm('This replaces what you have typed in the table for this week. Continue?')) return;
+    pdfSay('Reading ' + escH(f.name) + '…');
+    try{
+      const res = await lbSchedulePdf.readFile(f);
+      if(!res.employees.length){ pdfSay('Found text in the PDF but could not match it to a schedule table — fill the table by hand.', 'err'); return; }
+      const sun = curSunday(); drawHead(sun);
+      // start from what is saved for the chosen week, then lay the PDF on top
+      const base = weekData(sun), data = {};
+      Object.keys(base).forEach(k => { data[k] = { role: base[k].role, branch: base[k].branch, cells: {} }; });   // keep people, drop their old shifts
+      res.employees.forEach(e => {
+        const key = Object.keys(data).find(k => k.toLowerCase() === e.name.toLowerCase()) || e.name;
+        data[key] = { role: e.role || (data[key] && data[key].role) || '', branch: e.branch || (data[key] && data[key].branch) || '', cells: e.days };
+      });
+      render(data); dirty = true;
+      const unknown = res.employees.filter(e => !STAFF_ROSTER.some(full => schedName(full).toLowerCase() === e.name.toLowerCase())).map(e => e.name);
+      let html = '✓ Read <b>' + res.employees.length + ' people</b> from the PDF into the week of ' + ymd(sun) + '. Check the table, fix anything, then press <b>Save this week</b>.';
+      if(unknown.length) html += '<br>Not on your staff list (added as new rows): ' + escH(unknown.join(', ')) + '.';
+      if(res.warnings.length) html += '<div style="color:#a05a00;margin-top:6px;">⚠ Please check:<ul style="margin:4px 0 0 18px;padding:0;">' + res.warnings.map(w => '<li>' + escH(w) + '</li>').join('') + '</ul></div>';
+      pdfSay(html, 'ok');
+      $('wkTable').scrollIntoView({ behavior:'smooth', block:'start' });
+    }catch(e){ console.error(e); pdfSay('Could not read that PDF: ' + escH(e.message), 'err'); }
+  });
+
+  // ---- repeat for the rest of the month ----
+  function followingSundays(sun){
+    const end = addDays(sun, 6), last = new Date(end.getFullYear(), end.getMonth() + 1, 0), out = [];
+    for(let d = addDays(sun, 7); d <= last; d = addDays(d, 7)) out.push(new Date(d));
+    return out;
+  }
+  function refreshRepeatText(){
+    const n = followingSundays(curSunday()).length;
+    $('wkRepeatTxt').textContent = n ? 'Also use this same schedule for the ' + n + ' following week' + (n===1?'':'s') + ' until the end of the month (replaces what is saved for those weeks)' : 'This is the last week of the month — nothing further to repeat';
+    $('wkRepeat').disabled = !n; if(!n) $('wkRepeat').checked = false;
+  }
+  $('wkDate').addEventListener('change', refreshRepeatText);
+  ['wkPrev','wkNext'].forEach(id => $(id).addEventListener('click', () => setTimeout(refreshRepeatText, 50)));
+  setTimeout(refreshRepeatText, 100);
 
   window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
   goWeek(new Date());
