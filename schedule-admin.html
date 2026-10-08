@@ -473,15 +473,31 @@ fetch(LB_CONFIG.SCHEDULE_FAST_API + '?action=getEmployees&token=' + encodeURICom
   .then(r => r.json())
   .then(data => {
     if(!data || !data.success || !Array.isArray(data.employees)) return;
-    const list = document.getElementById('patEmployeeList');
-    const seen = new Set();
-    data.employees.forEach(e => {
-      if(!e.name || seen.has(e.name)) return;
-      seen.add(e.name);
-      const o = document.createElement('option'); o.value = e.name; list.appendChild(o);
-    });
+    fillEmployeeList(data.employees.map(e => e.name));
   })
-  .catch(()=>{});
+  .catch(()=>{ fillEmployeeList([]); });
+
+// Staff roster — suggested names for the Quick option even when nobody has a
+// schedule saved yet. Use the FIRST NAME as the schedule name: "My Schedule"
+// matches a login's first name against it.
+const STAFF_ROSTER = [
+  'Janice Laurete Maglangit', 'Aguinaldo Manalastas', 'Mohammed Salah Abdelkhalek Hammad', 'Moses Musisi',
+  'Agus Suiyanto Bn Suyono Kasi', 'Stephen Ogyado', 'Oliver Cruz Garcia', 'Joyce Marie Cantillo Navidad',
+  'Mahmoud Awad Mahmoud', 'Louielyn Managaytay Tenebroso', 'Rohit Chumber', 'Nabadda Zaharah Golooba',
+  'Vincent Khadulo Ouma', 'Rhene Dungca Fabia', 'Antonio Ligtas Custodio', 'Benjamin Gutierrez Jr',
+  'Baneesh Kumar Chalatha Nkandy'
+];
+function fillEmployeeList(existing){
+  const list = document.getElementById('patEmployeeList');
+  list.innerHTML = '';
+  const seen = new Set();
+  const add = (value, label) => {
+    const k = value.toLowerCase(); if(!value || seen.has(k)) return; seen.add(k);
+    const o = document.createElement('option'); o.value = value; if(label) o.label = label; list.appendChild(o);
+  };
+  (existing || []).forEach(n => add(n));
+  STAFF_ROSTER.forEach(full => add(full.split(' ')[0], full));
+}
 
 document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
   const status = document.getElementById('patStatus');
