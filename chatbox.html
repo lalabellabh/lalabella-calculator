@@ -122,6 +122,10 @@
   .msg.me .bubble{ background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; border-radius:16px 16px 5px 16px; }
   .msg.me .bubble.emoji-only{ color:inherit; }
   .bubble .t{ display:block; font-size:9.5px; opacity:.6; margin-top:3px; text-align:right; }
+  .bubble.bare{ background:none !important; padding:0; }
+  .bubble.bare .t{ color:var(--ink-dim); opacity:1; }
+  .msg.me .bubble .lbcm-vbtn{ background:rgba(255,255,255,.25); }
+  .msg.me .bubble .lbcm-vtrack{ background:rgba(255,255,255,.3); }
   .del-btn{ opacity:0; background:#fff; border:1px solid var(--line); color:#b23a3a; border-radius:50%; width:26px; height:26px; font-size:12px; cursor:pointer; flex-shrink:0; transition:opacity .15s; }
   .msg:hover .del-btn, .msg.show-del .del-btn{ opacity:1; }
   .empty-chat{ text-align:center; color:var(--ink-dim); font-size:13px; padding:40px 10px; }
@@ -163,11 +167,14 @@
 <script src="shared/nav.js" data-standalone></script>
 <script src="shared/chat-live.js"></script>
 <script src="shared/chat-sounds.js"></script>
+<script src="shared/chat-avatar.js"></script>
+<script src="shared/chat-media.js"></script>
 
 <div class="page">
   <div class="topline">
     <a class="back-link" href="index.html">&larr; Tools</a>
     <div class="top-tools">
+      <button class="pill-btn" id="avatarBtn" title="Make my avatar" hidden>🎨<span class="bg-lbl"> Avatar</span></button>
       <button class="pill-btn" id="settingsBtn" title="Chat settings">⚙️<span class="bg-lbl"> Settings</span></button>
       <input type="file" id="bgFile" accept="image/*" hidden>
       <div class="music-bar">
@@ -235,12 +242,10 @@
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <form class="composer" id="chatForm">
-        <button type="button" class="emoji-btn" id="emojiBtn" aria-label="Emoji">😊</button>
-        <div class="emoji-panel" id="emojiPanel">
-          <div class="emoji-tabs" id="emojiTabs"></div>
-          <div class="emoji-grid" id="emojiGrid"></div>
-        </div>
+        <button type="button" class="emoji-btn" id="emojiBtn" aria-label="Emoji, GIF and stickers" title="Emoji · GIF · Stickers">😊</button>
+        <button type="button" class="emoji-btn" id="photoBtn" aria-label="Send a photo" title="Send a photo">📷</button>
         <textarea id="chatInput" rows="1" maxlength="1000" placeholder="Write a message…" title="Enter to send · Shift+Enter for a new line"></textarea>
+        <button type="button" class="emoji-btn" id="micBtn" aria-label="Record a voice message" title="Voice message">🎤</button>
         <button type="submit" class="send-btn" aria-label="Send">➤</button>
       </form>
     </section>
@@ -277,7 +282,9 @@
   function avatarEl(personOrName, small, dot){
     const p = typeof personOrName === 'object' ? personOrName : { name: personOrName };
     const el = document.createElement('div'); el.className = 'av' + (small ? ' sm' : '');
-    if(p && p.avatar){
+    if(p && p.avatarCfg && window.lbChatAvatar){
+      const img = document.createElement('img'); img.src = lbChatAvatar.uri(p.avatarCfg); img.alt = ''; el.appendChild(img);
+    } else if(p && p.avatar){
       const img = document.createElement('img'); img.src = p.avatar; img.alt = ''; img.referrerPolicy = 'no-referrer';
       img.onerror = () => { img.remove(); el.insertBefore(document.createTextNode(initials(p.name)), el.firstChild); };
       el.appendChild(img);
@@ -418,8 +425,10 @@
       body.appendChild(who);
     }
     const br = document.createElement('div'); br.className = 'bubble-row';
-    const b = document.createElement('div'); b.className = 'bubble' + (EMOJI_RE.test(v.text) && [...v.text.trim()].length <= 8 ? ' emoji-only' : '');
-    b.appendChild(document.createTextNode(v.text));
+    const isMedia = v.kind && v.kind !== 'text' && window.lbChatMedia;
+    const b = document.createElement('div');
+    b.className = 'bubble' + (isMedia ? (v.kind === 'voice' ? '' : ' bare') : (EMOJI_RE.test(v.text) && [...v.text.trim()].length <= 8 ? ' emoji-only' : ''));
+    if(isMedia) b.appendChild(lbChatMedia.mediaEl(v)); else b.appendChild(document.createTextNode(v.text));
     const tm = document.createElement('span'); tm.className = 't'; tm.textContent = t.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); b.appendChild(tm);
     br.appendChild(b);
     if(mine || (isAdmin && !conv.peerId)){
@@ -513,34 +522,60 @@
       const d = await call('send', { text, peerId: conv.peerId || undefined });
       if(!d.success) throw new Error(d.error || 'failed');
       input.value = ''; autosize(); input.focus(); beep('send');
-      $('emojiPanel').classList.remove('show');
+      if(picker) picker.close();
       await poll(); box.scrollTop = box.scrollHeight;
     }catch(err){ alert(err.message && err.message !== 'failed' ? err.message : 'Could not send — please try again.'); }
     btn.disabled = false;
   });
 
-  // ---------- emoji picker ----------
-  const EMOJI = {
-    '😊': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😗 😋 😜 🤪 😎 🤩 🥳 😏 😌 😴 🤔 🤗 🤭 😮 😯 😲 😳 🥺 😢 😭 😤 😡 🤯 😱 😬 🙄 😷 🤒 🤧 🥱',
-    '👍': '👍 👎 👌 ✌️ 🤞 🤟 🤙 👏 🙌 👐 🙏 💪 👋 🤝 ✋ 👊 ✊ 🫶 👀 💃 🕺 🏃 🙋 🙆 🙅 🤷 🤦',
-    '🌸': '🌹 🥀 🌷 🌸 🌺 🌻 🌼 💐 🌿 🍀 🌱 🍃 🎀 🎁 🍫 🍬 🍭 🧁 🎂 🍰 🍩 🍪 ☕ 🧋 🍓 🍒 🍉',
-    '❤️': '❤️ 🧡 💛 💚 💙 💜 🤍 🖤 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ⚠️ ❗ ❓ 📦 🚚 🛵 📍 ⏰ 📅 📝 📸 💰 🎉 🎊'
-  };
-  let emojiTab = Object.keys(EMOJI)[0];
-  function renderEmoji(){
-    const tabs = $('emojiTabs'); tabs.innerHTML = '';
-    Object.keys(EMOJI).forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = k; if(k === emojiTab) b.className = 'on'; b.onclick = () => { emojiTab = k; renderEmoji(); }; tabs.appendChild(b); });
-    const grid = $('emojiGrid'); grid.innerHTML = '';
-    EMOJI[emojiTab].split(' ').forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.onclick = () => insertEmoji(e); grid.appendChild(b); });
+  // ---------- media: emoji/GIF/sticker picker, photo, voice, avatar (shared/chat-media.js) ----------
+  let picker = null;
+  async function sendPayload(payload){
+    const d = await call('send', Object.assign({ peerId: conv.peerId || undefined }, payload));
+    if(!d.success) throw new Error(d.error || 'Could not send — please try again.');
+    beep('send');
+    await poll(); box.scrollTop = box.scrollHeight;
+  }
+  if(!window.lbChatMedia){ $('emojiBtn').hidden = $('photoBtn').hidden = $('micBtn').hidden = true; }
+  else {
+    $('emojiBtn').addEventListener('click', () => {
+      if(!picker) picker = lbChatMedia.createPicker({
+        host: form, toggleBtn: $('emojiBtn'),
+        onEmoji: e => insertEmoji(e),
+        onGif: async (item, kind) => {
+          picker.close();
+          try{ await sendPayload({ kind, url: item.url, preview: item.preview, sig: item.sig }); }
+          catch(err){ alert(err.message); }
+        }
+      });
+      picker.toggle();
+    });
+    $('photoBtn').addEventListener('click', () => {
+      lbChatMedia.photoUI({ onSend: p => sendPayload({ kind: 'image', data: p.data, mime: p.mime }) });
+    });
+    $('micBtn').addEventListener('click', () => {
+      lbChatMedia.recordUI({ host: form, onSend: p => sendPayload({ kind: 'voice', data: p.data, mime: p.mime, durationMs: p.durationMs }) });
+    });
   }
   function insertEmoji(e){
     const s = input.selectionStart ?? input.value.length, en = input.selectionEnd ?? input.value.length;
     input.value = input.value.slice(0, s) + e + input.value.slice(en);
     const pos = s + e.length; input.setSelectionRange(pos, pos); input.focus(); autosize();
   }
-  $('emojiBtn').addEventListener('click', ev => { ev.stopPropagation(); renderEmoji(); $('emojiPanel').classList.toggle('show'); });
-  $('emojiPanel').addEventListener('click', ev => ev.stopPropagation());   // clicks inside keep it open
-  document.addEventListener('click', ev => { if(!ev.target.closest('#emojiBtn')) $('emojiPanel').classList.remove('show'); });
+  if(window.lbChatAvatar){
+    $('avatarBtn').hidden = false;
+    $('avatarBtn').addEventListener('click', () => {
+      const mine = people.find(p => p.me) || {};
+      lbChatAvatar.open({
+        cfg: mine.avatarCfg || null, hasPhoto: !!mine.avatar,
+        onSave: async cfg => {
+          const d = await call('avatarSave', { cfg: cfg === null ? '' : cfg });
+          if(!d.success) throw new Error(d.error || 'Could not save.');
+          await loadPeople();
+        }
+      });
+    });
+  }
 
   // ---------- background picture + chat transparency (saved on this device) ----------
   function applyBg(){
