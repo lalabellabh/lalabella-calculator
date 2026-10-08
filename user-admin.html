@@ -458,7 +458,14 @@ async function brainApi(params){
 }
 function remWhen(r){ return r.kind==='monthly' ? 'every month from day '+r.dayOfMonth : 'from '+String(r.startDate||'').slice(0,10); }
 function remWho(a){ if(a==='all') return 'Everyone'; if(a.indexOf('branch:')===0) return 'Branch '+a.slice(7); if(a.indexOf('user:')===0) return a.slice(5); return a; }
+async function loadNoteLinks(){
+  const sel=document.getElementById('remLink');
+  const d=await brainApi({action:'noteList'});
+  Array.from(sel.querySelectorAll('option[data-note]')).forEach(o=>o.remove());
+  if(d && d.success) (d.notes||[]).forEach(n=>{ const o=document.createElement('option'); o.value='brain.html#n'+n.id; o.dataset.note='1'; o.textContent='\uD83E\uDDE0 Note: '+n.title; sel.appendChild(o); });
+}
 async function loadReminders(){
+  loadNoteLinks();
   const box=document.getElementById('remList');
   const d=await brainApi({action:'adminList'});
   if(!d.success){ box.innerHTML='<span class="muted">'+esc(d.error||'Could not load reminders.')+'</span>'; return; }
