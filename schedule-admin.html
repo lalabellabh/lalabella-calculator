@@ -71,9 +71,41 @@
   details.raw{margin-top:16px;}
   details.raw summary{cursor:pointer;font-size:11.5px;color:var(--muted);}
   details.raw pre{white-space:pre-wrap;font-size:10.5px;background:#fbf7f6;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:220px;overflow:auto;margin-top:8px;color:#6b5a5e;}
+
+  /* weekly grid */
+  .wk-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;}
+  .wk-bar .field{flex:0 0 auto;min-width:170px;}
+  .wk-bar .field input[type=date]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:#fdf9f8;}
+  .wk-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
+  table.wk{border-collapse:collapse;width:100%;min-width:1080px;font-size:12px;}
+  table.wk th{background:#fbf3f2;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 6px;text-align:center;border-bottom:2px solid var(--line);position:sticky;top:0;}
+  table.wk th small{display:block;font-size:11px;letter-spacing:0;color:var(--ink);font-weight:700;text-transform:none;}
+  table.wk th.sun,table.wk th.wed{color:#c0392b;}
+  table.wk td{border-bottom:1px solid var(--line);padding:3px;vertical-align:middle;}
+  table.wk td.nm{min-width:130px;padding:6px 8px;font-weight:600;font-size:12.5px;}
+  table.wk td.nm small{display:block;font-weight:400;color:var(--muted);font-size:10px;line-height:1.3;}
+  table.wk input{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:6px;padding:7px 6px;font:inherit;font-size:12px;background:transparent;color:var(--ink);}
+  table.wk input:hover{border-color:var(--line);background:#fffaf9;}
+  table.wk input:focus{border-color:var(--rose);background:#fff;outline:none;}
+  table.wk input.off{background:#fdecea;color:var(--err);font-weight:600;}
+  table.wk td.br input,table.wk td.rl input{min-width:92px;}
+  table.wk td.day input{min-width:118px;}
+  table.wk .fillbtn{border:0;background:#f6eeee;color:var(--rose-dark);border-radius:6px;font-size:11px;padding:6px 8px;cursor:pointer;font-family:inherit;white-space:nowrap;}
 </style>
 </head>
 <body>
+<script>
+// Staff roster — suggested names (use the FIRST NAME as the schedule name:
+// "My Schedule" matches a login's first name against it).
+window.STAFF_ROSTER = [
+  'Janice Laurete Maglangit', 'Aguinaldo Manalastas', 'Mohammed Salah Abdelkhalek Hammad', 'Moses Musisi',
+  'Agus Suiyanto Bn Suyono Kasi', 'Stephen Ogyado', 'Oliver Cruz Garcia', 'Joyce Marie Cantillo Navidad',
+  'Mahmoud Awad Mahmoud', 'Louielyn Managaytay Tenebroso', 'Rohit Chumber', 'Nabadda Zaharah Golooba',
+  'Vincent Khadulo Ouma', 'Rhene Dungca Fabia', 'Antonio Ligtas Custodio', 'Benjamin Gutierrez Jr',
+  'Baneesh Kumar Chalatha Nkandy'
+];
+</script>
+
 <script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
 <div class="wrap">
   <div class="topbar">
@@ -84,6 +116,25 @@
   <div class="intro">
     <h1>Upload a week's schedule</h1>
     <p>Upload one PDF per week. Lalabella reads the text and its position on the page to rebuild the table — review and fix anything below before saving. Saving replaces only the week you pick; other weeks are untouched, so uploading week after week builds up the full month.</p>
+  </div>
+
+  <div class="card" id="weekGridCard">
+    <h2>Weekly schedule — everyone in one table</h2>
+    <p class="sub">Pick the Sunday the week starts on. Type each person's shift per day (or <b>Off</b>) — leave a day blank if it isn't scheduled. Use <b>Fill</b> to put the same shift on a person's blank days, then change only the days that differ. Saving replaces just this week; do it week by week to build the month.</p>
+    <div class="wk-bar">
+      <button type="button" class="btn ghost" id="wkPrev">‹ Prev week</button>
+      <div class="field"><label>Week starting (Sunday)</label><input type="date" id="wkDate"></div>
+      <button type="button" class="btn ghost" id="wkNext">Next week ›</button>
+      <button type="button" class="btn ghost" id="wkCopyPrev" title="Fill this table with last week's shifts">⧉ Copy from previous week</button>
+    </div>
+    <div class="wk-scroll"><table class="wk" id="wkTable"><thead></thead><tbody></tbody></table></div>
+    <datalist id="wkBranches"><option value="ModaMall"><option value="Hamala"><option value="Galali"></datalist>
+    <datalist id="wkShifts"><option value="Off"></datalist>
+    <div class="row-actions" style="margin-top:14px;">
+      <button type="button" class="btn primary" id="wkSave">Save this week</button>
+      <button type="button" class="btn ghost" id="wkClear">Clear table</button>
+      <span id="wkStatus" style="font-size:12.5px;"></span>
+    </div>
   </div>
 
   <div class="card" id="patternCard">
@@ -480,13 +531,7 @@ fetch(LB_CONFIG.SCHEDULE_FAST_API + '?action=getEmployees&token=' + encodeURICom
 // Staff roster — suggested names for the Quick option even when nobody has a
 // schedule saved yet. Use the FIRST NAME as the schedule name: "My Schedule"
 // matches a login's first name against it.
-const STAFF_ROSTER = [
-  'Janice Laurete Maglangit', 'Aguinaldo Manalastas', 'Mohammed Salah Abdelkhalek Hammad', 'Moses Musisi',
-  'Agus Suiyanto Bn Suyono Kasi', 'Stephen Ogyado', 'Oliver Cruz Garcia', 'Joyce Marie Cantillo Navidad',
-  'Mahmoud Awad Mahmoud', 'Louielyn Managaytay Tenebroso', 'Rohit Chumber', 'Nabadda Zaharah Golooba',
-  'Vincent Khadulo Ouma', 'Rhene Dungca Fabia', 'Antonio Ligtas Custodio', 'Benjamin Gutierrez Jr',
-  'Baneesh Kumar Chalatha Nkandy'
-];
+// (STAFF_ROSTER is defined in its own script near the top of <body>)
 function fillEmployeeList(existing){
   const list = document.getElementById('patEmployeeList');
   list.innerHTML = '';
@@ -543,5 +588,155 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
 });
 </script>
 <script src="joyboy-bubble.js"></script>
+<script>
+// ---------- weekly grid: everyone in one table ----------
+(function(){
+  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const API = LB_CONFIG.SCHEDULE_FAST_API;
+  const $ = id => document.getElementById(id);
+  const tbody = $('wkTable').tBodies[0], thead = $('wkTable').tHead;
+  const statusEl = $('wkStatus');
+  let all = null;          // every saved row (from getSchedule)
+  let dirty = false;
+  let meta = {};           // first name -> {role, branch} from saved data
+  const pad = n => String(n).padStart(2,'0');
+  const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
+  const sundayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate()-x.getDay()); return x; };
+  const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  function say(t, kind){ statusEl.style.color = kind==='err' ? 'var(--err)' : kind==='ok' ? 'var(--ok)' : 'var(--muted)'; statusEl.textContent = t || ''; }
+  function curSunday(){ const d = parse($('wkDate').value); return d ? sundayOf(d) : sundayOf(new Date()); }
+
+  function drawHead(sun){
+    const mon = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    thead.innerHTML = '<tr><th style="text-align:left">Name</th><th>Branch</th><th>Role</th>' +
+      DAYS.map((d,i)=>'<th class="'+(d==='SUN'||d==='WED'?'sun':'')+'">'+d+'<small>'+mon(addDays(sun,i))+'</small></th>').join('') + '<th></th></tr>';
+  }
+  function markOff(inp){ inp.classList.toggle('off', /^\s*off\s*$/i.test(inp.value)); }
+
+  function rowEl(name, full, role, branch, cells){
+    const tr = document.createElement('tr'); tr.dataset.name = name;
+    const nm = document.createElement('td'); nm.className = 'nm';
+    nm.textContent = name; if(full && full !== name){ const sm = document.createElement('small'); sm.textContent = full; nm.appendChild(sm); }
+    tr.appendChild(nm);
+    const mk = (cls, ph, val, list) => { const td = document.createElement('td'); td.className = cls; const i = document.createElement('input'); i.type='text'; i.placeholder = ph; i.value = val||''; if(list) i.setAttribute('list', list); td.appendChild(i); tr.appendChild(td); return i; };
+    const bi = mk('br','Branch', branch, 'wkBranches'); bi.dataset.f = 'branch';
+    const ri = mk('rl','Role', role); ri.dataset.f = 'role';
+    DAYS.forEach(d => { const i = mk('day','—', cells && cells[d], 'wkShifts'); i.dataset.day = d; markOff(i); i.addEventListener('input', ()=>{ markOff(i); dirty = true; }); });
+    [bi,ri].forEach(i => i.addEventListener('input', ()=>{ dirty = true; }));
+    const act = document.createElement('td'); const fb = document.createElement('button'); fb.type='button'; fb.className='fillbtn'; fb.textContent='Fill';
+    fb.title = 'Put the same shift on this person’s blank days';
+    fb.addEventListener('click', ()=>{
+      const t = prompt('Shift for ' + name + '’s blank days (e.g. 9AM to 9PM (1 HR break)):', '');
+      if(!t || !t.trim()) return;
+      tr.querySelectorAll('input[data-day]').forEach(i => { if(!i.value.trim()){ i.value = t.trim(); markOff(i); } });
+      dirty = true;
+    });
+    act.appendChild(fb); tr.appendChild(act);
+    return tr;
+  }
+
+  function weekData(sun){
+    const key = ymd(sun); const out = {};
+    (all || []).forEach(r => {
+      if(String(r.WeekOf).slice(0,10) !== key) return;
+      const n = String(r.Employee||'').trim(); if(!n) return;
+      (out[n] = out[n] || { role: r.Role||'', branch: r.HomeBranch||'', cells:{} }).cells[String(r.Day).toUpperCase().slice(0,3)] = r.ScheduleDetail;
+    });
+    return out;
+  }
+  function fullNameOf(first){ return (STAFF_ROSTER.find(f => f.split(' ')[0].toLowerCase() === first.toLowerCase()) || ''); }
+
+  function render(data){
+    const sun = curSunday(); drawHead(sun);
+    tbody.innerHTML = '';
+    const names = []; const seen = new Set();
+    const add = n => { const k = n.toLowerCase(); if(!seen.has(k)){ seen.add(k); names.push(n); } };
+    STAFF_ROSTER.forEach(f => add(f.split(' ')[0]));
+    Object.keys(data).forEach(add);
+    names.forEach(n => {
+      const key = Object.keys(data).find(k => k.toLowerCase() === n.toLowerCase());
+      const d = key ? data[key] : null;
+      const m = meta[n.toLowerCase()] || {};
+      tbody.appendChild(rowEl(key || n, fullNameOf(n), (d && d.role) || m.role || '', (d && d.branch) || m.branch || '', d ? d.cells : null));
+    });
+    dirty = false;
+  }
+
+  async function loadAll(){
+    say('Loading…');
+    try{
+      const res = await fetch(API + '?action=getSchedule&token=' + encodeURIComponent(token()), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } });
+      const data = await res.json();
+      if(!data.success) throw new Error(data.error || 'Could not load.');
+      all = data.schedule || [];
+      meta = {};
+      all.slice().sort((a,b) => String(a.WeekOf).localeCompare(String(b.WeekOf))).forEach(r => {   // latest week wins
+        const k = String(r.Employee||'').trim().toLowerCase(); if(!k) return;
+        meta[k] = { role: r.Role||'', branch: r.HomeBranch||'' };
+      });
+      const dl = $('wkShifts'); const shifts = new Set(['Off']);
+      all.forEach(r => { const t = String(r.ScheduleDetail||'').trim(); if(t) shifts.add(t); });
+      dl.innerHTML = ''; Array.from(shifts).slice(0,60).forEach(t => { const o = document.createElement('option'); o.value = t; dl.appendChild(o); });
+      say('');
+    }catch(e){ all = []; say('Could not load saved schedules: ' + e.message, 'err'); }
+  }
+
+  function readTable(){
+    const rows = [];
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const employee = tr.dataset.name;
+      const role = tr.querySelector('[data-f=role]').value.trim(), branch = tr.querySelector('[data-f=branch]').value.trim();
+      tr.querySelectorAll('input[data-day]').forEach(i => {
+        const v = i.value.trim(); if(!v) return;
+        rows.push({ employee, role, homeBranch: branch, day: i.dataset.day, scheduleDetail: v });
+      });
+    });
+    return rows;
+  }
+
+  async function goWeek(date){
+    if(dirty && !confirm('You have unsaved changes in this week. Leave without saving?')) { $('wkDate').value = ymd(curSunday()); return; }
+    $('wkDate').value = ymd(sundayOf(date));
+    if(all === null) await loadAll();
+    render(weekData(curSunday())); say('');
+  }
+
+  $('wkDate').addEventListener('change', () => { const d = parse($('wkDate').value); if(d) goWeek(d); });
+  $('wkPrev').addEventListener('click', () => goWeek(addDays(curSunday(), -7)));
+  $('wkNext').addEventListener('click', () => goWeek(addDays(curSunday(), 7)));
+  $('wkClear').addEventListener('click', () => { if(!confirm('Clear every shift in this table? (Nothing is deleted until you press Save.)')) return; tbody.querySelectorAll('input[data-day]').forEach(i => { i.value=''; markOff(i); }); dirty = true; });
+  $('wkCopyPrev').addEventListener('click', () => {
+    const prev = weekData(addDays(curSunday(), -7));
+    if(!Object.keys(prev).length){ say('No saved schedule for the previous week.', 'err'); return; }
+    if(dirty || tbody.querySelector('input[data-day]:not([value=""])')){ /* only warn when something is typed */
+      const any = Array.from(tbody.querySelectorAll('input[data-day]')).some(i => i.value.trim());
+      if(any && !confirm('Replace what is in the table with last week’s shifts?')) return;
+    }
+    render(prev); dirty = true; say('Copied from last week — adjust the days that differ, then Save.', 'ok');
+  });
+
+  $('wkSave').addEventListener('click', async () => {
+    const rows = readTable();
+    if(!rows.length){ say('Nothing to save — fill in at least one shift.', 'err'); return; }
+    const weekOf = ymd(curSunday());
+    if(!confirm('Save ' + rows.length + ' shifts for the week of ' + weekOf + '? This replaces everything saved for that week.')) return;
+    const btn = $('wkSave'); btn.disabled = true; btn.textContent = 'Saving…'; say('');
+    try{
+      const res = await fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'replaceScheduleWeek', token: token(), weekOf, rows: JSON.stringify(rows) }) });
+      const data = await res.json();
+      if(!data.success){ say(data.error || 'Could not save.', 'err'); }
+      else {
+        say('✓ Saved ' + data.saved + ' shifts for the week of ' + weekOf + '.', 'ok'); dirty = false;
+        all = (all||[]).filter(r => String(r.WeekOf).slice(0,10) !== weekOf).concat(rows.map(r => ({ Employee:r.employee, Role:r.role, HomeBranch:r.homeBranch, Day:r.day, ScheduleDetail:r.scheduleDetail, WeekOf:weekOf })));
+      }
+    }catch(e){ say('Connection error: ' + e.message, 'err'); }
+    btn.disabled = false; btn.textContent = 'Save this week';
+  });
+
+  window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
+  goWeek(new Date());
+})();
+</script>
 </body>
 </html>
