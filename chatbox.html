@@ -482,6 +482,11 @@
       const beforeTotal = Number(document.title.match(/^\((\d+)\)/)?.[1] || 0);
       const total = Object.values(unread.dm).reduce((a,b)=>a+b,0) + unread.group;
       document.title = (total ? '(' + total + ') ' : '') + 'Lalabella Chat';
+      // Keeps the hamburger profile dot (shared/nav.js) in sync when
+      // messages are read here, on the full chat page, rather than
+      // through the floating bubble — same event, same name, so nav.js
+      // doesn't need to know which of the two updated it.
+      window.dispatchEvent(new CustomEvent('lb:chat-unread', { detail: { total } }));
       if(total > beforeTotal && !firstLoad) beep('receive');
       renderConvs();
     }catch(e){}
