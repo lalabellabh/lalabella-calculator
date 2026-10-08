@@ -47,6 +47,16 @@
   .chip.off{background:#eee;color:#888;text-decoration:line-through}
   .chip button{padding:2px 8px;font-size:11px;border-radius:14px}
   .search{min-width:240px}
+
+  .rem-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:10px}
+  .rem-form .wide{grid-column:1/-1}
+  .rem-form label{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .rem-form input,.rem-form select,.rem-form textarea{width:100%;box-sizing:border-box}
+  .rem-form textarea{font:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fcfbf9;color:var(--ink);outline:none;min-height:64px;resize:vertical}
+  .rem-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:10px 4px;border-bottom:1px dashed #efe9e5}
+  .rem-row .rt{flex:1 1 260px;font-size:13.5px;line-height:1.45}
+  .rem-row .rt small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .rem-row.off .rt{opacity:.55;text-decoration:line-through}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
   td{padding:10px 8px;border-bottom:1px dashed #efe9e5;vertical-align:middle}
@@ -143,6 +153,28 @@
         <button class="primary" id="addPosBtn">Add Position</button>
       </div>
       <div class="msg" id="posMsg"></div>
+    </div>
+
+    <div class="card" id="remCard">
+      <div class="card-head"><h2>🔔 Reminders</h2><span class="muted">Shown to staff as a banner when they open the app. Auto-checks (like “no schedule yet”) already run on their own.</span></div>
+      <div class="rem-form">
+        <div class="wide"><label>Message</label><textarea id="remMsg" maxlength="500" placeholder="e.g. Please check your schedule for next month."></textarea></div>
+        <div><label>For</label>
+          <select id="remAud"><option value="all">Everyone</option><option value="branch:ModaMall">Branch: ModaMall</option><option value="branch:Hamala">Branch: Hamala</option><option value="branch:Galali">Branch: Galali</option><option value="user">One person…</option></select>
+          <input type="text" id="remUser" placeholder="First name, e.g. Oliver" style="display:none;margin-top:6px" maxlength="30">
+        </div>
+        <div><label>When</label>
+          <select id="remKind"><option value="once">Once, from a date</option><option value="monthly">Every month on day…</option></select>
+        </div>
+        <div id="remOnceBox"><label>Show from</label><input type="date" id="remDate"></div>
+        <div id="remMonthBox" style="display:none"><label>Day of the month (1–28)</label><input type="number" id="remDom" min="1" max="28" value="25"></div>
+        <div><label>Link (optional)</label>
+          <select id="remLink"><option value="">No link</option><option value="schedule.html">Duty schedule</option><option value="schedule-admin.html">Upload schedule</option><option value="schedule.html#me">My schedule (add yours)</option><option value="profile.html">My profile</option><option value="chatbox.html">Chat</option></select>
+        </div>
+      </div>
+      <div class="invite-row"><button class="primary" id="remAddBtn">Add reminder</button></div>
+      <div class="msg" id="remFormMsg"></div>
+      <div id="remList" style="margin-top:8px"><span class="muted">Loading…</span></div>
     </div>
 
     <div class="card">
@@ -415,9 +447,60 @@ document.getElementById('pwSave').addEventListener('click',async()=>{
   setMsg('tableMsg',d.message,true); closePw(); loadUsers();
 });
 
+
+/* ---------- reminders (brain-fast) ---------- */
+async function brainApi(params){
+  const body=new URLSearchParams(Object.assign({},params,{token:token()}));
+  const res=await fetch(LB_CONFIG.BRAIN_API,{method:'POST',body});
+  const d=await res.json();
+  if(d && d.reauth){ showLock(); }
+  return d;
+}
+function remWhen(r){ return r.kind==='monthly' ? 'every month from day '+r.dayOfMonth : 'from '+String(r.startDate||'').slice(0,10); }
+function remWho(a){ if(a==='all') return 'Everyone'; if(a.indexOf('branch:')===0) return 'Branch '+a.slice(7); if(a.indexOf('user:')===0) return a.slice(5); return a; }
+async function loadReminders(){
+  const box=document.getElementById('remList');
+  const d=await brainApi({action:'adminList'});
+  if(!d.success){ box.innerHTML='<span class="muted">'+esc(d.error||'Could not load reminders.')+'</span>'; return; }
+  if(!d.reminders.length){ box.innerHTML='<span class="muted">No reminders yet.</span>'; return; }
+  box.innerHTML='';
+  d.reminders.forEach(r=>{
+    const row=document.createElement('div'); row.className='rem-row'+(r.active?'':' off');
+    row.innerHTML='<div class="rt">'+esc(r.message)+'<small>'+esc(remWho(r.audience))+' · '+esc(remWhen(r))+(r.link?' · '+esc(r.link):'')+' · seen by '+r.seen+(r.active?'':' · paused')+'</small></div>'+
+      '<div class="actions"><button data-a="toggle">'+(r.active?'Pause':'Resume')+'</button><button class="danger" data-a="del">Delete</button></div>';
+    row.querySelector('[data-a=toggle]').addEventListener('click',async()=>{
+      const x=await brainApi({action:'adminSave',id:r.id,message:r.message,audience:r.audience,kind:r.kind,startDate:r.startDate||'',dayOfMonth:r.dayOfMonth||'',link:r.link,active:r.active?'false':'true'});
+      if(x.success) loadReminders(); else setMsg('remFormMsg',x.error||'Could not update.',false);
+    });
+    row.querySelector('[data-a=del]').addEventListener('click',async()=>{
+      if(!confirm('Delete this reminder?')) return;
+      const x=await brainApi({action:'adminDelete',id:r.id});
+      if(x.success) loadReminders(); else setMsg('remFormMsg',x.error||'Could not delete.',false);
+    });
+    box.appendChild(row);
+  });
+}
+(function(){
+  const $=id=>document.getElementById(id);
+  $('remDate').value=new Date(Date.now()+3*3600*1000).toISOString().slice(0,10);
+  $('remAud').addEventListener('change',()=>{ $('remUser').style.display=$('remAud').value==='user'?'':'none'; });
+  $('remKind').addEventListener('change',()=>{ const m=$('remKind').value==='monthly'; $('remMonthBox').style.display=m?'':'none'; $('remOnceBox').style.display=m?'none':''; });
+  $('remAddBtn').addEventListener('click',async()=>{
+    const message=$('remMsg').value.trim();
+    if(!message){ setMsg('remFormMsg','Write the message first.',false); return; }
+    let audience=$('remAud').value;
+    if(audience==='user'){ const n=$('remUser').value.trim(); if(!n){ setMsg('remFormMsg','Type the person’s first name.',false); return; } audience='user:'+n; }
+    const btn=$('remAddBtn'); btn.disabled=true;
+    const d=await brainApi({action:'adminSave',message,audience,kind:$('remKind').value,startDate:$('remDate').value,dayOfMonth:$('remDom').value,link:$('remLink').value});
+    btn.disabled=false;
+    if(!d.success){ setMsg('remFormMsg',d.error||'Could not save.',false); return; }
+    $('remMsg').value=''; setMsg('remFormMsg','Reminder added — staff will see it the next time they open the app.',true); loadReminders();
+  });
+})();
+
 /* start: always ask for the password first */
 function startAdmin(){
-  loadPositions().then(loadUsers).then(ok=>{ if(ok) loadInvite(); }).catch(()=>{
+  loadPositions().then(loadUsers).then(ok=>{ if(ok){ loadInvite(); loadReminders(); } }).catch(()=>{
     document.getElementById('adminArea').style.display='block';
     setMsg('tableMsg','Connection error — please check your connection.',false);
   });
