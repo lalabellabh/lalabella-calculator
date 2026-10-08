@@ -260,7 +260,11 @@
       '.lb-menu-avatar-fallback{display:flex;align-items:center;justify-content:center;background:var(--teal,#1f8a8a);color:#fff;font-weight:700;font-size:16px;}' +
       '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
       '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-      '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}';
+      '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.lb-menu-profile{position:relative;}' +
+      '.lb-menu-profile::after{content:"";position:absolute;left:30px;top:8px;width:11px;height:11px;border-radius:50%;' +
+        'background:#e03a3a;border:2px solid #fdfbf7;display:none;}' +
+      '.lb-menu-profile.lb-menu-has-unread::after{display:block;}';
     document.head.appendChild(st);
   }
   // ---- Standalone drawer (pages that don't have their own) ----
@@ -499,4 +503,37 @@
   window.addEventListener('lb:user-changed', renderAll);
   window.addEventListener('lb:theme-changed', drawSettings);
   window.addEventListener('storage', e => { if (e.key === 'lalabellaUser' || e.key === PREFS_KEY) renderAll(); });
+
+  // Joyboy floating chat bubble — loaded here, once, instead of a
+  // <script> tag pasted into every page, so turning it on/off (or
+  // changing which pages carry it) everywhere is a one-file change.
+  // Every page that loads nav.js already loaded shared/config.js first
+  // (LB_CONFIG, which joyboy-bubble.js needs, is always script-tag #1),
+  // so this is safe to inject unconditionally here.
+  if (!document.getElementById('joyboy-bubble-btn') && !document.querySelector('script[src="joyboy-bubble.js"]')) {
+    const jb = document.createElement('script');
+    jb.src = 'joyboy-bubble.js';
+    document.body.appendChild(jb);
+  }
+
+  // Staff chat floating bubble — same one-file-change reasoning as
+  // Joyboy above. Skipped on chatbox.html itself: that page already
+  // IS the full chat, a floating copy of it there would be redundant.
+  if (!/chatbox\.html$/i.test(location.pathname) &&
+      !document.getElementById('lbcb-btn') && !document.querySelector('script[src="shared/chat-bubble.js"]')) {
+    const cb = document.createElement('script');
+    cb.src = 'shared/chat-bubble.js';
+    document.body.appendChild(cb);
+  }
+
+  // Unread-chat dot on the hamburger profile header — chat-bubble.js
+  // dispatches this event whenever the unread total changes (and so
+  // will chatbox.html's own page script, once it's wired the same
+  // way), so this is the only place that needs to know how to draw
+  // the dot.
+  window.addEventListener('lb:chat-unread', e => {
+    document.querySelectorAll('.lb-menu-profile').forEach(p => {
+      p.classList.toggle('lb-menu-has-unread', !!(e.detail && e.detail.total > 0));
+    });
+  });
 })();
