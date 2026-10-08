@@ -3,6 +3,7 @@
 <head>
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/tool-edit.js"></script>
 <meta name="robots" content="noindex, nofollow">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -510,6 +511,25 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <a class="card" href="notes.html?from=index" data-card-key="notes.html"><div class="card-icon">📝</div><div class="card-kicker">Reminders</div><h3 data-edit-key="card-notes-title">Notes</h3><p data-edit-key="card-notes-desc">Quick notes and reminders for the team.</p><span class="open">Open →</span></a>
 <a class="card" href="item-inventory.html?from=index" data-card-key="item-inventory.html"><div class="card-icon">📦</div><div class="card-kicker">Supplies</div><h3 data-edit-key="card-iteminv-title">Item Inventory</h3><p data-edit-key="card-iteminv-desc">Ribbon, vase, supplies and fixed assets — with barcodes.</p><span class="open">Open →</span></a>
 </div>
+<script>
+  // Per-device tool editor (✏️): hide / reorder the tool cards.
+  try{ // one-time: carry over the old drag order
+    if(!localStorage.getItem('lbToolsIndex')){
+      const old = JSON.parse(localStorage.getItem('lalabellaCardOrder') || 'null');
+      if(Array.isArray(old)) localStorage.setItem('lbToolsIndex', JSON.stringify({order: old, hidden: []}));
+    }
+  }catch(e){}
+  LBToolEdit.apply({
+    container: '#toolsGrid',
+    item: '.card[data-card-key]',
+    key: el => el.dataset.cardKey,
+    storageKey: 'lbToolsIndex',
+    title: 'Lalabella Tools',
+    buttonIn: '#tools',
+    activeClass: '__none__'
+  });
+</script>
+
 </section>
 </main>
 <footer id="about" data-edit-key="footer">Thank you for being part of <span>Lalabella</span> 🌹<br><span style="font-size:11px;"><a href="privacy-policy.html" style="color:inherit;">Privacy Policy</a> · <a href="terms-of-use.html" style="color:inherit;">Terms of Use</a> · <a href="licenses.html" style="color:inherit;">Third-Party Software</a></span></footer>
@@ -672,27 +692,18 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     }catch(e){}
   }
 
-  function loadOrder(){
-    if(!grid) return;
-    try{
-      const order = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
-      if(!Array.isArray(order)) return;
-      order.forEach(key=>{
-        const card = grid.querySelector('.card[data-card-key="'+CSS.escape(key)+'"]');
-        if(card) grid.appendChild(card);
-      });
-    }catch(e){}
-  }
-
+  const TOOLS_KEY = 'lbToolsIndex';   // shared with shared/tool-edit.js (✏️ editor)
   function saveOrder(){
     if(!grid) return;
     try{
-      const order = Array.from(grid.querySelectorAll('.card[data-card-key]')).map(c=>c.dataset.cardKey);
-      localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+      const prefs = JSON.parse(localStorage.getItem(TOOLS_KEY) || '{}') || {};
+      const vis = Array.from(grid.querySelectorAll('.card[data-card-key]')).map(c=>c.dataset.cardKey);
+      const rest = (Array.isArray(prefs.order) ? prefs.order : []).filter(k=>vis.indexOf(k)===-1);
+      prefs.order = vis.concat(rest);
+      localStorage.setItem(TOOLS_KEY, JSON.stringify(prefs));
     }catch(e){}
   }
 
-  loadOrder();
   loadEdits();
 
   const editToolbar = document.getElementById('editToolbar');
@@ -743,7 +754,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
 
   resetEditsBtn.addEventListener('click', ()=>{
     if(!confirm('Reset all edited text and card order back to default?')) return;
-    try{ localStorage.removeItem(EDIT_KEY); localStorage.removeItem(ORDER_KEY); }catch(e){}
+    try{ localStorage.removeItem(EDIT_KEY); localStorage.removeItem(ORDER_KEY); localStorage.removeItem(TOOLS_KEY); }catch(e){}
     location.reload();
   });
 
