@@ -91,6 +91,12 @@
   table.wk td.br input,table.wk td.rl input{min-width:92px;}
   table.wk td.day input{min-width:118px;}
   table.wk .fillbtn{border:0;background:#f6eeee;color:var(--rose-dark);border-radius:6px;font-size:11px;padding:6px 8px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+
+  details.more{margin-top:6px;} details.more>summary{cursor:pointer;font-size:12.5px;color:var(--muted);padding:10px 4px;}
+  table.wk th:nth-child(3), table.wk td.rl{display:none;}
+  table.wk td.nm small{display:none;}
+  table.wk td.day input{min-width:150px;}
+  table.wk{min-width:1250px;}
 </style>
 </head>
 <body>
@@ -118,19 +124,19 @@ window.schedName = function(full){ const f = String(full).split(' ')[0]; return 
   </div>
 
   <div class="intro">
-    <h1>Upload a week's schedule</h1>
-    <p>Upload one PDF per week. Lalabella reads the text and its position on the page to rebuild the table — review and fix anything below before saving. Saving replaces only the week you pick; other weeks are untouched, so uploading week after week builds up the full month.</p>
+    <h1>Monthly schedule</h1>
+    <p><b>1</b> Pick the week &nbsp;·&nbsp; <b>2</b> Upload the PDF (names are found for you) &nbsp;·&nbsp; <b>3</b> Save — it is copied to the whole month.</p>
   </div>
 
   <div class="card" id="weekGridCard">
-    <h2>Weekly schedule — everyone in one table</h2>
-    <p class="sub">Pick the Sunday the week starts on. Type each person's shift per day (or <b>Off</b>) — leave a day blank if it isn't scheduled. Use <b>Fill</b> to put the same shift on a person's blank days, then change only the days that differ. Saving replaces just this week; do it week by week to build the month.</p>
+    <h2>Everyone's schedule</h2>
+    <p class="sub">Fix any time or Off in the table, then save. Leave a day blank if the person isn't scheduled.</p>
     <div class="wk-bar">
+      <button type="button" class="btn primary" id="wkPdfBtn" title="Read a duty-schedule PDF and fill this table">📄 Upload PDF</button>
       <button type="button" class="btn ghost" id="wkPrev">‹ Prev week</button>
       <div class="field"><label>Week starting (Sunday)</label><input type="date" id="wkDate"></div>
       <button type="button" class="btn ghost" id="wkNext">Next week ›</button>
       <button type="button" class="btn ghost" id="wkCopyPrev" title="Fill this table with last week's shifts">⧉ Copy from previous week</button>
-      <button type="button" class="btn ghost" id="wkPdfBtn" title="Read a duty-schedule PDF and fill this table">📄 Fill from a PDF</button>
       <input type="file" id="wkPdfInput" accept="application/pdf">
     </div>
     <div id="wkPdfMsg" style="display:none;font-size:12.5px;line-height:1.55;margin:-4px 0 12px;"></div>
@@ -147,6 +153,7 @@ window.schedName = function(full){ const f = String(full).split(' ')[0]; return 
     </div>
   </div>
 
+  <details class="more"><summary>More tools — check missing days, delete old schedule, quick pattern</summary>
   <div class="card" id="cleanCard">
     <h2>Check &amp; clean up</h2>
     <p class="sub">See who has missing days in the month shown above, and delete old schedules you no longer need.</p>
@@ -210,6 +217,7 @@ window.schedName = function(full){ const f = String(full).split(' ')[0]; return 
     </div>
   </div>
 
+  </details>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -466,7 +474,11 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
       });
       render(data); dirty = true;
       const unknown = res.employees.filter(e => !STAFF_ROSTER.some(full => schedName(full).toLowerCase() === e.name.toLowerCase())).map(e => e.name);
-      let html = '✓ Read <b>' + res.employees.length + ' people</b> from the PDF into the week of ' + ymd(sun) + '. Check the table, fix anything, then press <b>Save this week</b>.';
+      const foundSet = new Set(res.employees.map(e => e.name.toLowerCase()));
+      const missingNames = STAFF_ROSTER.map(schedName).filter(n => !foundSet.has(n.toLowerCase()));
+      const mo = monthOf(sun);
+      let html = '✓ Found <b>' + res.employees.length + ' people</b> in the PDF. Check the table, then press <b>Save the whole month</b> — this week is copied to every week of ' + MONTHS[mo.m] + ' ' + mo.y + '.';
+      if(missingNames.length) html += '<br>Not found in the PDF (left blank): ' + escH(missingNames.join(', ')) + '.';
       if(unknown.length) html += '<br>Not on your staff list (added as new rows): ' + escH(unknown.join(', ')) + '.';
       if(res.warnings.length) html += '<div style="color:#a05a00;margin-top:6px;">⚠ Please check:<ul style="margin:4px 0 0 18px;padding:0;">' + res.warnings.map(w => '<li>' + escH(w) + '</li>').join('') + '</ul></div>';
       pdfSay(html, 'ok');
