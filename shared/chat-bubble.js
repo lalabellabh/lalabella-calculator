@@ -20,6 +20,8 @@
       if (existing) {
         if (window.lbChatApi && src.indexOf('chat-live') !== -1) return resolve();
         if (window.lbChatSound && src.indexOf('chat-sounds') !== -1) return resolve();
+        if (window.lbChatAvatar && src.indexOf('chat-avatar') !== -1) return resolve();
+        if (window.lbChatMedia && src.indexOf('chat-media') !== -1) return resolve();
         existing.addEventListener('load', resolve);
         existing.addEventListener('error', resolve);
         return;
@@ -34,7 +36,9 @@
 
   Promise.all([
     loadScriptOnce('shared/chat-live.js'),
-    loadScriptOnce('shared/chat-sounds.js')
+    loadScriptOnce('shared/chat-sounds.js'),
+    loadScriptOnce('shared/chat-avatar.js'),
+    loadScriptOnce('shared/chat-media.js')
   ]).then(init);
 
   function init(){
@@ -76,6 +80,13 @@
       #lbcb-head-sub{ font-size:10.5px; opacity:.75; }
       #lbcb-openfull{ background:none; border:none; color:#fff; font-size:13px; cursor:pointer; opacity:.85; text-decoration:none; }
       #lbcb-openfull:hover{ opacity:1; }
+      #lbcb-avatar{ background:none; border:none; color:#fff; font-size:14px; cursor:pointer; opacity:.85; padding:0 2px; }
+      #lbcb-avatar:hover{ opacity:1; }
+      .lbcb-ib{ width:30px; height:34px; border:0; background:none; font-size:17px; cursor:pointer; padding:0; flex:0 0 auto; }
+      .lbcb-msg.bare{ background:none; border:none; padding:0; }
+      .lbcb-msg.bare .t{ color:#8a7078; }
+      .lbcb-msg.me .lbcm-vbtn{ background:rgba(255,255,255,.25); }
+      .lbcb-msg.me .lbcm-vtrack{ background:rgba(255,255,255,.3); }
       #lbcb-close{ background:none; border:none; color:#fff; font-size:17px; cursor:pointer; opacity:.8; }
       #lbcb-close:hover{ opacity:1; }
       #lbcb-search{ padding:8px 10px; border-bottom:1px solid #f0dede; }
@@ -99,11 +110,11 @@
       .lbcb-msg{ max-width:82%; padding:8px 11px; border-radius:12px; font-size:12.5px; line-height:1.45; align-self:flex-start; background:#fff; color:#2f2024; border:1px solid #f0dede; border-bottom-left-radius:3px; word-break:break-word; white-space:pre-wrap; }
       .lbcb-msg.me{ align-self:flex-end; background:#c9506b; color:#fff; border:none; border-bottom-right-radius:3px; }
       .lbcb-msg .t{ display:block; font-size:9px; opacity:.6; margin-top:3px; text-align:right; }
-      #lbcb-input-row{ display:none; gap:7px; padding:10px; border-top:1px solid #f0dede; background:#fff; }
+      #lbcb-input-row{ display:none; gap:6px; padding:10px; border-top:1px solid #f0dede; background:#fff; position:relative; align-items:center; }
       #lbcb-input-row.show{ display:flex; }
-      #lbcb-input{ flex:1; padding:9px 11px; border:1px solid #f0dede; border-radius:18px; font-size:12.5px; outline:none; font-family:inherit; }
+      #lbcb-input{ flex:1; min-width:0; padding:9px 11px; border:1px solid #f0dede; border-radius:18px; font-size:12.5px; outline:none; font-family:inherit; }
       #lbcb-input:focus{ border-color:#c9506b; }
-      #lbcb-send{ width:34px; height:34px; border-radius:50%; border:none; background:#c9506b; color:#fff; font-size:13px; cursor:pointer; flex:0 0 auto; }
+      #lbcb-send{ width:34px; height:34px; flex:0 0 34px; border-radius:50%; border:none; background:#c9506b; color:#fff; font-size:13px; cursor:pointer; flex:0 0 auto; }
       #lbcb-send:disabled{ opacity:.5; }
       @media print{ #lbcb-btn, #lbcb-panel{ display:none !important; } }
       @media(max-width:420px){ #lbcb-panel{ left:12px; } #lbcb-btn{ left:12px; width:46px; height:46px; font-size:19px; } }
@@ -123,6 +134,7 @@
       <div id="lbcb-head">
         <button id="lbcb-back" aria-label="Back">‹</button>
         <div id="lbcb-head-title"><b id="lbcb-head-name">Chats</b><div id="lbcb-head-sub"></div></div>
+        <button id="lbcb-avatar" aria-label="My avatar" title="Make my avatar" hidden>🎨</button>
         <a id="lbcb-openfull" href="chatbox.html" title="Open full chat">⤢</a>
         <button id="lbcb-close" aria-label="Close">✕</button>
       </div>
@@ -130,7 +142,10 @@
       <div id="lbcb-list"></div>
       <div id="lbcb-msgs"></div>
       <div id="lbcb-input-row">
+        <button class="lbcb-ib" id="lbcb-emoji" aria-label="Emoji, GIF and stickers" title="Emoji · GIF · Stickers">😊</button>
+        <button class="lbcb-ib" id="lbcb-photo" aria-label="Send a photo" title="Send a photo">📷</button>
         <input type="text" id="lbcb-input" placeholder="Message…" maxlength="1000">
+        <button class="lbcb-ib" id="lbcb-mic" aria-label="Record a voice message" title="Voice message">🎤</button>
         <button id="lbcb-send" aria-label="Send">➤</button>
       </div>
     `;
@@ -155,7 +170,10 @@
     function initials(n){ return String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
     function avatarEl(p, dot){
       const el = document.createElement('div'); el.className = 'lbcb-av';
-      if (p && p.avatar) {
+      if (p && p.avatarCfg && window.lbChatAvatar) {
+        const img = document.createElement('img'); img.src = lbChatAvatar.uri(p.avatarCfg); img.alt = '';
+        el.appendChild(img);
+      } else if (p && p.avatar) {
         const img = document.createElement('img'); img.src = p.avatar; img.alt = ''; img.referrerPolicy = 'no-referrer';
         img.onerror = function(){ img.remove(); el.insertBefore(document.createTextNode(initials(p.name)), el.firstChild); };
         el.appendChild(img);
@@ -237,6 +255,7 @@
 
     function showListView(){
       conv = null;
+      if (picker) picker.close();
       listEl.style.display = ''; searchInput.parentElement.style.display = '';
       msgsEl.classList.remove('show'); inputRow.classList.remove('show'); backBtn.classList.remove('show');
       headName.textContent = 'Chats'; headSub.textContent = '';
@@ -262,8 +281,10 @@
         sep.textContent = dayLabel(t); msgsEl.appendChild(sep); lastMsg = null;
       }
       const el = document.createElement('div');
-      el.className = 'lbcb-msg' + (mine ? ' me' : '');
-      el.appendChild(document.createTextNode(v.text));
+      const isMedia = v.kind && v.kind !== 'text' && window.lbChatMedia;
+      el.className = 'lbcb-msg' + (mine ? ' me' : '') + (isMedia && v.kind !== 'voice' ? ' bare' : '');
+      if (isMedia) el.appendChild(lbChatMedia.mediaEl(v));
+      else el.appendChild(document.createTextNode(v.text));
       const tm = document.createElement('span'); tm.className = 't'; tm.textContent = t.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
       el.appendChild(tm);
       msgsEl.appendChild(el);
@@ -342,6 +363,54 @@
       }catch(err){ /* quietly retry-able — the input already cleared is acceptable here, panel is compact */ }
       sendBtn.disabled = false; inputEl.focus();
     }
+    // ---- media: voice, photo, GIF/sticker, emoji picker, avatar ----
+    async function sendPayload(payload){
+      if (!conv) throw new Error('Open a chat first.');
+      const d = await lbChatApi('send', Object.assign({ peerId: conv.peerId || undefined }, payload));
+      if (!d.success) throw new Error(d.error || 'Could not send. Try again.');
+      if (window.lbChatSound) lbChatSound.play('send');
+      await poll();
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+    const emojiBtn = document.getElementById('lbcb-emoji'), photoBtn = document.getElementById('lbcb-photo'),
+          micBtn = document.getElementById('lbcb-mic'), avatarBtn = document.getElementById('lbcb-avatar');
+    let picker = null;
+    if (!window.lbChatMedia) { emojiBtn.hidden = photoBtn.hidden = micBtn.hidden = true; }
+    else {
+      emojiBtn.addEventListener('click', function(){
+        if (!picker) picker = lbChatMedia.createPicker({
+          host: inputRow, toggleBtn: emojiBtn,
+          onEmoji: function(e){ inputEl.value += e; inputEl.focus(); },
+          onGif: async function(item, kind){
+            picker.close();
+            try { await sendPayload({ kind: kind, url: item.url, preview: item.preview, sig: item.sig }); }
+            catch (err) { alert(err.message); }
+          }
+        });
+        picker.toggle();
+      });
+      photoBtn.addEventListener('click', function(){
+        lbChatMedia.photoUI({ onSend: function(p){ return sendPayload({ kind: 'image', data: p.data, mime: p.mime }); } });
+      });
+      micBtn.addEventListener('click', function(){
+        lbChatMedia.recordUI({ host: inputRow, onSend: function(p){ return sendPayload({ kind: 'voice', data: p.data, mime: p.mime, durationMs: p.durationMs }); } });
+      });
+    }
+    if (window.lbChatAvatar) {
+      avatarBtn.hidden = false;
+      avatarBtn.addEventListener('click', function(){
+        const mine = people.find(function(p){ return p.me; }) || {};
+        lbChatAvatar.open({
+          cfg: mine.avatarCfg || null, hasPhoto: !!mine.avatar,
+          onSave: async function(cfg){
+            const d = await lbChatApi('avatarSave', { cfg: cfg === null ? '' : cfg });
+            if (!d.success) throw new Error(d.error || 'Could not save.');
+            await loadPeople();
+          }
+        });
+      });
+    }
+
     sendBtn.addEventListener('click', sendMessage);
     inputEl.addEventListener('keydown', function(e){ if (e.key === 'Enter') sendMessage(); });
 
