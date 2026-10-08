@@ -192,6 +192,57 @@ from public.duty_schedule_archive
 where week_of >= date '2026-10-01';
 ```
 </script>
+<script type="text/plain" class="seed" data-title="Usage limits & storage" data-tags="supabase,limits,chat">
+# Usage limits & storage
+
+Supabase **free plan**: 1 GB file storage, 500 MB database, 5 GB bandwidth a month. The system protects itself — see [[System map]].
+
+## What is already automatic
+- **Chat photos/voice:** max **30 per person per day**; each file max 1.5 MB; voice max 60 s.
+- Chat media is **deleted after 30 days** (shows as "expired").
+- **Storage guard:** when storage reaches **850 MB**, photo/voice sending pauses for everyone (text and GIFs still work).
+- **Banner for you** (admin/IT) when storage or database reaches **70%**.
+- Staff see a banner when they have 5 or fewer photo/voice sends left for the day.
+- Old duty schedule is archived/cleaned monthly — [[Monthly schedule cleanup (SQL)]].
+
+## To change a limit
+Edit the numbers at the top of the `chat` function: `MEDIA_PER_DAY`, `MAX_MEDIA_BYTES`, `RETENTION_DAYS`, `STORAGE_STOP_BYTES`.
+
+## 1. Check how full we are
+```sql
+select pg_size_pretty((public.lb_usage()->>'db_bytes')::bigint) as database,
+       pg_size_pretty((public.lb_usage()->>'storage_bytes')::bigint) as storage,
+       pg_size_pretty((public.lb_usage()->>'chat_bytes')::bigint) as chat_media;
+```
+
+## 2. What is the biggest table?
+```sql
+select relname, pg_size_pretty(pg_total_relation_size(oid)) as size
+from pg_class where relkind = 'r' and relnamespace = 'public'::regnamespace
+order by pg_total_relation_size(oid) desc limit 10;
+```
+
+## 3. Emergency: free chat storage now
+Marks every chat photo/voice older than 7 days as expired. Then delete the files in Supabase → Storage → `chat-media` (select all → Delete).
+```sql
+update public.chat_messages
+set media_expired = true, media_path = null
+where media_path is not null and created_at < now() - interval '7 days';
+```
+</script>
+<script type="text/plain" class="seed" data-title="Security to-do" data-tags="security,todo">
+# Security to-do
+
+Things still open (tick them off by editing this note):
+- [ ] Change the `AUTH_TOKEN` secret (rotate it)
+- [ ] Remove the old legacy admin password
+- [ ] Add `OPENAI_API_KEY` for `nova-fast`
+- [ ] Set `GIF_API_KEY` secret, then test GIFs and stickers in chat
+- [ ] Legal review of the policy pages; mention voice/photos kept for 30 days in the privacy policy
+- [ ] Optional: delete the old backup table `duty_schedule_backup_20261008`
+
+See [[System map]] and [[Usage limits & storage]].
+</script>
 
 <script>
 (function(){
@@ -305,7 +356,8 @@ where week_of >= date '2026-10-01';
       $('main').innerHTML = '<h1 style="font-family:Fraunces,serif;margin:0 0 6px">Your vault is empty</h1><p class="hint" style="font-size:13px">Notes live here: system rules, SQL you want to copy, monthly routines. Link them with [[double brackets]] like Obsidian.</p><button class="btn primary" id="seedBtn">Add starter notes</button><div class="msg" id="seedMsg"></div>';
       $('seedBtn').addEventListener('click', seed);
     } else {
-      $('main').innerHTML = '<h1 style="font-family:Fraunces,serif;margin:0 0 6px">Brain Vault</h1><p class="hint" style="font-size:13px;line-height:1.7">Pick a note on the left, or press <b>+ New</b>.<br>Tip: put long SQL or code between three backticks and it gets a <b>Copy</b> button. Reminders can open a note straight from the banner (User Management → Reminders → Link).</p>';
+      $('main').innerHTML = '<h1 style="font-family:Fraunces,serif;margin:0 0 6px">Brain Vault</h1><p class="hint" style="font-size:13px;line-height:1.7">Pick a note on the left, or press <b>+ New</b>.<br>Tip: put long SQL or code between three backticks and it gets a <b>Copy</b> button. Reminders can open a note straight from the banner (User Management → Reminders → Link).</p>' + (missingSeeds() ? '<button class="btn primary" id="seedBtn">Add ' + missingSeeds() + ' new starter note' + (missingSeeds() > 1 ? 's' : '') + '</button><div class="msg" id="seedMsg"></div>' : '');
+      if($('seedBtn')) $('seedBtn').addEventListener('click', seed);
     }
   }
   async function copyText(text, btn){
@@ -320,10 +372,12 @@ where week_of >= date '2026-10-01';
   });
 
   // ---------- starter notes ----------
+  function missingSeeds(){ let c = 0; document.querySelectorAll('script.seed').forEach(el => { if(!notes.some(n => n.title.toLowerCase() === el.dataset.title.toLowerCase())) c++; }); return c; }
   async function seed(){
     const btn = $('seedBtn'); btn.disabled = true; $('seedMsg').textContent = 'Adding…';
     let firstId = '', cleanupId = '';
     for(const el of document.querySelectorAll('script.seed')){
+      if(notes.some(n => n.title.toLowerCase() === el.dataset.title.toLowerCase())) continue;
       const d = await api({ action: 'noteSave', title: el.dataset.title, tags: el.dataset.tags, body: el.textContent.replace(/^\n/, '') });
       if(d.success && !firstId) firstId = d.id;
       if(d.success && el.dataset.title.indexOf('cleanup') !== -1) cleanupId = d.id;
@@ -332,7 +386,7 @@ where week_of >= date '2026-10-01';
     try{
       const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}');
       const first = String(u.fullName || '').trim().split(/\s+/)[0];
-      if(cleanupId && first) await api({ action: 'adminSave', message: 'Monthly: upload next month’s schedule. The old-month cleanup runs by itself — the SQL code is in this note if you ever need to copy it.', audience: 'user:' + first, kind: 'monthly', dayOfMonth: 25, link: 'brain.html#n' + cleanupId });
+      if(cleanupId && first && !notes.length) await api({ action: 'adminSave', message: 'Monthly: upload next month’s schedule. The old-month cleanup runs by itself — the SQL code is in this note if you ever need to copy it.', audience: 'user:' + first, kind: 'monthly', dayOfMonth: 25, link: 'brain.html#n' + cleanupId });
     }catch(e){}
     await load(); location.hash = firstId ? '#n' + firstId : ''; route();
   }
