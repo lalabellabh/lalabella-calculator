@@ -82,6 +82,9 @@
   .date-cell .shift-txt{margin-top:5px;font-size:10.5px;line-height:1.35;color:var(--ink);font-weight:600;}
   .date-cell .shift-txt.off-txt{color:var(--muted);font-weight:500;}
   .date-cell .branch-txt{margin-top:3px;font-size:9.5px;color:#3a5c46;background:#eef2ee;display:inline-block;padding:1px 6px;border-radius:8px;}
+  .date-cell .branch-txt.alt{background:#fdeee0;color:#9a5b17;font-weight:600;}
+  .date-cell .note-txt{margin-top:3px;font-size:9px;line-height:1.3;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;}
+  .note-tip{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;max-width:min(420px,calc(100% - 32px));background:#2f2024;color:#fff;font-size:13px;line-height:1.5;padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);}
 
   .date-cell.hit:not(:first-child)::after{content:'';position:absolute;left:-9px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold-light);opacity:0;animation:dotFade .3s ease forwards .15s;}
   @keyframes dotFade{ to{ opacity:1; } }
@@ -340,7 +343,7 @@ async function loadEmployees(){
 async function loadScheduleFor(employeeName){
   hideCalEmptyMessage();
   currentSchedule = null;
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.note-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
   const titleEl0 = document.getElementById('calTitleText');
   if(titleEl0) titleEl0.innerHTML = 'Loading ' + employeeName + '\u2019s schedule\u2026';
   const roleTagEl0 = document.getElementById('calRoleTag');
@@ -397,6 +400,13 @@ async function loadScheduleFor(employeeName){
   }
 }
 
+function showNoteTip(text){
+  let tip = document.getElementById('noteTip');
+  if(!tip){ tip = document.createElement('div'); tip.id = 'noteTip'; tip.className = 'note-tip'; tip.style.whiteSpace = 'pre-line'; document.body.appendChild(tip);
+    document.addEventListener('click', () => { tip.style.display = 'none'; }); }
+  tip.textContent = text; tip.style.display = 'block';
+}
+
 function applyScheduleToGrid(records, animate){
   // Group by "WeekOf|Day" instead of just "Day" — with multiple
   // weeks of data now on file, keying by Day alone meant every
@@ -410,7 +420,7 @@ function applyScheduleToGrid(records, animate){
   });
   const distinctWeeks = [...new Set(records.map(r => r.WeekOf).filter(Boolean))];
 
-  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
+  document.querySelectorAll('.date-cell.hit').forEach(c => { c.classList.remove('hit','off'); c.style.animationDelay=''; const extra=c.querySelectorAll('.shift-txt,.branch-txt,.note-txt,.off-avatar'); extra.forEach(n=>n.remove()); });
 
   let step = 0;
   distinctWeeks.forEach(weekOfStr => {
@@ -450,11 +460,24 @@ function applyScheduleToGrid(records, animate){
         cell.appendChild(avatarEl);
       }
 
-      if(rec.HomeBranch){
+      // Extra parts after ";" — "@ Branch" (working at a different branch
+      // that day) and free notes ("Pray time", "Assigned to …").
+      const notes = noteParts.map(t => t.trim()).filter(Boolean);
+      const atNote = notes.find(n => n.charAt(0) === '@');
+      const textNotes = notes.filter(n => n.charAt(0) !== '@');
+      const branchLabel = atNote ? atNote.slice(1).trim() : rec.HomeBranch;
+      if(branchLabel){
         const branchEl = document.createElement('div');
-        branchEl.className = 'branch-txt';
-        branchEl.textContent = rec.HomeBranch;
+        branchEl.className = 'branch-txt' + (atNote ? ' alt' : '');
+        branchEl.textContent = branchLabel;
         cell.appendChild(branchEl);
+      }
+      if(textNotes.length && !isOff){
+        const noteEl = document.createElement('div');
+        noteEl.className = 'note-txt';
+        noteEl.textContent = '📝 ' + textNotes.join(' · ');
+        noteEl.addEventListener('click', ev => { ev.stopPropagation(); showNoteTip(textNotes.join('\n')); });
+        cell.appendChild(noteEl);
       }
     });
   });
