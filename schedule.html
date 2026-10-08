@@ -94,6 +94,26 @@
     .date-cell .shift-txt{font-size:9px;}
   }
 
+
+  .mine-card{display:none;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:22px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
+  .mine-card h3{font-family:'Fraunces',serif;font-size:17px;margin:0 0 4px;}
+  .mine-card .sub{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+  .mine-weekbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .mine-weekbar button{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--rose-dark);font-size:15px;}
+  .mine-weekbar b{font-size:13px;}
+  .mine-row{display:grid;grid-template-columns:78px 1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+  .mine-row .dl{font-size:12px;font-weight:700;} .mine-row .dl small{display:block;font-weight:500;color:var(--muted);font-size:10.5px;}
+  .mine-row input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;background:#fdf9f8;outline:none;}
+  .mine-row input:focus{border-color:var(--rose);}
+  .mine-row .offbtn{padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12px;cursor:pointer;color:var(--muted);}
+  .mine-row .offbtn.on{background:#faf6f5;color:var(--rose-dark);border-color:var(--rose);font-weight:700;}
+  .mine-rep{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:12.5px;line-height:1.5;}
+  .mine-rep input{margin-top:3px;}
+  .mine-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .mine-actions .ghost{padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;font:inherit;font-size:13px;cursor:pointer;}
+  .mine-status{font-size:12.5px;margin-top:10px;} .mine-status.err{color:#c0392b;} .mine-status.ok{color:#2e7d4f;}
+  .edit-mine-btn{display:none;padding:12px 16px;border:1px solid var(--rose);border-radius:12px;background:#fff;color:var(--rose-dark);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+
   .empty-state{padding:20px;}
   .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
 
@@ -153,10 +173,29 @@
         <option value="">Loading employees…</option>
       </select>
       <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
+      <button class="edit-mine-btn" id="editMineBtn">✏️ Edit my schedule</button>
     </div>
     <div id="scheduleAdminLinkWrap" style="display:none;margin-top:12px;">
       <a href="schedule-admin.html" style="font-size:12px;color:var(--rose-dark);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;display:inline-block;">📤 Upload New Schedule</a>
     </div>
+  </div>
+
+
+  <div class="mine-card" id="mineCard">
+    <h3>✏️ My schedule</h3>
+    <p class="sub" id="mineSub">Type your shift for each day (or tap <b>Off</b>). Leave a day blank if you are not scheduled.</p>
+    <div class="mine-weekbar">
+      <button type="button" id="minePrev" aria-label="Previous week">‹</button>
+      <b id="mineWeekLabel">—</b>
+      <button type="button" id="mineNext" aria-label="Next week">›</button>
+    </div>
+    <div id="mineRows"></div>
+    <label class="mine-rep"><input type="checkbox" id="mineRepeat" checked><span id="mineRepeatTxt"></span></label>
+    <div class="mine-actions">
+      <button class="my-schedule-btn" id="mineSave" type="button">Save</button>
+      <button class="ghost" id="mineCancel" type="button">Close</button>
+    </div>
+    <div class="mine-status" id="mineStatus"></div>
   </div>
 
   <h2 class="cal-title">
@@ -505,21 +544,122 @@ async function fetchMyPhoto(){
   return myPhotoDataUri;
 }
 
-document.getElementById('myScheduleBtn').addEventListener('click', async () => {
-  const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
-  if(!userStr){ return; }
-  const user = JSON.parse(userStr);
-  const firstName = (user.fullName || '').split(' ')[0];
+// ---------- My schedule: view + staff self-entry ----------
+let mineRows = [];          // my rows from the server (all weeks)
+let mineName = '';
+let mineSunday = null;      // Sunday (local Date) of the week being edited
+const tokenNow_ = () => window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+const ymdLocal_ = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const addDaysL_ = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const sundayOfL_ = d => addDaysL_(d, -d.getDay());
+// A week belongs to the month of its Thursday (same rule as the admin page).
+function monthOfWeek_(sun){ const t = addDaysL_(sun, 4); return { y: t.getFullYear(), m: t.getMonth() }; }
+function monthSundays_(sun){
+  const mo = monthOfWeek_(sun), same = s => { const x = monthOfWeek_(s); return x.y === mo.y && x.m === mo.m; };
+  let first = sun; while(same(addDaysL_(first, -7))) first = addDaysL_(first, -7);
+  const out = []; for(let s = first; same(s); s = addDaysL_(s, 7)) out.push(s);
+  return out;
+}
+function futureWeeksOnly_(list){ const todayStr = ymdLocal_(new Date()); return list.filter(s => ymdLocal_(addDaysL_(s, 6)) >= todayStr); }
+function mineWeeksToSave_(){ return futureWeeksOnly_(document.getElementById('mineRepeat').checked ? monthSundays_(mineSunday) : [mineSunday]); }
+
+function mineSetStatus_(msg, cls){ const el = document.getElementById('mineStatus'); el.textContent = msg || ''; el.className = 'mine-status ' + (cls || ''); }
+function mineRefreshRepeat_(){
+  const mo = monthOfWeek_(mineSunday), name = new Date(mo.y, mo.m, 1).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+  const all = monthSundays_(mineSunday), will = futureWeeksOnly_(all);
+  document.getElementById('mineRepeatTxt').textContent =
+    `Use this for the whole month of ${name} (${will.length} week${will.length===1?'':'s'}${will.length<all.length?', finished weeks are skipped':''}). Untick to save only this week.`;
+  document.getElementById('mineSave').textContent = document.getElementById('mineRepeat').checked ? 'Save the whole month' : 'Save this week';
+}
+function mineRenderWeek_(){
+  const end = addDaysL_(mineSunday, 6), o = { month:'short', day:'numeric' };
+  document.getElementById('mineWeekLabel').textContent = mineSunday.toLocaleDateString('en-US', o) + ' – ' + end.toLocaleDateString('en-US', o);
+  const wk = ymdLocal_(mineSunday);
+  const byDay = {}; mineRows.forEach(r => { if(String(r.WeekOf).slice(0,10) === wk) byDay[r.Day] = r.ScheduleDetail; });
+  const box = document.getElementById('mineRows'); box.innerHTML = '';
+  DAY_ORDER.forEach((day, i) => {
+    const d = addDaysL_(mineSunday, i), v = byDay[day] || '';
+    const row = document.createElement('div'); row.className = 'mine-row'; row.dataset.day = day;
+    row.innerHTML = `<div class="dl">${day}<small>${d.toLocaleDateString('en-US', o)}</small></div>
+      <input type="text" maxlength="300" placeholder="e.g. 10AM to 10PM" autocomplete="off">
+      <button type="button" class="offbtn">Off</button>`;
+    const inp = row.querySelector('input'), btn = row.querySelector('.offbtn');
+    inp.value = v;
+    const sync = () => btn.classList.toggle('on', /^off$/i.test(inp.value.trim()));
+    inp.addEventListener('input', sync);
+    btn.addEventListener('click', () => { inp.value = /^off$/i.test(inp.value.trim()) ? '' : 'Off'; sync(); });
+    sync(); box.appendChild(row);
+  });
+  mineRefreshRepeat_(); mineSetStatus_('');
+}
+function openMineForm_(introMsg){
+  if(!mineSunday) mineSunday = sundayOfL_(new Date());
+  if(introMsg) document.getElementById('mineSub').textContent = introMsg;
+  document.getElementById('mineCard').style.display = 'block';
+  mineRenderWeek_();
+  document.getElementById('mineCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+document.getElementById('minePrev').addEventListener('click', () => { mineSunday = addDaysL_(mineSunday, -7); mineRenderWeek_(); });
+document.getElementById('mineNext').addEventListener('click', () => { mineSunday = addDaysL_(mineSunday, 7); mineRenderWeek_(); });
+document.getElementById('mineRepeat').addEventListener('change', mineRefreshRepeat_);
+document.getElementById('mineCancel').addEventListener('click', () => { document.getElementById('mineCard').style.display = 'none'; });
+document.getElementById('editMineBtn').addEventListener('click', () => openMineForm_('Change your shifts below. Type a time or tap Off. Leave a day blank if you are not scheduled.'));
+
+document.getElementById('mineSave').addEventListener('click', async () => {
+  const days = [];
+  document.querySelectorAll('#mineRows .mine-row').forEach(r => {
+    const v = r.querySelector('input').value.trim();
+    if(v) days.push({ day: r.dataset.day, scheduleDetail: v });
+  });
+  if(!days.length){ mineSetStatus_('Put a shift (or Off) on at least one day.', 'err'); return; }
+  const weeks = mineWeeksToSave_();
+  if(!weeks.length){ mineSetStatus_('That week is already finished, so it can’t be changed. Go to a coming week.', 'err'); return; }
+  const btn = document.getElementById('mineSave'); btn.disabled = true; mineSetStatus_('Saving…');
+  try{
+    const body = new URLSearchParams({ action:'saveMySchedule', token: tokenNow_(), weeks: JSON.stringify(weeks.map(ymdLocal_)), days: JSON.stringify(days) });
+    const res = await fetch(SCHEDULE_API_URL, { method:'POST', body });
+    const data = await res.json();
+    if(!data.success){ mineSetStatus_(data.error || 'Could not save. Please try again.', 'err'); return; }
+    await showMySchedule_(true);
+    mineSetStatus_('Saved ✓ (' + data.saved.length + ' week' + (data.saved.length===1?'':'s') + ')', 'ok');
+  }catch(e){
+    mineSetStatus_('Connection problem — please try again.', 'err');
+  }finally{ btn.disabled = false; }
+});
+
+async function showMySchedule_(keepForm){
   const sel = document.getElementById('employeeSelect');
-  const match = allEmployees.find(e => e.name.toLowerCase() === firstName.toLowerCase());
-  if(match){
-    sel.value = match.name;
+  let data;
+  try{
+    const res = await fetch(SCHEDULE_API_URL + '?action=getMySchedule&token=' + encodeURIComponent(tokenNow_()));
+    data = await res.json();
+  }catch(e){ showCalEmptyMessage('Connection error', 'Could not load your schedule — check your connection.'); return; }
+  if(!data || !data.success){ showCalEmptyMessage('Could not load', (data && data.error) || 'Please log in again.'); return; }
+
+  mineRows = data.schedule || [];
+  const editBtn = document.getElementById('editMineBtn');
+  editBtn.style.display = 'inline-block';
+  if(mineRows.length){
+    mineName = mineRows[0].Employee;
+    if(!Array.from(sel.options).some(o => o.value === mineName)){
+      const o = document.createElement('option'); o.value = mineName; o.textContent = mineName; sel.appendChild(o);
+    }
+    sel.value = mineName;
     viewingIsMe = true;
     await fetchMyPhoto();
-    loadScheduleFor(match.name);
+    await loadScheduleFor(mineName);
+    if(keepForm) mineRenderWeek_(); else document.getElementById('mineCard').style.display = 'none';
   } else {
-    showCalEmptyMessage('No match found', 'No schedule entry for "' + firstName + '" — ask your admin to check the spelling on the schedule sheet.');
+    viewingIsMe = true;
+    currentSchedule = null; renderMonthGrid();
+    const t = document.getElementById('calTitleText'); if(t) t.textContent = 'No schedule yet';
+    openMineForm_('You have no schedule yet — please enter it here. Type your shift for each day (or tap Off). It is saved for you only.');
   }
+}
+document.getElementById('myScheduleBtn').addEventListener('click', () => {
+  const userStr = sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser');
+  if(!userStr){ return; }
+  showMySchedule_(false);
 });
 
 renderMonthGrid();
