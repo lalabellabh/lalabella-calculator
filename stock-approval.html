@@ -327,17 +327,19 @@
     row.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
 
     try{
+      const callApi = async (act) => {
+        const res = await fetch(`${API_URL}?action=${act}&countId=${encodeURIComponent(countId)}` + (act === 'approveCount' ? '&approvedBy=' : ''));
+        let d = {};
+        try{ d = await res.json(); }catch(_){ d = { error: 'No answer from the server. Refresh and check before trying again.' }; }
+        if(d && d.error){ alert(d.error); return false; }
+        return true;
+      };
       if(action === 'approve'){
-        await fetch(`${API_URL}?action=approveCount&countId=${encodeURIComponent(countId)}&approvedBy=`);
-        showStamp('APPROVED', 'approved');
-        playStampSound(true);
+        if(await callApi('approveCount')){ showStamp('APPROVED', 'approved'); playStampSound(true); }
       } else if(action === 'reject'){
-        await fetch(`${API_URL}?action=rejectCount&countId=${encodeURIComponent(countId)}`);
-        showStamp('REJECTED', 'rejected');
-        playStampSound(false);
+        if(await callApi('rejectCount')){ showStamp('REJECTED', 'rejected'); playStampSound(false); }
       } else if(action === 'recount'){
-        await fetch(`${API_URL}?action=requestRecount&countId=${encodeURIComponent(countId)}`);
-        row.classList.add('shake');
+        if(await callApi('requestRecount')) row.classList.add('shake');
       }
       setTimeout(()=> loadData(), 700);
     }catch(e){
