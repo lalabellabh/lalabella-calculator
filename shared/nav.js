@@ -264,7 +264,8 @@
       '.lb-menu-profile{position:relative;}' +
       '.lb-menu-profile::after{content:"";position:absolute;left:30px;top:8px;width:11px;height:11px;border-radius:50%;' +
         'background:#e03a3a;border:2px solid #fdfbf7;display:none;}' +
-      '.lb-menu-profile.lb-menu-has-unread::after{display:block;}';
+      '.lb-menu-profile.lb-menu-has-unread::after{display:block;}' +
+      '@media print{#lbcb-btn,#lbcb-panel,[id^="joyboy-"],.lbnav-btn,.lbnav-backdrop,.lbnav-drawer{display:none!important;}}';
     document.head.appendChild(st);
   }
   // ---- Standalone drawer (pages that don't have their own) ----
