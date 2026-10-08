@@ -751,6 +751,7 @@ document.getElementById('employeeSelect').addEventListener('change', refreshEdit
 
 renderMonthGrid();
 loadEmployees();
+if(location.hash === '#me') setTimeout(() => document.getElementById('myScheduleBtn').click(), 600);
 
 (function showAdminUploadLink(){
   try{
