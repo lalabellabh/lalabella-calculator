@@ -23,7 +23,17 @@
       headers: { 'Content-Type': 'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY },
       body: JSON.stringify(Object.assign({}, params || {}, { action: action, token: token() }))
     });
-    return res.json();
+    const data = await res.json();
+    // Usage warning: tell the sender when their daily photo/voice allowance is nearly used up
+    try {
+      if (action === 'send' && data && data.success && data.quota && data.quota.left <= 5 && window.LBBrain) {
+        const q = data.quota;
+        window.LBBrain.notify({ id: 'chat-quota', text: q.left > 0
+          ? 'Heads up: only ' + q.left + ' photo/voice message' + (q.left === 1 ? '' : 's') + ' left today (limit ' + q.limit + '). Photos and voices are deleted after 30 days.'
+          : 'That was your last photo/voice for today (limit ' + q.limit + '). Text and GIFs still work.' });
+      }
+    } catch (e) {}
+    return data;
   };
 
   function setStatus(v) { connected = v; statusFns.forEach(f => { try { f(v); } catch (e) {} }); }
