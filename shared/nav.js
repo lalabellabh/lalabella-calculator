@@ -366,7 +366,7 @@
       '.choco-drawer,.item-drawer,.flower-drawer{width:min(340px,86vw)!important;max-width:86vw!important;}' +
       '.lbw-row{flex-wrap:wrap;row-gap:6px;}.lbw-det{min-width:0;}.lbw-temp{white-space:nowrap;}.lbw-feels{white-space:normal;}' +
       '.lbw2-place{overflow:hidden;text-overflow:ellipsis;max-width:190px;}.lbw2-r{flex:0 0 auto;}' +
-      '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:inherit;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
+      '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:#3a2a2e;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
       '.lbw-row{display:flex;align-items:center;gap:10px;}' +
       '.lbw-ico{flex:0 0 54px;width:54px;height:54px;display:block;}' +
       '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:54px!important;height:54px!important;}' +
