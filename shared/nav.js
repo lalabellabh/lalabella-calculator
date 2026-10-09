@@ -536,6 +536,14 @@
     document.body.appendChild(br);
   }
 
+  // Little living animation behind your name in the menu (fish / snow /
+  // fire / petals). Self-contained — see shared/profile-fx.js.
+  if (!window.LBProfileFx && !document.querySelector('script[src="shared/profile-fx.js"]')) {
+    const fx = document.createElement('script');
+    fx.src = 'shared/profile-fx.js';
+    document.body.appendChild(fx);
+  }
+
   // Unread-chat dot on the hamburger profile header — chat-bubble.js
   // dispatches this event whenever the unread total changes (and so
   // will chatbox.html's own page script, once it's wired the same
