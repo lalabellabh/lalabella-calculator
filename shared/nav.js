@@ -218,58 +218,98 @@
 
   // ---- Weather strip at the very top of the drawer (no box — it sits right on the menu) ----
   // Open-Meteo (free, no key). Bahrain. Cached 15 min so opening the menu never re-fetches needlessly.
-  const WX_TXT = { 0: 'Sunny', 1: 'Mostly sunny', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers', 95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' };
+  const WX_PLACES = {
+    bh:   { n: 'Bahrain',              lat: 26.2285, lon: 50.5860,  tz: 'Asia/Bahrain', f: '🇧🇭' },
+    spl:  { n: 'San Pedro, Laguna',    lat: 14.3595, lon: 121.0473, tz: 'Asia/Manila',  f: '🇵🇭' },
+    mnl:  { n: 'Manila',               lat: 14.5995, lon: 120.9842, tz: 'Asia/Manila',  f: '🇵🇭' },
+    qc:   { n: 'Quezon City',          lat: 14.6760, lon: 121.0437, tz: 'Asia/Manila',  f: '🇵🇭' },
+    cebu: { n: 'Cebu City',            lat: 10.3157, lon: 123.8854, tz: 'Asia/Manila',  f: '🇵🇭' },
+    davao:{ n: 'Davao City',           lat: 7.1907,  lon: 125.4553, tz: 'Asia/Manila',  f: '🇵🇭' },
+    dxb:  { n: 'Dubai',                lat: 25.2048, lon: 55.2708,  tz: 'Asia/Dubai',   f: '🇦🇪' },
+    ruh:  { n: 'Riyadh',               lat: 24.7136, lon: 46.6753,  tz: 'Asia/Riyadh',  f: '🇸🇦' }
+  };
+  function wxOpts(sel) { return Object.keys(WX_PLACES).map(k => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + WX_PLACES[k].f + ' ' + WX_PLACES[k].n + '</option>').join(''); }
+  function wxPick(key, def) { let v = null; try { v = localStorage.getItem(key); } catch (e) {} return WX_PLACES[v] ? v : def; }
   function weatherHtml() {
-    return '<div class="lb-menu-weather"><div class="lbw-row"><span class="lbw-ico"></span>' +
+    const p1 = wxPick('lbWxP1', 'bh'), p2 = wxPick('lbWxP2', 'spl');
+    return '<div class="lb-menu-weather"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
+      '<div class="lbw-row"><span class="lbw-ico"></span>' +
       '<span class="lbw-main"><span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
       '<span class="lbw-feels">Feels like --</span></span>' +
       '<span class="lbw-det"><span class="lbw-p">Precipitation <b>--</b></span><span class="lbw-h">Humidity <b>--</b></span><span class="lbw-w">Wind <b>--</b></span></span></div>' +
       '<div class="lbw-foot"><span class="lbw-when">Weather</span><span class="lbw-cond"></span></div>' +
-      '<div class="lbw-upd"></div></div>';
+      '<div class="lbw-upd"></div>' +
+      '<div class="lbw2"><span class="lbw2-ico"></span><span class="lbw2-info"><span class="lbw2-place">' + WX_PLACES[p2].f + ' <span class="lbw2-pn">' + WX_PLACES[p2].n + '</span> ▾<select class="lbw-sel" data-k="lbWxP2" aria-label="Change place">' + wxOpts(p2) + '</select></span><span class="lbw2-time">--</span></span>' +
+      '<span class="lbw2-r"><span class="lbw2-t"><b>--</b></span><span class="lbw2-c"></span></span></div></div>';
   }
+  const WX_TXT = { 0: 'Sunny', 1: 'Mostly sunny', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers', 95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' };
   const WX_TTL = 5 * 60000;   // weather is re-fetched when older than 5 minutes
-  function wxFetch(force) {
-    let c = null; try { c = JSON.parse(localStorage.getItem('lbWxCache2') || 'null'); } catch (e) {}
+  function wxFetch(pk, force) {
+    const P = WX_PLACES[pk], ck = 'lbWxC3_' + pk;
+    let c = null; try { c = JSON.parse(localStorage.getItem(ck) || 'null'); } catch (e) {}
     if (!force && c && Date.now() - c.ts < WX_TTL) return Promise.resolve(c);
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=Asia%2FBahrain';
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + P.lat + '&longitude=' + P.lon + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=' + encodeURIComponent(P.tz);
     return fetch(url, { cache: 'no-store' }).then(r => r.json()).then(j => {
       const o = { ts: Date.now(), d: { t: j.current.temperature_2m, f: j.current.apparent_temperature, h: j.current.relative_humidity_2m, w: j.current.wind_speed_10m, code: j.current.weather_code,
         p: (j.hourly && j.hourly.precipitation_probability && j.hourly.precipitation_probability[0]) || 0 } };
-      try { localStorage.setItem('lbWxCache2', JSON.stringify(o)); } catch (e) {}
+      try { localStorage.setItem(ck, JSON.stringify(o)); } catch (e) {}
       return o;
     }).catch(err => { if (c) return c; throw err; });
   }
+  function isNightIn(tz) { const hr = Number(new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false })) % 24; return hr >= 18 || hr < 5; }
+  function condTxt(code, tz) { return (code === 0 && isNightIn(tz)) ? 'Clear' : (WX_TXT[code] || ''); }
   function fillWeather(root) {
     const box = root.querySelector('.lb-menu-weather'); if (!box) return;
     let unit = 'c'; try { unit = localStorage.getItem('lbWxUnit') === 'f' ? 'f' : 'c'; } catch (e) {}
-    let cur = null, lastIcon = null;
+    let p1 = wxPick('lbWxP1', 'bh'), p2 = wxPick('lbWxP2', 'spl');
+    let cur = null, cur2 = null, lastIcon = null, lastIcon2 = null;
     const conv = v => Math.round(unit === 'f' ? v * 9 / 5 + 32 : v);
+    const withHero = fn => { if (window.LBHero3D) fn(); else { const sc = document.createElement('script'); sc.src = 'shared/hero-3d.js'; sc.onload = fn; document.body.appendChild(sc); } };
     const paint = () => {
-      const tz = { timeZone: 'Asia/Bahrain' };
-      box.querySelector('.lbw-when').textContent = new Date().toLocaleString('en-US', Object.assign({ weekday: 'long', hour: 'numeric', minute: '2-digit' }, tz));
-      if (!cur) return;
-      const d = cur.d;
-      box.querySelector('.lbw-t').textContent = conv(d.t);
-      box.querySelectorAll('.lbw-u i').forEach(i => i.classList.toggle('on', i.getAttribute('data-u') === unit));
-      box.querySelector('.lbw-feels').textContent = 'Feels like ' + conv(d.f) + '°' + unit.toUpperCase();
-      box.querySelector('.lbw-p b').textContent = Math.round(d.p) + '%';
-      box.querySelector('.lbw-h b').textContent = Math.round(d.h) + '%';
-      box.querySelector('.lbw-w b').textContent = Math.round(d.w) + ' km/h';
-      box.querySelector('.lbw-cond').textContent = WX_TXT[d.code] || '';
-      box.querySelector('.lbw-upd').textContent = 'Updated ' + new Date(cur.ts).toLocaleTimeString('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, tz));
-      if (lastIcon !== d.code) {
-        lastIcon = d.code;
-        const icon = () => { if (window.LBHero3D) LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t); };
-        if (window.LBHero3D) icon(); else { const sc = document.createElement('script'); sc.src = 'shared/hero-3d.js'; sc.onload = icon; document.body.appendChild(sc); }
+      const T1 = WX_PLACES[p1].tz, T2 = WX_PLACES[p2].tz;
+      box.querySelector('.lbw-when').textContent = new Date().toLocaleString('en-US', { timeZone: T1, weekday: 'long', hour: 'numeric', minute: '2-digit' });
+      box.querySelector('.lbw2-time').textContent = new Date().toLocaleString('en-US', { timeZone: T2, weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      if (cur) {
+        const d = cur.d;
+        box.querySelector('.lbw-t').textContent = conv(d.t);
+        box.querySelectorAll('.lbw-u i').forEach(i => i.classList.toggle('on', i.getAttribute('data-u') === unit));
+        box.querySelector('.lbw-feels').textContent = 'Feels like ' + conv(d.f) + '°' + unit.toUpperCase();
+        box.querySelector('.lbw-p b').textContent = Math.round(d.p) + '%';
+        box.querySelector('.lbw-h b').textContent = Math.round(d.h) + '%';
+        box.querySelector('.lbw-w b').textContent = Math.round(d.w) + ' km/h';
+        box.querySelector('.lbw-cond').textContent = condTxt(d.code, T1);
+        box.querySelector('.lbw-upd').textContent = 'Updated ' + new Date(cur.ts).toLocaleTimeString('en-US', { timeZone: T1, hour: 'numeric', minute: '2-digit' });
+        const key = d.code + '|' + isNightIn(T1) + '|' + p1;
+        if (lastIcon !== key) { lastIcon = key; withHero(() => LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t, T1)); }
+      }
+      if (cur2) {
+        const d = cur2.d;
+        box.querySelector('.lbw2-t b').textContent = conv(d.t) + '°' + unit.toUpperCase();
+        box.querySelector('.lbw2-c').textContent = condTxt(d.code, T2);
+        const key = d.code + '|' + isNightIn(T2) + '|' + p2;
+        if (lastIcon2 !== key) { lastIcon2 = key; withHero(() => LBHero3D.weather(box.querySelector('.lbw2-ico'), d.code, d.t, T2)); }
       }
     };
     box.querySelectorAll('.lbw-u i').forEach(i => i.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation(); unit = i.getAttribute('data-u'); try { localStorage.setItem('lbWxUnit', unit); } catch (x) {} paint();
     }));
-    const load = force => wxFetch(force).then(o => { cur = o; paint(); }).catch(() => { box.querySelector('.lbw-cond').textContent = 'Weather unavailable'; });
+    const load = force => {
+      wxFetch(p1, force).then(o => { cur = o; paint(); }).catch(() => { box.querySelector('.lbw-cond').textContent = 'Weather unavailable'; });
+      wxFetch(p2, force).then(o => { cur2 = o; paint(); }).catch(() => { box.querySelector('.lbw2-c').textContent = 'N/A'; });
+    };
+    box.querySelectorAll('.lbw-sel').forEach(sel => {
+      sel.addEventListener('click', e => e.stopPropagation());
+      sel.addEventListener('change', () => {
+        const k = sel.getAttribute('data-k'), v = sel.value; try { localStorage.setItem(k, v); } catch (x) {}
+        const P = WX_PLACES[v], isP1 = k === 'lbWxP1';
+        if (isP1) { p1 = v; cur = null; lastIcon = null; box.querySelector('.lbw-pl').innerHTML = P.f + ' <span class="lbw-pn">' + P.n + '</span> ▾'; }
+        else { p2 = v; cur2 = null; lastIcon2 = null; const pn = box.querySelector('.lbw2-pn'); pn.parentNode.firstChild.nodeValue = P.f + ' '; pn.textContent = P.n; }
+        paint(); load(true);
+      });
+    });
     let lastTouch = 0;
     const maybe = () => { if (!box.isConnected) return; paint(); if (Date.now() - lastTouch > 30000) { lastTouch = Date.now(); load(false); } };
-    document.addEventListener('pointerdown', maybe, true);          // opening the menu = a tap → refresh if older than 5 min
+    document.addEventListener('pointerdown', maybe, true);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) maybe(); });
     setInterval(() => { if (box.isConnected) { paint(); load(false); } }, 60000);
     lastTouch = Date.now(); load(false); paint();
@@ -334,6 +374,10 @@
       '.lbw-feels{font-size:11.5px;opacity:.7;margin-top:3px;white-space:nowrap;font-weight:500;}' +
       '.lbw-det{display:flex;flex-direction:column;gap:2px;font-size:11.5px;line-height:1.3;margin-left:auto;text-align:left;font-weight:500;}.lbw-det span{opacity:.75;white-space:nowrap;}.lbw-det b{opacity:1;font-weight:700;margin-left:2px;}' +
       '.lbw-foot{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-top:7px;font-weight:600;}.lbw-when{opacity:.75;}.lbw-cond{opacity:.95;}' +
+      '.lbw-place{position:relative;display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:0 0 4px;}.lbw-sel{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px;}.lbw-place .lbw-pl{pointer-events:none;}.lbw2-place .lbw-sel{left:0;top:0;}' +
+      '.lbw2{position:relative;display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(128,128,128,.22);}.lbw2-ico{flex:0 0 38px;width:38px;height:38px;display:block;}.lbw2-ico .h3-wrap,.lbw2-ico svg{width:38px!important;height:38px!important;}' +
+      '.lbw2-info{display:flex;flex-direction:column;min-width:0;}.lbw2-place{position:relative;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.75;white-space:nowrap;}.lbw2-time{font-size:15px;font-weight:600;margin-top:2px;}' +
+      '.lbw2-r{margin-left:auto;text-align:right;display:flex;flex-direction:column;}.lbw2-t b{font-size:22px;font-weight:600;letter-spacing:-.02em;}.lbw2-c{font-size:11.5px;opacity:.8;font-weight:600;}' +
       '.lbw-upd{font-size:10px;opacity:.45;margin-top:2px;letter-spacing:.02em;}' +
       '.lb-menu-profile{position:relative;}' +
       '.lb-menu-profile::after{content:"";position:absolute;left:30px;top:8px;width:11px;height:11px;border-radius:50%;' +
