@@ -29,13 +29,14 @@
   const byId = {}; CHARS.forEach(function(c){ byId[c.id] = c; });
 
   // ------------------------------------------------------------ settings
-  const DEF = { on: true, char: 'random', vol: 0.7, mute: false, horn: false };
+  const DEF = { on: true, char: 'random', vol: 0.7, mute: false, horn: false, gifDay: null, gifRem: null };
   function load(){
     let s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
     const o = Object.assign({}, DEF, s);
     o.vol = Math.max(0, Math.min(1, Number(o.vol))); if (isNaN(o.vol)) o.vol = DEF.vol;
     if (o.char !== 'random' && !byId[o.char]) o.char = 'random';
     o.on = o.on !== false; o.mute = !!o.mute; o.horn = !!o.horn;
+    ['gifDay', 'gifRem'].forEach(function(k){ const g = o[k]; o[k] = (g && typeof g.url === 'string' && /^https:\/\//i.test(g.url)) ? { url: g.url, preview: (typeof g.preview === 'string' && /^https:\/\//i.test(g.preview)) ? g.preview : '' } : null; });
     return o;
   }
   function save(o){
@@ -322,6 +323,7 @@
       '.dfx-home{position:absolute;left:50%;top:52px;width:200px;margin-left:-100px;filter:drop-shadow(0 8px 6px rgba(0,0,0,.25))}',
       '.dfx-home svg{display:block;width:100%;height:auto}',
       '.dfx-char{position:absolute;left:50%;top:112px;width:168px;margin-left:-84px;transform-style:preserve-3d;will-change:transform;opacity:0;animation:dfx-emerge 1.7s cubic-bezier(.3,.8,.3,1) .5s forwards}',
+      '.dfx-char.gif{top:-6px;width:220px;margin-left:-110px}.dfx-gif{display:block;width:100%;max-height:220px;object-fit:contain;border-radius:18px;box-shadow:0 10px 26px rgba(0,0,0,.4);background:#0003}',
       '.dfx-char .tilt{transform-style:preserve-3d;transition:transform .12s ease-out}',
       '.dfx-char svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 10px 8px rgba(0,0,0,.28))}',
       '@keyframes dfx-emerge{0%{opacity:0;transform:translate3d(0,-24px,-160px) scale(.28)}18%{opacity:1}100%{opacity:1;transform:translate3d(0,92px,50px) scale(1)}}',
@@ -362,6 +364,8 @@
       '.dfxs-back{position:fixed;inset:0;z-index:100000;background:rgba(40,20,28,.45);display:flex;align-items:center;justify-content:center;padding:12px;font-family:"Space Grotesk",system-ui,sans-serif}',
       '.dfxs{width:min(420px,100%);max-height:94vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);color:#3a2530}',
       '.dfxs h3{margin:0 0 4px;font-size:16px}.dfxs .sub{font-size:12px;color:#8a7078;margin-bottom:12px}',
+      '.dfxs .gifrow{display:flex;align-items:center;gap:8px;margin:8px 0}.dfxs .gifrow b{width:98px;font-size:13px}.dfxs .gifrow .gp{flex:1;font-size:12px;opacity:.6}.dfxs .gifrow .gp img{height:44px;border-radius:8px;display:block}.dfxs .gifrow button{font:inherit;font-size:12px;font-weight:700;border:0;border-radius:9px;padding:8px 11px;background:#f6ecee;color:#7a2a40;cursor:pointer}',
+      '.dfxg{width:min(380px,100%);height:min(470px,92vh);background:#fff;border-radius:18px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.35);color:#3a2530}.dfxg-h{display:flex;align-items:center;padding:12px 14px}.dfxg-h b{flex:1}.dfxg-x{border:0;background:#f6ecee;border-radius:50%;width:28px;height:28px;cursor:pointer}.dfxg-host{position:absolute;left:0;right:0;bottom:0;height:0}.dfxg-host .lbcm-picker{margin:0 8px 8px;max-width:none}',
       '.dfxs .row{display:flex;align-items:center;gap:10px;margin:12px 0}.dfxs .row b{flex:1;font-size:13.5px}',
       '.dfxs input[type=checkbox]{width:20px;height:20px;accent-color:#c9506b}',
       '.dfxs input[type=range]{flex:2;accent-color:#c9506b}',
@@ -390,10 +394,15 @@
     const back = document.createElement('div'); back.className = 'dfx-back'; back.setAttribute('data-lb-theme-skip', '');
     const say = (opts.name ? opts.name + ', ' : '') + ch.say.charAt(0).toLowerCase() + ch.say.slice(1);
     back.innerHTML = '<div class="dfx-stage"><div class="dfx-sun"></div><div class="dfx-cloud"></div><div class="dfx-hill"></div>' +
-      '<div class="dfx-home">' + (HOME[id] || '') + '</div><div class="dfx-shadow"></div>' +
-      '<div class="dfx-char"><div class="tilt">' + charSvg(id) + '</div></div>' +
+      '<div class="dfx-home">' + (opts.gif ? '' : (HOME[id] || '')) + '</div><div class="dfx-shadow"></div>' +
+      '<div class="dfx-char' + (opts.gif ? ' gif' : '') + '"><div class="tilt">' + (opts.gif ? '<img class="dfx-gif" alt="">' : charSvg(id)) + '</div></div>' +
       '<div class="dfx-say"></div><button class="dfx-x" type="button" aria-label="Close">✕</button></div>';
     const stage = back.querySelector('.dfx-stage');
+    if (opts.gif) {
+      const gi = back.querySelector('.dfx-gif'); let tried = 0;
+      gi.onerror = function(){ tried++; if (tried === 1 && opts.gif.preview && gi.src !== opts.gif.preview) gi.src = opts.gif.preview; else { const t = back.querySelector('.tilt'); t.innerHTML = charSvg(id); back.querySelector('.dfx-char').classList.remove('gif'); } };
+      gi.src = opts.gif.url;
+    }
     back.querySelector('.dfx-say').textContent = opts.text ? opts.text : (opts.name ? opts.name + ' — ' : '') + ch.say + (opts.extra ? '\n' + opts.extra : '');
     if (opts.title) { const h = document.createElement('div'); h.className = 'dfx-ttl'; h.textContent = opts.title; back.querySelector('.dfx-say').insertAdjacentElement('afterbegin', h); }
     if (opts.actions) { const bar = document.createElement('div'); bar.className = 'dfx-act'; opts.actions.forEach(function(a){ const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = a.label; if (a.pri) bt.className = 'pri'; bt.addEventListener('click', function(e){ e.stopPropagation(); stop(); try { a.fn && a.fn(); } catch (er) {} }); bar.appendChild(bt); }); stage.appendChild(bar); }
@@ -449,8 +458,33 @@
     let seen = ''; try { seen = localStorage.getItem(SEEN) || ''; } catch (e) {}
     if (seen === today()) return false;
     try { localStorage.setItem(SEEN, today()); } catch (e) {}
-    play(s.char, { name: name, extra: extra });
+    play(s.char, { name: name, extra: extra, gif: s.gifDay });
     return true;
+  }
+
+  // ------------------------------------------------------------ GIF chooser (reuses the chat GIF picker / favorites)
+  function loadScript(src){ return new Promise(function(res, rej){ const x = document.createElement('script'); x.src = src; x.onload = res; x.onerror = rej; document.body.appendChild(x); }); }
+  async function chooseGif(onPick){
+    addStyle();
+    try {
+      if (!window.lbChatApi) {
+        window.lbChatApi = async function(action, params){
+          const tok = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+          const r = await fetch(LB_CONFIG.CHAT_API, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify(Object.assign({}, params || {}, { action: action, token: tok })) });
+          return r.json();
+        };
+      }
+      if (!window.lbChatMedia) await loadScript('shared/chat-media.js');
+    } catch (e) { alert('Could not load the GIF picker.'); return; }
+    const back = document.createElement('div'); back.className = 'dfxs-back'; back.style.zIndex = 100001; back.setAttribute('data-lb-theme-skip', '');
+    back.innerHTML = '<div class="dfxg"><div class="dfxg-h"><b>Pick a GIF</b><button type="button" class="dfxg-x">✕</button></div><div class="dfxg-host"></div></div>';
+    document.body.appendChild(back);
+    const host = back.querySelector('.dfxg-host');
+    function close(){ back.remove(); }
+    back.querySelector('.dfxg-x').addEventListener('click', close);
+    back.addEventListener('click', function(e){ if (e.target === back) close(); });
+    const picker = lbChatMedia.createPicker({ host: host, toggleBtn: null, onEmoji: function(){}, onGif: function(item, kind){ close(); onPick(item); } });
+    setTimeout(function(){ picker.open(); const tb = picker.el.querySelectorAll('.lbcm-tabs button'); if (tb[1]) tb[1].click(); }, 30);   // after the opening click has finished bubbling
   }
 
   // ------------------------------------------------------------ settings panel
@@ -461,7 +495,10 @@
     const box = document.createElement('div'); box.className = 'dfxs'; back.appendChild(box);
     box.innerHTML = '<h3>🎭 Day-off animation &amp; sound</h3><div class="sub">When you open My Schedule on your day off, a little friend greets you (once a day). Saved on this device.</div>' +
       '<div class="row"><b>Show the animation</b><input type="checkbox" id="dfxOn"></div>' +
-      '<div class="lbl">Character</div><div class="grid" id="dfxGrid"></div>' +
+      '<div class="lbl">GIF animation (optional — replaces the drawn character)</div>' +
+      '<div class="gifrow"><b>Day-off GIF</b><span class="gp" id="dfxGpD"></span><button type="button" id="dfxGcD">Choose</button><button type="button" id="dfxGxD">✕</button></div>' +
+      '<div class="gifrow"><b>Reminder GIF</b><span class="gp" id="dfxGpR"></span><button type="button" id="dfxGcR">Choose</button><button type="button" id="dfxGxR">✕</button></div>' +
+      '<div class="lbl">Character &amp; sound</div><div class="grid" id="dfxGrid"></div>' +
       '<div class="lbl">Sound</div>' +
       '<div class="row" style="margin-top:4px"><b>🔈 Volume</b><input type="range" id="dfxVol" min="0" max="100" step="1"><span id="dfxVolN" style="width:36px;text-align:right;font-size:12px"></span></div>' +
       '<div class="row"><b>📣 Air horn blast first (louder, alarm-style)</b><input type="checkbox" id="dfxHorn"></div>' +
@@ -480,7 +517,7 @@
         grid.appendChild(b);
       });
     }
-    function testPlay(id){ audio(); play(id || s.char, { hold: 6500 }); }
+    function testPlay(id, useGif){ audio(); play(id || s.char, { hold: 6500, gif: useGif ? s.gifDay : null }); }
     const on = box.querySelector('#dfxOn'), vol = box.querySelector('#dfxVol'), volN = box.querySelector('#dfxVolN'), mute = box.querySelector('#dfxMute');
     on.checked = s.on; vol.value = Math.round(s.vol * 100); volN.textContent = vol.value + '%'; mute.checked = s.mute; const hornEl = box.querySelector('#dfxHorn'); hornEl.checked = s.horn;
     hornEl.addEventListener('change', function(){ s.horn = hornEl.checked; save(s); audio(); if (hornEl.checked) horn(ctx.currentTime + 0.05, 1); });
@@ -488,12 +525,24 @@
     vol.addEventListener('input', function(){ s.vol = vol.value / 100; volN.textContent = vol.value + '%'; save(s); if (master) master.gain.value = s.mute ? 0 : s.vol * 0.9; });
     vol.addEventListener('change', function(){ audio(); beep(); });             // small tick so you can hear the level
     mute.addEventListener('change', function(){ s.mute = mute.checked; save(s); if (master) master.gain.value = s.mute ? 0 : s.vol * 0.9; });
-    box.querySelector('#dfxTest').addEventListener('click', function(){ testPlay(s.char); });
+    box.querySelector('#dfxTest').addEventListener('click', function(){ testPlay(s.char, true); });
     function close(){ back.remove(); document.removeEventListener('keydown', key); }
     const key = function(e){ if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', key);
     box.querySelector('#dfxDone').addEventListener('click', close);
     back.addEventListener('click', function(e){ if (e.target === back) close(); });
+    function drawGifs(){
+      [['D', 'gifDay'], ['R', 'gifRem']].forEach(function(p){
+        const g = s[p[1]], sp = box.querySelector('#dfxGp' + p[0]);
+        sp.innerHTML = ''; if (g) { const im = new Image(); im.src = g.preview || g.url; im.alt = ''; sp.appendChild(im); } else sp.textContent = 'none';
+        box.querySelector('#dfxGx' + p[0]).style.visibility = g ? 'visible' : 'hidden';
+      });
+    }
+    [['D', 'gifDay'], ['R', 'gifRem']].forEach(function(p){
+      box.querySelector('#dfxGc' + p[0]).addEventListener('click', function(){ chooseGif(function(item){ s[p[1]] = { url: item.url, preview: item.preview || '' }; save(s); drawGifs(); }); });
+      box.querySelector('#dfxGx' + p[0]).addEventListener('click', function(){ s[p[1]] = null; save(s); drawGifs(); });
+    });
+    drawGifs();
     drawGrid();
     document.body.appendChild(back);
   }
@@ -502,7 +551,7 @@
   function alarm(text, o){
     o = o || {}; const set = load();
     const id = (set.char === 'random' || !byId[set.char]) ? CHARS[Math.floor(Math.random() * CHARS.length)].id : set.char;
-    play(id, { persist: true, title: o.title || '🔔 Reminder', text: text, speak: 'Reminder. ' + text, every: 6000,
+    play(id, { gif: set.gifRem, persist: true, title: o.title || '🔔 Reminder', text: text, speak: 'Reminder. ' + text, every: 6000,
       actions: [{ label: '✔ Done', pri: true, fn: o.onDone }, { label: 'Later', fn: o.onLater }], onClose: o.onLater });
     return id;
   }
