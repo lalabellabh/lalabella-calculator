@@ -1845,6 +1845,7 @@ function saveCard(){
     font: font.value,
     fontSize: fontSize.value,
     bg: window.LBCardBg ? LBCardBg.get() : 'none',
+    bgOpacity: window.LBCardBg ? LBCardBg.getOpacity() : 100,
     images
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -1890,7 +1891,7 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
         : '"Baskerville Old Face",Baskerville,Georgia,serif';
       fontSize.value = data.fontSize || 16;
       textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
-      if(window.LBCardBg) LBCardBg.set(data.bg || 'none');
+      if(window.LBCardBg){ LBCardBg.set(data.bg || 'none'); LBCardBg.setOpacity(data.bgOpacity == null ? 100 : data.bgOpacity); }
       updatePrintSize();
 
       (data.images || []).forEach(imgData => {
