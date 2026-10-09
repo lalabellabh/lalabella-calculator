@@ -363,6 +363,9 @@
       '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
       '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.choco-drawer,.item-drawer,.flower-drawer{width:min(340px,86vw)!important;max-width:86vw!important;}' +
+      '.lbw-row{flex-wrap:wrap;row-gap:6px;}.lbw-det{min-width:0;}.lbw-temp{white-space:nowrap;}.lbw-feels{white-space:normal;}' +
+      '.lbw2-place{overflow:hidden;text-overflow:ellipsis;max-width:190px;}.lbw2-r{flex:0 0 auto;}' +
       '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:inherit;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
       '.lbw-row{display:flex;align-items:center;gap:10px;}' +
       '.lbw-ico{flex:0 0 54px;width:54px;height:54px;display:block;}' +
