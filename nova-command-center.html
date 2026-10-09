@@ -113,6 +113,15 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 .right .activity::-webkit-scrollbar-thumb{background:rgba(46,232,255,.28);border-radius:10px}
 .right .activity::-webkit-scrollbar-thumb:hover{background:rgba(46,232,255,.5)}
 .event b{display:block;line-height:1.45;white-space:normal}
+
+/* typed commands */
+.cmdbar{position:absolute;left:50%;transform:translateX(-50%);bottom:92px;width:min(600px,calc(100% - 28px));z-index:6;display:flex;flex-direction:column;gap:8px}
+.cmdreply{display:none;background:rgba(13,16,22,.94);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:13px;line-height:1.5;color:#dfe6f0;white-space:pre-line;max-height:34vh;overflow:auto;backdrop-filter:blur(6px)}
+.cmdreply.show{display:block}.cmdreply .you{color:#7e8da3;font-size:11px;margin-bottom:5px;display:block}.cmdreply .th{color:#e6c46a;font-style:italic;display:block;margin-bottom:4px}
+.cmdform{display:flex;gap:8px;align-items:center;background:#0d1016;border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 14px}
+.cmdform input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e8edf5;font:inherit;font-size:14px;padding:8px 0}
+.cmdform button{border:0;border-radius:10px;background:linear-gradient(135deg,#2ee8ff,#2a8cff);color:#04101a;font-weight:700;padding:9px 14px;cursor:pointer}
+.cmdform .spk{background:#161b24;color:#9fb0c6;padding:9px 10px}.cmdform .spk.on{color:#2ee8ff}
 </style>
 </head>
 <body>
@@ -157,6 +166,8 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
       <div class="transcript" id="transcript"></div>
       <button class="mic" id="mic" title="Manual voice input">◉</button>
       <div class="mic-label">Tap to talk</div>
+      <div class="cmdbar"><div class="cmdreply" id="cmdReply"></div>
+        <form class="cmdform" id="cmdForm" autocomplete="off"><input id="cmdInput" type="text" placeholder="Type a command… e.g. stock ng red rose, low stock, open dashboard" enterkeyhint="send"><button type="button" class="spk" id="cmdSpk" title="Speak replies">🔇</button><button type="submit">Send</button></form></div>
       <div class="status-row">
         <span class="dotlabel lbl-listening"><span class="sdot"></span>Listening</span>
         <span class="dotlabel lbl-thinking"><span class="sdot"></span>Thinking</span>
@@ -565,7 +576,7 @@ async function askNova(message){
   // OFFLINE BRAIN first (no AI API / subscription): knowledge base + live data.
   if(window.LBNovaBrain){
     setState('thinking','THINKING');
-    let nb=null; try{ nb = await LBNovaBrain.ask(message, th => { log('💭 ' + th, 'THOUGHT'); showTranscript('💭 ' + th); }); }catch(e){}
+    let nb=null; try{ nb = await LBNovaBrain.ask(message, th => { log('💭 ' + th, 'THOUGHT'); if(window.__typedThought) window.__typedThought(th); else showTranscript('💭 ' + th); }); }catch(e){}
     if(nb && nb.handled){
       const nav = safeNavTarget_(nb.navigateTo);
       if(nav){ log('Opening ' + nav, 'SYSTEM'); setTimeout(()=>{ window.location.href = nav; }, 1500); }
@@ -784,6 +795,28 @@ function manual(){
 speechSynthesis.getVoices();
 speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
 document.getElementById('mic').onclick=manual;
+
+// ---- typed commands (no wake word needed) ----
+(function(){
+  const form=document.getElementById('cmdForm'), inp=document.getElementById('cmdInput'), box=document.getElementById('cmdReply'), spk=document.getElementById('cmdSpk');
+  let voice=false; try{ voice=localStorage.getItem('novaTypedVoice')==='1'; }catch(e){}
+  const paint=()=>{ spk.textContent=voice?'🔊':'🔇'; spk.classList.toggle('on',voice); }; paint();
+  spk.onclick=()=>{ voice=!voice; try{localStorage.setItem('novaTypedVoice',voice?'1':'0')}catch(e){} paint(); if(!voice) try{speechSynthesis.cancel()}catch(e){} };
+  const hist=[]; let hi=0;
+  inp.addEventListener('keydown',e=>{ if(e.key==='ArrowUp'&&hist.length){ hi=Math.max(0,hi-1); inp.value=hist[hi]; e.preventDefault(); } else if(e.key==='ArrowDown'){ hi=Math.min(hist.length,hi+1); inp.value=hist[hi]||''; e.preventDefault(); } });
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); const t=inp.value.trim(); if(!t) return; inp.value=''; hist.push(t); hi=hist.length;
+    awake=true; log(t,'YOU');
+    box.className='cmdreply show'; box.innerHTML=''; const y=document.createElement('span'); y.className='you'; y.textContent='You: '+t; box.appendChild(y);
+    const th=document.createElement('span'); th.className='th'; th.textContent='💭 …'; box.appendChild(th);
+    const ans=document.createElement('div'); box.appendChild(ans);
+    window.__typedThought=s=>{ th.textContent='💭 '+s; };
+    let out=''; try{ out=await askNova(t); }catch(err){ out='Something went wrong, Boss.'; }
+    window.__typedThought=null; th.remove();
+    ans.textContent=out||'…'; box.scrollTop=0;
+    if(out){ if(voice) speak(out); else { log(out,'NOVA'); setState(awake?'awake':'','AWAKE'); } }
+  });
+})();
 document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{awake=true;handle(b.dataset.say)});
 setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),1000);
 setState('','STANDBY');
