@@ -107,9 +107,9 @@
     });
     host.addEventListener('pointerleave', function(){ el.style.transform = ''; });
   }
-  function weather(el, code, temp){
+  function weather(el, code, temp, tz){
     addStyle(); if (!el) return;
-    const hr = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bahrain', hour: 'numeric', hour12: false })) % 24, night = hr >= 18 || hr < 5;
+    const hr = Number(new Date().toLocaleString('en-US', { timeZone: tz || 'Asia/Bahrain', hour: 'numeric', hour12: false })) % 24, night = hr >= 18 || hr < 5;
     el.innerHTML = '<div class="h3-wrap" title="Tap me">' + iconSvg(code, night) + '</div>';
     const w = el.firstChild; let t = null;
     w.addEventListener('click', function(){ w.classList.remove('go'); void w.offsetWidth; w.classList.add('go'); clearTimeout(t); t = setTimeout(function(){ w.classList.remove('go'); }, 2300); });
