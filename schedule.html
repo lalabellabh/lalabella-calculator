@@ -585,7 +585,8 @@ function applyScheduleToGrid(records, animate){
   try{
     if(viewingIsMe && window.LBDayoffFx && document.querySelector('.date-cell.today.off')){
       const nm = (mineName || '').split(/\s+/)[0];
-      setTimeout(() => LBDayoffFx.maybePlayToday(nm), 400);
+      const tn = (typeof dayNotes_ !== 'undefined' && dayNotes_[ymdLocal_(new Date())]) || null;
+      setTimeout(() => LBDayoffFx.maybePlayToday(nm, tn && tn.note ? '📝 ' + tn.note : ''), 400);
     }
   }catch(e){}
 }
@@ -864,6 +865,7 @@ document.getElementById('dnDone').addEventListener('change', async e => {
   try{
     const d = await noteCall_({ action:'setReminderDone', employee: dayEdit_.who, date: dayEdit_.date, done: done ? '1' : '0' }, true);
     if(!d.success){ dnMsg_(d.error || 'Could not update.', true); e.target.checked = !done; return; }
+    if(done) stopAlarm_(dayEdit_.date);
     if(dayNotes_[dayEdit_.date]) dayNotes_[dayEdit_.date].done = done;
     paintNotes_(); queueReminders_();
   }catch(err){ dnMsg_('Connection problem.', true); e.target.checked = !done; }
@@ -883,26 +885,38 @@ function remBeep_(){
       o.connect(g); g.connect(ac.destination); o.start(now + i * 0.16); o.stop(now + i * 0.16 + 0.32); });
   }catch(e){}
 }
+function startAlarm_(k){
+  try{ if(window.LBDayoffFx && localStorage.getItem('lbSchedMute') !== '1'){ LBDayoffFx.alarmStart(k); return; } }catch(e){}
+  remBeep_();
+}
+function stopAlarm_(k){ try{ window.LBDayoffFx && LBDayoffFx.alarmStop(k); }catch(e){} }
 function showReminder_(r){
   const key = r.date; if(remShown_[key]) return; remShown_[key] = true;
-  const box = document.getElementById('remBox'), c = document.createElement('div'); c.className = 'rem-card';
   const late = r.date < remToday_;
   const d = parseDateOnly_(r.date);
   const when = late ? 'From ' + d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : 'Today' + (r.remindTime ? ' · ' + fmtTime_(r.remindTime) : '');
+  const markDone = async () => {
+    try{ await noteCall_({ action:'setReminderDone', date: r.date, done: '1' }, true); }catch(e){}
+    remList_ = remList_.filter(x => x.date !== r.date);
+    if(dayNotes_[r.date]) dayNotes_[r.date].done = true; paintNotes_();
+  };
+  // animated, repeating alarm (character calls until Done / Later) when the animation is on
+  try{
+    if(window.LBDayoffFx && LBDayoffFx.get().on){
+      LBDayoffFx.alarm(r.reminder, { title: '🔔 ' + when, onDone: markDone, onLater: () => {} });
+      return;
+    }
+  }catch(e){}
+  const box = document.getElementById('remBox'), c = document.createElement('div'); c.className = 'rem-card';
   c.innerHTML = '<b>🔔 Reminder · </b><div class="rt"></div><div class="ra"><button class="ok" type="button">✔ Done</button><button type="button">Later</button></div>';
   c.querySelector('b').textContent = '🔔 ' + when;
   c.querySelector('.rt').textContent = r.reminder;
   const btns = c.querySelectorAll('button');
-  btns[0].addEventListener('click', async () => {
-    c.remove();
-    try{ await noteCall_({ action:'setReminderDone', date: r.date, done: '1' }, true); }catch(e){}
-    remList_ = remList_.filter(x => x.date !== r.date);
-    if(dayNotes_[r.date]) dayNotes_[r.date].done = true; paintNotes_();
-  });
+  btns[0].addEventListener('click', () => { c.remove(); markDone(); });
   btns[1].addEventListener('click', () => c.remove());
   box.appendChild(c); remBeep_();
 }
-function queueReminders_(){ /* re-check right away (e.g. after saving a new reminder for today) */ loadReminders_(true); }
+function queueReminders_(){ try{ window.LBReminderAlarm && LBReminderAlarm.refresh(); }catch(e){} }
 function tickReminders_(){
   const nowMin = bahrainMinutes_();
   remList_.forEach(r => {
@@ -921,8 +935,6 @@ async function loadReminders_(quiet){
     tickReminders_();
   }catch(e){}
 }
-setTimeout(() => loadReminders_(), 1200);
-setInterval(tickReminders_, 20000);
 
 document.getElementById('fxBtn').addEventListener('click', () => { if(window.LBDayoffFx) LBDayoffFx.openSettings(); });
 renderMonthGrid();
