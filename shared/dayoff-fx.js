@@ -17,25 +17,25 @@
 
   const KEY = 'lbDayoffFx', SEEN = 'lbDayoffSeen';
   const CHARS = [
-    { id: 'chicken', label: 'Chicken', emoji: '🐔', say: 'Kok-kok-kodok! Day off mo na! 🌴' },
-    { id: 'parrot',  label: 'Parrot',  emoji: '🦜', say: 'Hello! Pahinga ka na today! 🌴' },
-    { id: 'dog',     label: 'Dog',     emoji: '🐶', say: 'Woof woof! Day off mo today! 🌴' },
-    { id: 'cat',     label: 'Cat',     emoji: '🐱', say: 'Meow~ Rest day mo na! 🌴' },
-    { id: 'frog',    label: 'Frog',    emoji: '🐸', say: 'Ribbit! Enjoy your day off! 🌴' },
-    { id: 'robot',   label: 'Robot',   emoji: '🤖', say: 'BEEP BOOP. DAY OFF ACTIVATED. 🌴' },
-    { id: 'girl',    label: 'Girl',    emoji: '👧', say: 'Yay! Day off mo ngayon! 🌴' },
-    { id: 'boy',     label: 'Boy',     emoji: '👦', say: 'Woohoo! Pahinga time! 🌴' }
+    { id: 'chicken', label: 'Chicken', emoji: '🐔', say: 'Cock-a-doodle-doo! It’s your day off.' },
+    { id: 'parrot',  label: 'Parrot',  emoji: '🦜', say: 'Hello! It’s your day off.' },
+    { id: 'dog',     label: 'Dog',     emoji: '🐶', say: 'Woof woof! It’s your day off.' },
+    { id: 'cat',     label: 'Cat',     emoji: '🐱', say: 'Meow. It’s your day off.' },
+    { id: 'frog',    label: 'Frog',    emoji: '🐸', say: 'Ribbit. It’s your day off.' },
+    { id: 'robot',   label: 'Robot',   emoji: '🤖', say: 'Attention. It is your day off.' },
+    { id: 'girl',    label: 'Girl',    emoji: '👧', say: 'Hello there! It’s your day off.' },
+    { id: 'boy',     label: 'Boy',     emoji: '👦', say: 'Hi! Hello there! It’s your day off.' }
   ];
   const byId = {}; CHARS.forEach(function(c){ byId[c.id] = c; });
 
   // ------------------------------------------------------------ settings
-  const DEF = { on: true, char: 'random', vol: 0.6, mute: false };
+  const DEF = { on: true, char: 'random', vol: 0.7, mute: false, horn: false };
   function load(){
     let s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
     const o = Object.assign({}, DEF, s);
     o.vol = Math.max(0, Math.min(1, Number(o.vol))); if (isNaN(o.vol)) o.vol = DEF.vol;
     if (o.char !== 'random' && !byId[o.char]) o.char = 'random';
-    o.on = o.on !== false; o.mute = !!o.mute;
+    o.on = o.on !== false; o.mute = !!o.mute; o.horn = !!o.horn;
     return o;
   }
   function save(o){
@@ -90,27 +90,39 @@
     const g = ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(f1); f1.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.02);
   }
+  function horn(t, n){                          // air horn: two detuned saws, slight droop
+    for (let i = 0; i < (n || 1); i++) {
+      const st = t + i * 0.95;
+      [415, 418, 622, 626, 830].forEach(function(f, k){
+        voice({ t: st, dur: 0.78, type: 'sawtooth', f0: f * 1.03, f1: f * 0.985, bp: 1800, q: 0.5, gain: k < 2 ? 0.2 : 0.13 });
+      });
+      thump(st, 0.12, 2500, 0.25);
+    }
+  }
   const SOUNDS = {
-    chicken: function(t){                      // cock-a-doodle-doo
-      voice({ t: t,        dur: 0.16, f0: 520, f1: 640, bp: 1500, q: 2, gain: 0.45 });
-      voice({ t: t + 0.2,  dur: 0.12, f0: 700, f1: 700, bp: 1500, q: 2, gain: 0.4 });
-      voice({ t: t + 0.36, dur: 0.38, f0: 640, f1: 1050, bp: 1700, q: 2, vib: [14, 22], gain: 0.5 });
-      voice({ t: t + 0.78, dur: 0.16, f0: 920, f1: 820, bp: 1700, q: 2, gain: 0.4 });
-      voice({ t: t + 0.98, dur: 0.95, f0: 1080, fm: 900, f1: 560, bp: 1600, q: 2, vib: [12, 30], gain: 0.5 });
+    chicken: function(t){                      // rooster: cock-a-doodle-doo, layered for body
+      [1, 1.012].forEach(function(m){
+        voice({ t: t,        dur: 0.2,  type: 'sawtooth', f0: 480 * m, f1: 720 * m, bp: 1400, q: 1.6, gain: 0.3 });
+        voice({ t: t + 0.24, dur: 0.14, type: 'sawtooth', f0: 760 * m, f1: 740 * m, bp: 1500, q: 1.6, gain: 0.28 });
+        voice({ t: t + 0.42, dur: 0.42, type: 'sawtooth', f0: 700 * m, fm: 1000 * m, f1: 1180 * m, bp: 1700, q: 1.6, vib: [16, 26], gain: 0.34 });
+        voice({ t: t + 0.9,  dur: 0.2,  type: 'sawtooth', f0: 1000 * m, f1: 840 * m, bp: 1600, q: 1.6, gain: 0.28 });
+        voice({ t: t + 1.14, dur: 1.1,  type: 'sawtooth', f0: 1150 * m, fm: 1000 * m, f1: 520 * m, bp: 1500, q: 1.6, vib: [13, 34], gain: 0.34 });
+      });
+      thump(t, 0.05, 2200, 0.15); thump(t + 0.42, 0.05, 2200, 0.12);
     },
     parrot: function(t){
       voice({ t: t,        dur: 0.12, type: 'square', f0: 1300, f1: 1900, bp: 2000, q: 2, gain: 0.25 });
       voice({ t: t + 0.16, dur: 0.16, type: 'sawtooth', f0: 1600, f1: 950, bp: 1800, q: 2, gain: 0.3 });
-      voice({ t: t + 0.4,  dur: 0.5, type: 'sine', f0: 900, fm: 1500, f1: 1050, vib: [9, 40], gain: 0.4 });   // whistle
+      voice({ t: t + 0.4,  dur: 0.5, type: 'sine', f0: 900, fm: 1500, f1: 1050, vib: [9, 40], gain: 0.4 });
       voice({ t: t + 0.95, dur: 0.14, type: 'square', f0: 1500, f1: 2000, bp: 2200, q: 2, gain: 0.22 });
     },
-    dog: function(t){
-      [0, 0.34].forEach(function(d){
-        thump(t + d, 0.16, 900, 0.7);
-        voice({ t: t + d, dur: 0.17, f0: 300, f1: 150, bp: 800, q: 1, gain: 0.55 });
+    dog: function(t){                          // woof woof woof — chesty, with a noisy attack
+      [0, 0.36, 0.78].forEach(function(d, i){
+        const k = i === 2 ? 0.8 : 1;
+        thump(t + d, 0.1, 1200, 0.5 * k); thump(t + d, 0.22, 500, 0.45 * k);
+        voice({ t: t + d, dur: 0.24, type: 'sawtooth', f0: 330, fm: 270, f1: 150, bp: 700, q: 1.2, gain: 0.6 * k });
+        voice({ t: t + d, dur: 0.2,  type: 'sawtooth', f0: 660, f1: 300, bp: 1500, q: 1.5, gain: 0.25 * k });
       });
-      voice({ t: t + 0.75, dur: 0.2, f0: 380, f1: 180, bp: 800, q: 1, gain: 0.5 });
-      thump(t + 0.75, 0.2, 900, 0.6);
     },
     cat: function(t){
       voice({ t: t,        dur: 0.85, type: 'triangle', f0: 420, fm: 980, f1: 480, bp: 1300, q: 1.4, vib: [7, 14], gain: 0.55 });
@@ -121,24 +133,46 @@
         voice({ t: t + d, dur: 0.16, f0: 150, f1: 210, bp: 420, q: 3, vib: [38, 60], gain: 0.5 });
       });
     },
-    robot: function(t){
-      [440, 660, 880, 1320].forEach(function(f, i){ voice({ t: t + i * 0.1, dur: 0.09, type: 'square', f0: f, f1: f, gain: 0.18 }); });
-      voice({ t: t + 0.5, dur: 0.22, type: 'square', f0: 220, f1: 220, vib: [30, 15], gain: 0.2 });
-      voice({ t: t + 0.8, dur: 0.12, type: 'square', f0: 880, f1: 880, gain: 0.16 });
-    },
-    girl: function(t){                         // sparkle chime
-      [1047, 1319, 1568, 2093, 1568, 2093].forEach(function(f, i){ voice({ t: t + i * 0.11, dur: 0.5, type: 'triangle', f0: f, f1: f, gain: 0.22 }); });
-    },
-    boy: function(t){                          // little fanfare
-      [392, 523, 659, 784].forEach(function(f, i){ voice({ t: t + i * 0.13, dur: 0.18, type: 'square', f0: f, f1: f, bp: 1800, q: 0.7, gain: 0.2 }); });
-      voice({ t: t + 0.55, dur: 0.6, type: 'square', f0: 784, f1: 784, bp: 1800, q: 0.7, vib: [6, 8], gain: 0.2 });
-    }
+    horn: function(t){ horn(t, 2); }
   };
+  // robot / girl / boy talk (browser speech voices) — falls back to a short tone if none exists
+  const SPEECH = {
+    robot: { text: 'Attention. It is your day off.',        pitch: 0.2,  rate: 0.85, want: 'male' },
+    girl:  { text: 'Hello there! It is your day off!',      pitch: 1.25, rate: 1,    want: 'female' },
+    boy:   { text: 'Hi! Hello there! It is your day off!',  pitch: 0.85, rate: 1,    want: 'male' }
+  };
+  function pickVoice(want){
+    const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    const en = vs.filter(function(v){ return /^en/i.test(v.lang); });
+    const fem = /female|zira|samantha|hazel|susan|aria|jenny|karen|moira|fiona|victoria|google uk english female/i;
+    const mal = /male|david|mark|george|james|daniel|guy|alex|fred|google uk english male/i;
+    const re = want === 'female' ? fem : mal;
+    return en.filter(function(v){ return re.test(v.name) && (want === 'female' || !/female/i.test(v.name)); })[0] || en[0] || null;
+  }
+  function speak(id){
+    const sp = SPEECH[id], set = load();
+    if (!sp || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return false;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(sp.text), v = pickVoice(sp.want);
+      if (v) u.voice = v; u.lang = (v && v.lang) || 'en-US';
+      u.pitch = sp.pitch; u.rate = sp.rate; u.volume = Math.max(0.05, set.vol);
+      speechSynthesis.speak(u); return true;
+    } catch (e) { return false; }
+  }
   function playSound(id){
     const c = audio(); if (!c) return false;
     try { c.resume && c.resume(); } catch (e) {}
+    const set = load();
+    if (set.horn) { if (!running()) return false; try { horn(c.currentTime + 0.05, 1); } catch (e) {} }
+    if (SPEECH[id]) {
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return false;
+      const wait = set.horn ? 1100 : 0;
+      setTimeout(function(){ if (!speak(id) && running()) { try { voice({ t: ctx.currentTime, dur: 0.3, type: 'square', f0: 440, f1: 660, gain: 0.2 }); } catch (e) {} } }, wait);
+      return true;
+    }
     if (!running()) return false;
-    try { (SOUNDS[id] || SOUNDS.chicken)(c.currentTime + 0.05); } catch (e) { return false; }
+    try { (SOUNDS[id] || SOUNDS.chicken)(c.currentTime + 0.05 + (set.horn ? 1.0 : 0)); } catch (e) { return false; }
     return true;
   }
   function beep(){
@@ -247,12 +281,12 @@
     s.textContent = [
       '.dfx-back{position:fixed;inset:0;z-index:100001;background:rgba(30,12,22,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:14px;opacity:0;animation:dfx-fade .35s ease forwards;font-family:"Space Grotesk",system-ui,sans-serif}',
       '@keyframes dfx-fade{to{opacity:1}}',
-      '.dfx-stage{position:relative;width:min(360px,100%);height:400px;border-radius:26px;overflow:hidden;background:linear-gradient(#8fd3ff 0%,#d8f1ff 52%,#bfe9a8 52%,#7cc46a 100%);box-shadow:0 26px 70px rgba(0,0,0,.45);perspective:760px;cursor:pointer}',
-      '.dfx-sun{position:absolute;top:18px;right:22px;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fffbd0,#ffd84a);box-shadow:0 0 40px 12px rgba(255,226,120,.6);animation:dfx-sun 6s ease-in-out infinite}',
+      '.dfx-stage{position:relative;width:min(360px,100%);height:400px;border-radius:26px;overflow:hidden;background:linear-gradient(#1d2b4a 0%,#7b5a86 34%,#f2a77a 51%,#2f3d33 51%,#1c2620 100%);box-shadow:0 26px 70px rgba(0,0,0,.45);perspective:760px;cursor:pointer}',
+      '.dfx-sun{opacity:.35;position:absolute;top:18px;right:22px;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fffbd0,#ffd84a);box-shadow:0 0 40px 12px rgba(255,226,120,.6);animation:dfx-sun 6s ease-in-out infinite}',
       '@keyframes dfx-sun{50%{transform:scale(1.08)}}',
-      '.dfx-cloud{position:absolute;top:34px;left:-80px;width:70px;height:24px;border-radius:20px;background:#fff;opacity:.9;box-shadow:24px -10px 0 6px #fff,44px 0 0 2px #fff;animation:dfx-cloud 14s linear infinite}',
+      '.dfx-cloud{display:none;position:absolute;top:34px;left:-80px;width:70px;height:24px;border-radius:20px;background:#fff;opacity:.9;box-shadow:24px -10px 0 6px #fff,44px 0 0 2px #fff;animation:dfx-cloud 14s linear infinite}',
       '@keyframes dfx-cloud{to{transform:translateX(480px)}}',
-      '.dfx-hill{position:absolute;left:-20%;right:-20%;bottom:-40px;height:150px;border-radius:50%;background:radial-gradient(ellipse at 50% 20%,#9be37f,#5fb54e)}',
+      '.dfx-hill{position:absolute;left:-20%;right:-20%;bottom:-40px;height:150px;border-radius:50%;background:radial-gradient(ellipse at 50% 20%,#4a6b45,#2a3b2a)}',
       '.dfx-home{position:absolute;left:50%;top:52px;width:200px;margin-left:-100px;filter:drop-shadow(0 8px 6px rgba(0,0,0,.25))}',
       '.dfx-home svg{display:block;width:100%;height:auto}',
       '.dfx-char{position:absolute;left:50%;top:112px;width:168px;margin-left:-84px;transform-style:preserve-3d;will-change:transform;opacity:0;animation:dfx-emerge 1.7s cubic-bezier(.3,.8,.3,1) .5s forwards}',
@@ -260,7 +294,7 @@
       '.dfx-char svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 10px 8px rgba(0,0,0,.28))}',
       '@keyframes dfx-emerge{0%{opacity:0;transform:translate3d(0,-24px,-160px) scale(.28)}18%{opacity:1}100%{opacity:1;transform:translate3d(0,92px,50px) scale(1)}}',
       '.dfx-shadow{position:absolute;left:50%;top:340px;width:140px;height:22px;margin-left:-70px;border-radius:50%;background:rgba(0,0,0,.22);filter:blur(5px);opacity:0;animation:dfx-fade .6s ease 1.7s forwards}',
-      '.dfx-say{position:absolute;left:14px;right:14px;top:14px;padding:10px 14px;border-radius:16px;background:#fff;color:#3a2530;font-weight:700;font-size:14px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.2);opacity:0;transform:translateY(-8px) scale(.96);animation:dfx-say .45s ease 1.9s forwards}',
+      '.dfx-say{position:absolute;left:14px;right:14px;top:14px;padding:10px 14px;border-radius:16px;background:rgba(15,18,28,.72);backdrop-filter:blur(6px);color:#fff;font-weight:600;font-size:14px;letter-spacing:.2px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.35);opacity:0;transform:translateY(-8px) scale(.96);animation:dfx-say .45s ease 1.9s forwards}',
       '@keyframes dfx-say{to{opacity:1;transform:none}}',
       '.dfx-x{position:absolute;right:10px;bottom:10px;z-index:3;border:0;border-radius:50%;width:34px;height:34px;background:rgba(0,0,0,.35);color:#fff;font-size:16px;cursor:pointer}',
       '.dfx-tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:3;border:0;border-radius:20px;padding:8px 14px;background:#c9506b;color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.3)}',
@@ -329,7 +363,7 @@
     back.querySelector('.dfx-say').textContent = (opts.name ? opts.name + ' — ' : '') + ch.say;
     // confetti
     const cols = ['#ff6f91', '#ffd34d', '#5aa7ff', '#6ee09a', '#b48cff'];
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 0; i++) {
       const c = document.createElement('i'); c.className = 'dfx-conf';
       c.style.left = (Math.random() * 100) + '%'; c.style.background = cols[i % cols.length];
       c.style.setProperty('--dx', (Math.random() * 80 - 40) + 'px'); c.style.animationDelay = (2.1 + Math.random() * 1.6) + 's';
@@ -393,9 +427,10 @@
       '<div class="lbl">Character</div><div class="grid" id="dfxGrid"></div>' +
       '<div class="lbl">Sound</div>' +
       '<div class="row" style="margin-top:4px"><b>🔈 Volume</b><input type="range" id="dfxVol" min="0" max="100" step="1"><span id="dfxVolN" style="width:36px;text-align:right;font-size:12px"></span></div>' +
+      '<div class="row"><b>📣 Air horn blast first (louder, alarm-style)</b><input type="checkbox" id="dfxHorn"></div>' +
       '<div class="row"><b>Mute (also mutes reminder chime)</b><input type="checkbox" id="dfxMute"></div>' +
       '<div class="btns"><button type="button" id="dfxTest">▶ Preview</button><button type="button" class="pri" id="dfxDone">Done</button></div>' +
-      '<div class="note">Sounds are generated by your browser, so they are simple "cartoon" versions. Phones may need a tap before sound can play.</div>';
+      '<div class="note">Animal sounds are generated by your browser; robot, girl and boy speak with your device’s voices. Phones may need a tap before sound can play.</div>';
     const grid = box.querySelector('#dfxGrid');
     function drawGrid(){
       grid.innerHTML = '';
@@ -410,7 +445,8 @@
     }
     function testPlay(id){ audio(); play(id || s.char, { hold: 6500 }); }
     const on = box.querySelector('#dfxOn'), vol = box.querySelector('#dfxVol'), volN = box.querySelector('#dfxVolN'), mute = box.querySelector('#dfxMute');
-    on.checked = s.on; vol.value = Math.round(s.vol * 100); volN.textContent = vol.value + '%'; mute.checked = s.mute;
+    on.checked = s.on; vol.value = Math.round(s.vol * 100); volN.textContent = vol.value + '%'; mute.checked = s.mute; const hornEl = box.querySelector('#dfxHorn'); hornEl.checked = s.horn;
+    hornEl.addEventListener('change', function(){ s.horn = hornEl.checked; save(s); audio(); if (hornEl.checked) horn(ctx.currentTime + 0.05, 1); });
     on.addEventListener('change', function(){ s.on = on.checked; save(s); });
     vol.addEventListener('input', function(){ s.vol = vol.value / 100; volN.textContent = vol.value + '%'; save(s); if (master) master.gain.value = s.mute ? 0 : s.vol * 0.9; });
     vol.addEventListener('change', function(){ audio(); beep(); });             // small tick so you can hear the level
