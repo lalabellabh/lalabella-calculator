@@ -530,7 +530,8 @@ body::before{
     </div>
     <button id="backTools" title="Back to Flower Tools">← Flower Tools</button>
     <div class="group"><span class="label">CARD</span>
-      <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 9.9 × 9.9 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option></select>
+      <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 9.9 × 9.9 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option><option value="custom">✏️ CUSTOM size…</option></select>
+      <span id="customSize" style="display:none;align-items:center;gap:6px;"><input type="number" id="customW" min="20" max="297" step="0.5" value="100" style="width:78px;"> × <input type="number" id="customH" min="20" max="420" step="0.5" value="150" style="width:78px;"> <span style="font-size:12px;opacity:.7">mm (W × H)</span></span>
     </div>
     <div class="group"><span class="label">ALIGN</span>
       <button data-align="left" title="Left">◀</button><button data-align="center" title="Center" class="active">☰</button><button data-align="right" title="Right">▶</button>
@@ -809,6 +810,17 @@ const fontSize=document.getElementById('fontSize');
 const fileImage=document.getElementById('fileImage');
 let selectedImage=null;
 
+function customMm(){
+  const cl=(v,a,b,d)=>{v=parseFloat(v); return isFinite(v)?Math.min(b,Math.max(a,v)):d;};
+  return { w: cl(document.getElementById('customW').value,20,297,100), h: cl(document.getElementById('customH').value,20,420,150) };
+}
+function applyCustomSize(){
+  const on = size.value==='custom';
+  document.getElementById('customSize').style.display = on ? 'inline-flex' : 'none';
+  card.classList.toggle('custom', on);
+  if(on){ const c=customMm(); card.style.width=c.w+'mm'; card.style.height=c.h+'mm'; }
+  else { card.style.width=''; card.style.height=''; }
+}
 function updatePrintSize(){
   // Circle sheets and the explicit A4 card size print on a full A4
   // page (multiple circles, or a page-sized card, need the room).
@@ -824,6 +836,12 @@ function updatePrintSize(){
   if(!s){s=document.createElement('style');s.id='dynamicPrint';document.head.appendChild(s)}
   if(size.value === 'circle10' || size.value === 'circle2in' || size.value === 'a4'){
     s.textContent='@media print{@page{size:210mm 297mm;margin:0}}';
+    return;
+  }
+  if(size.value === 'custom'){
+    const c=customMm();
+    if(c.w>210 || c.h>297){ s.textContent='@media print{@page{size:210mm 297mm;margin:0}}'; return; }
+    s.textContent='@media print{@page{size:'+c.w+'mm '+Math.max(c.h,127)+'mm;margin:0}}';
     return;
   }
   const cardMm = size.value === 'small' ? 74.93 : 110;
@@ -864,6 +882,7 @@ size.addEventListener('change',()=>{
   card.classList.toggle('circle10',size.value==='circle10');
   card.classList.toggle('circle2in',size.value==='circle2in');
   card.classList.toggle('a4',size.value==='a4');
+  applyCustomSize();
   document.getElementById('stickerSlotsPanel').style.display = (size.value==='circle10' || size.value==='circle2in') ? 'block' : 'none';
   updateStickerCountOptions();
   updatePrintSize();buildRulers();renderUserGuides();
@@ -880,10 +899,12 @@ function cardSizeMm(){
   if(card.classList.contains('circle10')) return { w: 99, h: 99 };
   if(card.classList.contains('circle2in')) return { w: 50.8, h: 50.8 };
   if(card.classList.contains('a4')) return { w: 210, h: 297 };
+  if(card.classList.contains('custom')) return customMm();
   if(card.classList.contains('small')) return { w: 74.93, h: 74.93 };
   return { w: 110, h: 110 };
 }
 
+['customW','customH'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ applyCustomSize(); updatePrintSize(); buildRulers(); renderUserGuides(); }));
 function buildRulers(){
   const { w: sizeMmW, h: sizeMmH } = cardSizeMm();
   const cardRect = card.getBoundingClientRect();
@@ -1866,6 +1887,8 @@ function saveCard(){
     textDir: textArea.dir,
     textAlign: textArea.style.textAlign || 'center',
     size: size.value,
+    customW: document.getElementById('customW').value,
+    customH: document.getElementById('customH').value,
     cols: cols.value,
     font: font.value,
     fontSize: fontSize.value,
@@ -1907,6 +1930,9 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
 
       size.value = data.size || 'big';
       card.classList.toggle('small', size.value === 'small');
+      if(data.customW) document.getElementById('customW').value=data.customW;
+      if(data.customH) document.getElementById('customH').value=data.customH;
+      applyCustomSize();
       cols.value = data.cols || '1';
       textArea.style.columnCount = cols.value;
       textArea.style.columnGap = '14px';
