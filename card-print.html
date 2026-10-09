@@ -275,6 +275,8 @@ body::before{
     position:absolute;left:12px;top:150px;width:205px;height:138px;margin:0;
   }
   .message-workspace .envelope:hover{ transform:none; }
+  .message-workspace .envelope .env-seal{ top:50px; width:40px; height:40px; font-size:18px; }
+  .message-workspace .envelope .envelope-label{ bottom:8px; }
   .message-workspace .envelope .hidden-card{
     /* Scaled down to fit the smaller 205x138 envelope used on desktop
        (the base .hidden-card size is tuned for the bigger mobile
@@ -468,6 +470,24 @@ body::before{
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Great+Vibes&family=Allura&family=Bodoni+Moda:ital@1&family=Cormorant+Garamond:ital@1&family=Playfair+Display:ital@1&family=Cinzel+Decorative&display=swap" rel="stylesheet">
+<style id="cpPolish">
+/* ===== toolbar polish (wider, tidier, desktop-first) ===== */
+.panel:has(> .toolbar){background:linear-gradient(180deg,#fffefd,#fff7f8);border:1px solid #efdce1;border-radius:24px;padding:18px 24px;box-shadow:0 14px 40px #6b435220,inset 0 1px 0 #fff}
+.toolbar{gap:10px 12px}
+.toolbar .group{background:linear-gradient(180deg,#fff,#fff8f9);border:1px solid #f0dde3;border-radius:14px;padding:6px 10px;box-shadow:0 2px 8px #6b43520c}
+.toolbar .label,.group .label{font-size:10.5px;letter-spacing:.1em;font-weight:700;color:#a85b78;text-transform:uppercase}
+.toolbar button,.toolbar select,.toolbar input[type=number],.toolbar input[type=text]{min-height:38px;border-radius:11px;border-color:#ecd7dd;transition:transform .15s,box-shadow .15s,background .15s}
+.toolbar button:hover,.toolbar select:hover{transform:translateY(-1px);box-shadow:0 6px 14px #6b435222}
+.toolbar .primary,.toolbar #print{background:linear-gradient(135deg,#a34f72,#8f3f61);box-shadow:0 8px 18px #8f3f6144;font-weight:700;padding-left:18px;padding-right:18px}
+.toolbar #print:hover{box-shadow:0 12px 24px #8f3f6155}
+#printOffsetBox{width:76px!important;height:76px!important;background:radial-gradient(circle,#fff 0%,#fdf0f3 100%)!important;box-shadow:inset 0 0 0 1px #fff,0 4px 12px #6b435220;transition:box-shadow .15s}
+#printOffsetBox:focus{outline:none;box-shadow:0 0 0 3px #a34f7255,0 6px 16px #6b435230}
+@media(min-width:900px){
+  .panel:has(> .toolbar){max-width:min(1400px,calc(100vw - 48px));padding:22px 32px}
+  .toolbar{justify-content:center;gap:12px 14px}
+  .toolbar .group{padding:7px 12px}
+}
+</style>
 </head>
 <body>
 
@@ -533,7 +553,7 @@ body::before{
       <select id="cols"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
     </div>
     <div class="group"><span class="label">GUIDE (mm from top)</span>
-      <input type="number" id="guideInput" step="1" min="0" placeholder="e.g. 20" style="width:70px;">
+      <input type="number" id="guideInput" step="1" min="0" placeholder="e.g. 20 mm" style="width:118px;">
       <button id="addGuideBtn">+ Add</button>
     </div>
     <button id="addImage">🖼️ Add Image</button>
@@ -1528,22 +1548,27 @@ document.addEventListener('keydown', e=>{
     if(isCentered) selectedImage.style.left = (r.width/2 - selectedImage.offsetWidth/2) + 'px';
     return;
   }
-  // Up/Down arrows nudge a HIGHLIGHTED piece of text vertically —
+  // Arrow keys (up/down/left/right) nudge a HIGHLIGHTED piece of text —
   // only when there's an actual (non-collapsed) selection, so normal
   // cursor movement through the message is never affected. This is
   // what lets one line of text be shifted to overlap another.
   const sel = window.getSelection();
   const hasRealSelection = sel && sel.rangeCount > 0 && !sel.isCollapsed && textArea.contains(sel.getRangeAt(0).commonAncestorContainer);
-  if(hasRealSelection && (e.key==='ArrowUp' || e.key==='ArrowDown')){
+  if(hasRealSelection && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
     e.preventDefault();
     const step = e.shiftKey ? 10 : 1;
     let span = currentSelectionSpan();
     if(!span) span = wrapSelectionInSpan();
     if(!span) return;
-    const curTop = parseFloat(span.style.top) || 0;
     span.style.position = 'relative';
     span.style.display = 'inline-block';
-    span.style.top = (curTop + (e.key==='ArrowUp' ? -step : step)) + 'px';
+    if(e.key==='ArrowUp' || e.key==='ArrowDown'){
+      const curTop = parseFloat(span.style.top) || 0;
+      span.style.top = (curTop + (e.key==='ArrowUp' ? -step : step)) + 'px';
+    }else{
+      const curLeft = parseFloat(span.style.left) || 0;
+      span.style.left = (curLeft + (e.key==='ArrowLeft' ? -step : step)) + 'px';
+    }
   }
 });
 
