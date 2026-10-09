@@ -528,6 +528,13 @@
     document.body.appendChild(cb);
   }
 
+  // Site-wide reminder alarm (floating, keeps ringing until Done/Later). See shared/reminder-alarm.js.
+  if (!window.LBReminderAlarm && !document.querySelector('script[src="shared/reminder-alarm.js"]')) {
+    const ra = document.createElement('script');
+    ra.src = 'shared/reminder-alarm.js';
+    document.body.appendChild(ra);
+  }
+
   // System "brain" (reminders + smart alerts) — loaded here once, same
   // one-file-change reasoning as the bubbles above. See shared/brain.js.
   if (!window.LBBrain && !document.querySelector('script[src="shared/brain.js"]')) {
