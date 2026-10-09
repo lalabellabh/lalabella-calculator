@@ -124,7 +124,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 .cmdform .spk{background:#161b24;color:#9fb0c6;padding:9px 10px}.cmdform .spk.on{color:#2ee8ff}
 
 /* NOVA floating core + cleaner corners */
-#joyboy-bubble-btn,#joyboy-panel{display:none!important}
+#joyboy-bubble-btn,#joyboy-panel,#lbcb-btn{display:none!important}
 .core{animation:novaFloat 5.5s ease-in-out infinite,novaGlow 3s ease-in-out infinite!important}
 @keyframes novaFloat{0%,100%{transform:translateY(8px) scale(1)}50%{transform:translateY(-18px) scale(1.035)}}
 @keyframes novaGlow{0%,100%{box-shadow:0 0 45px rgba(22,135,255,.5),0 0 100px rgba(22,135,255,.24),inset 0 0 70px #000}50%{box-shadow:0 0 75px rgba(22,135,255,.82),0 0 170px rgba(22,135,255,.38),inset 0 0 85px #000}}
@@ -153,6 +153,14 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 .lbcb-ubadge,#lbcb-badge{background:#2ee8ff!important;color:#03121f!important;border-color:#07101c!important}
 .lbcb-av{background:linear-gradient(135deg,#1677ff,#2ee8ff)!important;box-shadow:0 0 10px rgba(46,232,255,.5)}
 @media(max-width:900px){.status-row{padding-left:62px;gap:16px}}
+
+/* header chat button (like Index / Flower Tools) + docked chat panel */
+#novaChatBtn{position:relative;width:38px;height:34px;display:grid;place-items:center;border-radius:12px;border:1px solid rgba(46,232,255,.55);background:#0d1d31;color:#7ff0ff;font-size:16px;cursor:pointer;box-shadow:0 0 14px rgba(46,232,255,.35);flex:0 0 auto}
+#novaChatBtn:active{transform:scale(.94)}
+#novaChatBadge{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#2ee8ff;color:#03121f;font:700 10px/17px Arial,sans-serif;text-align:center;display:none;box-shadow:0 0 10px rgba(46,232,255,.8)}
+#novaChatBadge.show{display:block}
+#lbcb-panel{top:70px!important;bottom:auto!important;left:auto!important;right:16px!important;height:min(520px,calc(100vh - 96px))!important;z-index:9600!important}
+@media(max-width:900px){#lbcb-panel{left:12px!important;right:12px!important;width:auto!important;top:64px!important}.status-row{padding-left:0!important}}
 </style>
 </head>
 <body>
@@ -179,7 +187,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
   </aside>
 
   <main class="main">
-    <header class="top"><div class="title">COMMAND CENTER / NOVA CORE</div><div style="display:flex;align-items:center;gap:14px;"><button id="wakeToggle" title="Always-listening mode" style="display:flex;align-items:center;gap:6px;background:#111;border:1px solid #333;border-radius:20px;padding:5px 12px;color:#9aa4b2;font-size:11px;cursor:pointer;letter-spacing:.04em;"><span id="wakeToggleIcon">🎙️</span><span id="wakeToggleLabel">Always Listening: OFF</span></button><div class="clock" id="clock"></div></div></header>
+    <header class="top"><div class="title">COMMAND CENTER / NOVA CORE</div><div style="display:flex;align-items:center;gap:14px;"><button id="wakeToggle" title="Always-listening mode" style="display:flex;align-items:center;gap:6px;background:#111;border:1px solid #333;border-radius:20px;padding:5px 12px;color:#9aa4b2;font-size:11px;cursor:pointer;letter-spacing:.04em;"><span id="wakeToggleIcon">🎙️</span><span id="wakeToggleLabel">Always Listening: OFF</span></button><button id="novaChatBtn" type="button" aria-label="Staff chat" title="Chat with the team">💬<span id="novaChatBadge"></span></button><div class="clock" id="clock"></div></div></header>
     <section class="stage" id="stage">
       <div class="matrix" id="matrix" aria-hidden="true"></div>
       <div class="assembly" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="bolt one"></div><div class="bolt two"></div>
@@ -847,6 +855,13 @@ document.getElementById('mic').onclick=manual;
     ans.textContent=out||'…'; box.scrollTop=0;
     if(out){ if(voice) speak(out); else { log(out,'NOVA'); setState(awake?'awake':'','AWAKE'); } }
   });
+})();
+
+// header chat button -> toggles the staff-chat panel (docked, not floating) + unread badge
+(function(){
+  const btn=document.getElementById('novaChatBtn'), badge=document.getElementById('novaChatBadge');
+  btn.addEventListener('click',()=>{ const real=document.getElementById('lbcb-btn'); if(real) real.click(); });
+  window.addEventListener('lb:chat-unread',e=>{ const n=(e.detail&&e.detail.total)||0; badge.textContent=n>99?'99+':n; badge.classList.toggle('show',n>0); });
 })();
 document.querySelectorAll('[data-say]').forEach(b=>b.onclick=()=>{awake=true;handle(b.dataset.say)});
 setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),1000);
