@@ -402,6 +402,62 @@
   }
 
   /* ---------------------------------------------------------- main */
+
+  // ---------- weather (same places + cache as the nav drawer) ----------
+  var WXP = {
+    bh: { n: 'Bahrain', lat: 26.2285, lon: 50.5860, tz: 'Asia/Bahrain', k: /\b(bahrain|bh|manama|muharraq|riffa)\b/ },
+    spl: { n: 'San Pedro, Laguna', lat: 14.3595, lon: 121.0473, tz: 'Asia/Manila', k: /\b(san pedro|laguna|spl)\b/ },
+    mnl: { n: 'Manila', lat: 14.5995, lon: 120.9842, tz: 'Asia/Manila', k: /\b(manila|maynila)\b/ },
+    qc: { n: 'Quezon City', lat: 14.6760, lon: 121.0437, tz: 'Asia/Manila', k: /\b(quezon|qc)\b/ },
+    cebu: { n: 'Cebu City', lat: 10.3157, lon: 123.8854, tz: 'Asia/Manila', k: /\bcebu\b/ },
+    davao: { n: 'Davao City', lat: 7.1907, lon: 125.4553, tz: 'Asia/Manila', k: /\bdavao\b/ },
+    dxb: { n: 'Dubai', lat: 25.2048, lon: 55.2708, tz: 'Asia/Dubai', k: /\bdubai\b/ },
+    ruh: { n: 'Riyadh', lat: 24.7136, lon: 46.6753, tz: 'Asia/Riyadh', k: /\b(riyadh|saudi)\b/ }
+  };
+  var WXT = { 0: ['Sunny', 'Maaraw'], 1: ['Mostly sunny', 'Halos maaraw'], 2: ['Partly cloudy', 'May ulap'], 3: ['Cloudy', 'Makulimlim'], 45: ['Foggy', 'May fog'], 48: ['Foggy', 'May fog'], 51: ['Light drizzle', 'Ambon'], 53: ['Drizzle', 'Ambon'], 55: ['Drizzle', 'Ambon'], 61: ['Light rain', 'Mahinang ulan'], 63: ['Rain', 'Umuulan'], 65: ['Heavy rain', 'Malakas na ulan'], 80: ['Rain showers', 'Pag-ulan'], 81: ['Rain showers', 'Pag-ulan'], 82: ['Heavy showers', 'Malakas na ulan'], 95: ['Thunderstorm', 'Bagyo/kidlat'], 96: ['Thunderstorm', 'Bagyo/kidlat'], 99: ['Thunderstorm', 'Bagyo/kidlat'] };
+  function wxPlace(key) { var v = null; try { v = localStorage.getItem(key); } catch (e) {} return WXP[v] ? v : null; }
+  function wxGet(pk) {
+    var P = WXP[pk], ck = 'lbWxC3_' + pk, c = null;
+    try { c = JSON.parse(localStorage.getItem(ck) || 'null'); } catch (e) {}
+    if (c && c.d && Date.now() - c.ts < 300000) return Promise.resolve(c.d);
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + P.lat + '&longitude=' + P.lon + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=' + encodeURIComponent(P.tz);
+    return fetch(url, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      var d = { t: j.current.temperature_2m, f: j.current.apparent_temperature, h: j.current.relative_humidity_2m, w: j.current.wind_speed_10m, code: j.current.weather_code,
+        p: (j.hourly && j.hourly.precipitation_probability && j.hourly.precipitation_probability[0]) || 0 };
+      try { localStorage.setItem(ck, JSON.stringify({ ts: Date.now(), d: d })); } catch (e) {}
+      return d;
+    }).catch(function () { return c && c.d ? c.d : null; });
+  }
+  function wxFeel(raw, f, h) {
+    if (f >= 45) return L(raw, 'Extreme heat 🥵 — avoid being outside, drink lots of water.', 'Sobrang init 🥵 — iwasan ang lumabas, uminom ng maraming tubig.');
+    if (f >= 38) return L(raw, 'Very hot 🔥 — stay hydrated.', 'Sobrang mainit 🔥 — uminom ng tubig.');
+    if (f >= 32) return L(raw, 'Hot ☀️' + (h >= 65 ? ' and humid.' : '.'), 'Mainit ☀️' + (h >= 65 ? ' at maalinsangan.' : '.'));
+    if (f >= 26) return L(raw, 'Warm and comfortable.', 'Medyo mainit pero ok lang.');
+    if (f >= 18) return L(raw, 'Cool and pleasant 😌', 'Presko at maganda ang panahon 😌');
+    return L(raw, 'Cold 🥶 — bring a jacket.', 'Malamig 🥶 — magdala ng jacket.');
+  }
+  function wxLine(raw, pk, d) {
+    var P = WXP[pk], x = WXT[d.code] || ['', ''], tl = isTl(raw);
+    return '• ' + P.n + ': ' + Math.round(d.t) + '°C (' + (tl ? 'pakiramdam' : 'feels like') + ' ' + Math.round(d.f) + '°), ' + (tl ? x[1] : x[0]) + ', ' + (tl ? 'halumigmig ' : 'humidity ') + Math.round(d.h) + '%, ' + (tl ? 'ulan ' : 'rain ') + Math.round(d.p) + '%\n   ' + wxFeel(raw, d.f, d.h);
+  }
+  function weatherIntent(raw, t) {
+    var keys = Object.keys(WXP).filter(function (k) { return WXP[k].k.test(t); });
+    if (!keys.length) {
+      if (/\b(philippines|pilipinas|pinas|ph)\b/.test(t)) keys = [wxPlace('lbWxP2') || 'spl'];
+      else keys = [wxPlace('lbWxP1') || 'bh', wxPlace('lbWxP2') || 'spl'];
+      if (keys[0] === keys[1]) keys = [keys[0]];
+    }
+    think('Checking the live weather for ' + keys.map(function (k) { return WXP[k].n; }).join(' & ') + '…', 'Chine-check ko ang live na panahon sa ' + keys.map(function (k) { return WXP[k].n; }).join(' at ') + '…', raw);
+    return Promise.all(keys.map(function (k) { return wxGet(k); })).then(function (arr) {
+      var lines = [], hot = false, rain = false;
+      arr.forEach(function (d, i) { if (d) { lines.push(wxLine(raw, keys[i], d)); if (d.f >= 38) hot = true; if (d.p >= 50 || d.code >= 61) rain = true; } else lines.push('• ' + WXP[keys[i]].n + ': ' + L(raw, 'weather unavailable right now.', 'walang makuhang weather ngayon.')); });
+      var out = lines.join('\n');
+      if (hot) out += tip(raw, 'Heat is high — keep the flowers out of direct sun and check the cooler/delivery timing.', 'Mataas ang init — ilayo sa direktang araw ang mga bulaklak at i-check ang cooler/oras ng delivery.');
+      else if (rain) out += tip(raw, 'Rain is likely — protect deliveries and bouquets.', 'Posibleng umulan — protektahan ang mga delivery at bouquet.');
+      return { handled: true, text: out, navigateTo: null };
+    });
+  }
+
   var ctx = { item: '', branch: '', last: '' };
   var thoughtCb = null;
   function think(en, tl, raw) { try { if (thoughtCb) thoughtCb(L(raw || '', en, tl)); } catch (e) {} }
@@ -414,6 +470,7 @@
     if (!t) return Promise.resolve({ handled: false });
 
     var st = smallTalk(raw, t); if (st) return ok(st);
+    if (/\b(weather|panahon|temperature|temp|init|mainit|malamig|lamig|ulan|umuulan|maulan|rain(ing)?|hot|cold|humidity|forecast|bagyo|maaraw|sunny|heat)\b/.test(t) && !/\b(stock|schedule|reminder|expiry|order|sales)\b/.test(t)) return weatherIntent(raw, t);
     var tm = timeIntent(raw, t); if (tm) return ok(tm);
     var mt = mathIntent(raw); if (mt) return ok(mt);
 
@@ -425,6 +482,7 @@
     }
 
     if (offlineNet() && /(stock|schedule|reminder|expiry|low|summary)/.test(t)) return Promise.resolve(netMsg(raw));
+
 
     // live data
     if (/\b(low stock|lowstock|below min|minimum stock|running low|paubos|nauubos|ubos na|kulang na|kulang ang stock|mababa ang stock|need(s)? restock|restock)\b/.test(t)) return lowStock(raw, t, ctx);
@@ -453,7 +511,7 @@
     return Promise.resolve({ handled: false });
   }
 
-  var SORRY_EN = ["I didn't quite get that, Boss. Try: \"stock of red rose\", \"low stock\", \"near expiry\", \"my day off\", \"open flower dashboard\", or \"how to receive stock\".",
+  var SORRY_EN = ["I didn't quite get that, Boss. Try: \"stock of red rose\", \"weather today\", \"low stock\", \"near expiry\", \"my day off\", \"open flower dashboard\", or \"how to receive stock\".",
     "Hmm, I'm not sure about that one. I can check stock, schedule, reminders, open pages or explain how any tool works — what do you need?"];
   var SORRY_TL = ['Hindi ko masyadong naintindihan, Boss. Subukan: "stock ng red rose", "low stock", "near expiry", "day off ko", "buksan ang flower dashboard", o "paano mag receive".',
     'Hmm, hindi ako sigurado diyan. Kaya kong mag-check ng stock, schedule, reminders, magbukas ng page o magpaliwanag ng mga tool — ano ang kailangan mo?'];
