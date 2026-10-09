@@ -6,6 +6,7 @@
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <script src="shared/dayoff-fx.js"></script>
+<script src="shared/hero-3d.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Duty Schedule</title>
@@ -364,6 +365,7 @@ function tickClock(){
 }
 tickClock();
 setInterval(tickClock, 1000);
+try{ if(window.LBHero3D){ LBHero3D.initClock(document.querySelector('.clock-panel')); LBHero3D.weather(document.getElementById('weatherEmoji'), 3); } }catch(e){}
 
 // ---------- Weather (Open-Meteo — free, no API key required) ----------
 const WEATHER_ICONS = {
@@ -379,7 +381,7 @@ async function loadWeather(){
     const data = await res.json();
     const c = data.current;
     const [emoji, desc] = WEATHER_ICONS[c.weather_code] || ['🌡️','—'];
-    document.getElementById('weatherEmoji').textContent = emoji;
+    if(window.LBHero3D) LBHero3D.weather(document.getElementById('weatherEmoji'), c.weather_code, c.temperature_2m); else document.getElementById('weatherEmoji').textContent = emoji;
     document.getElementById('weatherTemp').textContent = Math.round(c.temperature_2m) + '°C';
     document.getElementById('weatherDesc').textContent = desc;
     document.getElementById('weatherFeels').textContent = Math.round(c.apparent_temperature) + '°C';
