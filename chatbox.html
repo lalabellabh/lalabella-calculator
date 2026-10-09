@@ -87,6 +87,29 @@
   .ubadge.show{ display:flex; }
   .group-icon{ width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
 
+  .new-grp{ width:100%; margin-top:8px; border:1px dashed var(--rose); background:none; color:var(--rose-deep); border-radius:12px; padding:8px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .new-grp:hover{ background:var(--blush); }
+  .group-icon.g2{ background:linear-gradient(135deg,#7a8fd6,#4d5fa8); }
+  .head-acts{ margin-left:auto; display:flex; gap:6px; }
+  .head-acts button{ border:1px solid var(--line); background:var(--blush); color:var(--ink); border-radius:20px; padding:5px 11px; font-family:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; }
+  .head-acts button:hover{ background:#f6d3da; }
+  .head-acts .danger{ color:#b23a3a; }
+  .grp-back{ position:fixed; inset:0; z-index:100000; background:rgba(40,20,28,.45); display:flex; align-items:center; justify-content:center; padding:12px; }
+  .grp-box{ width:min(400px,100%); max-height:90vh; display:flex; flex-direction:column; background:#fff; border-radius:18px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.35); color:var(--ink); }
+  .grp-box h3{ margin:0 0 10px; font-size:16px; }
+  .grp-box input[type=text]{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--blush); font-family:inherit; font-size:14px; outline:none; margin-bottom:8px; }
+  .grp-pick{ flex:1; min-height:120px; overflow-y:auto; border:1px solid var(--line); border-radius:12px; padding:4px; }
+  .grp-pick label{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; cursor:pointer; }
+  .grp-pick label:hover{ background:var(--blush); }
+  .grp-pick input{ width:18px; height:18px; accent-color:var(--rose); flex-shrink:0; }
+  .grp-pick .nm{ font-size:13px; font-weight:600; } .grp-pick .ps{ font-size:10.5px; color:var(--ink-dim); }
+  .grp-cnt{ font-size:11.5px; color:var(--ink-dim); margin:8px 2px 0; }
+  .grp-msg{ font-size:12px; color:#b23a3a; min-height:16px; margin-top:6px; }
+  .grp-btns{ display:flex; gap:8px; margin-top:8px; }
+  .grp-btns button{ font:inherit; font-weight:700; font-size:13px; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; background:#f6ecec; color:var(--ink); }
+  .grp-btns .pri{ background:var(--rose-deep); color:#fff; flex:1; }
+  .grp-btns button:disabled{ opacity:.55; }
+
   /* ---- avatar ---- */
   .av{ position:relative; width:38px; height:38px; flex-shrink:0; border-radius:50%; background:linear-gradient(135deg,#f3b0bf,var(--rose)); color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; }
   .av img{ width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
@@ -226,6 +249,7 @@
       <div class="convs-head">
         <h2>💬 Chats</h2>
         <input type="search" id="convSearch" placeholder="Search people…">
+        <button type="button" class="new-grp" id="newGroupBtn">➕ New group</button>
       </div>
       <div class="conv-list" id="convList"></div>
     </aside>
@@ -239,6 +263,7 @@
           <div class="chat-sub" id="headSub">Everyone</div>
         </div>
         <span class="private-tag" id="privateTag" hidden>🔒 Only you two can see this</span>
+        <div class="head-acts" id="grpActs" hidden><button type="button" id="grpAddBtn">➕ Add</button><button type="button" class="danger" id="grpLeaveBtn">🚪 Leave</button></div>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <form class="composer" id="chatForm">
@@ -261,17 +286,19 @@
   const FALLBACK_MS = 30000, PEOPLE_MS = 60000;
 
   let meId = null, isAdmin = false, people = [], peopleById = {};
-  let conv = { peerId: null };          // null = group chat
+  let conv = { peerId: null, groupId: null };   // both null = team chat
+  let groups = [], groupsById = {};
   let lastId = 0, delSince = '', lastMsg = null, busy = false, firstLoad = true, liveOn = false;
   const nodes = {};
-  let unread = { group: 0, dm: {} };
+  let unread = { group: 0, dm: {}, grp: {} };
 
   // ---------- seen markers (per device) ----------
   function loadSeen(){ try{ return JSON.parse(localStorage.getItem('lbChatSeen') || '{}') || {}; }catch(e){ return {}; } }
   function saveSeen(s){ try{ localStorage.setItem('lbChatSeen', JSON.stringify(s)); }catch(e){} }
   function markSeen(id){
-    const s = loadSeen(); s.dm = s.dm || {};
-    if(conv.peerId){ if(id > (s.dm[conv.peerId] || 0)) s.dm[conv.peerId] = id; }
+    const s = loadSeen(); s.dm = s.dm || {}; s.grp = s.grp || {};
+    if(conv.groupId){ if(id > (s.grp[conv.groupId] || 0)) s.grp[conv.groupId] = id; }
+    else if(conv.peerId){ if(id > (s.dm[conv.peerId] || 0)) s.dm[conv.peerId] = id; }
     else { if(id > (s.group || 0)) s.group = id; try{ localStorage.setItem('lalabellaChatLastSeenId', String(Math.max(id, Number(localStorage.getItem('lalabellaChatLastSeenId'))||0))); }catch(e){} }
     saveSeen(s);
   }
@@ -334,10 +361,28 @@
     const q = $('convSearch').value.trim().toLowerCase();
     const list = $('convList'); list.innerHTML = '';
     // Group
-    const g = document.createElement('div'); g.className = 'conv' + (!conv.peerId ? ' active' : '');
+    const g = document.createElement('div'); g.className = 'conv' + (!conv.peerId && !conv.groupId ? ' active' : '');
     g.innerHTML = '<div class="group-icon">🌹</div><div class="txt"><div class="cname">Lalabella Team</div><div class="csub">Group chat · everyone</div></div>';
     const gb = document.createElement('span'); gb.className = 'ubadge' + (unread.group ? ' show' : ''); gb.textContent = unread.group > 99 ? '99+' : unread.group;
     g.appendChild(gb); g.addEventListener('click', () => openConv(null)); list.appendChild(g);
+
+    // Staff-made groups
+    const myGroups = groups.filter(x => !q || x.name.toLowerCase().includes(q));
+    if(myGroups.length){
+      const h = document.createElement('div'); h.className = 'conv-sep'; h.textContent = 'Groups'; list.appendChild(h);
+      myGroups.forEach(x => {
+        const c = document.createElement('div'); c.className = 'conv' + (conv.groupId === x.id ? ' active' : '');
+        const ic = document.createElement('div'); ic.className = 'group-icon g2'; ic.textContent = '👥'; c.appendChild(ic);
+        const t = document.createElement('div'); t.className = 'txt';
+        const n = document.createElement('div'); n.className = 'cname'; n.textContent = x.name;
+        const sb = document.createElement('div'); sb.className = 'csub'; sb.textContent = x.memberIds.length + ' members';
+        t.appendChild(n); t.appendChild(sb); c.appendChild(t);
+        const cnt = (unread.grp && unread.grp[x.id]) || 0;
+        const b = document.createElement('span'); b.className = 'ubadge' + (cnt ? ' show' : ''); b.textContent = cnt > 99 ? '99+' : cnt; c.appendChild(b);
+        c.addEventListener('click', () => openConv(null, x.id));
+        list.appendChild(c);
+      });
+    }
 
     const others = people.filter(p => !p.me && (!q || (p.name + ' ' + p.position + ' ' + p.username).toLowerCase().includes(q)));
     const addSection = (title, arr, emptyText) => {
@@ -368,6 +413,18 @@
 
   function renderHead(){
     const ha = $('headAvatar'); ha.innerHTML = '';
+    const grp = conv.groupId ? groupsById[conv.groupId] : null;
+    $('grpActs').hidden = !grp;
+    if(grp){
+      ha.innerHTML = '<div class="group-icon g2">👥</div>';
+      $('headName').textContent = grp.name;
+      const names = grp.memberIds.map(id => peopleById[id]).filter(Boolean).map(p => p.me ? 'You' : p.name.split(' ')[0]);
+      $('headSub').textContent = grp.memberIds.length + ' members · ' + names.slice(0, 4).join(', ') + (names.length > 4 ? ' +' + (names.length - 4) : '');
+      $('privateTag').hidden = true;
+      $('grpAddBtn').hidden = !(grp.createdBy === meId || isAdmin);
+      $('headSub').classList.remove('live');
+      return;
+    }
     if(!conv.peerId){
       ha.innerHTML = '<div class="group-icon">🌹</div>';
       $('headName').textContent = 'Lalabella Team';
@@ -381,16 +438,17 @@
       $('headSub').textContent = (p.position ? p.position + ' · ' : '') + (p.online ? 'Active now' : lastSeenText(p.lastSeen));
       $('privateTag').hidden = false;
     }
-    $('headSub').classList.toggle('live', liveOn && !conv.peerId);
+    $('headSub').classList.toggle('live', liveOn && !conv.peerId && !conv.groupId);
   }
 
-  function openConv(peerId){
-    conv = { peerId: peerId || null };
+  function openConv(peerId, groupId){
+    if(groupId && !groupsById[groupId]) groupId = null;
+    conv = { peerId: groupId ? null : (peerId || null), groupId: groupId || null };
     lastId = 0; delSince = ''; lastMsg = null; firstLoad = true;
     Object.keys(nodes).forEach(k => delete nodes[k]);
     box.innerHTML = '<div class="empty-chat">Loading…</div>';
     $('layout').classList.add('in-chat');
-    input.placeholder = peerId ? 'Private message to ' + ((peerId && peopleById[peerId]) ? peopleById[peerId].name.split(' ')[0] : '') + '…' : 'Message the team…';
+    input.placeholder = conv.groupId ? 'Message ' + groupsById[conv.groupId].name + '…' : (peerId ? 'Private message to ' + ((peerId && peopleById[peerId]) ? peopleById[peerId].name.split(' ')[0] : '') + '…' : 'Message the team…');
     renderHead(); renderConvs(); poll();
     if(window.innerWidth > 820) input.focus();
   }
@@ -431,7 +489,8 @@
     if(isMedia) b.appendChild(lbChatMedia.mediaEl(v)); else b.appendChild(document.createTextNode(v.text));
     const tm = document.createElement('span'); tm.className = 't'; tm.textContent = t.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); b.appendChild(tm);
     br.appendChild(b);
-    if(mine || (isAdmin && !conv.peerId)){
+    const grpOwner = conv.groupId && groupsById[conv.groupId] && groupsById[conv.groupId].createdBy === meId;
+    if(mine || (isAdmin && !conv.peerId && !conv.groupId) || grpOwner){
       const del = document.createElement('button'); del.type = 'button'; del.className = 'del-btn'; del.title = 'Delete message'; del.textContent = '🗑';
       del.addEventListener('click', ev => { ev.stopPropagation(); deleteMsg(v.id); });
       br.appendChild(del);
@@ -457,21 +516,21 @@
 
   async function poll(){
     if(busy) return; busy = true;
-    const myConv = conv.peerId;
+    const myConv = conv.peerId, myGrp = conv.groupId;
     try{
-      const params = { peerId: conv.peerId || undefined };
+      const params = { peerId: conv.peerId || undefined, groupId: conv.groupId || undefined };
       if(lastId) params.sinceId = lastId; else params.limit = 100;
       if(delSince) params.delSince = delSince;
       const d = await call('list', params);
-      if(myConv !== conv.peerId){ busy = false; return; }      // switched chats meanwhile
-      if(!d.success) throw new Error(d.error || 'failed');
+      if(myConv !== conv.peerId || myGrp !== conv.groupId){ busy = false; return; }      // switched chats meanwhile
+      if(!d.success){ if(conv.groupId && /not in that group/i.test(d.error || '')){ loadGroups().then(() => openConv(null)); busy = false; return; } throw new Error(d.error || 'failed'); }
       meId = d.meId; isAdmin = !!d.isAdmin; if(d.serverTime) delSince = d.serverTime;
       const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
       if(firstLoad) box.innerHTML = '';
       (d.messages || []).forEach(add);
       (d.deletedIds || []).forEach(removeMsg);
       if(firstLoad && !box.children.length){
-        box.innerHTML = '<div class="empty-chat">' + (conv.peerId ? '🔒 This is a private chat. Say hi 👋' : 'No messages yet — say hi to the team 🌹') + '</div>';
+        box.innerHTML = '<div class="empty-chat">' + (conv.groupId ? 'No messages yet — say hi to the group 👋' : conv.peerId ? '🔒 This is a private chat. Say hi 👋' : 'No messages yet — say hi to the team 🌹') + '</div>';
       }
       if(firstLoad || nearBottom) box.scrollTop = box.scrollHeight;
       if(lastId) markSeen(lastId);
@@ -484,12 +543,14 @@
   async function refreshUnread(){
     try{
       const s = loadSeen();
-      const d = await call('unread', { seenGroup: s.group || 0, seenDm: s.dm || {} });
+      const d = await call('unread', { seenGroup: s.group || 0, seenDm: s.dm || {}, seenGrp: s.grp || {} });
       if(!d.success) return;
-      unread = { group: conv.peerId === null && $('layout').classList.contains('in-chat') ? 0 : d.group, dm: d.dm || {} };
-      if(conv.peerId && $('layout').classList.contains('in-chat')) unread.dm[conv.peerId] = 0;
+      const inChat = $('layout').classList.contains('in-chat');
+      unread = { group: conv.peerId === null && conv.groupId === null && inChat ? 0 : d.group, dm: d.dm || {}, grp: d.grp || {} };
+      if(conv.peerId && inChat) unread.dm[conv.peerId] = 0;
+      if(conv.groupId && inChat) unread.grp[conv.groupId] = 0;
       const beforeTotal = Number(document.title.match(/^\((\d+)\)/)?.[1] || 0);
-      const total = Object.values(unread.dm).reduce((a,b)=>a+b,0) + unread.group;
+      const total = Object.values(unread.dm).reduce((a,b)=>a+b,0) + Object.values(unread.grp).reduce((a,b)=>a+b,0) + unread.group;
       document.title = (total ? '(' + total + ') ' : '') + 'Lalabella Chat';
       // Keeps the hamburger profile dot (shared/nav.js) in sync when
       // messages are read here, on the full chat page, rather than
@@ -510,6 +571,91 @@
     }catch(e){}
   }
 
+  let groupsAt = 0;
+  async function loadGroups(){
+    try{
+      const d = await call('groups');
+      if(!d.success) return;
+      groupsAt = Date.now();
+      groups = d.groups || []; groupsById = {}; groups.forEach(g => groupsById[g.id] = g);
+      if(conv.groupId && !groupsById[conv.groupId]){ openConv(null); return; }
+      renderConvs(); renderHead();
+    }catch(e){}
+  }
+
+  // ---------- create / add-people dialog ----------
+  function pickDialog(o){
+    const back = document.createElement('div'); back.className = 'grp-back'; back.setAttribute('data-lb-theme-skip', '');
+    const bx = document.createElement('div'); bx.className = 'grp-box'; back.appendChild(bx);
+    const h = document.createElement('h3'); h.textContent = o.title; bx.appendChild(h);
+    let nameIn = null;
+    if(o.askName){ nameIn = document.createElement('input'); nameIn.type = 'text'; nameIn.maxLength = 40; nameIn.placeholder = 'Group name (e.g. Flower team)'; bx.appendChild(nameIn); }
+    const pick = document.createElement('div'); pick.className = 'grp-pick'; bx.appendChild(pick);
+    const cnt = document.createElement('div'); cnt.className = 'grp-cnt'; bx.appendChild(cnt);
+    const msg = document.createElement('div'); msg.className = 'grp-msg'; bx.appendChild(msg);
+    const btns = document.createElement('div'); btns.className = 'grp-btns';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+    const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'pri'; ok.textContent = o.okLabel;
+    btns.appendChild(cancel); btns.appendChild(ok); bx.appendChild(btns);
+    const chosen = new Set();
+    const cands = people.filter(p => !p.me && !(o.exclude || []).includes(p.id));
+    if(!cands.length){ pick.innerHTML = '<div class="conv-empty">No one else to add.</div>'; }
+    cands.forEach(p => {
+      const lb = document.createElement('label');
+      const cb = document.createElement('input'); cb.type = 'checkbox';
+      cb.addEventListener('change', () => { cb.checked ? chosen.add(p.id) : chosen.delete(p.id); cnt.textContent = chosen.size + ' selected'; });
+      lb.appendChild(cb); lb.appendChild(avatarEl(p, true, false));
+      const t = document.createElement('div'); t.innerHTML = '<div class="nm"></div><div class="ps"></div>';
+      t.firstChild.textContent = p.name; t.lastChild.textContent = p.position || '';
+      lb.appendChild(t); pick.appendChild(lb);
+    });
+    cnt.textContent = '0 selected';
+    const close = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = e => { if(e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    cancel.addEventListener('click', close);
+    back.addEventListener('click', e => { if(e.target === back) close(); });
+    ok.addEventListener('click', async () => {
+      msg.textContent = '';
+      const name = nameIn ? nameIn.value.trim() : '';
+      if(o.askName && !name){ msg.textContent = 'Please give the group a name.'; return; }
+      if(!chosen.size){ msg.textContent = 'Pick at least one person.'; return; }
+      ok.disabled = cancel.disabled = true;
+      try{ await o.onSubmit(name, [...chosen]); close(); }
+      catch(err){ msg.textContent = (err && err.message) || 'Something went wrong.'; ok.disabled = cancel.disabled = false; }
+    });
+    document.body.appendChild(back);
+    if(nameIn) nameIn.focus();
+  }
+  $('newGroupBtn').addEventListener('click', () => pickDialog({
+    title: '👥 New group', askName: true, okLabel: 'Create group',
+    onSubmit: async (name, ids) => {
+      const d = await call('groupCreate', { name, memberIds: ids });
+      if(!d.success) throw new Error(d.error || 'Could not create the group.');
+      await loadGroups(); openConv(null, d.group.id);
+    }
+  }));
+  $('grpAddBtn').addEventListener('click', () => {
+    const g = groupsById[conv.groupId]; if(!g) return;
+    pickDialog({
+      title: '➕ Add people to ' + g.name, okLabel: 'Add', exclude: g.memberIds,
+      onSubmit: async (_n, ids) => {
+        const d = await call('groupAdd', { groupId: g.id, memberIds: ids });
+        if(!d.success) throw new Error(d.error || 'Could not add them.');
+        await loadGroups();
+      }
+    });
+  });
+  $('grpLeaveBtn').addEventListener('click', async () => {
+    const g = groupsById[conv.groupId]; if(!g) return;
+    if(!confirm('Leave "' + g.name + '"? You will no longer see its messages.')) return;
+    try{
+      const d = await call('groupLeave', { groupId: g.id });
+      if(!d.success){ alert(d.error || 'Could not leave.'); return; }
+      await loadGroups(); openConv(null);
+    }catch(e){ alert('Connection error — please try again.'); }
+  });
+
   // ---------- composer ----------
   function autosize(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; }
   input.addEventListener('input', autosize);
@@ -519,7 +665,7 @@
     const text = input.value.trim(); if(!text) return;
     const btn = form.querySelector('.send-btn'); btn.disabled = true;
     try{
-      const d = await call('send', { text, peerId: conv.peerId || undefined });
+      const d = await call('send', { text, peerId: conv.peerId || undefined, groupId: conv.groupId || undefined });
       if(!d.success) throw new Error(d.error || 'failed');
       input.value = ''; autosize(); input.focus(); beep('send');
       if(picker) picker.close();
@@ -531,7 +677,7 @@
   // ---------- media: emoji/GIF/sticker picker, photo, voice, avatar (shared/chat-media.js) ----------
   let picker = null;
   async function sendPayload(payload){
-    const d = await call('send', Object.assign({ peerId: conv.peerId || undefined }, payload));
+    const d = await call('send', Object.assign({ peerId: conv.peerId || undefined, groupId: conv.groupId || undefined }, payload));
     if(!d.success) throw new Error(d.error || 'Could not send — please try again.');
     beep('send');
     await poll(); box.scrollTop = box.scrollHeight;
@@ -570,6 +716,12 @@
         cfg: mine.avatarCfg || null, hasPhoto: !!mine.avatar,
         onSave: async cfg => {
           const d = await call('avatarSave', { cfg: cfg === null ? '' : cfg });
+          if(!d.success) throw new Error(d.error || 'Could not save.');
+          await loadPeople();
+        },
+        onPhoto: async dataUri => {
+          await lbChatAvatar.uploadProfilePhoto(dataUri);
+          const d = await call('avatarSave', { cfg: '' });          // show the photo, not the cartoon
           if(!d.success) throw new Error(d.error || 'Could not save.');
           await loadPeople();
         }
@@ -629,13 +781,13 @@
   });
 
   // ---------- start ----------
-  lbChatLive.onPing(() => poll());
+  lbChatLive.onPing(() => { poll(); if(Date.now() - groupsAt > 5000) loadGroups(); });
   lbChatLive.onStatus(on => { liveOn = on; renderHead(); });
   setInterval(() => { if(!document.hidden) poll(); }, FALLBACK_MS);
-  setInterval(() => { if(!document.hidden) loadPeople(); }, PEOPLE_MS);
-  document.addEventListener('visibilitychange', () => { if(!document.hidden){ poll(); loadPeople(); } });
+  setInterval(() => { if(!document.hidden){ loadPeople(); loadGroups(); } }, PEOPLE_MS);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden){ poll(); loadPeople(); loadGroups(); } });
 
-  loadPeople().then(() => {
+  Promise.all([loadPeople(), loadGroups()]).then(() => {
     renderHead();
     if(window.innerWidth > 820) openConv(null);    // desktop: open the group chat
     else { renderConvs(); refreshUnread(); }       // phone: start on the chat list
