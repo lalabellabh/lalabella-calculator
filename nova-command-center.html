@@ -8,7 +8,7 @@
 <script src="auth-guard.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>JOYBOY — Lalabella Intelligence</title>
+<title>NOVA — Lalabella Intelligence</title>
 <style>
 :root{
   --bg:#07080b;--panel:#0d1016;--line:#252a34;--text:#f5f1e9;--muted:#8f96a5;
@@ -122,13 +122,26 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 .cmdform input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e8edf5;font:inherit;font-size:14px;padding:8px 0}
 .cmdform button{border:0;border-radius:10px;background:linear-gradient(135deg,#2ee8ff,#2a8cff);color:#04101a;font-weight:700;padding:9px 14px;cursor:pointer}
 .cmdform .spk{background:#161b24;color:#9fb0c6;padding:9px 10px}.cmdform .spk.on{color:#2ee8ff}
+
+/* NOVA floating core + cleaner corners */
+#joyboy-bubble-btn,#joyboy-panel,#lbcb-btn{display:none!important}
+.core{animation:novaFloat 5.5s ease-in-out infinite,novaGlow 3s ease-in-out infinite!important}
+@keyframes novaFloat{0%,100%{transform:translateY(8px) scale(1)}50%{transform:translateY(-18px) scale(1.035)}}
+@keyframes novaGlow{0%,100%{box-shadow:0 0 45px rgba(22,135,255,.5),0 0 100px rgba(22,135,255,.24),inset 0 0 70px #000}50%{box-shadow:0 0 75px rgba(22,135,255,.82),0 0 170px rgba(22,135,255,.38),inset 0 0 85px #000}}
+.coreText strong{letter-spacing:.3em;text-indent:.3em;font-size:48px}
+.stage:after{content:"";position:absolute;left:50%;top:calc(50% + 190px);width:200px;height:22px;margin-left:-100px;border-radius:50%;background:radial-gradient(ellipse,rgba(46,160,255,.42),transparent 70%);animation:novaShadow 5.5s ease-in-out infinite;pointer-events:none;z-index:1}
+@keyframes novaShadow{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(.7);opacity:.45}}
+@media(max-width:900px){.stage:after{top:calc(50% + 150px)}}
+/* hamburger must be readable on the dark page */
+.lbnav-btn{background:#0f1c2b!important;color:#5fe3ff!important;border:1px solid rgba(46,232,255,.6)!important;box-shadow:0 0 14px rgba(46,232,255,.35),0 6px 18px rgba(0,0,0,.5)!important;opacity:1!important;backdrop-filter:none!important}
+.lbnav-btn:active{background:#16293d!important}
 </style>
 </head>
 <body>
 <script src="shared/nav.js" data-standalone data-shift=".brand, header.top"></script>
 <div class="app" id="app">
   <aside class="side">
-    <div class="brand"><div class="logo">J</div><div><b>JOYBOY</b><small>LALABELLA INTELLIGENCE</small></div></div>
+    <div class="brand"><div class="logo">N</div><div><b>NOVA</b><small>LALABELLA INTELLIGENCE</small></div></div>
     <div class="nav">
       <button class="active">◉ Intelligence</button>
       <button>▣ Inventory</button>
@@ -148,7 +161,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
   </aside>
 
   <main class="main">
-    <header class="top"><div class="title">COMMAND CENTER / JOYBOY CORE</div><div style="display:flex;align-items:center;gap:14px;"><button id="wakeToggle" title="Always-listening mode" style="display:flex;align-items:center;gap:6px;background:#111;border:1px solid #333;border-radius:20px;padding:5px 12px;color:#9aa4b2;font-size:11px;cursor:pointer;letter-spacing:.04em;"><span id="wakeToggleIcon">🎙️</span><span id="wakeToggleLabel">Always Listening: OFF</span></button><div class="clock" id="clock"></div></div></header>
+    <header class="top"><div class="title">COMMAND CENTER / NOVA CORE</div><div style="display:flex;align-items:center;gap:14px;"><button id="wakeToggle" title="Always-listening mode" style="display:flex;align-items:center;gap:6px;background:#111;border:1px solid #333;border-radius:20px;padding:5px 12px;color:#9aa4b2;font-size:11px;cursor:pointer;letter-spacing:.04em;"><span id="wakeToggleIcon">🎙️</span><span id="wakeToggleLabel">Always Listening: OFF</span></button><div class="clock" id="clock"></div></div></header>
     <section class="stage" id="stage">
       <div class="matrix" id="matrix" aria-hidden="true"></div>
       <div class="assembly" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="bolt one"></div><div class="bolt two"></div>
@@ -159,7 +172,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
       </div>
       <div class="state" id="state">CORE <b>STANDBY</b></div>
       <div class="core" id="core">
-        <div class="coreText"><strong>JOYBOY</strong><span>INTELLIGENCE CORE</span></div>
+        <div class="coreText"><strong>NOVA</strong><span>INTELLIGENCE CORE</span></div>
       </div>
       <div class="wave" id="wave"></div>
       <div class="hello"></div>
@@ -865,6 +878,6 @@ if(wakeEnabled) startWake();
 // It wakes only after the user says "Hey Nova", "Hello Nova", or "Nova".
 setState('','STANDBY');
 </script>
-
+  <script src="joyboy-bubble.js"></script>
 </body>
 </html>
