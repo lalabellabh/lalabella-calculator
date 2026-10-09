@@ -198,13 +198,13 @@
       saveSeen(s);
     }
 
-    let unreadState = { group: 0, dm: {} };
+    let unreadState = { group: 0, dm: {}, grp: 0 };
     async function refreshUnread(){
       try{
         const s = loadSeen();
-        const d = await lbChatApi('unread', { seenGroup: s.group || 0, seenDm: s.dm || {} });
+        const d = await lbChatApi('unread', { seenGroup: s.group || 0, seenDm: s.dm || {}, seenGrp: s.grp || {} });
         if (!d.success) return;
-        unreadState = { group: (conv === null) ? d.group : (conv.peerId === null ? 0 : d.group), dm: d.dm || {} };
+        unreadState = { group: (conv === null) ? d.group : (conv.peerId === null ? 0 : d.group), dm: d.dm || {}, grp: Object.values(d.grp || {}).reduce(function(a,b){ return a + b; }, 0) };
         if (conv && conv.peerId) unreadState.dm[conv.peerId] = 0;
         const total = (d.total != null ? d.total : (d.group + Object.values(d.dm || {}).reduce((a,b)=>a+b,0)));
         badgeEl.textContent = total > 99 ? '99+' : String(total);
@@ -236,6 +236,12 @@
       g.appendChild(gb);
       g.addEventListener('click', function(){ openConv(null); });
       listEl.appendChild(g);
+      if (unreadState.grp > 0) {
+        const gg = document.createElement('a'); gg.className = 'lbcb-conv'; gg.href = 'chatbox.html'; gg.style.textDecoration = 'none'; gg.style.color = 'inherit';
+        gg.innerHTML = '<div class="lbcb-av" style="background:linear-gradient(135deg,#7a8fd6,#4d5fa8);">👥</div><div class="txt"><div class="cname">Your groups</div><div class="csub">Open the full chat to read</div></div>';
+        const gbb = document.createElement('span'); gbb.className = 'lbcb-ubadge show'; gbb.textContent = unreadState.grp > 99 ? '99+' : unreadState.grp; gg.appendChild(gbb);
+        listEl.appendChild(gg);
+      }
 
       const others = people.filter(function(p){ return !p.me && (!q || (p.name + ' ' + (p.position||'')).toLowerCase().indexOf(q) !== -1); });
       function section(title, arr, emptyText){
@@ -410,6 +416,12 @@
           cfg: mine.avatarCfg || null, hasPhoto: !!mine.avatar,
           onSave: async function(cfg){
             const d = await lbChatApi('avatarSave', { cfg: cfg === null ? '' : cfg });
+            if (!d.success) throw new Error(d.error || 'Could not save.');
+            await loadPeople();
+          },
+          onPhoto: async function(dataUri){
+            await lbChatAvatar.uploadProfilePhoto(dataUri);
+            const d = await lbChatApi('avatarSave', { cfg: '' });
             if (!d.success) throw new Error(d.error || 'Could not save.');
             await loadPeople();
           }
