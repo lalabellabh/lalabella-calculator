@@ -215,6 +215,53 @@
       (sub ? '<span class="lb-menu-profile-sub">' + esc(sub) + '</span>' : '') + '</span></a>';
   }
 
+
+  // ---- Weather strip at the very top of the drawer (no box — it sits right on the menu) ----
+  // Open-Meteo (free, no key). Bahrain. Cached 15 min so opening the menu never re-fetches needlessly.
+  const WX_TXT = { 0: 'Sunny', 1: 'Mostly sunny', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers', 95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' };
+  function weatherHtml() {
+    return '<div class="lb-menu-weather"><div class="lbw-row"><span class="lbw-ico"></span>' +
+      '<span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
+      '<span class="lbw-det"><span class="lbw-p">Precipitation: --</span><span class="lbw-h">Humidity: --</span><span class="lbw-w">Wind: --</span></span></div>' +
+      '<div class="lbw-foot"><span class="lbw-when">Weather</span><span class="lbw-cond"></span></div></div>';
+  }
+  function wxFetch() {
+    let c = null; try { c = JSON.parse(localStorage.getItem('lbWxCache') || 'null'); } catch (e) {}
+    if (c && Date.now() - c.ts < 15 * 60000) return Promise.resolve(c.d);
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=Asia%2FBahrain';
+    return fetch(url).then(r => r.json()).then(j => {
+      const d = { t: j.current.temperature_2m, h: j.current.relative_humidity_2m, w: j.current.wind_speed_10m, code: j.current.weather_code,
+        p: (j.hourly && j.hourly.precipitation_probability && j.hourly.precipitation_probability[0]) || 0 };
+      try { localStorage.setItem('lbWxCache', JSON.stringify({ ts: Date.now(), d: d })); } catch (e) {}
+      return d;
+    });
+  }
+  function fillWeather(root) {
+    const box = root.querySelector('.lb-menu-weather'); if (!box) return;
+    let unit = 'c'; try { unit = localStorage.getItem('lbWxUnit') === 'f' ? 'f' : 'c'; } catch (e) {}
+    let data = null;
+    const paint = () => {
+      if (!data) return;
+      const t = unit === 'f' ? data.t * 9 / 5 + 32 : data.t;
+      box.querySelector('.lbw-t').textContent = Math.round(t);
+      box.querySelectorAll('.lbw-u i').forEach(i => i.classList.toggle('on', i.getAttribute('data-u') === unit));
+      box.querySelector('.lbw-p').textContent = 'Precipitation: ' + Math.round(data.p) + '%';
+      box.querySelector('.lbw-h').textContent = 'Humidity: ' + Math.round(data.h) + '%';
+      box.querySelector('.lbw-w').textContent = 'Wind: ' + Math.round(data.w) + ' km/h';
+      box.querySelector('.lbw-when').textContent = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bahrain', weekday: 'long', hour: 'numeric', minute: '2-digit' });
+      box.querySelector('.lbw-cond').textContent = WX_TXT[data.code] || '';
+    };
+    box.querySelectorAll('.lbw-u i').forEach(i => i.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation(); unit = i.getAttribute('data-u'); try { localStorage.setItem('lbWxUnit', unit); } catch (x) {} paint();
+    }));
+    wxFetch().then(d => {
+      data = d; paint();
+      const icon = () => { if (window.LBHero3D) LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t); };
+      if (window.LBHero3D) icon();
+      else { const sc = document.createElement('script'); sc.src = 'shared/hero-3d.js'; sc.onload = icon; document.body.appendChild(sc); }
+    }).catch(() => { box.querySelector('.lbw-cond').textContent = 'Weather unavailable'; });
+  }
+
   function render(el) {
     const hubClass = el.getAttribute('data-hub-class') || 'choco-hub-grid';
     const titleClass = el.getAttribute('data-title-class') || 'choco-drawer-title';
@@ -222,7 +269,7 @@
     const modKey = moduleOf(page);
     const mod = moduleAllowed(modKey) ? MODULES[modKey] : null;
     const hub = HUB.filter(h => moduleAllowed(h[3]));
-    let html = profileHeaderHtml() +
+    let html = weatherHtml() + profileHeaderHtml() +
       (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
       hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
@@ -246,6 +293,7 @@
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
 
     el.innerHTML = html;
+    fillWeather(el);
     el.style.display = 'contents';   // links stay direct flex children of the drawer
     el.querySelector('[data-lb-logout]').addEventListener('click', e => { e.preventDefault(); logout(); });
     el.querySelector('[data-lb-settings]').addEventListener('click', e => { e.preventDefault(); openSettings(); });
@@ -262,6 +310,15 @@
       '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
       '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.lb-menu-weather{display:block;padding:2px 6px 8px;margin:0 0 6px;color:inherit;}' +
+      '.lbw-row{display:flex;align-items:center;gap:10px;}' +
+      '.lbw-ico{flex:0 0 46px;width:46px;height:46px;display:block;}' +
+      '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:46px!important;height:46px!important;}' +
+      '.lbw-temp{display:flex;align-items:flex-start;gap:3px;}' +
+      '.lbw-t{font-size:34px;line-height:1;font-weight:500;letter-spacing:-.02em;}' +
+      '.lbw-u{font-size:12px;margin-top:3px;display:flex;gap:3px;}.lbw-u i{font-style:normal;cursor:pointer;opacity:.5;}.lbw-u i.on{opacity:1;font-weight:700;}.lbw-u em{font-style:normal;opacity:.35;}' +
+      '.lbw-det{display:flex;flex-direction:column;font-size:10.5px;line-height:1.35;opacity:.7;margin-left:auto;text-align:left;}' +
+      '.lbw-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;opacity:.65;margin-top:4px;}' +
       '.lb-menu-profile{position:relative;}' +
       '.lb-menu-profile::after{content:"";position:absolute;left:30px;top:8px;width:11px;height:11px;border-radius:50%;' +
         'background:#e03a3a;border:2px solid #fdfbf7;display:none;}' +
