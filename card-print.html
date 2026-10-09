@@ -1844,6 +1844,7 @@ function saveCard(){
     cols: cols.value,
     font: font.value,
     fontSize: fontSize.value,
+    bg: window.LBCardBg ? LBCardBg.get() : 'none',
     images
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -1889,6 +1890,7 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
         : '"Baskerville Old Face",Baskerville,Georgia,serif';
       fontSize.value = data.fontSize || 16;
       textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
+      if(window.LBCardBg) LBCardBg.set(data.bg || 'none');
       updatePrintSize();
 
       (data.images || []).forEach(imgData => {
@@ -2229,5 +2231,6 @@ updatePrintSize();
 </script>
 
 <script src="joyboy-bubble.js"></script>
+<script src="shared/card-bg.js"></script>
 </body>
 </html>
