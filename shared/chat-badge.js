@@ -57,7 +57,7 @@
     busy = true;
     try {
       const sn = seen();
-      const d = await lbChatApi('unread', { seenGroup: sn.group || 0, seenDm: sn.dm || {} });
+      const d = await lbChatApi('unread', { seenGroup: sn.group || 0, seenDm: sn.dm || {}, seenGrp: sn.grp || {} });
       if (d && d.success) {
         if (lastCount >= 0 && d.count > lastCount) ding();
         lastCount = d.count;
