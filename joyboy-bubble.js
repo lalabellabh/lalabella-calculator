@@ -6,6 +6,7 @@
    NOVA Command Center page already uses.
    ========================================================== */
 (function(){
+  if(window.__lbJoyboyBubble || document.getElementById('joyboy-bubble-btn')) return; window.__lbJoyboyBubble = true;   // never inject two bubbles
   const NOVA_API_URL = LB_CONFIG.NOVA_FAST_API;
 
   // ---------- Inject styles ----------
@@ -38,7 +39,7 @@
     #joyboy-voice-toggle:hover{ opacity:1; }
     #joyboy-voice-toggle.on{ color:#f1d38c; }
     #joyboy-msgs{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:#fdf1f0; }
-    .jb-msg{ max-width:82%; padding:9px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
+    .jb-msg{white-space:pre-line; max-width:82%; padding:9px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
     .jb-msg.user{ align-self:flex-end; background:#c9506b; color:#fff; border-bottom-right-radius:3px; }
     .jb-msg.bot{ align-self:flex-start; background:#fff; color:#2f2024; border:1px solid #f0dede; border-bottom-left-radius:3px; }
     .jb-msg.thinking{ align-self:flex-start; background:#fff; color:#8a7078; border:1px solid #f0dede; font-style:italic; }
@@ -51,6 +52,7 @@
   `;
   document.head.appendChild(style);
 
+  if(!window.LBNovaBrain){ const sb=document.createElement('script'); sb.src='shared/nova-brain.js'; document.head.appendChild(sb); }
   // ---------- Inject markup ----------
   const btn = document.createElement('button');
   btn.id = 'joyboy-bubble-btn';
@@ -142,6 +144,18 @@
     }, 4000);
 
     try{
+      // OFFLINE BRAIN first — no AI API / subscription needed.
+      if(window.LBNovaBrain){
+        const nb = await LBNovaBrain.ask(message, th => { thinkingEl.textContent = '💭 ' + th; });
+        if(nb && nb.handled || !LBNovaBrain.useApi()){
+          clearTimeout(slowTimer); thinkingEl.remove();
+          const out = (nb && nb.handled) ? nb.text : LBNovaBrain.fallback(message);
+          addMsg(out || '...', 'bot'); speak(out);
+          const nav = safeNavTarget_(nb && nb.navigateTo);
+          if(nav){ addMsg('Opening ' + nav + '…', 'bot'); setTimeout(()=>{ window.location.href = nav; }, 1400); }
+          return;
+        }
+      }
       const lalabellaToken = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
       const sessionStr = JSON.stringify(session || {});
       const contextStr = JSON.stringify({ page: document.title || location.pathname, app: 'Joyboy Bubble' });
