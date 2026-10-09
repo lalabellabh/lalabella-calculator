@@ -1,300 +1,1101 @@
-/**
- * LALABELLA PROFILE FX — a little living animation behind your name in the menu.
- *
- * Finds the profile card at the top of the drawer (.lb-menu-profile, drawn by
- * nav.js) and puts a tiny canvas animation behind the text:
- *   🐟 Fish   — small fish swimming, a few bubbles
- *   ❄️ Snow   — soft snowfall
- *   🔥 Fire   — little flames + rising embers
- *   🌸 Petals — flower petals drifting down
- *   🚫 Off
- * Tap the ✨ at the corner of the card to change it. The choice is remembered
- * on this device, per login.
- *
- * Light on battery: it only draws while the menu is actually on screen and the
- * tab is visible, at ~30 frames a second.
- *
- * Add a new effect = add one entry to EFFECTS below (init + draw). Nothing else.
- */
-(function () {
-  'use strict';
-  if (window.LBProfileFx) return;
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js?v=4"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — My Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#2f6570;--teal-dark:#214e57;--teal-soft:#dcebed;--rose:#c9506b;--rose-dark:#9e2f4a;--gold:#d9a441;--ink:#3d3a39;--muted:#827976;--line:#e6e0dc;--cream:#faf9f6;--white:#fff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:'Space Grotesk',sans-serif;color:var(--ink);background:var(--cream)}body{overflow-x:hidden;padding-bottom:80px}.wrap{width:min(1360px,calc(100% - 48px));margin:0 auto;position:relative;z-index:2}
+.announcement{height:76px;margin:0 -24px 0;background:linear-gradient(135deg,#2c626d,#245662);color:#fff;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;letter-spacing:.02em;box-shadow:0 5px 24px rgba(33,78,87,.12)}.announcement b{font-family:Georgia,serif;font-size:15px;font-weight:500;letter-spacing:.04em}.announcement span{font-size:10px;opacity:.72;margin-top:4px;letter-spacing:.14em;text-transform:uppercase}
+.site-head{max-width:1080px;margin:0 auto;padding:34px 0 20px;border-bottom:1px solid #ddd8d4;text-align:center;position:relative}.brand{font-family:Georgia,'Times New Roman',serif;font-size:25px;letter-spacing:.32em;margin-left:.32em;color:#575150}.brand small{display:block;font-family:Georgia,serif;font-size:9px;letter-spacing:.28em;margin:5px 0 0;color:#9a918d}.head-actions{position:absolute;right:0;top:42px;display:flex;align-items:center;gap:14px}.head-actions a{color:#5f5a57;text-decoration:none;font-size:12px}.head-icon{font-size:20px;color:#555;transition:.25s}.head-actions a:hover .head-icon{color:var(--teal);transform:translateY(-2px)}
+.navline{display:flex;justify-content:center;gap:34px;padding:20px 0 18px;font-size:12px;color:#555}.navline a{color:inherit;text-decoration:none;position:relative}.navline a:after{content:'';position:absolute;left:50%;right:50%;bottom:-8px;height:1px;background:var(--teal);transition:.25s}.navline a:hover:after{left:0;right:0}
+.botanical{position:fixed;z-index:0;pointer-events:none;opacity:.24;fill:none;stroke:#7db2ba;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 5px 8px rgba(45,100,112,.04))}.botanical.left{left:-34px;bottom:0;width:250px;height:430px}.botanical.right{right:-45px;bottom:5px;width:290px;height:470px;transform:scaleX(-1)}
+.page-title{max-width:1080px;margin:32px auto 22px;display:flex;align-items:end;justify-content:space-between;gap:20px}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:7px}.page-title h1{font-family:'Fraunces',serif;font-size:38px;line-height:1.05;font-weight:600;margin:0;color:#454140}.page-title p{max-width:430px;margin:0;color:var(--muted);font-size:12px;line-height:1.65;text-align:right}
+.profile-layout{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:330px minmax(0,1fr);gap:26px;align-items:start}.profile-sidebar{position:sticky;top:20px}.profile-main{min-width:0;display:grid;grid-template-columns:1fr;gap:18px}.desktop-label{grid-column:1/-1;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:700;margin:2px 0 -3px}
+.photo-hero{min-height:0;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:3px;padding:42px 28px;text-align:center;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;box-shadow:0 18px 50px rgba(57,49,46,.07);animation:rise .65s ease both}.photo-hero:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 15%,rgba(47,101,112,.10),transparent 34%),radial-gradient(circle at 85% 85%,rgba(201,80,107,.07),transparent 35%)}.photo-hero:after{content:'LALABELLA';position:absolute;bottom:18px;left:0;right:0;font-family:Georgia,serif;font-size:9px;letter-spacing:.42em;color:#b8b0ac}.avatar-wrap{position:relative;z-index:1;width:150px;height:150px;margin:0 auto 22px}.avatar-img{width:150px;height:150px;border-radius:50%;object-fit:cover;border:1px solid #d9cfc9;background:#edf4f4;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--teal);font-family:'Fraunces',serif;box-shadow:0 0 0 8px #fff,0 0 0 9px #c9dfe2,0 18px 35px rgba(47,101,112,.12);animation:float 5s ease-in-out infinite}.avatar-wrap:after{content:'';position:absolute;inset:-17px;border:1px dashed rgba(47,101,112,.28);border-radius:50%;animation:spin 18s linear infinite}.avatar-edit-btn{position:absolute;z-index:3;bottom:2px;right:2px;width:40px;height:40px;border-radius:50%;background:var(--teal);color:#fff;border:3px solid #fff;display:grid;place-items:center;cursor:pointer;font-size:16px;box-shadow:0 6px 15px rgba(47,101,112,.22);transition:.25s}.avatar-edit-btn:hover{transform:scale(1.08) rotate(-8deg)}.hero-name{position:relative;z-index:1;font-family:'Fraunces',serif;font-size:28px;font-weight:700;margin:0 0 5px;color:#403b39}.hero-role{position:relative;z-index:1;font-size:12px;color:#827976}.hero-branch-tag{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;margin:13px auto 0;font-size:10px;background:var(--teal-soft);color:var(--teal-dark);padding:7px 14px;border-radius:30px;text-transform:uppercase;letter-spacing:.09em}.hero-branch-tag:before{content:'';width:6px;height:6px;border-radius:50%;background:#65a276;box-shadow:0 0 0 4px rgba(101,162,118,.12);animation:pulse 2s infinite}
+.section-card{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:3px;padding:25px 27px;box-shadow:0 12px 32px rgba(57,49,46,.055);transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;animation:rise .65s ease both}.section-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(57,49,46,.09);border-color:#d7cdca}.section-card:nth-of-type(2){animation-delay:.08s}.section-card:nth-of-type(3){animation-delay:.16s}.section-card:nth-of-type(4){animation-delay:.24s}.section-title{font-family:'Fraunces',serif;font-size:21px;font-weight:600;margin:0 0 19px;display:flex;align-items:center;gap:9px;color:#484240}.field{margin-bottom:15px}.field label{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#8c827e;margin-bottom:7px;font-weight:700}.field input,.field select{width:100%;padding:13px 14px;border:1px solid #e3dcd8;border-radius:2px;font-size:13px;font-family:inherit;background:#fcfbf9;color:#403c3a;outline:none;transition:.2s}.field input:hover,.field select:hover{border-color:#c9bfba}.field input:focus,.field select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(47,101,112,.08);background:#fff}.field input:disabled{color:#9b918d;background:#f4f1ee}.pw-wrap{position:relative}.pw-wrap input{padding-right:42px}.pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;color:#958b87;font-size:16px}.save-btn{padding:12px 24px;border:0;border-radius:2px;background:var(--teal);color:#fff;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.02em;transition:.25s}.save-btn:hover{background:var(--teal-dark);transform:translateY(-1px);box-shadow:0 7px 16px rgba(47,101,112,.18)}.save-btn:disabled{opacity:.6;cursor:default}.msg{font-size:12px;margin-top:10px;display:none}.msg.ok{color:#3d7a4f}.msg.err{color:#c0392b}.logout-btn{width:100%;padding:13px;border:1px solid #d8b9b9;border-radius:2px;background:#fff;color:#b44b4b;font-weight:700;font-size:12px;cursor:pointer;transition:.25s}.logout-btn:hover{background:#fff7f7;border-color:#b44b4b;transform:translateY(-1px)}input[type=file]{display:none}
+.meta-list{position:relative;z-index:1;margin:26px 0 8px;border-top:1px solid var(--line);text-align:left}.meta-list div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px dashed #ebe5e1;font-size:12px}.meta-list span{color:#9a908c;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}.meta-list b{color:#4a4442;font-weight:600;text-align:right;word-break:break-word}
+.profile-sidebar .logout-btn{margin-top:14px}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #f0ebe7}.card-head .section-title{margin:0}.card-sub{margin:0;font-size:12px;color:var(--muted)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.field-grid.three{grid-template-columns:1fr 1fr 1fr}.field-hint{font-size:10.5px;color:#a0968f;margin-top:6px;line-height:1.5}
+.card-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px}.card-actions .msg{margin-top:0}
+.nav-toggle{position:fixed;top:16px;left:16px;z-index:9210;width:44px;height:44px;border-radius:12px;border:1px solid rgba(47,101,112,.25);background:rgba(255,255,255,.92);color:var(--teal);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(47,101,112,.14);transition:.2s}.nav-toggle:hover{background:var(--teal);color:#fff}
+.nav-backdrop{position:fixed;inset:0;z-index:9205;background:rgba(33,78,87,.35);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s ease}.nav-backdrop.show{opacity:1;pointer-events:auto}
+.side-drawer{position:fixed;top:0;left:0;bottom:0;width:min(320px,82vw);z-index:9206;background:linear-gradient(170deg,#fdfcfa,#f3f7f7);border-right:1px solid var(--line);box-shadow:12px 0 40px rgba(33,78,87,.18);transform:translateX(-100%);transition:transform .25s ease;padding:74px 16px 24px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}.side-drawer.show{transform:translateX(0)}
+.side-drawer .hub-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}.side-drawer .hub-grid a{flex-direction:column;justify-content:center;text-align:center;gap:4px;padding:12px 4px;min-height:74px;font-size:10.5px;background:#fff;border:1px solid var(--line)}.side-drawer .hub-grid .hub-icon{font-size:20px}
+.side-drawer a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;color:#4a4442;text-decoration:none;font-size:13.5px;font-weight:600;transition:.15s}.side-drawer a:hover{background:var(--teal-soft);color:var(--teal-dark)}.side-drawer a.active{background:var(--teal);color:#fff}.drawer-title{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:700;margin:8px 12px 4px}
+.crop-backdrop{position:fixed;inset:0;background:rgba(38,57,60,.62);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}.crop-backdrop.show{display:flex}.crop-modal{background:#fff;border-radius:3px;padding:22px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.crop-title{font-family:'Fraunces',serif;font-size:18px;margin-bottom:14px;text-align:center}.crop-stage{position:relative;width:260px;height:260px;margin:0 auto;border-radius:3px;overflow:hidden;background:#edf4f4;touch-action:none;cursor:grab}.crop-stage.dragging{cursor:grabbing}.crop-stage img{position:absolute;top:0;left:0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}.crop-circle-mask{position:absolute;top:50%;left:50%;width:230px;height:230px;margin:-115px 0 0 -115px;border-radius:50%;pointer-events:none;box-shadow:0 0 0 2000px rgba(20,35,37,.55);border:2px solid rgba(255,255,255,.9)}.crop-zoom-row{display:flex;align-items:center;gap:10px;margin-top:16px}.crop-zoom-label{font-size:14px}.crop-zoom-row input[type=range]{flex:1;accent-color:var(--teal)}.crop-hint{text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px}.crop-actions{display:flex;gap:10px;margin-top:18px}.crop-cancel-btn,.crop-save-btn{flex:1;padding:11px;border-radius:2px;font-weight:700;cursor:pointer;font-size:12px}.crop-cancel-btn{border:1px solid var(--line);background:#fff;color:var(--muted)}.crop-save-btn{border:0;background:var(--teal);color:#fff}
+.load-error-banner{display:none;background:#fdecea;border:1px solid #f3b8b3;color:#a12b20;border-radius:3px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;grid-column:1/-1}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45;transform:scale(.8)}}
+@media(max-width:859px){body{padding-bottom:50px}.wrap{width:min(100% - 28px,560px)}.announcement{margin:0 -14px;height:62px}.announcement b{font-size:12px}.site-head{padding:24px 0 16px}.brand{font-size:19px}.head-actions{top:25px;right:0}.head-actions a:first-child{display:none}.navline{gap:15px;overflow:auto;justify-content:flex-start;padding:15px 2px;font-size:10px;white-space:nowrap}.botanical{opacity:.14}.botanical.left{width:150px;height:280px;left:-55px}.botanical.right{width:170px;height:300px;right:-75px}.page-title{display:block;margin:25px 0 18px}.page-title h1{font-size:29px}.page-title p{text-align:left;margin-top:8px}.profile-layout{display:flex;flex-direction:column}.profile-sidebar{position:static;display:contents}.photo-hero{order:1;width:100%;align-self:stretch}.profile-main{width:100%}.profile-main{order:2}.profile-sidebar .logout-btn{order:3;margin-top:0}.announcement{padding:0 58px}.nav-toggle{top:12px;left:12px;width:40px;height:40px}.profile-main{display:block}.field-grid,.field-grid.three{grid-template-columns:1fr}.card-head{display:block}.card-sub{margin-top:6px}.desktop-label{display:none}.photo-hero{min-height:0;border-radius:3px;padding:35px 24px;margin-bottom:18px}.avatar-wrap,.avatar-img{width:110px;height:110px}.avatar-img{font-size:35px}.avatar-wrap{margin-bottom:18px}.avatar-wrap:after{inset:-11px}.avatar-edit-btn{width:34px;height:34px;font-size:14px}.hero-name{font-size:23px}.section-card{border-radius:3px;padding:21px;margin-bottom:18px}.section-title{font-size:18px}.head-actions{display:none}}
+/* ---------- Desktop: full-width banner + whole page fits one screen (mobile untouched) ---------- */
+@media(min-width:860px){
+body{padding-bottom:0}
+.wrap{width:100%}
+.announcement{margin:0;height:54px}.announcement b{font-size:14px}.announcement span{margin-top:2px}
+.site-head{padding:12px 0 0;max-width:1180px}.brand{font-size:21px}.brand small{margin-top:3px}.head-actions{top:18px}.navline{padding:8px 0 10px}
+.page-title{max-width:1180px;margin:14px auto 12px}.page-title h1{font-size:30px}.eyebrow{margin-bottom:4px}
+.profile-layout{max-width:1180px;grid-template-columns:320px minmax(0,1fr);gap:22px}
+.profile-sidebar{top:12px}
+.photo-hero{padding:22px 24px 30px}.avatar-wrap,.avatar-img{width:112px;height:112px}.avatar-img{font-size:36px}.avatar-wrap{margin-bottom:16px}.avatar-wrap:after{inset:-12px}.avatar-edit-btn{width:34px;height:34px;font-size:14px}
+.hero-name{font-size:23px;margin-bottom:3px}.hero-branch-tag{margin-top:9px;padding:5px 12px}
+.meta-list{margin:14px 0 6px}.meta-list div{padding:7px 2px}
+.photo-hero:after{bottom:11px}
+.profile-sidebar .logout-btn{margin-top:10px;padding:11px}
+.profile-main{gap:14px}.desktop-label{margin:0 0 -4px}
+.section-card{padding:16px 22px}.card-head{margin-bottom:12px;padding-bottom:9px}.section-title{font-size:19px}
+.field{margin-bottom:10px}.field label{margin-bottom:5px}.field input,.field select{padding:10px 12px}.field-hint{margin-top:4px;font-size:10px}
+.save-btn{padding:10px 20px}
+}
+/* Tall desktop screens: use the extra room so the page doesn't look empty at the bottom */
+@media(min-width:860px) and (min-height:880px){
+.announcement{height:62px}.site-head{padding-top:18px}.brand{font-size:23px}.navline{padding:12px 0 14px}
+.page-title{margin:24px auto 18px}.page-title h1{font-size:34px}
+.photo-hero{padding:30px 26px 38px}.avatar-wrap,.avatar-img{width:132px;height:132px}.avatar-img{font-size:42px}.avatar-wrap{margin-bottom:20px}.avatar-wrap:after{inset:-14px}
+.hero-name{font-size:26px}.meta-list{margin:20px 0 8px}.meta-list div{padding:10px 2px}
+.profile-main{gap:18px}.section-card{padding:22px 26px}.card-head{margin-bottom:16px;padding-bottom:12px}.section-title{font-size:21px}
+.field{margin-bottom:14px}.field input,.field select{padding:12px 14px}.save-btn{padding:12px 24px}
+.profile-sidebar .logout-btn{margin-top:14px;padding:13px}
+}
+/* Shorter laptop screens: tighten a little more so it still fits */
+@media(min-width:860px) and (max-height:780px){
+.announcement{height:44px}.announcement span{display:none}
+.site-head{padding-top:8px}.brand{font-size:18px}.brand small{display:none}.navline{padding:6px 0 8px}
+.page-title{margin:8px auto 8px}.page-title h1{font-size:25px}.page-title p{font-size:11px}
+.photo-hero{padding:14px 20px 24px}.avatar-wrap,.avatar-img{width:84px;height:84px}.avatar-img{font-size:28px}.avatar-wrap{margin-bottom:12px}.avatar-wrap:after{inset:-9px}.avatar-edit-btn{width:28px;height:28px;font-size:12px}
+.hero-name{font-size:19px}.meta-list{margin:10px 0 4px}.meta-list div{padding:5px 2px}
+.section-card{padding:12px 20px}.card-head{margin-bottom:8px;padding-bottom:7px}.section-title{font-size:17px}
+.field{margin-bottom:7px}.field input,.field select{padding:8px 11px}.field-hint{display:none}
+.profile-main{gap:10px}
+}
+/* ---------- Team Status + Gallery + Account Settings panel ---------- */
+.px-toolbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 -3px}
+.px-toolbar .desktop-label{margin:0}
+.acct-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--teal-dark);border-radius:999px;padding:8px 14px 8px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(47,101,112,.08);transition:.2s}
+.acct-btn .gear{font-size:16px;line-height:1;display:inline-block;transition:transform .5s ease}
+.acct-btn:hover{background:var(--teal);color:#fff;border-color:var(--teal)}.acct-btn:hover .gear{transform:rotate(90deg)}
+.acct-modal{position:fixed;inset:0;z-index:9500;background:rgba(33,50,54,.45);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.acct-modal.show{display:flex}
+.acct-sheet{width:min(820px,100%);display:grid;gap:14px;animation:rise .3s ease both}
+.acct-head{display:flex;align-items:center;justify-content:space-between;background:var(--teal);color:#fff;border-radius:3px;padding:12px 16px}
+.acct-head b{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+.acct-close{background:rgba(255,255,255,.15);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}
+.acct-sheet .section-card{margin:0}
+.acct-sheet .section-card:hover{transform:none}
 
-  var KEY = 'lbProfileFx';
-  var DEFAULT = 'fish';
+.px-status-card .card-head,.px-gallery-card .card-head{align-items:center}
+.px-strip{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.px-strip::-webkit-scrollbar{height:6px}.px-strip::-webkit-scrollbar-thumb{background:#d6cfcb;border-radius:3px}
+.px-item{flex:0 0 auto;width:78px;text-align:center;cursor:pointer;scroll-snap-align:start;background:none;border:0;padding:0;font:inherit;color:inherit}
+.px-ring{width:70px;height:70px;margin:0 auto 6px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,var(--rose),var(--gold),var(--teal),var(--rose));position:relative;transition:transform .2s}
+.px-item:hover .px-ring{transform:scale(1.05)}
+.px-ring.seen{background:#d9d2ce}
+.px-ring.none{background:transparent;border:2px dashed #c9d9dc;padding:1px}
+.px-face{width:100%;height:100%;border-radius:50%;border:3px solid #fff;background:var(--teal-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:22px;color:#fff;overflow:hidden}
+.px-plus{position:absolute;right:-1px;bottom:-1px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid #fff;font-size:15px;font-weight:700;line-height:20px;text-align:center}
+.px-ring.idle{background:transparent;border:2px solid #e3ecee;padding:1px}
+.px-dot{position:absolute;right:3px;bottom:3px;width:15px;height:15px;border-radius:50%;background:#34b36b;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.05)}
+.px-sep{flex:0 0 auto;width:1px;background:var(--line);margin:8px 2px 26px}
+.px-time.on{color:#2e9a5c;font-weight:700}
+.px-sheet.pp{width:min(560px,100%);padding:0;overflow:hidden}
+.pp-cover{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;aspect-ratio:3/1;background:linear-gradient(135deg,#2c626d,#c9506b)}
+.pp-cover div{background:center/cover no-repeat}
+.pp-cover.private{background:linear-gradient(135deg,#8d9da0,#b9b1ae)}
+.pp-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:15px;cursor:pointer;z-index:2}
+.pp-body{padding:0 22px 22px;text-align:center;position:relative}
+.pp-av{width:104px;height:104px;border-radius:50%;margin:-52px auto 10px;border:4px solid #fff;background:var(--teal-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:34px;font-weight:700;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.15);position:relative}
+.pp-av .px-dot{right:6px;bottom:6px;width:18px;height:18px}
+.pp-name{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#3d3a39;line-height:1.15}
+.pp-role{font-size:12.5px;color:var(--muted);margin-top:4px}
+.pp-tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0 4px}
+.pp-tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--teal-soft);color:var(--teal-dark)}
+.pp-tag.on{background:#e3f5ea;color:#2e7d4f}
+.pp-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px;text-align:left}
+.pp-meta div{border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.pp-meta span{display:block;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#9a908c;font-weight:700;margin-bottom:3px}
+.pp-meta b{font-size:13px;color:#4a4442}
+.pp-private{margin:12px 0 0;font-size:13px;color:var(--muted)}
+.pp-actions{margin-top:16px;display:flex;gap:8px;justify-content:center}
+.pp-loading{padding:60px 20px;text-align:center;color:var(--muted);font-size:13px}
+.pxv-who{cursor:pointer}
+.px-switch{display:flex;align-items:center;gap:14px;cursor:pointer}
+.px-switch input{position:absolute;opacity:0;pointer-events:none}
+.px-switch .trk{flex:0 0 auto;width:46px;height:26px;border-radius:999px;background:#d9d3cf;position:relative;transition:.2s}
+.px-switch .trk:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
+.px-switch input:checked + .trk{background:var(--teal)}
+.px-switch input:checked + .trk:after{left:23px}
+.px-switch .txt b{display:block;font-size:13.5px;color:#4a4442}.px-switch .txt span{font-size:11.5px;color:var(--muted);line-height:1.45}
+.px-name{font-size:11.5px;font-weight:700;color:#4a4442;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.px-time{font-size:10px;color:var(--muted)}
+.px-empty,.px-loading{font-size:12px;color:var(--muted);align-self:center;padding:10px 4px}
+.px-count{font-size:10px;color:var(--teal);font-weight:700}
+
+.px-add-btn{border:1px solid var(--line);background:#fff;color:var(--teal-dark);border-radius:999px;padding:7px 13px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.px-add-btn:hover{background:var(--teal-soft)}
+.px-add-btn:disabled{opacity:.5;cursor:default}
+.px-gallery{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;aspect-ratio:3/1;border-radius:4px;overflow:hidden}
+.px-gallery.n0{aspect-ratio:auto;display:block}
+.px-gallery .px-pic{position:relative;overflow:hidden;background:#efe9e6 center/cover no-repeat;cursor:pointer;border:0;padding:0;height:100%;min-width:0;transition:flex .3s}
+.px-gallery .px-pic img,.pp-cover div img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .15s}
+.pp-cover div{overflow:hidden}
+.px-adj-frame{position:relative;overflow:hidden;border-radius:6px;background:#111;margin:0 auto 12px;touch-action:none;cursor:grab;max-width:100%}
+.px-adj-frame.dragging{cursor:grabbing}
+.px-adj-frame img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.px-adj-frame:after{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.28) 1px,transparent 1px);background-size:33.33% 33.33%;background-position:-1px -1px;opacity:0;transition:.2s}
+.px-adj-frame.dragging:after{opacity:1}
+.px-adj-hint{font-size:11.5px;color:var(--muted);text-align:center;margin:-4px 0 10px}
+.px-zoom{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:12px;color:var(--muted)}
+.px-zoom input{flex:1;accent-color:var(--teal)}
+.px-gallery .px-pic:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.25));opacity:0;transition:.2s}
+.px-gallery .px-pic:hover:after{opacity:1}
+.px-gallery .px-pic.loading{animation:pxPulse 1.2s ease-in-out infinite}
+.px-gallery-empty{grid-column:1/-1;border:2px dashed #d7e3e5;border-radius:3px;padding:34px 16px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;background:rgba(220,235,237,.25)}
+.px-gallery-empty b{display:block;font-size:26px;margin-bottom:6px;color:var(--teal)}
+@keyframes pxPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* Composer + gallery viewer (light sheets) */
+.px-modal{position:fixed;inset:0;z-index:9600;background:rgba(20,28,30,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+.px-sheet{background:#fff;width:min(440px,100%);max-height:92vh;overflow-y:auto;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.3);animation:rise .25s ease both}
+.px-sheet.adj{width:min(640px,100%)}
+.px-sheet h4{margin:0 0 12px;font-family:'Fraunces',serif;font-size:19px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.px-sheet h4 button{background:none;border:0;font-size:18px;color:var(--muted);cursor:pointer}
+.px-preview{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:9/12;max-height:52vh;width:100%;display:flex;align-items:center;justify-content:center;background:#2f6570;color:#fff;text-align:center;margin-bottom:12px}
+.px-preview img{width:100%;height:100%;object-fit:cover}
+.px-preview .px-ptext{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 14px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.6));font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.px-preview.textonly .px-ptext{position:static;background:none;padding:22px;font-family:'Fraunces',serif;font-size:22px;line-height:1.3}
+.px-preview .px-ptext:empty{display:none}
+.px-preview .px-rmimg{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:14px}
+.px-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.px-sw{width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.px-sw.on{box-shadow:0 0 0 2px var(--ink)}
+.px-sheet textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;color:var(--ink);background:#fff}
+.px-counter{font-size:10.5px;color:var(--muted);text-align:right;margin:4px 0 12px}
+.px-actions{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.px-btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--teal);color:#fff}
+.px-btn.ghost{background:var(--teal-soft);color:var(--teal-dark)}
+.px-btn.danger{background:#fbeaea;color:#a12b20}
+.px-btn:disabled{opacity:.55;cursor:default}
+.px-msg{font-size:12px;color:#a12b20;margin:8px 0 0;min-height:0}
+.px-lightbox img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#111;display:block;margin-bottom:12px}
+
+/* Status viewer (full screen, always dark) */
+.pxv{position:fixed;inset:0;z-index:9700;background:#0d0d0f;color:#fff;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+.pxv-stage{position:relative;width:min(460px,100%);height:min(820px,100%);background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
+@media(min-width:600px){.pxv-stage{border-radius:14px;height:min(820px,calc(100% - 40px))}}
+.pxv-bars{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:4px;z-index:3}
+.pxv-bar{flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden}
+.pxv-bar i{display:block;height:100%;width:0;background:#fff}
+.pxv-head{position:absolute;top:20px;left:10px;right:10px;display:flex;align-items:center;gap:10px;z-index:3}
+.pxv-av{width:36px;height:36px;border-radius:50%;background:#2f6570 center/cover;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;border:2px solid rgba(255,255,255,.7)}
+.pxv-who{flex:1;min-width:0;line-height:1.2}.pxv-who b{display:block;font-size:13.5px}.pxv-who span{font-size:11px;opacity:.75}
+.pxv-ico{width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.35);color:#fff;font-size:16px;cursor:pointer;flex:0 0 auto}
+.pxv-body{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.pxv-body img{width:100%;height:100%;object-fit:contain}
+.pxv-textonly{padding:40px 28px;text-align:center;font-family:'Fraunces',serif;font-size:26px;line-height:1.35;white-space:pre-wrap;word-break:break-word;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.pxv-cap{position:absolute;left:0;right:0;bottom:0;padding:40px 18px calc(22px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,transparent,rgba(0,0,0,.75));font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word;z-index:2}
+.pxv-cap:empty{display:none}
+.pxv-tap{position:absolute;top:70px;bottom:0;width:35%;z-index:2;cursor:pointer}.pxv-tap.l{left:0}.pxv-tap.r{right:0;width:65%}
+.pxv-spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+
+@media(max-width:859px){
+.px-toolbar{display:flex;margin:0 0 14px}.px-toolbar .desktop-label{display:block;margin:0}
+.acct-modal{padding:0;align-items:flex-start}.acct-sheet{width:100%;gap:0;align-content:start;background:var(--cream);min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.acct-head{border-radius:0;position:sticky;top:0;z-index:2;padding:14px 16px calc(14px);padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.acct-sheet .section-card{margin:12px 12px 0}
+.px-strip{gap:12px}.px-item{width:70px}.px-ring{width:64px;height:64px}
+.px-status-card .card-head,.px-gallery-card .card-head{display:flex;justify-content:space-between;gap:10px}.px-status-card .card-head{display:block}
+.px-gallery{aspect-ratio:2/1;gap:3px}
+.px-modal{align-items:flex-end;padding:0}.px-sheet{width:100%;border-radius:18px 18px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<button class="nav-toggle" id="navToggle" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect y="3" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="8.9" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="14.8" width="20" height="2.2" rx="1.1" fill="currentColor"/></svg></button>
+<div class="nav-backdrop" id="navBackdrop"></div>
+<nav class="side-drawer" id="sideDrawer">
+  <div data-lb-menu data-hub-class="hub-grid" data-title-class="drawer-title"></div>
+</nav>
+<script src="shared/nav.js"></script>
+<div class="wrap">
+<div class="announcement"><b>LALABELLA • MY PROFILE</b><span>Your account, beautifully arranged</span></div>
+<header class="site-head"><div class="brand">LALABELLA<small>BAHRAIN</small></div><div class="head-actions"><a href="index.html">Home</a><a href="index.html" aria-label="Back">↩ <span class="head-icon">⌂</span></a></div><nav class="navline"><a href="index.html">Dashboard</a><a href="flower-tools.html">Flower Tools</a><a href="item-dashboard.html">Inventory</a><a href="nova-command-center.html">NOVA</a><a href="profile.html">My Profile</a></nav></header>
+<svg class="botanical left" viewBox="0 0 250 430" aria-hidden="true"><path d="M83 430C88 354 83 292 105 229C125 172 155 124 170 70"/><path d="M103 251C75 236 54 213 40 180C68 181 92 198 111 222"/><path d="M91 299C59 295 32 277 17 251C47 248 72 260 96 281"/><path d="M106 224C101 190 107 157 129 132C143 163 135 194 117 222"/><path d="M122 170C105 144 104 116 117 91C140 112 143 141 130 165"/><path d="M167 72C145 64 130 48 128 28C151 28 169 40 174 59"/><path d="M171 73C189 56 209 51 229 57C217 77 196 87 174 82"/></svg>
+<svg class="botanical right" viewBox="0 0 290 470" aria-hidden="true"><path d="M83 470C90 386 85 325 111 260C137 195 174 140 195 72"/><path d="M107 279C76 265 52 242 39 209C70 211 97 228 116 252"/><path d="M95 330C60 323 32 303 18 275C48 273 78 287 102 310"/><path d="M119 246C114 209 124 176 149 149C160 185 151 219 130 247"/><path d="M145 188C128 159 130 129 146 104C168 129 170 158 155 182"/><path d="M193 75C171 68 157 51 156 30C179 31 197 45 200 64"/><path d="M198 76C218 57 241 55 263 63C248 84 223 91 199 84"/></svg>
+<div class="page-title"><div><div class="eyebrow">Account / Personal space</div><h1>My Profile</h1></div><p>Keep your Lalabella account details updated. Your profile information and preferences are managed here.</p></div>
+<div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div><div class="meta-list"><div><span>Username</span><b id="metaUsername">—</b></div><div><span>Position</span><b id="metaPosition">—</b></div><div><span>Role</span><b id="metaRole">—</b></div><div><span>Branch</span><b id="metaBranch">—</b></div><div><span>Member since</span><b id="metaSince">—</b></div></div></div><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></aside>
+<main class="profile-main">
+<div class="load-error-banner" id="loadErrorBanner"></div>
+<div class="px-toolbar"><div class="desktop-label">Today at Lalabella</div><button type="button" class="acct-btn" id="acctBtn" title="Account settings"><span class="gear">⚙️</span>Account settings</button></div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
+<section class="section-card px-status-card"><div class="card-head"><h3 class="section-title">💬 Team Status</h3><p class="card-sub">Shared with all staff · disappears after 24 hours · 🟢 = active now</p></div><div class="px-strip" id="pxStrip"><div class="px-loading">Loading statuses…</div></div></section>
+<section class="section-card px-gallery-card"><div class="card-head"><h3 class="section-title">🖼️ My Gallery</h3><button type="button" class="px-add-btn" id="pxGalAdd">＋ Add picture</button></div><div class="px-gallery" id="pxGallery"></div></section>
+<div class="acct-modal" id="acctModal" aria-hidden="true"><div class="acct-sheet" role="dialog" aria-modal="true" aria-label="Account settings"><div class="acct-head"><b>⚙️ Account Settings</b><button type="button" class="acct-close" id="acctClose" aria-label="Close">✕</button></div>
+<div class="section-card"><div class="card-head"><h3 class="section-title">✏️ Account Information</h3><p class="card-sub">Update your username, name and branch.</p></div><div class="field-grid"><div class="field"><label>Username</label><input type="text" id="usernameField" autocomplete="username" maxlength="30"><div class="field-hint">Used to log in. Letters, numbers, dot, dash or underscore (3–30 characters).</div></div><div class="field"><label>Full Name</label><input type="text" id="fullNameField" autocomplete="name"></div><div class="field"><label>Branch</label><select id="branchField"><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div><div class="field"><label>Role</label><input type="text" id="roleField" disabled><div class="field-hint">Only an admin can change roles.</div></div></div><div class="card-actions"><button class="save-btn" id="saveInfoBtn">Save Changes</button><div class="msg" id="infoMsg"></div></div></div>
+<div class="section-card"><div class="card-head"><h3 class="section-title">🔒 Change Password</h3><p class="card-sub">At least 6 characters.</p></div><div class="field-grid three"><div class="field"><label>Current Password</label><div class="pw-wrap"><input type="password" id="currentPw" autocomplete="current-password"><button type="button" class="pw-toggle" id="toggleCurrentPw">👁</button></div></div><div class="field"><label>New Password</label><div class="pw-wrap"><input type="password" id="newPw" autocomplete="new-password"><button type="button" class="pw-toggle" id="toggleNewPw">👁</button></div></div><div class="field"><label>Confirm New Password</label><div class="pw-wrap"><input type="password" id="confirmPw" autocomplete="new-password"><button type="button" class="pw-toggle" id="toggleConfirmPw">👁</button></div></div></div><div class="card-actions"><button class="save-btn" id="savePwBtn">Update Password</button><div class="msg" id="pwMsg"></div></div></div>
+<div class="section-card"><div class="card-head"><h3 class="section-title">🔒 Privacy</h3><p class="card-sub">Who can see your profile.</p></div><label class="px-switch"><input type="checkbox" id="pxPrivate"><span class="trk"></span><span class="txt"><b>Private profile</b><span>When on, other staff only see your name — not your photo, position, branch or gallery. Statuses you post are still shared.</span></span></label><div class="card-actions" style="margin-top:14px"><button type="button" class="px-btn ghost" id="pxPreviewMe">👁 See how others see me</button><div class="msg" id="pxPrivMsg" style="display:none"></div></div></div></div></div>
+</main></div></div>
+<script>
+const AUTH_API_URL=LB_CONFIG.AUTH_FAST_API;
+function getToken(){return window.LALABELLA_TOKEN||sessionStorage.getItem('lalabellaToken')||localStorage.getItem('lalabellaToken')||''}
+function setupPwToggle(inputId,btnId){const input=document.getElementById(inputId),btn=document.getElementById(btnId);btn.addEventListener('click',()=>{const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁':'🙈'})}
+setupPwToggle('currentPw','toggleCurrentPw');setupPwToggle('newPw','toggleNewPw');setupPwToggle('confirmPw','toggleConfirmPw');
+(function(){const t=document.getElementById('navToggle'),d=document.getElementById('sideDrawer'),b=document.getElementById('navBackdrop');function open(){d.classList.add('show');b.classList.add('show')}function close(){d.classList.remove('show');b.classList.remove('show')}t.addEventListener('click',()=>d.classList.contains('show')?close():open());b.addEventListener('click',close);document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});})();
+let currentUsername='';
+function fmtDate(v){if(!v)return '—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+let currentPosition='';
+function fillMeta(p){if(p.position!==undefined)document.getElementById('metaPosition').textContent=p.position||'Not set';document.getElementById('metaUsername').textContent=p.username||'—';document.getElementById('metaRole').textContent=p.role||'Staff';document.getElementById('metaBranch').textContent=p.branch||'—';if(p.dateRegistered!==undefined)document.getElementById('metaSince').textContent=fmtDate(p.dateRegistered)}
+
+function showLoadError(message){
+  const banner = document.getElementById('loadErrorBanner');
+  banner.textContent = '⚠ Could not load your profile: ' + message;
+  banner.style.display = 'block';
+}
+
+async function loadProfile(){
+  const token = getToken();
+  if(!token){
+    showLoadError('No session token found. Please log out and log in again.');
+    return;
+  }
+  try{
+    const res = await fetch(AUTH_API_URL+'?action=getProfile&token='+encodeURIComponent(token));
+    const data = await res.json();
+    if(!data.success){
+      showLoadError(data.error || 'Unknown error from server.');
+      return;
+    }
+    const p=data.profile;
+    document.getElementById('heroName').textContent=p.fullName||p.username;
+    currentPosition=p.position||'';
+    document.getElementById('heroRole').textContent=p.position||p.role||'Staff';
+    document.getElementById('heroBranch').textContent=p.branch||'—';
+    document.getElementById('usernameField').value=p.username;
+    currentUsername=p.username||'';
+    document.getElementById('roleField').value=p.role||'Staff';
+    fillMeta(p);
+    document.getElementById('fullNameField').value=p.fullName||'';
+    document.getElementById('branchField').value=p.branch||'ModaMall';
+    const avatarEl=document.getElementById('avatarImg');
+    if(p.photoDataUri){
+      avatarEl.style.backgroundImage=`url('${p.photoDataUri}')`;
+      avatarEl.style.backgroundSize='cover';
+      avatarEl.style.backgroundPosition='center';
+      avatarEl.textContent=''
+    }else{
+      avatarEl.textContent=(p.fullName||p.username||'?').charAt(0).toUpperCase()
+    }
+  }catch(e){
+    console.error('[Profile] load failed',e);
+    showLoadError('Connection error — ' + e.message);
+  }
+}
+loadProfile();
+
+document.getElementById('avatarEditBtn').addEventListener('click',()=>document.getElementById('photoInput').click());
+const cropBackdrop=document.getElementById('cropBackdrop'),cropStage=document.getElementById('cropStage'),cropImg=document.getElementById('cropImg'),cropZoom=document.getElementById('cropZoom');
+let cropState={naturalW:0,naturalH:0,baseScale:1,scale:1,offsetX:0,offsetY:0};
+const STAGE_SIZE=260;
+function applyCropTransform(){const s=cropState.baseScale*cropState.scale;cropImg.style.width=cropState.naturalW*s+'px';cropImg.style.height=cropState.naturalH*s+'px';cropImg.style.transform=`translate(${cropState.offsetX}px,${cropState.offsetY}px)`}
+function clampOffset(){const s=cropState.baseScale*cropState.scale,w=cropState.naturalW*s,h=cropState.naturalH*s,minX=STAGE_SIZE-w,maxX=0,minY=STAGE_SIZE-h,maxY=0;cropState.offsetX=Math.min(maxX,Math.max(minX,cropState.offsetX));cropState.offsetY=Math.min(maxY,Math.max(minY,cropState.offsetY))}
+
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      cropState.naturalW=img.width;cropState.naturalH=img.height;
+      cropState.baseScale=Math.max(STAGE_SIZE/img.width,STAGE_SIZE/img.height);
+      cropState.scale=1;
+      cropState.offsetX=(STAGE_SIZE-img.width*cropState.baseScale)/2;
+      cropState.offsetY=(STAGE_SIZE-img.height*cropState.baseScale)/2;
+      cropImg.src=ev.target.result;
+      cropZoom.value=100;
+      applyCropTransform();
+      cropBackdrop.classList.add('show');
+    };
+    img.onerror=()=>{ alert('Could not read that image file. Please try a different photo (JPG or PNG).'); };
+    img.src=ev.target.result;
+  };
+  reader.onerror=()=>{ alert('Could not read that file from your device. Please try again.'); };
+  reader.readAsDataURL(file);
+  e.target.value='';
+});
+
+cropZoom.addEventListener('input',()=>{cropState.scale=Number(cropZoom.value)/100;clampOffset();applyCropTransform()});
+let dragging=false,dragStartX=0,dragStartY=0,startOffsetX=0,startOffsetY=0;
+cropStage.addEventListener('pointerdown',e=>{dragging=true;cropStage.classList.add('dragging');dragStartX=e.clientX;dragStartY=e.clientY;startOffsetX=cropState.offsetX;startOffsetY=cropState.offsetY;cropStage.setPointerCapture(e.pointerId)});
+cropStage.addEventListener('pointermove',e=>{if(!dragging)return;cropState.offsetX=startOffsetX+(e.clientX-dragStartX);cropState.offsetY=startOffsetY+(e.clientY-dragStartY);clampOffset();applyCropTransform()});
+cropStage.addEventListener('pointerup',()=>{dragging=false;cropStage.classList.remove('dragging')});
+cropStage.addEventListener('pointercancel',()=>{dragging=false;cropStage.classList.remove('dragging')});
+document.getElementById('cropCancelBtn').addEventListener('click',()=>cropBackdrop.classList.remove('show'));
+
+document.getElementById('cropSaveBtn').addEventListener('click',async()=>{
+  const btn = document.getElementById('cropSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const size=200,canvas=document.createElement('canvas');
+  canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext('2d'),s=cropState.baseScale*cropState.scale,exportScale=size/STAGE_SIZE;
+  ctx.drawImage(cropImg,cropState.offsetX*exportScale,cropState.offsetY*exportScale,cropState.naturalW*s*exportScale,cropState.naturalH*s*exportScale);
+  const compressedBase64=canvas.toDataURL('image/jpeg',.7);
+  try{
+    const data = await saveProfile({photoBase64:compressedBase64});
+    btn.disabled = false; btn.textContent = 'Use This Photo';
+    if(!data.success){
+      alert('Could not save photo: ' + (data.error || 'unknown error'));
+      return;
+    }
+    const avatarEl=document.getElementById('avatarImg');
+    avatarEl.style.backgroundImage=`url('${compressedBase64}')`;
+    avatarEl.style.backgroundSize='cover';
+    avatarEl.style.backgroundPosition='center';
+    avatarEl.textContent='';
+    cropBackdrop.classList.remove('show');
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Use This Photo';
+    alert('Connection error while saving photo: ' + e.message);
+  }
+});
+
+async function saveProfile(fields){
+  const token=getToken();
+  const params=new URLSearchParams({action:'updateProfile',token});
+  Object.keys(fields||{}).forEach(k=>{ if(fields[k]) params.set(k,fields[k]); });
+  const res=await fetch(AUTH_API_URL+'?'+params.toString());
+  return res.json();
+}
+
+document.getElementById('saveInfoBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('saveInfoBtn'),msg=document.getElementById('infoMsg');
+  const showMsg=(ok,text)=>{msg.className='msg '+(ok?'ok':'err');msg.textContent=text;msg.style.display='block'};
+  const username=document.getElementById('usernameField').value.trim();
+  const fullName=document.getElementById('fullNameField').value.trim(),branch=document.getElementById('branchField').value;
+  if(!fullName){showMsg(false,'Full Name is required.');return}
+  if(!/^[A-Za-z0-9._-]{3,30}$/.test(username)){showMsg(false,'Username must be 3–30 characters: letters, numbers, dot, dash or underscore.');return}
+  const usernameChanged=username!==currentUsername;
+  if(usernameChanged&&!confirm('Change your username to "'+username+'"?\n\nYou will use this new username the next time you log in.'))return;
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    const fields={fullName,branch};
+    if(usernameChanged)fields.username=username;
+    const data=await saveProfile(fields);
+    btn.disabled=false;btn.textContent='Save Changes';
+    showMsg(!!data.success,data.success?(usernameChanged?'Saved! Use "'+username+'" to log in from now on.':'Saved!'):(data.error||'Failed to save.'));
+    if(data.success){
+      if(usernameChanged)currentUsername=username;
+      document.getElementById('heroName').textContent=fullName;
+      document.getElementById('heroBranch').textContent=branch;
+      fillMeta({username:currentUsername,role:document.getElementById('roleField').value,branch,position:currentPosition});
+      ['sessionStorage','localStorage'].forEach(store=>{
+        const str=window[store].getItem('lalabellaUser');
+        if(!str)return;
+        try{const u=JSON.parse(str);u.fullName=fullName;u.branch=branch;u.username=currentUsername;window[store].setItem('lalabellaUser',JSON.stringify(u))}catch(e){}
+      });
+    }
+  }catch(e){
+    btn.disabled=false;btn.textContent='Save Changes';
+    showMsg(false,'Connection error: ' + e.message);
+  }
+});
+
+document.getElementById('savePwBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('savePwBtn'),msg=document.getElementById('pwMsg'),currentPassword=document.getElementById('currentPw').value,newPassword=document.getElementById('newPw').value,confirmPassword=document.getElementById('confirmPw').value;
+  const pwErr=t=>{msg.className='msg err';msg.textContent=t;msg.style.display='block'};
+  if(!currentPassword||!newPassword||!confirmPassword){pwErr('All three fields are required.');return}
+  if(newPassword.length<6){pwErr('New password must be at least 6 characters.');return}
+  if(newPassword!==confirmPassword){pwErr('New passwords do not match.');return}
+  btn.disabled=true;btn.textContent='Updating…';
+  const token=getToken();
+  try{
+    const res=await fetch(AUTH_API_URL+'?action=changePassword&token='+encodeURIComponent(token)+'&currentPassword='+encodeURIComponent(currentPassword)+'&newPassword='+encodeURIComponent(newPassword));
+    const data=await res.json();
+    btn.disabled=false;btn.textContent='Update Password';
+    msg.className='msg '+(data.success?'ok':'err');
+    msg.textContent=data.success?'Password updated!':(data.error||'Failed.');
+    msg.style.display='block';
+    if(data.success){['currentPw','newPw','confirmPw'].forEach(id=>document.getElementById(id).value='')}
+  }catch(e){
+    btn.disabled=false;btn.textContent='Update Password';
+    msg.className='msg err';msg.textContent='Connection error: ' + e.message;msg.style.display='block';
+  }
+});
+
+function logout(){
+  const token=getToken();
+  // Invalidate the session on the server too, not just in this browser.
+  if(token){try{fetch(AUTH_API_URL+'?action=logout&token='+encodeURIComponent(token),{keepalive:true}).catch(()=>{})}catch(e){}}
+  ['lalabellaToken','lalabellaUser','lalabellaVerifiedToken','lalabellaVerifiedAt'].forEach(k=>{sessionStorage.removeItem(k);localStorage.removeItem(k)});
+  window.location.href='index.html';
+}
+document.getElementById('logoutBtn').addEventListener('click',logout);
+</script>
+<script>
+/* =================================================================
+   Account Settings panel · Team Status (24 h) · My Gallery
+   Backend: auth-fast Edge Function (was ProfileExtras.gs).
+   ================================================================= */
+(function(){
+  // ---------- Account Settings (⚙️) ----------
+  const acctModal = document.getElementById('acctModal');
+  document.body.appendChild(acctModal);   // out of .wrap so it sits above the burger button
+  function openAcct(){ acctModal.classList.add('show'); acctModal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+  function closeAcct(){ acctModal.classList.remove('show'); acctModal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  document.getElementById('acctBtn').addEventListener('click', openAcct);
+  document.getElementById('acctClose').addEventListener('click', closeAcct);
+  acctModal.addEventListener('click', e=>{ if(e.target === acctModal) closeAcct(); });
 
   // ---------- helpers ----------
-  function rnd(a, b) { return a + Math.random() * (b - a); }
-  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-  function user() {
-    try { return JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }
-    catch (e) { return {}; }
+  const API = LB_CONFIG.AUTH_FAST_API;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function apiGet(action, extra){
+    const q = new URLSearchParams(Object.assign({action, token:getToken(), _ts:Date.now()}, extra||{}));
+    const r = await fetch(API + '?' + q.toString());
+    return r.json();
   }
-  function who() { var u = user(); return String(u.username || u.fullName || 'anon').toLowerCase(); }
-  function getChoice() {
-    try {
-      var all = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
-      if (all[who()]) return all[who()];
-    } catch (e) {}
-    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return reduce ? 'off' : DEFAULT;
+  async function apiPost(action, fields){
+    const body = new URLSearchParams(Object.assign({action, token:getToken()}, fields||{}));
+    const r = await fetch(API, { method:'POST', body });
+    return r.json();
   }
-  function setChoice(v) {
-    try {
-      var all = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
-      all[who()] = v; localStorage.setItem(KEY, JSON.stringify(all));
-    } catch (e) {}
+  function initials(name){
+    const parts = String(name||'?').trim().split(/\s+/);
+    return ((parts[0]||'?')[0] + (parts.length > 1 ? parts[parts.length-1][0] : '')).toUpperCase();
+  }
+  const FACE_COLORS = ['#2f6570','#c9506b','#b07d2b','#5f8f63','#7a5a9e','#3d6fa3'];
+  function faceColor(id){ return FACE_COLORS[Math.abs(Number(id)||0) % FACE_COLORS.length]; }
+  function ago(iso){
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if(m < 1) return 'just now';
+    if(m < 60) return m + 'm ago';
+    return Math.floor(m/60) + 'h ago';
+  }
+  function myPhotoUrl(){
+    const bg = document.getElementById('avatarImg').style.backgroundImage || '';
+    const m = bg.match(/url\(["']?(.*?)["']?\)$/);
+    return m ? m[1] : '';
   }
 
-  // ---------- the effects ----------
-  // init(w,h) -> state ; draw(ctx,w,h,t,dt,state)
-  var EFFECTS = {
-    fish: {
-      label: '🐟 Fish', tint: 'linear-gradient(135deg,rgba(110,200,225,.30),rgba(150,225,235,.10))',
-      init: function (w, h) {
-        var colors = ['#ff8a3d', '#ff6f91', '#ffc93c', '#4cc9c0', '#f7a8c4', '#ff9f5a'];
-        var fish = [], bubbles = [];
-        for (var i = 0; i < 6; i++) fish.push(newFish(w, h, colors, true));
-        return { fish: fish, bubbles: bubbles, colors: colors, nextBubble: 0 };
-      },
-      draw: function (c, w, h, t, dt, s) {
-        s.fish.forEach(function (f, i) {
-          f.x += f.v * f.dir * dt;
-          if ((f.dir > 0 && f.x > w + 30) || (f.dir < 0 && f.x < -30)) Object.assign(f, newFish(w, h, s.colors, false, f.dir));
-          var y = f.y + Math.sin(t * f.wob + f.ph) * 3;
-          drawFish(c, f.x, y, f.s, f.dir, f.col, t * 9 + f.ph);
-        });
-        s.nextBubble -= dt;
-        if (s.nextBubble <= 0) { s.nextBubble = rnd(.5, 1.6); s.bubbles.push({ x: rnd(8, w - 8), y: h + 4, r: rnd(1, 2.4), v: rnd(10, 22) }); }
-        c.lineWidth = 1; c.strokeStyle = 'rgba(255,255,255,.75)';
-        s.bubbles = s.bubbles.filter(function (b) { return b.y > -6; });
-        s.bubbles.forEach(function (b) {
-          b.y -= b.v * dt; b.x += Math.sin(t * 2 + b.y * .1) * .2;
-          c.beginPath(); c.arc(b.x, b.y, b.r, 0, 6.283); c.stroke();
-        });
+  // Compress a picture on the phone before uploading (keeps uploads small and fast).
+  function loadImage(file){
+    return new Promise((res, rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=>{ const img = new Image(); img.onload = ()=>res(img); img.onerror = ()=>rej(new Error('Could not read that picture.')); img.src = fr.result; };
+      fr.onerror = ()=>rej(new Error('Could not read that file.'));
+      fr.readAsDataURL(file);
+    });
+  }
+  function toJpeg(img, maxDim, maxChars, square){
+    let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+    if(square){ const s = Math.min(sw, sh); sx = (sw - s)/2; sy = (sh - s)/2; sw = sh = s; }
+    let scale = Math.min(1, maxDim / Math.max(sw, sh));
+    for(let tries = 0; tries < 8; tries++){
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      for(const q of [0.8, 0.7, 0.6, 0.5]){
+        const url = c.toDataURL('image/jpeg', q);
+        if(url.length <= maxChars) return url;
       }
-    },
-    snow: {
-      label: '❄️ Snow', tint: 'linear-gradient(160deg,rgba(150,185,230,.34),rgba(200,220,245,.12))',
-      init: function (w, h) {
-        var a = []; for (var i = 0; i < 30; i++) a.push({ x: rnd(0, w), y: rnd(0, h), r: rnd(1, 2.8), v: rnd(10, 30), ph: rnd(0, 6) });
-        return { flakes: a };
-      },
-      draw: function (c, w, h, t, dt, s) {
-        s.flakes.forEach(function (f) {
-          f.y += f.v * dt; f.x += Math.sin(t * 1.3 + f.ph) * .35;
-          if (f.y > h + 4) { f.y = -4; f.x = rnd(0, w); }
-          c.beginPath(); c.arc(f.x, f.y, f.r, 0, 6.283);
-          c.fillStyle = 'rgba(255,255,255,.95)'; c.fill();
-          c.lineWidth = .6; c.strokeStyle = 'rgba(110,150,200,.45)'; c.stroke();
-        });
+      scale *= 0.8;
+    }
+    throw new Error('That picture is too large. Please try another one.');
+  }
+  function pickFile(multiple){
+    return new Promise(resolve=>{
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      if(multiple) inp.multiple = true;
+      inp.onchange = ()=>resolve(multiple ? Array.from(inp.files || []) : (inp.files && inp.files[0]));
+      inp.click();
+    });
+  }
+  // Position/zoom of a gallery picture inside its frame (set with ✥ Adjust).
+  function picImg(b){
+    const x = b.x == null ? 50 : b.x, y = b.y == null ? 50 : b.y, z = b.zoom || 1;
+    return '<img alt="" src="' + esc(b.image) + '" style="object-position:' + x + '% ' + y + '%;transform:scale(' + z + ');transform-origin:' + x + '% ' + y + '%">';
+  }
+  function modal(html){
+    const m = document.createElement('div');
+    m.className = 'px-modal';
+    m.innerHTML = '<div class="px-sheet" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(m);
+    const close = ()=>{ m.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = e=>{ if(e.key === 'Escape') close(); };
+    m.addEventListener('click', e=>{ if(e.target === m || e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', onKey);
+    return { el:m, close };
+  }
+
+  // ================= TEAM STATUS =================
+  const SEEN_KEY = 'lbStatusSeen';
+  const photos = (()=>{ try{ return JSON.parse(sessionStorage.getItem('lbStaffPhotos') || '{}'); }catch(e){ return {}; } })();
+  const photoAsked = {};
+  function staffPhoto(id){ return photos[id] || ''; }
+  async function loadStaffPhotos(){
+    const meId = statusData.me && statusData.me.id;
+    const ids = {};
+    statusData.statuses.forEach(x=>{ ids[x.userId] = 1; });
+    (statusData.online || []).forEach(x=>{ ids[x.userId] = 1; });
+    const need = Object.keys(ids).filter(id=>Number(id) !== meId && !photoAsked[id]);
+    if(!need.length) return;
+    need.forEach(id=>{ photoAsked[id] = 1; });
+    try{
+      const d = await apiGet('staffPhotos', { ids: need.join(',') });
+      if(d.success && d.photos){
+        Object.assign(photos, d.photos);
+        try{ sessionStorage.setItem('lbStaffPhotos', JSON.stringify(photos)); }catch(e){}
+        renderStrip();
       }
-    },
-    fire: {
-      label: '🔥 Fire', tint: 'linear-gradient(0deg,rgba(255,140,60,.30),rgba(255,200,130,.08))',
-      init: function (w, h) {
-        var n = Math.max(6, Math.round(w / 34)), fl = [], em = [];
-        for (var i = 0; i < n; i++) fl.push({ x: (i + .5) * w / n, ph: rnd(0, 6), base: rnd(.7, 1.1) });
-        for (var j = 0; j < 14; j++) em.push(newEmber(w, h, true));
-        return { fl: fl, em: em, n: n };
-      },
-      draw: function (c, w, h, t, dt, s) {
-        var wd = w / s.n * .75;
-        s.fl.forEach(function (f) {
-          var k = (Math.sin(t * 4 + f.ph) + Math.sin(t * 6.7 + f.ph * 1.7)) * .25 + .5; // 0..1
-          var H = (11 + 15 * k) * f.base, sway = Math.sin(t * 3 + f.ph) * 3;
-          flame(c, f.x, h, wd, H, sway, 'rgba(255,70,20,.55)');
-          flame(c, f.x, h, wd * .66, H * .74, sway * .8, 'rgba(255,150,30,.75)');
-          flame(c, f.x, h, wd * .36, H * .48, sway * .5, 'rgba(255,235,130,.9)');
-        });
-        s.em.forEach(function (e, i) {
-          e.y -= e.v * dt; e.x += Math.sin(t * 3 + e.ph) * .4; e.life -= dt;
-          if (e.life <= 0 || e.y < -4) s.em[i] = newEmber(w, h, false);
-          c.globalAlpha = Math.max(0, Math.min(1, e.life / e.max));
-          c.fillStyle = e.col; c.beginPath(); c.arc(e.x, e.y, e.r, 0, 6.283); c.fill();
-        });
-        c.globalAlpha = 1;
+    }catch(e){}
+  }
+  let statusData = { me:null, isAdmin:false, statuses:[] };
+  let groups = [];
+  const imageCache = {};
+
+  function seenList(){ try{ const s = JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); return Array.isArray(s) ? s : []; }catch(e){ return []; } }
+  function markSeen(id){
+    const s = seenList();
+    if(s.indexOf(id) === -1){ s.push(id); try{ localStorage.setItem(SEEN_KEY, JSON.stringify(s.slice(-400))); }catch(e){} }
+  }
+
+  function buildGroups(){
+    const byUser = {};
+    statusData.statuses.forEach(st=>{
+      (byUser[st.userId] = byUser[st.userId] || { userId:st.userId, name:st.name, position:st.position, mine:st.mine, items:[] }).items.push(st);
+    });
+    const list = Object.keys(byUser).map(k=>byUser[k]);
+    const seen = seenList();
+    list.forEach(g=>{ g.allSeen = g.items.every(i=>seen.indexOf(i.id) !== -1); g.latest = g.items[g.items.length-1]; });
+    const mine = list.filter(g=>g.mine);
+    const others = list.filter(g=>!g.mine).sort((a,b)=> (a.allSeen - b.allSeen) || (new Date(b.latest.createdAt) - new Date(a.latest.createdAt)));
+    groups = mine.concat(others);
+  }
+
+  function onlineMap(){
+    const m = {};
+    (statusData.online || []).forEach(o=>{ m[o.userId] = o; });
+    return m;
+  }
+  function seenAgo(iso){
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    return mins <= 2 ? 'Active now' : 'Active ' + mins + 'm ago';
+  }
+
+  function renderStrip(){
+    const strip = document.getElementById('pxStrip');
+    const mineG = groups.find(g=>g.mine);
+    const photo = myPhotoUrl();
+    let h = '<button type="button" class="px-item" data-my="1" title="' + (mineG ? 'View my status' : 'Add a status') + '">' +
+      '<div class="px-ring ' + (mineG ? '' : 'none') + '"><div class="px-face" style="' +
+      (photo ? 'background-image:url(\'' + esc(photo) + '\')' : 'background-color:' + faceColor(statusData.me && statusData.me.id)) + '">' +
+      (photo ? '' : esc(initials(statusData.me ? statusData.me.name : '?'))) + '</div>' +
+      '<span class="px-plus" data-add="1" title="Add status">+</span></div>' +
+      '<div class="px-name">My status</div><div class="px-time">' + (mineG ? mineG.items.length + ' active' : 'Tap to add') + '</div></button>';
+    const others = groups.filter(g=>!g.mine);
+    const online = onlineMap();
+    others.forEach(g=>{
+      const t = g.latest.thumb;
+      h += '<button type="button" class="px-item" data-user="' + g.userId + '">' +
+        '<div class="px-ring ' + (g.allSeen ? 'seen' : '') + '"><div class="px-face" style="' +
+        (t || staffPhoto(g.userId) ? 'background-image:url(\'' + esc(t || staffPhoto(g.userId)) + '\')' : 'background-color:' + esc(g.latest.bg || faceColor(g.userId))) + '">' +
+        (t || staffPhoto(g.userId) ? '' : esc(initials(g.name))) + '</div>' + (online[g.userId] ? '<span class="px-dot" title="Active now"></span>' : '') + '</div>' +
+        '<div class="px-name">' + esc(String(g.name).split(' ')[0]) + '</div>' +
+        '<div class="px-time">' + esc(ago(g.latest.createdAt)) + (g.items.length > 1 ? ' · <span class="px-count">' + g.items.length + '</span>' : '') + '</div></button>';
+    });
+    // Staff active right now who haven't posted a status.
+    const withStatus = {};
+    groups.forEach(g=>{ withStatus[g.userId] = 1; });
+    const meId = statusData.me && statusData.me.id;
+    const idle = (statusData.online || []).filter(o=>!withStatus[o.userId] && o.userId !== meId);
+    if(idle.length && others.length) h += '<div class="px-sep" aria-hidden="true"></div>';
+    idle.forEach(o=>{
+      const ph = staffPhoto(o.userId);
+      h += '<button type="button" class="px-item idle" data-profile="' + o.userId + '" title="View ' + esc(o.name) + '’s profile">' +
+        '<div class="px-ring idle"><div class="px-face" style="' + (ph ? 'background-image:url(\'' + esc(ph) + '\')' : 'background-color:' + faceColor(o.userId)) + '">' + (ph ? '' : esc(initials(o.name))) + '</div>' +
+        '<span class="px-dot"></span></div>' +
+        '<div class="px-name">' + esc(String(o.name).split(' ')[0]) + '</div>' +
+        '<div class="px-time on">' + esc(seenAgo(o.lastSeen)) + '</div></button>';
+    });
+    if(!others.length && !idle.length) h += '<div class="px-empty">No team statuses right now — be the first to share one! 🌸</div>';
+    strip.innerHTML = h;
+  }
+
+  async function loadStatuses(){
+    try{
+      const d = await apiGet('statusList');
+      if(!d.success) throw new Error(d.error || 'Could not load statuses.');
+      statusData = d;
+      buildGroups();
+      renderStrip();
+      const pv = document.getElementById('pxPrivate');
+      if(pv && d.me) pv.checked = !!d.me.private;
+      loadStaffPhotos();
+    }catch(e){
+      document.getElementById('pxStrip').innerHTML = '<div class="px-empty">Could not load team statuses. <a href="#" id="pxRetry">Try again</a></div>';
+      const r = document.getElementById('pxRetry');
+      if(r) r.onclick = ev=>{ ev.preventDefault(); loadStatuses(); };
+    }
+  }
+
+  document.getElementById('pxStrip').addEventListener('click', e=>{
+    const item = e.target.closest('.px-item');
+    if(!item) return;
+    if(item.dataset.my){
+      const mineIdx = groups.findIndex(g=>g.mine);
+      if(e.target.closest('[data-add]') || mineIdx === -1) openComposer();
+      else openViewer(mineIdx);
+      return;
+    }
+    if(item.dataset.profile){ openProfile(Number(item.dataset.profile)); return; }
+    const idx = groups.findIndex(g=>String(g.userId) === item.dataset.user);
+    if(idx !== -1) openViewer(idx);
+  });
+
+  // ---------- composer ----------
+  const BG_COLORS = ['#2f6570','#c9506b','#9e2f4a','#b07d2b','#5f8f63','#3a3530'];
+  function openComposer(){
+    const st = { img:null, dataUrl:'', bg:BG_COLORS[0] };
+    const m = modal(
+      '<h4>New status <button type="button" data-close aria-label="Close">✕</button></h4>' +
+      '<div class="px-preview textonly" id="pxcPrev" data-lb-theme-skip style="background:' + st.bg + '"><div class="px-ptext" id="pxcPText"></div></div>' +
+      '<div class="px-row"><button type="button" class="px-btn ghost" id="pxcPic">📷 Add picture</button>' +
+      '<span id="pxcSw">' + BG_COLORS.map((c,i)=>'<button type="button" class="px-sw' + (i===0?' on':'') + '" data-c="' + c + '" style="background:' + c + '" aria-label="Background colour"></button>').join(' ') + '</span></div>' +
+      '<textarea id="pxcText" maxlength="300" placeholder="What\'s happening? (optional with a picture)"></textarea>' +
+      '<div class="px-counter"><span id="pxcCount">0</span>/300 · visible to all staff for 24 hours</div>' +
+      '<div class="px-actions"><button type="button" class="px-btn ghost" data-close>Cancel</button><button type="button" class="px-btn" id="pxcPost">Post status</button></div>' +
+      '<div class="px-msg" id="pxcMsg"></div>'
+    );
+    const $ = id => m.el.querySelector('#' + id);
+    function draw(){
+      const prev = $('pxcPrev'), text = $('pxcText').value;
+      prev.classList.toggle('textonly', !st.dataUrl);
+      prev.style.background = st.dataUrl ? '#111' : st.bg;
+      prev.innerHTML = (st.dataUrl ? '<img src="' + st.dataUrl + '" alt=""><button type="button" class="px-rmimg" id="pxcRm" aria-label="Remove picture">✕</button>' : '') +
+        '<div class="px-ptext"></div>';
+      prev.querySelector('.px-ptext').textContent = text || (st.dataUrl ? '' : 'Your status…');
+      $('pxcSw').style.display = st.dataUrl ? 'none' : '';
+      $('pxcPic').textContent = st.dataUrl ? '📷 Change picture' : '📷 Add picture';
+      $('pxcCount').textContent = text.length;
+      const rm = $('pxcRm'); if(rm) rm.onclick = ()=>{ st.img = null; st.dataUrl = ''; draw(); };
+    }
+    $('pxcText').addEventListener('input', draw);
+    $('pxcSw').addEventListener('click', e=>{
+      const b = e.target.closest('.px-sw'); if(!b) return;
+      st.bg = b.dataset.c;
+      $('pxcSw').querySelectorAll('.px-sw').forEach(x=>x.classList.toggle('on', x === b));
+      draw();
+    });
+    $('pxcPic').addEventListener('click', async ()=>{
+      const f = await pickFile(); if(!f) return;
+      try{ st.img = await loadImage(f); st.dataUrl = toJpeg(st.img, 1080, 200000); $('pxcMsg').textContent = ''; }
+      catch(err){ $('pxcMsg').textContent = err.message; }
+      draw();
+    });
+    $('pxcPost').addEventListener('click', async ()=>{
+      const text = $('pxcText').value.trim();
+      if(!text && !st.dataUrl){ $('pxcMsg').textContent = 'Write something or add a picture.'; return; }
+      const btn = $('pxcPost'); btn.disabled = true; btn.textContent = 'Posting…'; $('pxcMsg').textContent = '';
+      try{
+        const fields = { text, bg:st.bg };
+        if(st.img){ fields.image = st.dataUrl; fields.thumb = toJpeg(st.img, 180, 22000, true); }
+        const d = await apiPost('statusAdd', fields);
+        if(!d.success) throw new Error(d.error || 'Could not post.');
+        m.close();
+        await loadStatuses();
+      }catch(err){
+        btn.disabled = false; btn.textContent = 'Post status';
+        $('pxcMsg').textContent = err.message || 'Connection error.';
       }
-    },
-    petals: {
-      label: '🌸 Petals', tint: 'linear-gradient(135deg,rgba(255,170,200,.30),rgba(255,215,225,.10))',
-      init: function (w, h) {
-        var a = []; for (var i = 0; i < 14; i++) a.push(newPetal(w, h, true));
-        return { p: a };
-      },
-      draw: function (c, w, h, t, dt, s) {
-        s.p.forEach(function (p, i) {
-          p.y += p.v * dt; p.x += Math.sin(t * 1.2 + p.ph) * .5 + p.dx * dt; p.rot += p.vr * dt;
-          if (p.y > h + 8 || p.x > w + 10 || p.x < -10) s.p[i] = newPetal(w, h, false);
-          c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.scale(1, .62 + Math.abs(Math.sin(t * 1.5 + p.ph)) * .38);
-          c.fillStyle = p.col; c.beginPath(); c.ellipse(0, 0, p.r * 1.25, p.r * .75, 0, 0, 6.283); c.fill();
-          c.restore();
-        });
+    });
+    draw();
+    setTimeout(()=>$('pxcText').focus(), 50);
+  }
+
+  // ---------- viewer ----------
+  const STATUS_MS = 6000;
+  function openViewer(startGroup){
+    let gi = startGroup, si = 0, timer = null, started = 0, elapsed = 0, paused = false, ready = false, closed = false;
+    if(groups[gi] && !groups[gi].mine){
+      // Start at the first unseen status of this person.
+      const seen = seenList();
+      const k = groups[gi].items.findIndex(i=>seen.indexOf(i.id) === -1);
+      si = k === -1 ? 0 : k;
+    }
+    const v = document.createElement('div');
+    v.className = 'pxv';
+    v.setAttribute('data-lb-theme-skip', '');   // keep status colours true in dark mode
+    v.innerHTML = '<div class="pxv-stage"><div class="pxv-bars"></div>' +
+      '<div class="pxv-head"><div class="pxv-av"></div><div class="pxv-who"><b></b><span></span></div>' +
+      '<button type="button" class="pxv-ico" data-prof title="View profile">👤</button>' +
+      '<button type="button" class="pxv-ico" data-del title="Delete status" style="display:none">🗑</button>' +
+      '<button type="button" class="pxv-ico" data-x title="Close">✕</button></div>' +
+      '<div class="pxv-body"></div><div class="pxv-cap"></div>' +
+      '<div class="pxv-tap l"></div><div class="pxv-tap r"></div></div>';
+    document.body.appendChild(v);
+    document.body.style.overflow = 'hidden';
+    const q = s => v.querySelector(s);
+
+    function close(){
+      if(closed) return; closed = true;
+      clearInterval(timer); v.remove(); document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      buildGroups(); renderStrip();
+    }
+    function tick(){
+      if(paused || !ready) return;
+      const p = Math.min(1, (elapsed + (Date.now() - started)) / STATUS_MS);
+      const bar = q('.pxv-bar.cur i'); if(bar) bar.style.width = (p*100) + '%';
+      if(p >= 1) next();
+    }
+    function show(){
+      const g = groups[gi]; if(!g){ close(); return; }
+      const st = g.items[si];
+      ready = false; elapsed = 0;
+      q('.pxv-bars').innerHTML = g.items.map((x,i)=>'<div class="pxv-bar' + (i===si?' cur':'') + '"><i style="width:' + (i<si?100:0) + '%"></i></div>').join('');
+      const av = q('.pxv-av');
+      const photo = g.mine ? myPhotoUrl() : staffPhoto(g.userId);
+      av.style.backgroundImage = photo ? 'url(\'' + photo + '\')' : '';
+      av.style.backgroundColor = faceColor(g.userId);
+      av.textContent = photo ? '' : initials(g.name);
+      q('.pxv-who b').textContent = g.mine ? 'My status' : g.name;
+      q('.pxv-who span').textContent = ago(st.createdAt) + (g.position && !g.mine ? ' · ' + g.position : '');
+      q('[data-del]').style.display = (st.mine || statusData.isAdmin) ? '' : 'none';
+      const body = q('.pxv-body'), cap = q('.pxv-cap');
+      markSeen(st.id);
+      if(st.hasImage){
+        cap.textContent = st.text || '';
+        body.style.background = '#000';
+        const put = src=>{
+          if(closed || groups[gi] !== g || g.items[si] !== st) return;
+          body.innerHTML = '<img alt="">';
+          const im = body.querySelector('img');
+          im.onload = ()=>{ ready = true; started = Date.now(); };
+          im.onerror = ()=>{ ready = true; started = Date.now(); };
+          im.src = src;
+        };
+        if(imageCache[st.id]) put(imageCache[st.id]);
+        else{
+          body.innerHTML = (st.thumb ? '<img alt="" src="' + st.thumb + '" style="filter:blur(12px);transform:scale(1.1)">' : '') +
+            '<div class="pxv-spin" style="position:absolute"></div>';
+          apiGet('statusImage', { id: st.id }).then(d=>{
+            if(d.success && d.image){ imageCache[st.id] = d.image; put(d.image); }
+            else { body.innerHTML = '<div class="pxv-textonly">' + esc(d.error || 'Picture unavailable.') + '</div>'; ready = true; started = Date.now(); }
+          }).catch(()=>{ body.innerHTML = '<div class="pxv-textonly">Could not load picture.</div>'; ready = true; started = Date.now(); });
+        }
+      }else{
+        cap.textContent = '';
+        body.style.background = st.bg || '#2f6570';
+        body.innerHTML = '<div class="pxv-textonly"></div>';
+        body.firstChild.textContent = st.text || '';
+        ready = true; started = Date.now();
       }
-    },
-    off: { label: '🚫 Off', tint: '' }
-  };
-  var ORDER = ['fish', 'snow', 'fire', 'petals', 'off'];
+      // Preload the next picture.
+      const nx = g.items[si+1] || (groups[gi+1] && groups[gi+1].items[0]);
+      if(nx && nx.hasImage && !imageCache[nx.id]) apiGet('statusImage', { id: nx.id }).then(d=>{ if(d.success) imageCache[nx.id] = d.image; }).catch(()=>{});
+    }
+    function next(){
+      const g = groups[gi];
+      if(si < g.items.length - 1){ si++; show(); return; }
+      if(gi < groups.length - 1 && !g.mine){ gi++; si = 0; show(); return; }
+      close();
+    }
+    function prev(){
+      if(si > 0){ si--; show(); return; }
+      if(gi > 0 && !groups[gi-1].mine){ gi--; si = groups[gi].items.length - 1; show(); return; }
+      show();
+    }
+    function pause(){ if(!paused && ready){ elapsed += Date.now() - started; } paused = true; }
+    function resume(){ if(paused){ paused = false; started = Date.now(); } }
+    const onKey = e=>{
+      if(e.key === 'Escape') close();
+      else if(e.key === 'ArrowRight') next();
+      else if(e.key === 'ArrowLeft') prev();
+    };
+    document.addEventListener('keydown', onKey);
 
-  function newFish(w, h, colors, spread, dirIn) {
-    var dir = dirIn || (Math.random() < .5 ? 1 : -1);
-    return { x: spread ? rnd(0, w) : (dir > 0 ? -20 : w + 20), y: rnd(10, h - 10), s: rnd(4.5, 8), v: rnd(14, 34),
-      dir: dir, col: pick(colors), wob: rnd(.8, 2), ph: rnd(0, 6) };
-  }
-  function drawFish(c, x, y, s, dir, col, tw) {
-    c.save(); c.translate(x, y); c.scale(dir, 1);
-    var wag = Math.sin(tw) * .35;
-    c.fillStyle = col;
-    c.save(); c.translate(-s * .85, 0); c.rotate(wag);
-    c.beginPath(); c.moveTo(0, 0); c.lineTo(-s * .95, -s * .6); c.lineTo(-s * .95, s * .6); c.closePath(); c.fill(); c.restore();
-    c.beginPath(); c.ellipse(0, 0, s, s * .58, 0, 0, 6.283); c.fill();
-    c.beginPath(); c.moveTo(-s * .2, -s * .5); c.lineTo(s * .15, -s * .95); c.lineTo(s * .35, -s * .45); c.closePath(); c.fill();
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(s * .52, -s * .12, s * .2, 0, 6.283); c.fill();
-    c.fillStyle = '#222'; c.beginPath(); c.arc(s * .57, -s * .12, s * .1, 0, 6.283); c.fill();
-    c.restore();
-  }
-  function flame(c, x, base, wd, H, sway, col) {
-    c.fillStyle = col; c.beginPath();
-    c.moveTo(x - wd, base);
-    c.quadraticCurveTo(x - wd * .6, base - H * .55, x + sway, base - H);
-    c.quadraticCurveTo(x + wd * .6, base - H * .55, x + wd, base);
-    c.closePath(); c.fill();
-  }
-  function newEmber(w, h, spread) {
-    var max = rnd(1, 2.2);
-    return { x: rnd(0, w), y: spread ? rnd(0, h) : h - rnd(0, 6), r: rnd(.8, 1.9), v: rnd(14, 32), ph: rnd(0, 6), life: spread ? rnd(.3, max) : max, max: max, col: pick(['#ffb02e', '#ff7a1a', '#ffd966']) };
-  }
-  function newPetal(w, h, spread) {
-    return { x: rnd(0, w), y: spread ? rnd(0, h) : -8, r: rnd(2.6, 4.4), v: rnd(10, 22), dx: rnd(-4, 6), ph: rnd(0, 6), rot: rnd(0, 6), vr: rnd(-1.5, 1.5), col: pick(['#ff8fb1', '#ffb3c8', '#ff6f9c', '#ffd1dc']) };
-  }
-
-  // ---------- one card ----------
-  var cards = [];
-
-  function decorate(card) {
-    if (card.getAttribute('data-fx')) return;
-    card.setAttribute('data-fx', '1');
-    card.style.position = 'relative';
-
-    var wrap = document.createElement('span');
-    wrap.className = 'lbfx-wrap';
-    var cv = document.createElement('canvas');
-    wrap.appendChild(cv);
-    card.insertBefore(wrap, card.firstChild);
-
-    var btn = document.createElement('span');
-    btn.className = 'lbfx-btn'; btn.setAttribute('role', 'button'); btn.setAttribute('aria-label', 'Change animation'); btn.title = 'Change animation';
-    btn.textContent = '✨';
-    card.appendChild(btn);
-
-    var pop = null;
-    function closePop() { if (pop) { pop.remove(); pop = null; document.removeEventListener('click', outside, true); } }
-    function outside(e) { if (pop && !pop.contains(e.target) && e.target !== btn) closePop(); }
-    btn.addEventListener('click', function (e) {
-      e.preventDefault(); e.stopPropagation();
-      if (pop) { closePop(); return; }
-      pop = document.createElement('span');
-      pop.className = 'lbfx-pop';
-      var cur = getChoice();
-      pop.innerHTML = ORDER.map(function (k) {
-        return '<span class="lbfx-opt' + (k === cur ? ' on' : '') + '" data-k="' + k + '" role="button">' + EFFECTS[k].label + '</span>';
-      }).join('');
-      pop.addEventListener('click', function (ev) {
-        ev.preventDefault(); ev.stopPropagation();
-        var o = ev.target.closest && ev.target.closest('.lbfx-opt'); if (!o) return;
-        setChoice(o.getAttribute('data-k')); closePop(); apply();
-        window.dispatchEvent(new CustomEvent('lb:profile-fx', { detail: { effect: o.getAttribute('data-k') } }));
+    // Tap left/right to move, press and hold to pause.
+    let downAt = 0;
+    ['l','r'].forEach(side=>{
+      const z = q('.pxv-tap.' + side);
+      z.addEventListener('pointerdown', ()=>{ downAt = Date.now(); pause(); });
+      z.addEventListener('pointerup', ()=>{
+        const long = Date.now() - downAt > 350;
+        resume();
+        if(!long) (side === 'l' ? prev : next)();
       });
-      card.appendChild(pop);
-      setTimeout(function () { document.addEventListener('click', outside, true); }, 0);
+      z.addEventListener('pointerleave', resume);
+    });
+    q('[data-x]').addEventListener('click', close);
+    const toProfile = ()=>{ const id = groups[gi] && groups[gi].userId; close(); if(id) openProfile(id); };
+    q('[data-prof]').addEventListener('click', toProfile);
+    q('.pxv-who').addEventListener('click', toProfile);
+    q('.pxv-av').addEventListener('click', toProfile);
+    q('[data-del]').addEventListener('click', async ()=>{
+      const st = groups[gi].items[si];
+      pause();
+      if(!confirm('Delete this status?')){ resume(); return; }
+      try{
+        const d = await apiPost('statusDelete', { id: st.id });
+        if(!d.success) throw new Error(d.error || 'Could not delete.');
+        statusData.statuses = statusData.statuses.filter(x=>x.id !== st.id);
+        const g = groups[gi];
+        g.items.splice(si, 1);
+        if(!g.items.length){ close(); return; }
+        if(si >= g.items.length) si = g.items.length - 1;
+        paused = false; show();
+      }catch(err){ alert(err.message || 'Connection error.'); resume(); }
     });
 
-    var st = { card: card, wrap: wrap, cv: cv, ctx: cv.getContext('2d'), w: 0, h: 0, eff: 'off', state: null, visible: false, last: 0, acc: 0, t: 0 };
-    cards.push(st);
+    timer = setInterval(tick, 50);
+    show();
+  }
 
-    function size() {
-      var r = card.getBoundingClientRect(); if (!r.width) return;
-      var d = Math.min(window.devicePixelRatio || 1, 2);
-      st.w = Math.round(r.width); st.h = Math.round(r.height);
-      cv.width = st.w * d; cv.height = st.h * d; cv.style.width = st.w + 'px'; cv.style.height = st.h + 'px';
-      st.ctx.setTransform(d, 0, 0, d, 0, 0);
-      if (st.eff !== 'off' && EFFECTS[st.eff].init) st.state = EFFECTS[st.eff].init(st.w, st.h);
+  // ================= VIEW SOMEONE'S PROFILE =================
+  function fmtDay(v){ if(!v) return '—'; const d = new Date(v); return isNaN(d) ? '—' : d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+  async function openProfile(userId, asOthers){
+    const m = modal('<div class="pp-loading">Loading profile…</div>');
+    m.el.querySelector('.px-sheet').classList.add('pp');
+    let d;
+    try{ d = await apiGet('profileView', { id: userId }); }
+    catch(e){ d = { success:false, error:'Connection error.' }; }
+    const sheet = m.el.querySelector('.px-sheet');
+    if(!sheet) return;
+    if(!d.success){ sheet.innerHTML = '<div class="pp-loading">' + esc(d.error || 'Could not load profile.') + '<br><br><button type="button" class="px-btn ghost" data-close>Close</button></div>'; return; }
+    const p = d.profile;
+    const meId = statusData.me && statusData.me.id;
+    const isMe = p.id === meId;
+    const onl = onlineMap()[p.id];
+    const g = groups.find(x=>x.userId === p.id);
+    const ph = isMe ? myPhotoUrl() : (p.photo || '');
+    if(p.photo && !isMe){ photos[p.id] = p.photo; }
+    let h = '<button type="button" class="pp-close" data-close aria-label="Close">✕</button>';
+    if(p.private && (!isMe || asOthers)){
+      h += '<div class="pp-cover private"></div><div class="pp-body">' +
+        '<div class="pp-av" style="background-color:#9aa6a8">🔒</div>' +
+        '<div class="pp-name">' + esc(p.name) + '</div>' +
+        '<div class="pp-private">This profile is private.</div>' +
+        (g ? '<div class="pp-actions"><button type="button" class="px-btn" data-status="' + p.id + '">▶ View status</button></div>' : '') +
+        '</div>';
+    }else{
+      const bs = p.banners || [];
+      h += '<div class="pp-cover">' + bs.map(b=>'<div>' + picImg(b) + '</div>').join('') + '</div>' +
+        '<div class="pp-body"><div class="pp-av" style="' + (ph ? 'background-image:url(\'' + esc(ph) + '\')' : 'background-color:' + faceColor(p.id)) + '">' +
+        (ph ? '' : esc(initials(p.name))) + (onl ? '<span class="px-dot"></span>' : '') + '</div>' +
+        '<div class="pp-name">' + esc(p.name) + '</div>' +
+        '<div class="pp-role">' + esc([p.position, p.role].filter(Boolean).join(' · ')) + '</div>' +
+        '<div class="pp-tags">' + (p.branch ? '<span class="pp-tag">📍 ' + esc(p.branch) + '</span>' : '') +
+        (onl ? '<span class="pp-tag on">● ' + esc(seenAgo(onl.lastSeen)) + '</span>' : '') +
+        (isMe && p.private ? '<span class="pp-tag">🔒 Private</span>' : '') + '</div>' +
+        '<div class="pp-meta"><div><span>Position</span><b>' + esc(p.position || 'Not set') + '</b></div>' +
+        '<div><span>Role</span><b>' + esc(p.role) + '</b></div>' +
+        '<div><span>Branch</span><b>' + esc(p.branch || '—') + '</b></div>' +
+        '<div><span>Member since</span><b>' + esc(fmtDay(p.memberSince)) + '</b></div></div>' +
+        (g ? '<div class="pp-actions"><button type="button" class="px-btn" data-status="' + p.id + '">▶ View status (' + g.items.length + ')</button></div>' : '') +
+        (isMe && p.private ? '<div class="pp-private">Others only see your name, because your profile is private.</div>' : '') +
+        '</div>';
     }
-    function apply() {
-      st.eff = EFFECTS[getChoice()] ? getChoice() : DEFAULT;
-      wrap.style.background = EFFECTS[st.eff].tint || '';
-      wrap.style.display = st.eff === 'off' ? 'none' : '';
-      size();
-      st.ctx.clearRect(0, 0, st.w, st.h);
-      loop();
+    sheet.innerHTML = h;
+    const sb = sheet.querySelector('[data-status]');
+    if(sb) sb.onclick = ()=>{ m.close(); const idx = groups.findIndex(x=>x.userId === p.id); if(idx !== -1) openViewer(idx); };
+  }
+
+  // ---------- privacy toggle (Account Settings) ----------
+  const pvBox = document.getElementById('pxPrivate');
+  if(pvBox) pvBox.addEventListener('change', async ()=>{
+    const msg = document.getElementById('pxPrivMsg');
+    const want = pvBox.checked;
+    pvBox.disabled = true;
+    try{
+      const d = await apiPost('privacySet', { private: want ? '1' : '0' });
+      if(!d.success) throw new Error(d.error || 'Could not save.');
+      if(statusData.me) statusData.me.private = want;
+      msg.className = 'msg ok'; msg.textContent = want ? 'Your profile is now private.' : 'Your profile is now visible to staff.';
+    }catch(err){
+      pvBox.checked = !want;
+      msg.className = 'msg err'; msg.textContent = err.message || 'Connection error.';
     }
-    st.apply = apply;
-    if (window.ResizeObserver) new ResizeObserver(size).observe(card);
-    if (window.IntersectionObserver) new IntersectionObserver(function (en) { st.visible = en[0].isIntersecting; if (st.visible) loop(); }).observe(card);
-    else st.visible = true;
+    msg.style.display = 'block';
+    pvBox.disabled = false;
+  });
+  const prevBtn = document.getElementById('pxPreviewMe');
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{
+    if(statusData.me) openProfile(statusData.me.id, true);
+  });
+
+  // ================= MY GALLERY =================
+  let banners = [];
+  function renderGallery(loadingSlots){
+    const box = document.getElementById('pxGallery');
+    const addBtn = document.getElementById('pxGalAdd');
+    const n = banners.length;
+    addBtn.disabled = n >= 6;
+    addBtn.textContent = n >= 6 ? 'Gallery full (6/6)' : '＋ Add pictures (' + n + '/6)';
+    box.className = 'px-gallery n' + n;
+    if(!n && !loadingSlots){
+      box.className = 'px-gallery n0';
+      box.innerHTML = '<div class="px-gallery-empty" id="pxGalEmpty"><b>🖼️</b>Add up to 6 pictures to decorate your profile — you can pick several at once. One picture becomes a full-width banner.</div>';
+      document.getElementById('pxGalEmpty').onclick = addBanner;
+      return;
+    }
+    if(loadingSlots){
+      box.className = 'px-gallery n3';
+      box.innerHTML = '<div class="px-pic loading"></div><div class="px-pic loading"></div><div class="px-pic loading"></div>';
+      return;
+    }
+    box.innerHTML = banners.map(b=>'<button type="button" class="px-pic" data-slot="' + b.slot + '" aria-label="Gallery picture">' + picImg(b) + '</button>').join('');
+  }
+  async function loadBanners(){
+    renderGallery(true);
+    try{
+      const d = await apiGet('bannerList');
+      if(!d.success) throw new Error(d.error);
+      banners = d.banners || [];
+    }catch(e){ banners = []; }
+    renderGallery(false);
+  }
+  async function saveBannerTo(slot, file){
+    const img = await loadImage(file);
+    const dataUrl = toJpeg(img, 1400, 200000);
+    const d = await apiPost('bannerSave', { slot, image: dataUrl });
+    if(!d.success) throw new Error(d.error || 'Could not save picture.');
+    const i = banners.findIndex(b=>b.slot === slot);
+    const fresh = { slot, image: dataUrl, x: 50, y: 50, zoom: 1 };
+    if(i === -1) banners.push(fresh); else banners[i] = fresh;
+    banners.sort((a,b)=>a.slot - b.slot);
+    renderGallery(false);
+  }
+  // Pick several pictures at once — they fill the free slots in order.
+  async function addBanner(){
+    const used = banners.map(b=>b.slot);
+    const free = [1,2,3,4,5,6].filter(n=>used.indexOf(n) === -1);
+    if(!free.length) return;
+    const files = await pickFile(true);
+    if(!files || !files.length) return;
+    const todo = files.slice(0, free.length);
+    const btn = document.getElementById('pxGalAdd');
+    btn.disabled = true;
+    const failed = [];
+    for(let k = 0; k < todo.length; k++){
+      btn.textContent = 'Uploading ' + (k + 1) + ' of ' + todo.length + '…';
+      try{ await saveBannerTo(free[k], todo[k]); }
+      catch(err){ failed.push((todo[k].name || 'picture') + ': ' + (err.message || 'error')); }
+    }
+    renderGallery(false);
+    const skipped = files.length - todo.length;
+    if(failed.length || skipped > 0){
+      alert((failed.length ? 'Some pictures could not be uploaded:\n' + failed.join('\n') + '\n\n' : '') +
+        (skipped > 0 ? skipped + ' picture(s) were not added — the gallery holds 6 at most.' : ''));
+    }
+  }
+  // ✥ Adjust: drag the picture inside its real frame shape, zoom with the slider.
+  function openAdjust(slot, ratio){
+    const b = banners.find(x=>x.slot === slot); if(!b) return;
+    const st = { x: b.x == null ? 50 : b.x, y: b.y == null ? 50 : b.y, zoom: b.zoom || 1 };
+    const m = modal('<h4>Adjust picture <button type="button" data-close aria-label="Close">✕</button></h4>' +
+      '<div class="px-adj-frame" id="pxaFrame"><img alt="" id="pxaImg" src="' + esc(b.image) + '"></div>' +
+      '<div class="px-adj-hint">Drag the picture to move it · this is exactly how it shows on your profile</div>' +
+      '<div class="px-zoom">🔍<input type="range" id="pxaZoom" min="100" max="300" step="1" value="' + Math.round(st.zoom * 100) + '"><span id="pxaZv">' + Math.round(st.zoom * 100) + '%</span></div>' +
+      '<div class="px-actions"><button type="button" class="px-btn ghost" id="pxaReset">↺ Reset</button>' +
+      '<span style="display:flex;gap:8px"><button type="button" class="px-btn ghost" data-close>Cancel</button>' +
+      '<button type="button" class="px-btn" id="pxaSave">Save</button></span></div><div class="px-msg" id="pxaMsg"></div>');
+    m.el.querySelector('.px-sheet').classList.add('adj');
+    const frame = m.el.querySelector('#pxaFrame'), img = m.el.querySelector('#pxaImg');
+    // Same shape as the real slot; tall narrow slots are limited by screen height.
+    const maxH = Math.min(window.innerHeight * 0.5, 420);
+    frame.style.aspectRatio = String(ratio);
+    frame.style.width = 'min(100%, ' + Math.round(maxH * ratio) + 'px)';
+    function apply(){
+      img.style.objectPosition = st.x + '% ' + st.y + '%';
+      img.style.transform = 'scale(' + st.zoom + ')';
+      img.style.transformOrigin = st.x + '% ' + st.y + '%';
+      m.el.querySelector('#pxaZv').textContent = Math.round(st.zoom * 100) + '%';
+    }
+    // How far (px) the picture can move on each axis at the current zoom.
+    function overflow(){
+      const fw = frame.clientWidth, fh = frame.clientHeight;
+      const iw = img.naturalWidth || fw, ih = img.naturalHeight || fh;
+      const s = Math.max(fw / iw, fh / ih);
+      return { x: Math.max(1, iw * s * st.zoom - fw), y: Math.max(1, ih * s * st.zoom - fh) };
+    }
+    let drag = null;
+    frame.addEventListener('pointerdown', e=>{
+      drag = { px: e.clientX, py: e.clientY, x: st.x, y: st.y, o: overflow() };
+      frame.classList.add('dragging'); frame.setPointerCapture(e.pointerId);
+    });
+    frame.addEventListener('pointermove', e=>{
+      if(!drag) return;
+      st.x = Math.min(100, Math.max(0, drag.x - (e.clientX - drag.px) / drag.o.x * 100));
+      st.y = Math.min(100, Math.max(0, drag.y - (e.clientY - drag.py) / drag.o.y * 100));
+      apply();
+    });
+    const end = ()=>{ drag = null; frame.classList.remove('dragging'); };
+    frame.addEventListener('pointerup', end); frame.addEventListener('pointercancel', end);
+    m.el.querySelector('#pxaZoom').addEventListener('input', e=>{ st.zoom = Number(e.target.value) / 100; apply(); });
+    m.el.querySelector('#pxaReset').onclick = ()=>{ st.x = 50; st.y = 50; st.zoom = 1; m.el.querySelector('#pxaZoom').value = 100; apply(); };
+    m.el.querySelector('#pxaSave').onclick = async ()=>{
+      const btn = m.el.querySelector('#pxaSave'); btn.disabled = true; btn.textContent = 'Saving…';
+      const val = { x: Math.round(st.x * 10) / 10, y: Math.round(st.y * 10) / 10, zoom: Math.round(st.zoom * 100) / 100 };
+      try{
+        const d = await apiPost('bannerAdjust', { slot, x: val.x, y: val.y, zoom: val.zoom });
+        if(!d.success) throw new Error(d.error || 'Could not save.');
+        Object.assign(b, val);
+        renderGallery(false); m.close();
+      }catch(err){ btn.disabled = false; btn.textContent = 'Save'; m.el.querySelector('#pxaMsg').textContent = err.message || 'Connection error.'; }
+    };
     apply();
   }
 
-  // one shared animation loop, ~30fps, only while something is visible
-  var running = false;
-  function loop() {
-    if (running) return;
-    running = true;
-    var prev = 0;
-    function frame(now) {
-      var any = false;
-      if (!document.hidden) {
-        var dt = prev ? Math.min((now - prev) / 1000, .1) : 0;
-        if (!prev || now - prev >= 32) {
-          prev = now;
-          cards.forEach(function (st) {
-            if (!st.card.isConnected || st.eff === 'off' || !st.visible || !st.w) return;
-            any = true; st.t += dt;
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            EFFECTS[st.eff].draw(st.ctx, st.w, st.h, st.t, dt, st.state);
-          });
-        } else any = true;
-      }
-      cards = cards.filter(function (st) { return st.card.isConnected; });
-      if (any || (document.hidden && cards.length)) requestAnimationFrame(frame); else running = false;
-    }
-    requestAnimationFrame(frame);
-  }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) loop(); });
+  document.getElementById('pxGalAdd').addEventListener('click', addBanner);
+  document.getElementById('pxGallery').addEventListener('click', e=>{
+    const pic = e.target.closest('.px-pic[data-slot]');
+    if(!pic) return;
+    const slot = Number(pic.dataset.slot);
+    const b = banners.find(x=>x.slot === slot); if(!b) return;
+    const m = modal('<div class="px-lightbox"><h4>Gallery picture <button type="button" data-close aria-label="Close">✕</button></h4>' +
+      '<img src="' + esc(b.image) + '" alt=""></div>' +
+      '<div class="px-actions"><button type="button" class="px-btn danger" id="pxgDel">🗑 Remove</button>' +
+      '<span style="display:flex;gap:8px"><button type="button" class="px-btn ghost" id="pxgAdj">✥ Adjust</button>' +
+      '<button type="button" class="px-btn" id="pxgRep">🔄 Replace</button></span></div><div class="px-msg" id="pxgMsg"></div>');
+    m.el.querySelector('#pxgAdj').onclick = ()=>{ const r = pic.getBoundingClientRect(); m.close(); openAdjust(slot, r.width / Math.max(1, r.height)); };
+    m.el.querySelector('#pxgRep').onclick = async ()=>{
+      const f = await pickFile(); if(!f) return;
+      const btn = m.el.querySelector('#pxgRep'); btn.disabled = true; btn.textContent = 'Uploading…';
+      try{ await saveBannerTo(slot, f); m.close(); }
+      catch(err){ btn.disabled = false; btn.textContent = '🔄 Replace'; m.el.querySelector('#pxgMsg').textContent = err.message || 'Connection error.'; }
+    };
+    m.el.querySelector('#pxgDel').onclick = async ()=>{
+      if(!confirm('Remove this picture from your gallery?')) return;
+      const btn = m.el.querySelector('#pxgDel'); btn.disabled = true;
+      try{
+        const d = await apiPost('bannerDelete', { slot });
+        if(!d.success) throw new Error(d.error || 'Could not remove.');
+        banners = banners.filter(x=>x.slot !== slot);
+        renderGallery(false); m.close();
+      }catch(err){ btn.disabled = false; m.el.querySelector('#pxgMsg').textContent = err.message || 'Connection error.'; }
+    };
+  });
 
-  // ---------- styles ----------
-  if (!document.getElementById('lbfx-style')) {
-    var css = document.createElement('style'); css.id = 'lbfx-style';
-    css.textContent =
-      '.lb-menu-profile .lbfx-wrap{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:0}' +
-      '.lb-menu-profile .lbfx-wrap canvas{display:block}' +
-      '.lb-menu-profile>.lb-menu-avatar,.lb-menu-profile>.lb-menu-profile-text{position:relative;z-index:1}' +
-      '.lbfx-btn{position:absolute;top:5px;right:6px;z-index:3;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
-        'font-size:12px;line-height:1;cursor:pointer;background:rgba(255,255,255,.7);box-shadow:0 1px 4px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}' +
-      '.lbfx-btn:active{transform:scale(.92)}' +
-      '.lbfx-pop{position:absolute;top:32px;right:4px;z-index:5;display:flex;flex-direction:column;gap:2px;padding:5px;border-radius:12px;background:#fff;' +
-        'box-shadow:0 8px 24px rgba(60,30,40,.25);border:1px solid rgba(0,0,0,.06);color:#3a2a2e;font-weight:600}' +
-      '.lbfx-opt{display:block;padding:7px 12px;border-radius:8px;font-size:13px;white-space:nowrap;cursor:pointer}' +
-      '.lbfx-opt:hover{background:rgba(201,80,107,.1)}' +
-      '.lbfx-opt.on{background:#9e2f4a;color:#fff}' +
-      '@media print{.lbfx-wrap,.lbfx-btn,.lbfx-pop{display:none!important}}';
-    document.head.appendChild(css);
-  }
-
-  // ---------- find cards (nav.js redraws the menu, so keep watching) ----------
-  var queued = false;
-  function scan() {
-    queued = false;
-    document.querySelectorAll('.lb-menu-profile:not([data-fx])').forEach(decorate);
-  }
-  function queue() { if (!queued) { queued = true; requestAnimationFrame(scan); } }
-  new MutationObserver(queue).observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener('lb:user-changed', function () { cards.forEach(function (st) { st.apply && st.apply(); }); });
-  scan();
-
-  window.LBProfileFx = {
-    effects: ORDER.slice(),
-    set: function (k) { if (EFFECTS[k]) { setChoice(k); cards.forEach(function (st) { st.apply && st.apply(); }); } },
-    get: getChoice
-  };
+  // ---------- start ----------
+  loadStatuses();
+  loadBanners();
+  // Keep statuses fresh while the page is open (every 2 min, only when visible).
+  setInterval(()=>{ if(!document.hidden && !document.querySelector('.pxv, .px-modal')) loadStatuses(); }, 120000);
+  // Re-draw "My status" once the profile photo has loaded.
+  const av = document.getElementById('avatarImg');
+  if(window.MutationObserver) new MutationObserver(()=>renderStrip()).observe(av, { attributes:true, attributeFilter:['style'] });
 })();
+</script>
+
+<script src="joyboy-bubble.js"></script>
+</body>
+</html>
