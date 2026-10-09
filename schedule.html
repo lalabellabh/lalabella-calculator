@@ -126,6 +126,23 @@
   .day-modal .quick button,.day-modal .acts .ghost{padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;cursor:pointer;}
   .day-modal .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .day-modal .msg{font-size:12.5px;margin-top:10px;min-height:16px;} .day-modal .msg.err{color:#c0392b;}
+  .day-modal .box{max-height:92vh;overflow-y:auto;}
+  .dn-sec{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);}
+  .dn-sec label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 5px;}
+  .dn-sec textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:13.5px;background:#fdf9f8;outline:none;resize:vertical;margin-bottom:10px;}
+  .dn-sec textarea:focus,.dn-sec input:focus{border-color:var(--rose);outline:none;}
+  .dn-row{display:flex;gap:8px;margin-bottom:8px;} .dn-row input[type=text]{flex:1;min-width:0;margin-bottom:0 !important;}
+  .dn-row input[type=time]{padding:10px 8px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:13.5px;background:#fdf9f8;}
+  .dn-done{display:none;align-items:center;gap:8px;font-size:12.5px;margin:0 0 10px;text-transform:none;letter-spacing:0;color:var(--ink);} .dn-done input{width:17px;height:17px;accent-color:var(--rose);}
+  .date-cell .dn-note,.date-cell .dn-rem{margin-top:3px;font-size:9.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;border-radius:5px;padding:1px 4px;}
+  .date-cell .dn-note{background:rgba(255,236,170,.9);color:#5b4500;}
+  .date-cell .dn-rem{background:rgba(255,205,215,.95);color:#7a1d33;}
+  .date-cell .dn-rem.done{opacity:.55;text-decoration:line-through;}
+  #remBox{position:fixed;top:12px;right:12px;z-index:9997;display:flex;flex-direction:column;gap:8px;max-width:min(340px,calc(100vw - 24px));}
+  .rem-card{background:#fff;border-left:5px solid var(--rose);border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(60,20,35,.28);font-size:13px;animation:remIn .35s ease both;}
+  .rem-card b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--rose-deep,#9e2f4a);margin-bottom:3px;}
+  .rem-card .ra{display:flex;gap:6px;margin-top:8px;} .rem-card button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer;} .rem-card button.ok{background:var(--rose);color:#fff;border-color:transparent;}
+  @keyframes remIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
 
   .empty-state{padding:20px;}
   .loading-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
@@ -240,8 +257,21 @@
       <button class="ghost" id="dayCancel" type="button">Cancel</button>
     </div>
     <div class="msg" id="dayMsg"></div>
+    <div class="dn-sec" id="dnSec">
+      <label for="dnNote">📝 Note for this day</label>
+      <textarea id="dnNote" rows="2" maxlength="300" placeholder="e.g. Pray time, deliver to Seef…"></textarea>
+      <label for="dnRem">🔔 Reminder</label>
+      <div class="dn-row"><input type="text" id="dnRem" maxlength="120" placeholder="What should I remind you?" autocomplete="off"><input type="time" id="dnTime" title="Time (optional)"></div>
+      <label class="dn-done" id="dnDoneWrap"><input type="checkbox" id="dnDone"> Mark reminder as done</label>
+      <div class="acts">
+        <button class="my-schedule-btn" id="dnSave" type="button">Save note &amp; reminder</button>
+        <button class="ghost" id="dnClear" type="button">Clear</button>
+      </div>
+      <div class="msg" id="dnMsg"></div>
+    </div>
   </div>
 </div>
+<div id="remBox"></div>
 <script>
 const SCHEDULE_API_URL = LB_CONFIG.SCHEDULE_FAST_API;
 const DAY_ORDER = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -380,6 +410,7 @@ function renderMonthGrid(){
 
   if(currentSchedule) applyScheduleToGrid(currentSchedule, employeeIsOnScreen());
   if(typeof refreshEditable_ === 'function') refreshEditable_();
+  if(typeof paintNotes_ === 'function') paintNotes_();
 }
 function employeeIsOnScreen(){ return true; }
 
@@ -719,6 +750,7 @@ document.getElementById('monthGrid').addEventListener('click', ev => {
   document.getElementById('dayInput').value = rec ? rec.ScheduleDetail : '';
   document.getElementById('dayClear').style.display = rec ? '' : 'none';
   dayMsg_('');
+  fillNoteForm_(cell.dataset.date);
   document.getElementById('dayModal').style.display = 'flex';
   setTimeout(() => document.getElementById('dayInput').focus(), 50);
 });
@@ -748,6 +780,139 @@ document.getElementById('daySave').addEventListener('click', () => {
 document.getElementById('dayClear').addEventListener('click', () => { if(confirm('Clear this day?')) saveDay_(''); });
 document.getElementById('dayInput').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('daySave').click(); });
 document.getElementById('employeeSelect').addEventListener('change', refreshEditable_);
+
+// ---------- per-day note + reminder ----------
+let dayNotes_ = {}, notesFor_ = null, notesFetching_ = '';
+const NOTE_API_ = () => SCHEDULE_API_URL;
+async function noteCall_(params, post){
+  const p = Object.assign({ token: tokenNow_() }, params);
+  const res = post ? await fetch(SCHEDULE_API_URL, { method:'POST', body: new URLSearchParams(p) })
+                   : await fetch(SCHEDULE_API_URL + '?' + new URLSearchParams(p).toString());
+  return res.json();
+}
+function fmtTime_(t){ if(!t) return ''; const [h,m] = t.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ap; }
+async function fetchNotes_(who){
+  const key = who.toLowerCase();
+  if(notesFetching_ === key) return;
+  notesFetching_ = key;
+  let map = {};
+  try{
+    const d = await noteCall_({ action:'getDayNotes', employee: who });
+    if(d && d.success) (d.notes || []).forEach(n => { map[n.date] = n; });
+  }catch(e){}
+  notesFetching_ = '';
+  if((editTarget_() || '').toLowerCase() !== key) return;     // person changed meanwhile
+  dayNotes_ = map; notesFor_ = key; paintNotes_();
+}
+function paintNotes_(){
+  const grid = document.getElementById('monthGrid'); if(!grid) return;
+  grid.querySelectorAll('.dn-note,.dn-rem').forEach(n => n.remove());
+  const who = editTarget_();
+  if(!who){ dayNotes_ = {}; notesFor_ = null; return; }
+  if(notesFor_ !== who.toLowerCase()){ fetchNotes_(who); return; }
+  grid.querySelectorAll('.date-cell').forEach(cell => {
+    const n = dayNotes_[cell.dataset.date]; if(!n) return;
+    if(n.note){ const e = document.createElement('div'); e.className = 'dn-note'; e.textContent = '📝 ' + n.note; cell.appendChild(e); }
+    if(n.reminder){ const e = document.createElement('div'); e.className = 'dn-rem' + (n.done ? ' done' : ''); e.textContent = (n.done ? '✅ ' : '🔔 ') + (n.remindTime ? fmtTime_(n.remindTime) + ' ' : '') + n.reminder; cell.appendChild(e); }
+  });
+}
+function dnMsg_(t, err){ const m = document.getElementById('dnMsg'); m.textContent = t || ''; m.className = 'msg' + (err ? ' err' : ''); }
+function fillNoteForm_(date){
+  const n = dayNotes_[date] || null;
+  document.getElementById('dnNote').value = n ? n.note : '';
+  document.getElementById('dnRem').value = n ? n.reminder : '';
+  document.getElementById('dnTime').value = n ? n.remindTime : '';
+  document.getElementById('dnDoneWrap').style.display = (n && n.reminder) ? 'flex' : 'none';
+  document.getElementById('dnDone').checked = !!(n && n.done);
+  dnMsg_('');
+}
+async function saveNote_(clear){
+  if(!dayEdit_) return;
+  const note = clear ? '' : document.getElementById('dnNote').value.trim();
+  const rem = clear ? '' : document.getElementById('dnRem').value.trim();
+  const time = clear ? '' : document.getElementById('dnTime').value;
+  const btns = document.querySelectorAll('#dnSec button'); btns.forEach(b => b.disabled = true); dnMsg_('Saving…');
+  try{
+    const d = await noteCall_({ action:'saveDayNote', employee: dayEdit_.who, date: dayEdit_.date, note, reminder: rem, remindTime: time }, true);
+    if(!d.success){ dnMsg_(d.error || 'Could not save. Please try again.', true); return; }
+    if(!note && !rem) delete dayNotes_[dayEdit_.date];
+    else dayNotes_[dayEdit_.date] = { date: dayEdit_.date, note, reminder: rem, remindTime: rem ? time : '', done: false };
+    paintNotes_();
+    document.getElementById('dayModal').style.display = 'none';
+    { // you just wrote it: don't pop it up straight away unless it is meant for a time that is still ahead
+      const tt = (time || '').split(':').map(Number);
+      const future = time && dayEdit_.date === ymdLocal_(new Date()) && (tt[0] * 60 + tt[1]) > bahrainMinutes_();
+      if(!future) remShown_[dayEdit_.date] = true;
+    }
+    queueReminders_();
+  }catch(e){ dnMsg_('Connection problem — please try again.', true); }
+  finally{ btns.forEach(b => b.disabled = false); }
+}
+document.getElementById('dnSave').addEventListener('click', () => saveNote_(false));
+document.getElementById('dnClear').addEventListener('click', () => { if(confirm('Clear the note and reminder for this day?')) saveNote_(true); });
+document.getElementById('dnDone').addEventListener('change', async e => {
+  if(!dayEdit_) return; const done = e.target.checked;
+  try{
+    const d = await noteCall_({ action:'setReminderDone', employee: dayEdit_.who, date: dayEdit_.date, done: done ? '1' : '0' }, true);
+    if(!d.success){ dnMsg_(d.error || 'Could not update.', true); e.target.checked = !done; return; }
+    if(dayNotes_[dayEdit_.date]) dayNotes_[dayEdit_.date].done = done;
+    paintNotes_(); queueReminders_();
+  }catch(err){ dnMsg_('Connection problem.', true); e.target.checked = !done; }
+});
+
+// ---- reminder pop-ups for the logged-in person (shown while this page is open) ----
+let remList_ = [], remShown_ = {}, remToday_ = '';
+function bahrainMinutes_(){ const d = new Date(Date.now() + 3 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); }
+function remBeep_(){
+  try{
+    if(localStorage.getItem('lbSchedMute') === '1') return;
+    const vol = Math.max(0, Math.min(1, parseFloat(localStorage.getItem('lbSchedVol') || '0.5')));
+    const ac = new (window.AudioContext || window.webkitAudioContext)(), now = ac.currentTime;
+    [660, 880].forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now + i * 0.16); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.25 * vol), now + i * 0.16 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.16 + 0.3);
+      o.connect(g); g.connect(ac.destination); o.start(now + i * 0.16); o.stop(now + i * 0.16 + 0.32); });
+  }catch(e){}
+}
+function showReminder_(r){
+  const key = r.date; if(remShown_[key]) return; remShown_[key] = true;
+  const box = document.getElementById('remBox'), c = document.createElement('div'); c.className = 'rem-card';
+  const late = r.date < remToday_;
+  const d = parseDateOnly_(r.date);
+  const when = late ? 'From ' + d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : 'Today' + (r.remindTime ? ' · ' + fmtTime_(r.remindTime) : '');
+  c.innerHTML = '<b>🔔 Reminder · </b><div class="rt"></div><div class="ra"><button class="ok" type="button">✔ Done</button><button type="button">Later</button></div>';
+  c.querySelector('b').textContent = '🔔 ' + when;
+  c.querySelector('.rt').textContent = r.reminder;
+  const btns = c.querySelectorAll('button');
+  btns[0].addEventListener('click', async () => {
+    c.remove();
+    try{ await noteCall_({ action:'setReminderDone', date: r.date, done: '1' }, true); }catch(e){}
+    remList_ = remList_.filter(x => x.date !== r.date);
+    if(dayNotes_[r.date]) dayNotes_[r.date].done = true; paintNotes_();
+  });
+  btns[1].addEventListener('click', () => c.remove());
+  box.appendChild(c); remBeep_();
+}
+function queueReminders_(){ /* re-check right away (e.g. after saving a new reminder for today) */ loadReminders_(true); }
+function tickReminders_(){
+  const nowMin = bahrainMinutes_();
+  remList_.forEach(r => {
+    if(remShown_[r.date]) return;
+    if(r.date < remToday_ || !r.remindTime) { showReminder_(r); return; }
+    const [h, m] = r.remindTime.split(':').map(Number);
+    if(nowMin >= h * 60 + m) showReminder_(r);
+  });
+}
+async function loadReminders_(quiet){
+  try{
+    const d = await noteCall_({ action:'getMyReminders' });
+    if(!d || !d.success) return;
+    remToday_ = d.today; remList_ = d.reminders || [];
+    Object.keys(remShown_).forEach(k => { if(!remList_.some(r => r.date === k)) delete remShown_[k]; });
+    tickReminders_();
+  }catch(e){}
+}
+setTimeout(() => loadReminders_(), 1200);
+setInterval(tickReminders_, 20000);
 
 renderMonthGrid();
 loadEmployees();
