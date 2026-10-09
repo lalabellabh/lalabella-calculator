@@ -221,45 +221,58 @@
   const WX_TXT = { 0: 'Sunny', 1: 'Mostly sunny', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers', 95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' };
   function weatherHtml() {
     return '<div class="lb-menu-weather"><div class="lbw-row"><span class="lbw-ico"></span>' +
-      '<span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
-      '<span class="lbw-det"><span class="lbw-p">Precipitation: --</span><span class="lbw-h">Humidity: --</span><span class="lbw-w">Wind: --</span></span></div>' +
-      '<div class="lbw-foot"><span class="lbw-when">Weather</span><span class="lbw-cond"></span></div></div>';
+      '<span class="lbw-main"><span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
+      '<span class="lbw-feels">Feels like --</span></span>' +
+      '<span class="lbw-det"><span class="lbw-p">Precipitation <b>--</b></span><span class="lbw-h">Humidity <b>--</b></span><span class="lbw-w">Wind <b>--</b></span></span></div>' +
+      '<div class="lbw-foot"><span class="lbw-when">Weather</span><span class="lbw-cond"></span></div>' +
+      '<div class="lbw-upd"></div></div>';
   }
-  function wxFetch() {
-    let c = null; try { c = JSON.parse(localStorage.getItem('lbWxCache') || 'null'); } catch (e) {}
-    if (c && Date.now() - c.ts < 15 * 60000) return Promise.resolve(c.d);
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=Asia%2FBahrain';
-    return fetch(url).then(r => r.json()).then(j => {
-      const d = { t: j.current.temperature_2m, h: j.current.relative_humidity_2m, w: j.current.wind_speed_10m, code: j.current.weather_code,
-        p: (j.hourly && j.hourly.precipitation_probability && j.hourly.precipitation_probability[0]) || 0 };
-      try { localStorage.setItem('lbWxCache', JSON.stringify({ ts: Date.now(), d: d })); } catch (e) {}
-      return d;
-    });
+  const WX_TTL = 5 * 60000;   // weather is re-fetched when older than 5 minutes
+  function wxFetch(force) {
+    let c = null; try { c = JSON.parse(localStorage.getItem('lbWxCache2') || 'null'); } catch (e) {}
+    if (!force && c && Date.now() - c.ts < WX_TTL) return Promise.resolve(c);
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=26.2285&longitude=50.5860&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&hourly=precipitation_probability&forecast_hours=1&timezone=Asia%2FBahrain';
+    return fetch(url, { cache: 'no-store' }).then(r => r.json()).then(j => {
+      const o = { ts: Date.now(), d: { t: j.current.temperature_2m, f: j.current.apparent_temperature, h: j.current.relative_humidity_2m, w: j.current.wind_speed_10m, code: j.current.weather_code,
+        p: (j.hourly && j.hourly.precipitation_probability && j.hourly.precipitation_probability[0]) || 0 } };
+      try { localStorage.setItem('lbWxCache2', JSON.stringify(o)); } catch (e) {}
+      return o;
+    }).catch(err => { if (c) return c; throw err; });
   }
   function fillWeather(root) {
     const box = root.querySelector('.lb-menu-weather'); if (!box) return;
     let unit = 'c'; try { unit = localStorage.getItem('lbWxUnit') === 'f' ? 'f' : 'c'; } catch (e) {}
-    let data = null;
+    let cur = null, lastIcon = null;
+    const conv = v => Math.round(unit === 'f' ? v * 9 / 5 + 32 : v);
     const paint = () => {
-      if (!data) return;
-      const t = unit === 'f' ? data.t * 9 / 5 + 32 : data.t;
-      box.querySelector('.lbw-t').textContent = Math.round(t);
+      const tz = { timeZone: 'Asia/Bahrain' };
+      box.querySelector('.lbw-when').textContent = new Date().toLocaleString('en-US', Object.assign({ weekday: 'long', hour: 'numeric', minute: '2-digit' }, tz));
+      if (!cur) return;
+      const d = cur.d;
+      box.querySelector('.lbw-t').textContent = conv(d.t);
       box.querySelectorAll('.lbw-u i').forEach(i => i.classList.toggle('on', i.getAttribute('data-u') === unit));
-      box.querySelector('.lbw-p').textContent = 'Precipitation: ' + Math.round(data.p) + '%';
-      box.querySelector('.lbw-h').textContent = 'Humidity: ' + Math.round(data.h) + '%';
-      box.querySelector('.lbw-w').textContent = 'Wind: ' + Math.round(data.w) + ' km/h';
-      box.querySelector('.lbw-when').textContent = new Date().toLocaleString('en-US', { timeZone: 'Asia/Bahrain', weekday: 'long', hour: 'numeric', minute: '2-digit' });
-      box.querySelector('.lbw-cond').textContent = WX_TXT[data.code] || '';
+      box.querySelector('.lbw-feels').textContent = 'Feels like ' + conv(d.f) + '°' + unit.toUpperCase();
+      box.querySelector('.lbw-p b').textContent = Math.round(d.p) + '%';
+      box.querySelector('.lbw-h b').textContent = Math.round(d.h) + '%';
+      box.querySelector('.lbw-w b').textContent = Math.round(d.w) + ' km/h';
+      box.querySelector('.lbw-cond').textContent = WX_TXT[d.code] || '';
+      box.querySelector('.lbw-upd').textContent = 'Updated ' + new Date(cur.ts).toLocaleTimeString('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, tz));
+      if (lastIcon !== d.code) {
+        lastIcon = d.code;
+        const icon = () => { if (window.LBHero3D) LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t); };
+        if (window.LBHero3D) icon(); else { const sc = document.createElement('script'); sc.src = 'shared/hero-3d.js'; sc.onload = icon; document.body.appendChild(sc); }
+      }
     };
     box.querySelectorAll('.lbw-u i').forEach(i => i.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation(); unit = i.getAttribute('data-u'); try { localStorage.setItem('lbWxUnit', unit); } catch (x) {} paint();
     }));
-    wxFetch().then(d => {
-      data = d; paint();
-      const icon = () => { if (window.LBHero3D) LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t); };
-      if (window.LBHero3D) icon();
-      else { const sc = document.createElement('script'); sc.src = 'shared/hero-3d.js'; sc.onload = icon; document.body.appendChild(sc); }
-    }).catch(() => { box.querySelector('.lbw-cond').textContent = 'Weather unavailable'; });
+    const load = force => wxFetch(force).then(o => { cur = o; paint(); }).catch(() => { box.querySelector('.lbw-cond').textContent = 'Weather unavailable'; });
+    let lastTouch = 0;
+    const maybe = () => { if (!box.isConnected) return; paint(); if (Date.now() - lastTouch > 30000) { lastTouch = Date.now(); load(false); } };
+    document.addEventListener('pointerdown', maybe, true);          // opening the menu = a tap → refresh if older than 5 min
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) maybe(); });
+    setInterval(() => { if (box.isConnected) { paint(); load(false); } }, 60000);
+    lastTouch = Date.now(); load(false); paint();
   }
 
   function render(el) {
@@ -310,15 +323,18 @@
       '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
       '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-      '.lb-menu-weather{display:block;padding:2px 6px 8px;margin:0 0 6px;color:inherit;}' +
+      '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:inherit;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
       '.lbw-row{display:flex;align-items:center;gap:10px;}' +
-      '.lbw-ico{flex:0 0 46px;width:46px;height:46px;display:block;}' +
-      '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:46px!important;height:46px!important;}' +
-      '.lbw-temp{display:flex;align-items:flex-start;gap:3px;}' +
-      '.lbw-t{font-size:34px;line-height:1;font-weight:500;letter-spacing:-.02em;}' +
-      '.lbw-u{font-size:12px;margin-top:3px;display:flex;gap:3px;}.lbw-u i{font-style:normal;cursor:pointer;opacity:.5;}.lbw-u i.on{opacity:1;font-weight:700;}.lbw-u em{font-style:normal;opacity:.35;}' +
-      '.lbw-det{display:flex;flex-direction:column;font-size:10.5px;line-height:1.35;opacity:.7;margin-left:auto;text-align:left;}' +
-      '.lbw-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;opacity:.65;margin-top:4px;}' +
+      '.lbw-ico{flex:0 0 54px;width:54px;height:54px;display:block;}' +
+      '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:54px!important;height:54px!important;}' +
+      '.lbw-main{display:flex;flex-direction:column;min-width:0;}' +
+      '.lbw-temp{display:flex;align-items:flex-start;gap:4px;}' +
+      '.lbw-t{font-size:38px;line-height:1;font-weight:600;letter-spacing:-.03em;}' +
+      '.lbw-u{font-size:13px;margin-top:4px;display:flex;gap:4px;font-weight:600;}.lbw-u i{font-style:normal;cursor:pointer;opacity:.45;}.lbw-u i.on{opacity:1;}.lbw-u em{font-style:normal;opacity:.3;}' +
+      '.lbw-feels{font-size:11.5px;opacity:.7;margin-top:3px;white-space:nowrap;font-weight:500;}' +
+      '.lbw-det{display:flex;flex-direction:column;gap:2px;font-size:11.5px;line-height:1.3;margin-left:auto;text-align:left;font-weight:500;}.lbw-det span{opacity:.75;white-space:nowrap;}.lbw-det b{opacity:1;font-weight:700;margin-left:2px;}' +
+      '.lbw-foot{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-top:7px;font-weight:600;}.lbw-when{opacity:.75;}.lbw-cond{opacity:.95;}' +
+      '.lbw-upd{font-size:10px;opacity:.45;margin-top:2px;letter-spacing:.02em;}' +
       '.lb-menu-profile{position:relative;}' +
       '.lb-menu-profile::after{content:"";position:absolute;left:30px;top:8px;width:11px;height:11px;border-radius:50%;' +
         'background:#e03a3a;border:2px solid #fdfbf7;display:none;}' +
