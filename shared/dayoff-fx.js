@@ -149,18 +149,18 @@
     const re = want === 'female' ? fem : mal;
     return en.filter(function(v){ return re.test(v.name) && (want === 'female' || !/female/i.test(v.name)); })[0] || en[0] || null;
   }
-  function speak(id){
+  function speak(id, custom){
     const sp = SPEECH[id], set = load();
     if (!sp || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return false;
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(sp.text), v = pickVoice(sp.want);
+      const u = new SpeechSynthesisUtterance(custom || sp.text), v = pickVoice(sp.want);
       if (v) u.voice = v; u.lang = (v && v.lang) || 'en-US';
       u.pitch = sp.pitch; u.rate = sp.rate; u.volume = Math.max(0.05, set.vol);
       speechSynthesis.speak(u); return true;
     } catch (e) { return false; }
   }
-  function playSound(id){
+  function playSound(id, custom){
     const c = audio(); if (!c) return false;
     try { c.resume && c.resume(); } catch (e) {}
     const set = load();
@@ -168,7 +168,7 @@
     if (SPEECH[id]) {
       if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return false;
       const wait = set.horn ? 1100 : 0;
-      setTimeout(function(){ if (!speak(id) && running()) { try { voice({ t: ctx.currentTime, dur: 0.3, type: 'square', f0: 440, f1: 660, gain: 0.2 }); } catch (e) {} } }, wait);
+      setTimeout(function(){ if (!speak(id, custom) && running()) { try { voice({ t: ctx.currentTime, dur: 0.3, type: 'square', f0: 440, f1: 660, gain: 0.2 }); } catch (e) {} } }, wait);
       return true;
     }
     if (!running()) return false;
@@ -179,6 +179,38 @@
     const c = audio(); if (!c || !running()) return;
     const t = c.currentTime + 0.02;
     try { voice({ t: t, dur: 0.28, type: 'sine', f0: 660, f1: 660, gain: 0.3 }); voice({ t: t + 0.16, dur: 0.3, type: 'sine', f0: 880, f1: 880, gain: 0.3 }); } catch (e) {}
+  }
+
+
+  // ------------------------------------------------------------ repeating reminder alarm
+  const alarms = {};
+  function alarmCycle(){
+    const c = audio(); if (!c) return;
+    try { c.resume && c.resume(); } catch (e) {}
+    if (!running()) return;
+    const set = load(), t = c.currentTime + 0.05;
+    let id = set.char; if (!SOUNDS[id] || id === 'horn') id = 'chicken';
+    if (id === 'parrot' || id === 'cat' || id === 'frog') id = 'chicken';
+    try {
+      if (set.horn) horn(t, 1);
+      SOUNDS[id](t + (set.horn ? 1.0 : 0));
+      const b = t + (set.horn ? 1.0 : 0) + 2.2;          // then a digital triple-beep so it cuts through
+      [0, 0.22, 0.44].forEach(function(d){ voice({ t: b + d, dur: 0.14, type: 'square', f0: 1000, f1: 1000, gain: 0.3 }); });
+    } catch (e) {}
+  }
+  function alarmStart(key, maxMs){
+    if (alarms[key]) return;
+    const a = alarms[key] = { n: 0 };
+    const resume = function(){ try { audio(); ctx && ctx.resume && ctx.resume(); } catch (e) {} };
+    a.unlock = resume; document.addEventListener('pointerdown', resume, { once: true });
+    const tick = function(){ a.n++; alarmCycle(); };
+    tick(); a.iv = setInterval(tick, 4600);
+    a.cap = setTimeout(function(){ alarmStop(key); }, maxMs || 120000);
+  }
+  function alarmStop(key){
+    const a = alarms[key]; if (!a) return;
+    clearInterval(a.iv); clearTimeout(a.cap); document.removeEventListener('pointerdown', a.unlock);
+    delete alarms[key];
   }
 
   // ------------------------------------------------------------ characters (inline SVG, shaded to look rounded)
@@ -296,6 +328,8 @@
       '.dfx-shadow{position:absolute;left:50%;top:340px;width:140px;height:22px;margin-left:-70px;border-radius:50%;background:rgba(0,0,0,.22);filter:blur(5px);opacity:0;animation:dfx-fade .6s ease 1.7s forwards}',
       '.dfx-say{position:absolute;left:14px;right:14px;top:14px;padding:10px 14px;border-radius:16px;background:rgba(15,18,28,.72);backdrop-filter:blur(6px);color:#fff;font-weight:600;font-size:14px;letter-spacing:.2px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.35);opacity:0;transform:translateY(-8px) scale(.96);animation:dfx-say .45s ease 1.9s forwards}',
       '@keyframes dfx-say{to{opacity:1;transform:none}}',
+      '.dfx-say{white-space:pre-line}.dfx-ttl{font-size:11px;letter-spacing:.8px;text-transform:uppercase;opacity:.75;margin-bottom:3px}',
+      '.dfx-act{position:absolute;left:14px;right:56px;bottom:14px;display:flex;gap:8px;z-index:5}.dfx-act button{flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(15,18,28,.7);color:#fff;font-weight:700;font-size:14px;cursor:pointer}.dfx-act .pri{background:#c9506f;border-color:#c9506f}',
       '.dfx-x{position:absolute;right:10px;bottom:10px;z-index:3;border:0;border-radius:50%;width:34px;height:34px;background:rgba(0,0,0,.35);color:#fff;font-size:16px;cursor:pointer}',
       '.dfx-tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:3;border:0;border-radius:20px;padding:8px 14px;background:#c9506b;color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.3)}',
       '.dfx-conf{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:0;animation:dfx-conf 3.4s linear forwards}',
@@ -360,7 +394,9 @@
       '<div class="dfx-char"><div class="tilt">' + charSvg(id) + '</div></div>' +
       '<div class="dfx-say"></div><button class="dfx-x" type="button" aria-label="Close">✕</button></div>';
     const stage = back.querySelector('.dfx-stage');
-    back.querySelector('.dfx-say').textContent = (opts.name ? opts.name + ' — ' : '') + ch.say;
+    back.querySelector('.dfx-say').textContent = opts.text ? opts.text : (opts.name ? opts.name + ' — ' : '') + ch.say + (opts.extra ? '\n' + opts.extra : '');
+    if (opts.title) { const h = document.createElement('div'); h.className = 'dfx-ttl'; h.textContent = opts.title; back.querySelector('.dfx-say').insertAdjacentElement('afterbegin', h); }
+    if (opts.actions) { const bar = document.createElement('div'); bar.className = 'dfx-act'; opts.actions.forEach(function(a){ const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = a.label; if (a.pri) bt.className = 'pri'; bt.addEventListener('click', function(e){ e.stopPropagation(); stop(); try { a.fn && a.fn(); } catch (er) {} }); bar.appendChild(bt); }); stage.appendChild(bar); }
     // confetti
     const cols = ['#ff6f91', '#ffd34d', '#5aa7ff', '#6ee09a', '#b48cff'];
     for (let i = 0; i < 0; i++) {
@@ -378,16 +414,16 @@
       tilt.style.transform = 'rotateY(' + (dx * 18).toFixed(1) + 'deg) rotateX(' + (-dy * 10).toFixed(1) + 'deg)';
     }
     stage.addEventListener('pointermove', onMove); stage.addEventListener('touchmove', onMove, { passive: true });
-    function close(){ stop(); }
+    function close(){ stop(); if (opts.onClose) try { opts.onClose(); } catch (er) {} }
     back.querySelector('.dfx-x').addEventListener('click', function(e){ e.stopPropagation(); close(); });
-    back.addEventListener('click', function(e){ if (e.target === back) close(); });
-    const key = function(e){ if (e.key === 'Escape') close(); };
+    back.addEventListener('click', function(e){ if (e.target === back && !opts.persist) close(); });
+    const key = function(e){ if (e.key === 'Escape' && !opts.persist) close(); };
     document.addEventListener('keydown', key);
     document.body.appendChild(back);
 
     // sound: at the moment the character is out; if the browser blocks audio, offer a tap
     let played = false;
-    function sound(){ if (played) return; if (set.mute || set.vol === 0) { played = true; return; } if (playSound(id)) played = true; }
+    function sound(){ if (played) return; if (set.mute || set.vol === 0) { played = true; return; } if (playSound(id, opts.speak)) played = true; }
     const soundTimer = setTimeout(function(){
       sound();
       if (!played) {
@@ -397,22 +433,23 @@
       }
     }, 1900);
     audio();                                   // wake the audio engine as early as possible (works when started by a tap)
-    const timer = setTimeout(close, opts.hold || 9000);
+    const timer = opts.persist ? 0 : setTimeout(close, opts.hold || 9000);
     current = { el: back, timer: timer, key: key, soundTimer: soundTimer };
+    if (opts.persist) current.loop = setInterval(function(){ if (!set.mute && set.vol > 0 && played) playSound(id, opts.speak); }, opts.every || 5500);
     return id;
   }
   // make sure the delayed sound never fires after the scene is closed
   const _stop = stop;
-  stop = function(){ if (current && current.soundTimer) clearTimeout(current.soundTimer); _stop(); };
+  stop = function(){ if (current && current.soundTimer) clearTimeout(current.soundTimer); if (current && current.loop) clearInterval(current.loop); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} _stop(); };
 
   // ------------------------------------------------------------ once a day
   function today(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function maybePlayToday(name){
+  function maybePlayToday(name, extra){
     const s = load(); if (!s.on) return false;
     let seen = ''; try { seen = localStorage.getItem(SEEN) || ''; } catch (e) {}
     if (seen === today()) return false;
     try { localStorage.setItem(SEEN, today()); } catch (e) {}
-    play(s.char, { name: name });
+    play(s.char, { name: name, extra: extra });
     return true;
   }
 
@@ -461,5 +498,13 @@
     document.body.appendChild(back);
   }
 
-  window.LBDayoffFx = { openSettings: openSettings, play: play, stop: function(){ stop(); }, maybePlayToday: maybePlayToday, beep: beep, CHARS: CHARS, get: load };
+  // reminder alarm: the character keeps calling (sound repeats) until you press Done / Later
+  function alarm(text, o){
+    o = o || {}; const set = load();
+    const id = (set.char === 'random' || !byId[set.char]) ? CHARS[Math.floor(Math.random() * CHARS.length)].id : set.char;
+    play(id, { persist: true, title: o.title || '🔔 Reminder', text: text, speak: 'Reminder. ' + text, every: 6000,
+      actions: [{ label: '✔ Done', pri: true, fn: o.onDone }, { label: 'Later', fn: o.onLater }], onClose: o.onLater });
+    return id;
+  }
+  window.LBDayoffFx = { alarm: alarm, openSettings: openSettings, play: play, stop: function(){ stop(); }, maybePlayToday: maybePlayToday, beep: beep, alarmStart: alarmStart, alarmStop: alarmStop, CHARS: CHARS, get: load };
 })();
