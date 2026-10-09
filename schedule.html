@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/dayoff-fx.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Duty Schedule</title>
@@ -204,6 +205,7 @@
       </select>
       <button class="my-schedule-btn" id="myScheduleBtn">📅 My Schedule</button>
       <button class="edit-mine-btn" id="editMineBtn">✏️ Edit my schedule</button>
+      <button class="edit-mine-btn" id="fxBtn" style="display:inline-block" type="button" title="Animation &amp; sound settings">🎭 Animation &amp; sound</button>
     </div>
     <div id="scheduleAdminLinkWrap" style="display:none;margin-top:12px;">
       <a href="schedule-admin.html" style="font-size:12px;color:var(--rose-dark);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;display:inline-block;">📤 Upload New Schedule</a>
@@ -579,6 +581,13 @@ function applyScheduleToGrid(records, animate){
       }
     });
   });
+  // Day-off greeting: only on your own schedule, on today's Off cell, once a day.
+  try{
+    if(viewingIsMe && window.LBDayoffFx && document.querySelector('.date-cell.today.off')){
+      const nm = (mineName || '').split(/\s+/)[0];
+      setTimeout(() => LBDayoffFx.maybePlayToday(nm), 400);
+    }
+  }catch(e){}
 }
 
 document.getElementById('employeeSelect').addEventListener('change', (e) => {
@@ -864,6 +873,7 @@ document.getElementById('dnDone').addEventListener('change', async e => {
 let remList_ = [], remShown_ = {}, remToday_ = '';
 function bahrainMinutes_(){ const d = new Date(Date.now() + 3 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); }
 function remBeep_(){
+  try{ if(window.LBDayoffFx){ LBDayoffFx.beep(); return; } }catch(e){}
   try{
     if(localStorage.getItem('lbSchedMute') === '1') return;
     const vol = Math.max(0, Math.min(1, parseFloat(localStorage.getItem('lbSchedVol') || '0.5')));
@@ -914,6 +924,7 @@ async function loadReminders_(quiet){
 setTimeout(() => loadReminders_(), 1200);
 setInterval(tickReminders_, 20000);
 
+document.getElementById('fxBtn').addEventListener('click', () => { if(window.LBDayoffFx) LBDayoffFx.openSettings(); });
 renderMonthGrid();
 loadEmployees();
 if(location.hash === '#me') setTimeout(() => document.getElementById('myScheduleBtn').click(), 600);
