@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/nova-brain.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <meta charset="utf-8">
@@ -561,6 +562,17 @@ async function askNova(message){
   const local = localCommand(message);
   if(local.handled) return local.text;
 
+  // OFFLINE BRAIN first (no AI API / subscription): knowledge base + live data.
+  if(window.LBNovaBrain){
+    setState('thinking','THINKING');
+    let nb=null; try{ nb = await LBNovaBrain.ask(message, th => { log('💭 ' + th, 'THOUGHT'); showTranscript('💭 ' + th); }); }catch(e){}
+    if(nb && nb.handled){
+      const nav = safeNavTarget_(nb.navigateTo);
+      if(nav){ log('Opening ' + nav, 'SYSTEM'); setTimeout(()=>{ window.location.href = nav; }, 1500); }
+      return nb.text;
+    }
+    if(!LBNovaBrain.useApi()) return LBNovaBrain.fallback(message);
+  }
   if(!NOVA_API_URL || NOVA_API_URL.includes('PASTE_')) {
     return 'I can handle that when the NOVA API is connected, Boss.';
   }
