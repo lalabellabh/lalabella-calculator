@@ -17,24 +17,34 @@
 
   const KEY = 'lbDayoffFx', SEEN = 'lbDayoffSeen';
   const CHARS = [
-    { id: 'chicken', label: 'Chicken', emoji: '🐔', say: 'Cock-a-doodle-doo! It’s your day off.' },
-    { id: 'parrot',  label: 'Parrot',  emoji: '🦜', say: 'Hello! It’s your day off.' },
-    { id: 'dog',     label: 'Dog',     emoji: '🐶', say: 'Woof woof! It’s your day off.' },
-    { id: 'cat',     label: 'Cat',     emoji: '🐱', say: 'Meow. It’s your day off.' },
-    { id: 'frog',    label: 'Frog',    emoji: '🐸', say: 'Ribbit. It’s your day off.' },
-    { id: 'robot',   label: 'Robot',   emoji: '🤖', say: 'Attention. It is your day off.' },
-    { id: 'girl',    label: 'Girl',    emoji: '👧', say: 'Hello there! It’s your day off.' },
-    { id: 'boy',     label: 'Boy',     emoji: '👦', say: 'Hi! Hello there! It’s your day off.' }
+    { id: 'rooster',  label: 'Rooster — real recording', emoji: '🐓', vis: 'chicken', say: 'Cock-a-doodle-doo! It’s your day off.' },
+    { id: 'chicken',  label: 'Rooster crow (synth)',     emoji: '🐔', vis: 'chicken', say: 'Cock-a-doodle-doo! It’s your day off.' },
+    { id: 'dog',      label: 'Dog bark',                 emoji: '🐶', vis: 'dog',     say: 'Woof woof! It’s your day off.' },
+    { id: 'horn',     label: 'Air horn',                 emoji: '📣', vis: 'clock',   say: 'It’s your day off.' },
+    { id: 'bell',     label: 'Classic alarm-clock bell', emoji: '⏰', vis: 'clock',   say: 'Wake up! It’s your day off.' },
+    { id: 'digital',  label: 'Digital alarm beeps',      emoji: '📟', vis: 'clock',   say: 'It’s your day off.' },
+    { id: 'siren',    label: 'Siren',                    emoji: '🚨', vis: 'clock',   say: 'It’s your day off.' },
+    { id: 'ringtone', label: 'Old phone ring',           emoji: '☎️', vis: 'clock',   say: 'It’s your day off.' },
+    { id: 'ding',     label: 'Doorbell ding-dong',       emoji: '🔔', vis: 'clock',   say: 'It’s your day off.' },
+    { id: 'cuckoo',   label: 'Cuckoo clock',             emoji: '🕰️', vis: 'clock',   say: 'Cuckoo! It’s your day off.' },
+    { id: 'reveille', label: 'Morning trumpet',          emoji: '🎺', vis: 'clock',   say: 'Rise and shine. It’s your day off.' },
+    { id: 'cat',      label: 'Cat meow',                 emoji: '🐱', vis: 'cat',     say: 'Meow. It’s your day off.' },
+    { id: 'parrot',   label: 'Parrot whistle',           emoji: '🦜', vis: 'parrot',  say: 'Hello! It’s your day off.' },
+    { id: 'frog',     label: 'Frog',                     emoji: '🐸', vis: 'frog',    say: 'Ribbit. It’s your day off.' },
+    { id: 'robot',    label: 'Robot voice: “Attention. It is your day off.”', emoji: '🤖', vis: 'robot', say: 'Attention. It is your day off.' },
+    { id: 'girl',     label: 'Girl voice: “Hello there!”', emoji: '👧', vis: 'girl',  say: 'Hello there! It’s your day off.' },
+    { id: 'boy',      label: 'Boy voice: “Hi! Hello there!”', emoji: '👦', vis: 'boy', say: 'Hi! Hello there! It’s your day off.' },
+    { id: 'custom',   label: 'My own sound (upload a file)', emoji: '📁', vis: 'clock', say: 'It’s your day off.' }
   ];
   const byId = {}; CHARS.forEach(function(c){ byId[c.id] = c; });
 
   // ------------------------------------------------------------ settings
-  const DEF = { on: true, char: 'random', vol: 0.7, mute: false, horn: false, gifDay: null, gifRem: null };
+  const DEF = { on: true, char: 'rooster', vol: 0.7, mute: false, horn: false, gifDay: null, gifRem: null };
   function load(){
     let s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
     const o = Object.assign({}, DEF, s);
     o.vol = Math.max(0, Math.min(1, Number(o.vol))); if (isNaN(o.vol)) o.vol = DEF.vol;
-    if (o.char !== 'random' && !byId[o.char]) o.char = 'random';
+    if (o.char !== 'random' && !byId[o.char]) o.char = 'rooster';
     o.on = o.on !== false; o.mute = !!o.mute; o.horn = !!o.horn;
     ['gifDay', 'gifRem'].forEach(function(k){ const g = o[k]; o[k] = (g && typeof g.url === 'string' && /^https:\/\//i.test(g.url)) ? { url: g.url, preview: (typeof g.preview === 'string' && /^https:\/\//i.test(g.preview)) ? g.preview : '' } : null; });
     return o;
@@ -136,6 +146,64 @@
     },
     horn: function(t){ horn(t, 2); }
   };
+  SOUNDS.bell = function(t){                    // two-bell hammer, like an old wind-up alarm clock
+    for (let i = 0; i < 22; i++) {
+      const st = t + i * 0.085, f = i % 2 ? 2200 : 2350;
+      voice({ t: st, dur: 0.12, type: 'triangle', f0: f, f1: f * 0.99, gain: 0.32 });
+      voice({ t: st, dur: 0.12, type: 'sine', f0: f * 2.4, f1: f * 2.4, gain: 0.1 });
+    }
+  };
+  SOUNDS.digital = function(t){
+    for (let g = 0; g < 3; g++) { for (let i = 0; i < 4; i++) voice({ t: t + g * 0.9 + i * 0.11, dur: 0.07, type: 'square', f0: 2000, f1: 2000, gain: 0.22 }); }
+  };
+  SOUNDS.siren = function(t){
+    for (let i = 0; i < 3; i++) voice({ t: t + i * 0.9, dur: 0.88, type: 'sawtooth', f0: 600, fm: 1150, f1: 600, bp: 1500, q: 0.4, gain: 0.3 });
+  };
+  SOUNDS.ringtone = function(t){                // brr-brr … brr-brr
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 16; i++) voice({ t: t + r * 1.4 + i * 0.045, dur: 0.04, type: 'square', f0: i % 2 ? 1400 : 1000, f1: i % 2 ? 1400 : 1000, gain: 0.2 });
+  };
+  SOUNDS.ding = function(t){
+    [[659, 0], [523, 0.55]].forEach(function(n){
+      voice({ t: t + n[1], dur: 1.1, type: 'sine', f0: n[0], f1: n[0], gain: 0.4 });
+      voice({ t: t + n[1], dur: 0.7, type: 'sine', f0: n[0] * 2.01, f1: n[0] * 2.01, gain: 0.12 });
+    });
+  };
+  SOUNDS.cuckoo = function(t){
+    [0, 0.7, 1.4].forEach(function(d){
+      voice({ t: t + d, dur: 0.22, type: 'sine', f0: 780, f1: 780, gain: 0.4 });
+      voice({ t: t + d + 0.26, dur: 0.3, type: 'sine', f0: 620, f1: 620, gain: 0.4 });
+    });
+  };
+  SOUNDS.reveille = function(t){                // bugle-style wake-up call
+    const N = [[392, 0, .16], [523, .2, .16], [659, .4, .16], [784, .6, .5], [659, 1.15, .16], [784, 1.35, .7]];
+    N.forEach(function(n){ voice({ t: t + n[1], dur: n[2], type: 'sawtooth', f0: n[0], f1: n[0], bp: 1400, q: 0.8, vib: [5, 4], gain: 0.28 }); });
+  };
+
+  // real recordings: shared/sounds/rooster.(mp3|ogg|wav) in the site, or the user's own uploaded file
+  const FILES = { rooster: ['shared/sounds/rooster.mp3', 'shared/sounds/rooster.ogg', 'shared/sounds/rooster.wav'] };
+  const bufCache = {};
+  function idb(){ return new Promise(function(res, rej){ try { const r = indexedDB.open('lbDayoffSnd', 1); r.onupgradeneeded = function(){ r.result.createObjectStore('s'); }; r.onsuccess = function(){ res(r.result); }; r.onerror = function(){ rej(r.error); }; } catch (e) { rej(e); } }); }
+  async function customGet(){ try { const db = await idb(); return await new Promise(function(res){ const q = db.transaction('s').objectStore('s').get('custom'); q.onsuccess = function(){ res(q.result || null); }; q.onerror = function(){ res(null); }; }); } catch (e) { return null; } }
+  async function customSet(blob){ const db = await idb(); return new Promise(function(res, rej){ const tx = db.transaction('s', 'readwrite'); if (blob) tx.objectStore('s').put(blob, 'custom'); else tx.objectStore('s').delete('custom'); tx.oncomplete = function(){ delete bufCache.custom; res(); }; tx.onerror = function(){ rej(tx.error); }; }); }
+  async function getBuffer(id){
+    if (bufCache[id] !== undefined) return bufCache[id];
+    let ab = null;
+    try {
+      if (id === 'custom') { const b = await customGet(); if (b) ab = await b.arrayBuffer(); }
+      else for (const u of FILES[id] || []) { try { const r = await fetch(u); if (r.ok) { ab = await r.arrayBuffer(); break; } } catch (e) {} }
+      bufCache[id] = ab ? await new Promise(function(res, rej){ ctx.decodeAudioData(ab, res, rej); }) : null;
+    } catch (e) { bufCache[id] = null; }
+    return bufCache[id];
+  }
+  async function playFileSound(id, fallback){
+    const buf = await getBuffer(id);
+    if (!buf) { if (running()) { try { SOUNDS[fallback](ctx.currentTime + 0.05); } catch (e) {} } return false; }
+    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(master); src.start(ctx.currentTime + 0.02);
+    try { src.stop(ctx.currentTime + 0.02 + Math.min(buf.duration, 10)); } catch (e) {}
+    return true;
+  }
+  async function fileExists(id){ return !!(await getBuffer(id)); }
+
   // robot / girl / boy talk (browser speech voices) — falls back to a short tone if none exists
   const SPEECH = {
     robot: { text: 'Attention. It is your day off.',        pitch: 0.2,  rate: 0.85, want: 'male' },
@@ -173,6 +241,7 @@
       return true;
     }
     if (!running()) return false;
+    if (id === 'rooster' || id === 'custom') { audio(); playFileSound(id, id === 'rooster' ? 'chicken' : 'bell'); return true; }
     try { (SOUNDS[id] || SOUNDS.chicken)(c.currentTime + 0.05 + (set.horn ? 1.0 : 0)); } catch (e) { return false; }
     return true;
   }
@@ -189,15 +258,8 @@
     const c = audio(); if (!c) return;
     try { c.resume && c.resume(); } catch (e) {}
     if (!running()) return;
-    const set = load(), t = c.currentTime + 0.05;
-    let id = set.char; if (!SOUNDS[id] || id === 'horn') id = 'chicken';
-    if (id === 'parrot' || id === 'cat' || id === 'frog') id = 'chicken';
-    try {
-      if (set.horn) horn(t, 1);
-      SOUNDS[id](t + (set.horn ? 1.0 : 0));
-      const b = t + (set.horn ? 1.0 : 0) + 2.2;          // then a digital triple-beep so it cuts through
-      [0, 0.22, 0.44].forEach(function(d){ voice({ t: b + d, dur: 0.14, type: 'square', f0: 1000, f1: 1000, gain: 0.3 }); });
-    } catch (e) {}
+    let id = load().char; if (id === 'random' || !byId[id] || SPEECH[id]) id = 'bell';
+    playSound(id);
   }
   function alarmStart(key, maxMs){
     if (alarms[key]) return;
@@ -218,6 +280,13 @@
   const G = function(id, a, b, cx, cy, r){ return '<radialGradient id="' + id + '" cx="' + (cx || 38) + '%" cy="' + (cy || 30) + '%" r="' + (r || 80) + '%"><stop offset="0" stop-color="' + a + '"/><stop offset="1" stop-color="' + b + '"/></radialGradient>'; };
   const eyeDot = function(x, y, r, cls){ return '<g class="' + (cls || '') + '"><circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#1d1416"/><circle cx="' + (x - r * 0.3) + '" cy="' + (y - r * 0.35) + '" r="' + (r * 0.32) + '" fill="#fff"/></g>'; };
   const ART = {
+    clock: '<defs><radialGradient id="k1" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#ffd0d6"/><stop offset="1" stop-color="#d63a52"/></radialGradient><radialGradient id="k2" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f1e6e8"/></radialGradient></defs>' +
+      '<circle cx="34" cy="36" r="17" fill="url(#k1)"/><circle cx="126" cy="36" r="17" fill="url(#k1)"/><path d="M80 30V22" stroke="#a82b40" stroke-width="5" stroke-linecap="round"/>' +
+      '<path d="M44 138L34 158M116 138L126 158" stroke="#a82b40" stroke-width="9" stroke-linecap="round"/>' +
+      '<circle cx="80" cy="88" r="58" fill="url(#k1)"/><circle cx="80" cy="88" r="46" fill="url(#k2)"/>' +
+      '<g stroke="#3a2530" stroke-width="3" stroke-linecap="round"><path d="M80 52V58M80 118V124M44 88H50M110 88H116"/></g>' +
+      '<g class="hand"><path d="M80 88V62" stroke="#3a2530" stroke-width="5" stroke-linecap="round"/></g><path d="M80 88L98 98" stroke="#3a2530" stroke-width="4" stroke-linecap="round"/><circle cx="80" cy="88" r="5" fill="#d63a52"/>' +
+      '<path d="M40 70Q46 52 62 46" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/>',
     chicken: '<defs>' + G('c1', '#ffffff', '#e8dccd') + G('c2', '#ff6b6b', '#c92a3a') + '</defs>' +
       '<g class="tail"><path d="M48 98 Q16 60 30 40 Q44 66 56 82 Z" fill="#d9ccbb"/><path d="M46 104 Q10 84 14 58 Q38 80 54 92 Z" fill="#efe4d5"/><path d="M50 108 Q20 106 14 84 Q40 92 56 100 Z" fill="#c7b9a6"/></g>' +
       '<path d="M66 134 L64 150 M92 134 L94 150" stroke="#f0a41c" stroke-width="5" stroke-linecap="round"/><path d="M56 152 L72 152 M86 152 L102 152" stroke="#f0a41c" stroke-width="5" stroke-linecap="round"/>' +
@@ -338,6 +407,7 @@
       '@keyframes dfx-conf{0%{opacity:1;transform:translate3d(0,0,0) rotate(0)}100%{opacity:.9;transform:translate3d(var(--dx),400px,0) rotate(540deg)}}',
       // idle motion (after they come out)
       '.dfx-art *{transform-box:fill-box}',
+      '.dfx-art.dfx-clock{transform-origin:50% 90%;animation:dfx-ring .09s linear 2.2s infinite alternate}@keyframes dfx-ring{from{transform:rotate(-3.5deg)}to{transform:rotate(3.5deg)}}.dfx-art .hand{transform-origin:50% 100%;animation:dfx-spin 2s linear 2.2s infinite}@keyframes dfx-spin{to{transform:rotate(360deg)}}',
       '.dfx-art .tail{transform-origin:20% 80%;animation:dfx-wag .5s ease-in-out 2.2s infinite alternate}',
       '.dfx-dog .tail{transform-origin:10% 90%;animation-duration:.22s}',
       '.dfx-cat .tail{transform-origin:10% 90%;animation-duration:.9s}',
@@ -366,6 +436,7 @@
       '.dfxs h3{margin:0 0 4px;font-size:16px}.dfxs .sub{font-size:12px;color:#8a7078;margin-bottom:12px}',
       '.dfxs .gifrow{display:flex;align-items:center;gap:8px;margin:8px 0}.dfxs .gifrow b{width:98px;font-size:13px}.dfxs .gifrow .gp{flex:1;font-size:12px;opacity:.6}.dfxs .gifrow .gp img{height:44px;border-radius:8px;display:block}.dfxs .gifrow button{font:inherit;font-size:12px;font-weight:700;border:0;border-radius:9px;padding:8px 11px;background:#f6ecee;color:#7a2a40;cursor:pointer}',
       '.dfxg{width:min(380px,100%);height:min(470px,92vh);background:#fff;border-radius:18px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.35);color:#3a2530}.dfxg-h{display:flex;align-items:center;padding:12px 14px}.dfxg-h b{flex:1}.dfxg-x{border:0;background:#f6ecee;border-radius:50%;width:28px;height:28px;cursor:pointer}.dfxg-host{position:absolute;left:0;right:0;bottom:0;height:0}.dfxg-host .lbcm-picker{margin:0 8px 8px;max-width:none}',
+      '.dfxs .snds{max-height:260px;overflow-y:auto;border:1px solid #f0d9d9;border-radius:12px;padding:4px}.dfxs .snd{display:flex;align-items:center;gap:6px;border-radius:9px;padding:2px}.dfxs .snd.on{background:#fde8ed}.dfxs .snd .pk{flex:1;text-align:left;font:inherit;font-size:13px;border:0;background:none;padding:9px 8px;cursor:pointer;color:#3a2530}.dfxs .snd.on .pk{font-weight:700}.dfxs .snd .hint{font-size:10.5px;opacity:.6}.dfxs .snd .pl{border:0;background:#f6ecee;color:#7a2a40;border-radius:8px;width:32px;height:30px;font-weight:700;cursor:pointer}',
       '.dfxs .row{display:flex;align-items:center;gap:10px;margin:12px 0}.dfxs .row b{flex:1;font-size:13.5px}',
       '.dfxs input[type=checkbox]{width:20px;height:20px;accent-color:#c9506b}',
       '.dfxs input[type=range]{flex:2;accent-color:#c9506b}',
@@ -388,19 +459,19 @@
   function play(id, opts){
     opts = opts || {}; addStyle(); stop();
     const set = load();
-    if (!id || id === 'random') id = CHARS[Math.floor(Math.random() * CHARS.length)].id;
-    if (!byId[id]) id = 'chicken';
-    const ch = byId[id];
+    if (!id || id === 'random') { const pool = CHARS.filter(function(c){ return c.id !== 'custom'; }); id = pool[Math.floor(Math.random() * pool.length)].id; }
+    if (!byId[id]) id = 'rooster';
+    const ch = byId[id], vis = ch.vis || id;
     const back = document.createElement('div'); back.className = 'dfx-back'; back.setAttribute('data-lb-theme-skip', '');
     const say = (opts.name ? opts.name + ', ' : '') + ch.say.charAt(0).toLowerCase() + ch.say.slice(1);
     back.innerHTML = '<div class="dfx-stage"><div class="dfx-sun"></div><div class="dfx-cloud"></div><div class="dfx-hill"></div>' +
-      '<div class="dfx-home">' + (opts.gif ? '' : (HOME[id] || '')) + '</div><div class="dfx-shadow"></div>' +
-      '<div class="dfx-char' + (opts.gif ? ' gif' : '') + '"><div class="tilt">' + (opts.gif ? '<img class="dfx-gif" alt="">' : charSvg(id)) + '</div></div>' +
+      '<div class="dfx-home">' + (opts.gif ? '' : (HOME[vis] || '')) + '</div><div class="dfx-shadow"></div>' +
+      '<div class="dfx-char' + (opts.gif ? ' gif' : '') + '"><div class="tilt">' + (opts.gif ? '<img class="dfx-gif" alt="">' : charSvg(vis)) + '</div></div>' +
       '<div class="dfx-say"></div><button class="dfx-x" type="button" aria-label="Close">✕</button></div>';
     const stage = back.querySelector('.dfx-stage');
     if (opts.gif) {
       const gi = back.querySelector('.dfx-gif'); let tried = 0;
-      gi.onerror = function(){ tried++; if (tried === 1 && opts.gif.preview && gi.src !== opts.gif.preview) gi.src = opts.gif.preview; else { const t = back.querySelector('.tilt'); t.innerHTML = charSvg(id); back.querySelector('.dfx-char').classList.remove('gif'); } };
+      gi.onerror = function(){ tried++; if (tried === 1 && opts.gif.preview && gi.src !== opts.gif.preview) gi.src = opts.gif.preview; else { const t = back.querySelector('.tilt'); t.innerHTML = charSvg(vis); back.querySelector('.dfx-char').classList.remove('gif'); } };
       gi.src = opts.gif.url;
     }
     back.querySelector('.dfx-say').textContent = opts.text ? opts.text : (opts.name ? opts.name + ' — ' : '') + ch.say + (opts.extra ? '\n' + opts.extra : '');
@@ -498,25 +569,44 @@
       '<div class="lbl">GIF animation (optional — replaces the drawn character)</div>' +
       '<div class="gifrow"><b>Day-off GIF</b><span class="gp" id="dfxGpD"></span><button type="button" id="dfxGcD">Choose</button><button type="button" id="dfxGxD">✕</button></div>' +
       '<div class="gifrow"><b>Reminder GIF</b><span class="gp" id="dfxGpR"></span><button type="button" id="dfxGcR">Choose</button><button type="button" id="dfxGxR">✕</button></div>' +
-      '<div class="lbl">Character &amp; sound</div><div class="grid" id="dfxGrid"></div>' +
-      '<div class="lbl">Sound</div>' +
-      '<div class="row" style="margin-top:4px"><b>🔈 Volume</b><input type="range" id="dfxVol" min="0" max="100" step="1"><span id="dfxVolN" style="width:36px;text-align:right;font-size:12px"></span></div>' +
+      '<div class="lbl">Sound</div><div class="snds" id="dfxGrid"></div>' +
+      '<div class="row" style="margin-top:10px"><b>🔈 Volume</b><input type="range" id="dfxVol" min="0" max="100" step="1"><span id="dfxVolN" style="width:36px;text-align:right;font-size:12px"></span></div>' +
       '<div class="row"><b>📣 Air horn blast first (louder, alarm-style)</b><input type="checkbox" id="dfxHorn"></div>' +
       '<div class="row"><b>Mute (also mutes reminder chime)</b><input type="checkbox" id="dfxMute"></div>' +
       '<div class="btns"><button type="button" id="dfxTest">▶ Preview</button><button type="button" class="pri" id="dfxDone">Done</button></div>' +
-      '<div class="note">Animal sounds are generated by your browser; robot, girl and boy speak with your device’s voices. Phones may need a tap before sound can play.</div>';
-    const grid = box.querySelector('#dfxGrid');
+      '<div class="note">Tap ▶ to hear a sound. Animal and alarm sounds are made by your browser; the voices use your device’s voice. For a real chicken, add shared/sounds/rooster.mp3 to the site or upload your own file under “My own sound”. Phones may need a tap before sound can play.</div>';
+    const grid = box.querySelector('#dfxGrid'), note2 = {};
     function drawGrid(){
       grid.innerHTML = '';
-      const items = CHARS.map(function(c){ return { id: c.id, label: c.label, svg: charSvg(c.id) }; });
-      items.push({ id: 'random', label: 'Surprise me', svg: '<div class="rnd">🎲</div>' });
+      const items = CHARS.map(function(c){ return { id: c.id, label: c.emoji + ' ' + c.label }; });
+      items.push({ id: 'random', label: '🎲 Surprise me (random each time)' });
       items.forEach(function(it){
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'ch' + (s.char === it.id ? ' on' : '');
-        b.innerHTML = '<span class="th">' + it.svg + '</span>' + it.label;
-        b.addEventListener('click', function(){ s.char = it.id; save(s); drawGrid(); if (it.id !== 'random') testPlay(it.id); });
-        grid.appendChild(b);
+        const row = document.createElement('div'); row.className = 'snd' + (s.char === it.id ? ' on' : '');
+        const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'pk'; pick.textContent = it.label;
+        const hint = document.createElement('span'); hint.className = 'hint'; hint.textContent = note2[it.id] || '';
+        const play1 = document.createElement('button'); play1.type = 'button'; play1.className = 'pl'; play1.textContent = '▶'; play1.setAttribute('aria-label', 'Play');
+        pick.addEventListener('click', function(){ s.char = it.id; save(s); drawGrid(); });
+        play1.addEventListener('click', function(){ audio(); let id = it.id; if (id === 'random') { const pool = CHARS.filter(function(c){ return c.id !== 'custom'; }); id = pool[Math.floor(Math.random() * pool.length)].id; } playSound(id); });
+        row.appendChild(pick); if (note2[it.id]) row.appendChild(hint); row.appendChild(play1);
+        if (it.id === 'custom') {
+          const up = document.createElement('button'); up.type = 'button'; up.className = 'pl'; up.textContent = '⬆';  up.setAttribute('aria-label', 'Upload sound');
+          up.addEventListener('click', function(){
+            const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'audio/*';
+            inp.addEventListener('change', async function(){
+              const f = inp.files && inp.files[0]; if (!f) return;
+              if (f.size > 2 * 1024 * 1024) { alert('Please use a short clip under 2 MB (about 10–20 seconds).'); return; }
+              try { await customSet(f); audio(); const ok = await fileExists('custom'); if (!ok) { await customSet(null); alert('That file could not be played. Try an mp3, wav or m4a.'); return; }
+                note2.custom = f.name.slice(0, 22); s.char = 'custom'; save(s); drawGrid(); } catch (e) { alert('Could not save the sound on this device.'); }
+            });
+            inp.click();
+          });
+          row.appendChild(up);
+        }
+        grid.appendChild(row);
       });
     }
+    // flag the real-recording rows that have no file yet
+    (async function(){ audio(); if (!(await fileExists('rooster'))) note2.rooster = 'file not added yet'; if (await fileExists('custom')) note2.custom = 'saved on this device'; drawGrid(); })();
     function testPlay(id, useGif){ audio(); play(id || s.char, { hold: 6500, gif: useGif ? s.gifDay : null }); }
     const on = box.querySelector('#dfxOn'), vol = box.querySelector('#dfxVol'), volN = box.querySelector('#dfxVolN'), mute = box.querySelector('#dfxMute');
     on.checked = s.on; vol.value = Math.round(s.vol * 100); volN.textContent = vol.value + '%'; mute.checked = s.mute; const hornEl = box.querySelector('#dfxHorn'); hornEl.checked = s.horn;
@@ -550,7 +640,7 @@
   // reminder alarm: the character keeps calling (sound repeats) until you press Done / Later
   function alarm(text, o){
     o = o || {}; const set = load();
-    const id = (set.char === 'random' || !byId[set.char]) ? CHARS[Math.floor(Math.random() * CHARS.length)].id : set.char;
+    const id = (set.char === 'random' || !byId[set.char]) ? 'random' : set.char;
     play(id, { gif: set.gifRem, persist: true, title: o.title || '🔔 Reminder', text: text, speak: 'Reminder. ' + text, every: 6000,
       actions: [{ label: '✔ Done', pri: true, fn: o.onDone }, { label: 'Later', fn: o.onLater }], onClose: o.onLater });
     return id;
