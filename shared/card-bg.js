@@ -67,19 +67,34 @@
   add('stripes', 'Pastel stripes', e('<defs><pattern id="s" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="20" height="40" fill="#fff6f8"/><rect x="20" width="20" height="40" fill="#fde5ea"/></pattern></defs><rect width="400" height="400" fill="url(#s)"/>'));
 
   // ------------------------------------------------------------ apply / save
-  let cur = 'none';
+  let cur = 'none', op = 100;
   function cssFor(v){
     if (v && v.indexOf('color:') === 0) return { bg: v.slice(6), size: '' };
     if (v && v.indexOf('img:') === 0) return { bg: 'url("' + v.slice(4) + '") center/cover no-repeat', size: '' };
     const d = D.find(x => x.id === v) || D[0];
     return d.css.indexOf('data:') === 0 ? { bg: 'url("' + d.css + '") center/100% 100% no-repeat', size: '' } : { bg: d.css, size: '' };
   }
+  // the design lives on its own layer UNDER the text, so its opacity can be changed without fading the text
+  function layer(){
+    const card = document.getElementById('card'); if (!card) return null;
+    let l = card.querySelector(':scope > .card-bgl');
+    if (!l) { l = document.createElement('div'); l.className = 'card-bgl'; l.setAttribute('aria-hidden', 'true');
+      l.style.cssText = 'position:absolute;inset:0;z-index:-1;pointer-events:none;'; card.insertBefore(l, card.firstChild); card.style.isolation = 'isolate'; }
+    return l;
+  }
   function apply(v){
     cur = v || 'none';
-    const card = document.getElementById('card'); if (!card) return;
-    card.style.background = cssFor(cur).bg;
-    card.style.webkitPrintColorAdjust = 'exact'; card.style.printColorAdjust = 'exact';
+    const l = layer(); if (!l) return;
+    l.style.background = cur === 'none' ? 'none' : cssFor(cur).bg;
+    l.style.opacity = String(op / 100);
+    l.style.webkitPrintColorAdjust = 'exact'; l.style.printColorAdjust = 'exact';
     document.querySelectorAll('.lbbg-th').forEach(t => t.classList.toggle('on', t.getAttribute('data-id') === cur));
+  }
+  function setOpacity(n){
+    op = Math.max(0, Math.min(100, Math.round(Number(n)))); if (isNaN(op)) op = 100;
+    const l = layer(); if (l) l.style.opacity = String(op / 100);
+    document.querySelectorAll('.lbbg-op').forEach(i => { i.value = op; });
+    document.querySelectorAll('.lbbg-opn').forEach(i => { i.textContent = op + '%'; });
   }
 
   // ------------------------------------------------------------ picker
@@ -99,7 +114,9 @@
   function open(){
     style();
     const back = document.createElement('div'); back.className = 'lbbg-back';
-    back.innerHTML = '<div class="lbbg"><h3>🎨 Card background</h3><div class="sub">Tap one to try it on the card. Print uses the same background.</div><div class="lbbg-grid"></div>' +
+    back.innerHTML = '<div class="lbbg"><h3>🎨 Card background</h3><div class="sub">Tap one to try it on the card. Print uses the same background.</div>' +
+      '<div class="lbbg-row" style="margin:0 0 12px;position:sticky;top:-16px;background:#fff;padding:8px 0;z-index:2"><b style="font-size:13px">Opacity</b><input type="range" class="lbbg-op" min="0" max="100" step="1" value="100" style="flex:1;min-width:120px"><span class="lbbg-opn" style="width:40px;text-align:right;font-size:12px">100%</span></div>' +
+      '<div class="lbbg-grid"></div>' +
       '<div class="lbbg-row"><span style="font-size:13px">Colour:</span><input type="color" id="lbbgColor" value="#fff3f5"><label>🖼️ My picture<input type="file" accept="image/*" id="lbbgFile" hidden></label><button type="button" id="lbbgReset">Reset to white</button></div>' +
       '<button type="button" class="lbbg-done">Done</button></div>';
     const grid = back.querySelector('.lbbg-grid');
@@ -109,12 +126,13 @@
       b.addEventListener('click', () => apply(d.id)); grid.appendChild(b);
     });
     document.body.appendChild(back);
-    apply(cur);
+    apply(cur); setOpacity(op);
+    back.querySelector('.lbbg-op').addEventListener('input', ev => setOpacity(ev.target.value));
     const close = () => back.remove();
     back.querySelector('.lbbg-done').addEventListener('click', close);
     back.addEventListener('click', ev => { if (ev.target === back) close(); });
     back.querySelector('#lbbgColor').addEventListener('input', ev => apply('color:' + ev.target.value));
-    back.querySelector('#lbbgReset').addEventListener('click', () => apply('none'));
+    back.querySelector('#lbbgReset').addEventListener('click', () => { apply('none'); setOpacity(100); });
     back.querySelector('#lbbgFile').addEventListener('change', ev => {
       const f = ev.target.files && ev.target.files[0]; if (!f) return;
       const r = new FileReader();
@@ -131,8 +149,8 @@
     g.innerHTML = '<span class="label">BACKGROUND</span><button type="button" id="bgBtn" title="Change the card background">🎨 Choose…</button>';
     const host = sz.closest('.group'); host.parentNode.insertBefore(g, host.nextSibling);
     g.querySelector('#bgBtn').addEventListener('click', open);
-    apply('none');   // always starts white so a forgotten background never ends up on a print
+    apply('none'); setOpacity(100);   // always starts white so a forgotten background never ends up on a print
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
-  window.LBCardBg = { get: () => cur, set: apply, open: open, list: D };
+  window.LBCardBg = { get: () => cur, getOpacity: () => op, setOpacity: setOpacity, set: apply, open: open, list: D };
 })();
