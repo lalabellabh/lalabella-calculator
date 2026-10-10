@@ -342,6 +342,30 @@
   };
   const EMOJI_FONT = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'";
 
+  // Hide emoji this device cannot draw (they would show as an empty box). Draws each one on a hidden canvas and
+  // compares it with how a missing character looks; sequences that split into several pictures count as missing too.
+  const canShow = (function(){
+    let ctx = null, refs = null, cache = {};
+    const SZ = 32;
+    function px(t){ ctx.clearRect(0, 0, SZ * 3, SZ * 2); ctx.fillText(t, 2, 4); return ctx.getImageData(0, 0, SZ * 3, SZ * 2).data.join(','); }
+    return function(e){
+      if (cache[e] !== undefined) return cache[e];
+      try {
+        if (!ctx) {
+          const c = document.createElement('canvas'); c.width = SZ * 3; c.height = SZ * 2;
+          ctx = c.getContext('2d', { willReadFrequently: true });
+          ctx.font = SZ + 'px ' + EMOJI_FONT + ',sans-serif'; ctx.textBaseline = 'top';
+          refs = ['\u{10FFFF}', '\u{F0000}', '\u{E0FFF}'].map(px);
+        }
+        const w = ctx.measureText(e).width;
+        let ok = true;
+        if (/\u200D/.test(e) && w > SZ * 1.7) ok = false;           // joined emoji that fell apart into pieces
+        else if (refs.indexOf(px(e)) !== -1) ok = false;               // looks exactly like a missing character
+        return (cache[e] = ok);
+      } catch (err) { return (cache[e] = true); }                      // cannot test: show it
+    };
+  })();
+
   // opts: {host (position:relative), toggleBtn (or toggleBtns[]), tabs (optional, e.g. ['emoji','sticker','fav']), onEmoji(e), onGif(item, 'gif'|'sticker')}
   // picker.open('emoji'|'gif'|'sticker'|'fav') / picker.toggle(tab) can jump straight to a tab.
   function createPicker(opts){
@@ -374,7 +398,7 @@
 
     function emojiGrid(list, container){
       const grid = el('div', 'lbcm-egrid');
-      list.forEach(function(e){
+      list.filter(canShow).forEach(function(e){
         const b = el('button', hasFav('emoji', e) ? 'fav' : '', e); b.type = 'button';
         let timer = null, longDone = false;
         const startPress = function(){ longDone = false; timer = setTimeout(async function(){
