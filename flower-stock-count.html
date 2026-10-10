@@ -72,6 +72,10 @@
   .add-waste{ color:#b3413f !important; border-color:#d98b89 !important; background:#fff1f0 !important; }
   .add-waste::placeholder{ color:#b3413f; opacity:0.6; }
   @media (max-width:420px){ .flower-inputs{ gap:4px; } .flower-inputs input{ width:50px; padding:6px 3px; } .add-input{ width:32px !important; } }
+  .flower-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; }
+  .unit-sel{ font-size:10px; padding:0 2px; height:18px; width:auto; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink-dim); }
+  .unit-sel.bunch{ background:#e9f5ec; border-color:#7fb592; color:#2f7d4f; font-weight:700; }
+  .spb-note{ color:#2f7d4f; cursor:pointer; text-decoration:underline dotted; }
   .count-flash{ animation:countFlash 0.5s ease; }
   @keyframes countFlash{ 0%{ background:#eaf3ec; } 100%{ background:var(--blush); } }
   .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
@@ -265,6 +269,32 @@
   let isReadOnlyView = false;
   let hasBeenEdited = false;
   let savedBase = {};         // flower -> {count,waste} already saved this session (branch|date); the server overwrites per flower/day, so new entries are ADDED on top of these
+  // ---- Unit per flower: pieces (default) or bunch. Stock is always saved in PIECES, so bunch counts are multiplied by pieces-per-bunch ----
+  const UNIT_KEY = 'lbFlowerUnitPrefs';
+  function unitPrefs(){ try{ return JSON.parse(localStorage.getItem(UNIT_KEY)||'{}')||{}; }catch(e){ return {}; } }
+  function saveUnitPref(name, u, spb){ try{ const p=unitPrefs(); p[String(name).trim().toLowerCase()]={u:u,spb:spb}; localStorage.setItem(UNIT_KEY, JSON.stringify(p)); }catch(e){} }
+  function knownSpb(name){
+    const n = String(name).trim().toLowerCase();
+    const p = unitPrefs()[n]; if(p && Number(p.spb) > 1) return Number(p.spb);
+    const it = flowerItems.find(x => String(x.Flowers||'').trim().toLowerCase()===n && String(x.Unit||'').toLowerCase()==='bunch' && Number(x['Stems per Bunch'])>1);
+    return it ? Number(it['Stems per Bunch']) : 0;
+  }
+  function ensureUnit(b){
+    if(b.unit) return;
+    const p = unitPrefs()[String(b.flowerName).trim().toLowerCase()];
+    if(p && p.u==='bunch' && Number(p.spb)>1){ b.unit='bunch'; b.spb=Number(p.spb); } else b.unit='pcs';
+  }
+  const mult = b => (b.unit==='bunch' && Number(b.spb)>0) ? Number(b.spb) : 1;
+  const r3 = v => Math.round(v*1000)/1000;
+  // copy of a row with count + waste expressed in pieces
+  function asPcs(b){
+    const m = mult(b), o = Object.assign({}, b); o.unit = 'pcs'; delete o.spb;
+    if(m !== 1){
+      if(b.physicalCount !== '' && !isNaN(b.physicalCount)) o.physicalCount = String(r3(Number(b.physicalCount)*m));
+      if(b.wastage !== '' && !isNaN(b.wastage)) o.wastage = String(r3(Number(b.wastage)*m));
+    }
+    return o;
+  }
   const baseKey = n => currentBranch + '|' + document.getElementById('countDate').value + '|' + String(n).trim().toLowerCase();
 
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
@@ -355,7 +385,7 @@
       flowerName: r.Flower,
       contributingItemCodes: r['Contributing Item Codes'] || '',
       physicalCount: r['Physical Count'],
-      wastage: r.Wastage,
+      wastage: r.Wastage, unit: 'pcs',
       legacyRate: Number(r['Rate At Count']) || legacyRateFor(r.Flower)
     }));
 
@@ -380,7 +410,7 @@
       flowerName: r.Flower,
       contributingItemCodes: r['Contributing Item Codes'] || '',
       physicalCount: r['Physical Count'],
-      wastage: r.Wastage,
+      wastage: r.Wastage, unit: 'pcs',
       legacyRate: Number(r['Rate At Count']) || 0
     }));
 
@@ -406,15 +436,16 @@
       el.innerHTML = '<div class="empty-note">No matching flowers.</div>';
     } else {
       el.innerHTML = visible.map((b) => {
+        ensureUnit(b);
         const idx = backing.indexOf(b);
         return `
         <div class="flower-row">
           <div class="flower-info">
             <div class="flower-name">${b.flowerName}</div>
-            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+sb.count+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
+            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD <select class="unit-sel ${b.unit==='bunch'?'bunch':''}" data-idx="${idx}" ${isReadOnlyView?'disabled':''}><option value="pcs" ${b.unit==='pcs'?'selected':''}>pcs</option><option value="bunch" ${b.unit==='bunch'?'selected':''}>bunch</option></select>${b.unit==='bunch'?' <span class="spb-note" data-idx="'+idx+'">1 bunch = '+b.spb+' pcs ✎</span>':''}${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+sb.count+' pcs'+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
           </div>
           <div class="flower-inputs">
-            <input type="text" inputmode="decimal" placeholder="Count" value="${b.physicalCount}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="${b.unit==='bunch'?'Bunch':'Count'}" value="${b.physicalCount}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="+" class="add-input" data-idx="${idx}" data-field="addCount" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="Waste" value="${b.wastage}" data-idx="${idx}" data-field="wastage" id="waste-${idx}" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="+" class="add-input add-waste" data-idx="${idx}" data-field="addWaste" ${isReadOnlyView?'disabled':''} />
@@ -425,6 +456,32 @@
 
     document.getElementById('itemsCountedLabel').textContent =
       '(' + backing.filter(b => (b.physicalCount !== '' && !isNaN(b.physicalCount)) || (b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0)).length + ' counted)';
+
+    function askSpb(b, cur){
+      const v = prompt('How many pieces are in 1 bunch of ' + b.flowerName + '?', cur || '');
+      const n = Number(String(v||'').trim());
+      return (v !== null && isFinite(n) && n >= 1) ? n : 0;
+    }
+    el.querySelectorAll('.unit-sel').forEach(sel => sel.addEventListener('change', e=>{
+      const b = backing[Number(sel.dataset.idx)], to = sel.value;
+      if(to === b.unit) return;
+      let n = b.spb || knownSpb(b.flowerName);
+      if(to === 'bunch'){
+        n = askSpb(b, n); if(!n){ sel.value = 'pcs'; return; }
+        b.spb = n;
+        if(b.physicalCount !== '' && !isNaN(b.physicalCount)) b.physicalCount = String(r3(Number(b.physicalCount)/n));
+        if(b.wastage !== '' && !isNaN(b.wastage)) b.wastage = String(r3(Number(b.wastage)/n));
+      } else {
+        if(b.physicalCount !== '' && !isNaN(b.physicalCount)) b.physicalCount = String(r3(Number(b.physicalCount)*mult(b)));
+        if(b.wastage !== '' && !isNaN(b.wastage)) b.wastage = String(r3(Number(b.wastage)*mult(b)));
+      }
+      b.unit = to; saveUnitPref(b.flowerName, to, b.spb || n || 0);
+      hasBeenEdited = true; renderFlowerList(); renderSummary();
+    }));
+    el.querySelectorAll('.spb-note').forEach(sp => sp.addEventListener('click', ()=>{
+      const b = backing[Number(sp.dataset.idx)], n = askSpb(b, b.spb); if(!n) return;
+      b.spb = n; saveUnitPref(b.flowerName, 'bunch', n); renderFlowerList(); renderSummary();
+    }));
 
     el.querySelectorAll('input').forEach(inp => {
       inp.addEventListener('input', e=>{
@@ -479,8 +536,8 @@
     backing.forEach(b => {
       const hasCount = b.physicalCount !== '' && !isNaN(b.physicalCount);
       const hasWastage = b.wastage !== '' && !isNaN(b.wastage);
-      if(hasCount) inventoryTotal += Number(b.physicalCount) * b.legacyRate;
-      if(hasWastage) wastageCostTotal += Number(b.wastage) * b.legacyRate;
+      if(hasCount) inventoryTotal += Number(b.physicalCount) * mult(b) * b.legacyRate;
+      if(hasWastage) wastageCostTotal += Number(b.wastage) * mult(b) * b.legacyRate;
       if(hasCount || hasWastage) itemsCounted++;
     });
     document.getElementById('sumInventory').textContent = fmtBD(inventoryTotal);
@@ -526,7 +583,7 @@
       (b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0)
     );
     // Add this round on top of what was already saved this session (the server replaces the day's row per flower)
-    const toSave = entered.map(b => {
+    const toSave = entered.map(asPcs).map(b => {
       const sb = savedBase[baseKey(b.flowerName)] || {count:0, waste:0};
       const hasC = b.physicalCount !== '' && !isNaN(b.physicalCount);
       const hasW = b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0;
@@ -586,13 +643,16 @@
       ? `<tr><td>${toPrint.length + 1}</td><td></td><td>Counted By</td><td>${countedByValue}</td></tr>`
       : '';
 
-    document.getElementById('pvBody').innerHTML = toPrint.map((b,i) => `
+    const pcsRows = toPrint.map(asPcs);
+    document.getElementById('pvBody').innerHTML = pcsRows.map((b,i) => {
+      const o = toPrint[i], isB = mult(o) !== 1, note = (v) => isB ? ' (' + v + ' bunch)' : '';
+      return `
       <tr>
         <td>${i+1}</td><td>${b.flowerName}</td>
-        <td>${b.physicalCount === '' ? 'N/A' : b.physicalCount}</td>
-        <td>${b.wastage === '' || Number(b.wastage) === 0 ? '' : b.wastage}</td>
-      </tr>`).join('') + countedByRow;
-    return { dateVal, toPrint };
+        <td>${b.physicalCount === '' ? 'N/A' : b.physicalCount + note(o.physicalCount)}</td>
+        <td>${b.wastage === '' || Number(b.wastage) === 0 ? '' : b.wastage + note(o.wastage)}</td>
+      </tr>`; }).join('') + countedByRow;
+    return { dateVal, toPrint: pcsRows };
   }
 
   document.getElementById('printBtn').addEventListener('click', async ()=>{
