@@ -232,7 +232,8 @@
   function wxPick(key, def) { let v = null; try { v = localStorage.getItem(key); } catch (e) {} return WX_PLACES[v] ? v : def; }
   function weatherHtml() {
     const p1 = wxPick('lbWxP1', 'bh'), p2 = wxPick('lbWxP2', 'spl');
-    return '<div class="lb-menu-weather"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
+    let hid = false; try { hid = localStorage.getItem('lbWxHide') === '1'; } catch (e) {}
+    return '<div class="lb-menu-weather' + (hid ? ' lbw-hid' : '') + '"><button type="button" class="lbw-tg" aria-label="Hide or show weather"><span class="lbw-sum"></span><span class="lbw-chev">⌃</span></button><div class="lbw-wrap"><div class="lbw-body"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
       '<div class="lbw-row"><span class="lbw-ico"></span>' +
       '<span class="lbw-main"><span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
       '<span class="lbw-feels">Feels like --</span></span>' +
@@ -240,7 +241,7 @@
       '<div class="lbw-foot"><span class="lbw-when">Weather</span><span class="lbw-cond"></span></div>' +
       '<div class="lbw-upd"></div>' +
       '<div class="lbw2"><span class="lbw2-ico"></span><span class="lbw2-info"><span class="lbw2-place">' + WX_PLACES[p2].f + ' <span class="lbw2-pn">' + WX_PLACES[p2].n + '</span> ▾<select class="lbw-sel" data-k="lbWxP2" aria-label="Change place">' + wxOpts(p2) + '</select></span><span class="lbw2-time">--</span></span>' +
-      '<span class="lbw2-r"><span class="lbw2-t"><b>--</b></span><span class="lbw2-c"></span></span></div></div>';
+      '<span class="lbw2-r"><span class="lbw2-t"><b>--</b></span><span class="lbw2-c"></span></span></div></div></div></div>';
   }
   const WX_TXT = { 0: 'Sunny', 1: 'Mostly sunny', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers', 95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' };
   const WX_TTL = 5 * 60000;   // weather is re-fetched when older than 5 minutes
@@ -282,6 +283,7 @@
         const key = d.code + '|' + isNightIn(T1) + '|' + p1;
         if (lastIcon !== key) { lastIcon = key; withHero(() => LBHero3D.weather(box.querySelector('.lbw-ico'), d.code, d.t, T1)); }
       }
+      sumPaint();
       if (cur2) {
         const d = cur2.d;
         box.querySelector('.lbw2-t b').textContent = conv(d.t) + '°' + unit.toUpperCase();
@@ -289,7 +291,17 @@
         const key = d.code + '|' + isNightIn(T2) + '|' + p2;
         if (lastIcon2 !== key) { lastIcon2 = key; withHero(() => LBHero3D.weather(box.querySelector('.lbw2-ico'), d.code, d.t, T2)); }
       }
+      sumPaint();
     };
+    const sumPaint = () => {
+      const el = box.querySelector('.lbw-sum'); if (!el) return;
+      el.textContent = WX_PLACES[p1].f + ' ' + (cur ? conv(cur.d.t) + '°' : '--') + '  ·  ' + WX_PLACES[p2].f + ' ' + (cur2 ? conv(cur2.d.t) + '°' : '--') + '  ' + (cur ? condTxt(cur.d.code, WX_PLACES[p1].tz) : '');
+    };
+    const tg = box.querySelector('.lbw-tg');
+    if (tg) tg.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const h = box.classList.toggle('lbw-hid'); try { localStorage.setItem('lbWxHide', h ? '1' : '0'); } catch (x) {}
+    });
     box.querySelectorAll('.lbw-u i').forEach(i => i.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation(); unit = i.getAttribute('data-u'); try { localStorage.setItem('lbWxUnit', unit); } catch (x) {} paint();
     }));
@@ -367,6 +379,12 @@
       '.lbw-row{flex-wrap:wrap;row-gap:6px;}.lbw-det{min-width:0;}.lbw-temp{white-space:nowrap;}.lbw-feels{white-space:normal;}' +
       '.lbw2-place{overflow:hidden;text-overflow:ellipsis;max-width:190px;}.lbw2-r{flex:0 0 auto;}' +
       '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:#3a2a2e;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
+      '.lb-menu-weather{position:relative;}' +
+      '.lbw-wrap{display:grid;grid-template-rows:1fr;transition:grid-template-rows .32s ease,opacity .25s ease;opacity:1;}.lbw-body{overflow:hidden;min-height:0;}' +
+      '.lbw-hid .lbw-wrap{grid-template-rows:0fr;opacity:0;}' +
+      '.lbw-tg{position:absolute;top:0;right:4px;z-index:3;display:flex;align-items:center;gap:8px;border:0;background:rgba(128,128,128,.14);color:inherit;border-radius:999px;padding:2px 9px;font:600 12px inherit;cursor:pointer;line-height:1.4;}' +
+      '.lbw-sum{display:none;font-size:12.5px;font-weight:600;}.lbw-chev{display:inline-block;transition:transform .3s;font-size:13px;}' +
+      '.lbw-hid .lbw-tg{position:static;width:100%;justify-content:space-between;padding:7px 12px;border-radius:12px;}.lbw-hid .lbw-sum{display:inline;}.lbw-hid .lbw-chev{transform:rotate(180deg);}' +
       '.lbw-row{display:flex;align-items:center;gap:10px;}' +
       '.lbw-ico{flex:0 0 54px;width:54px;height:54px;display:block;}' +
       '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:54px!important;height:54px!important;}' +
