@@ -10,86 +10,143 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Brain Vault</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c; --ink:#2f2024; --muted:#8a7078; --line:#f0dede; --ok:#3d7a4f; --err:#c0392b; }
+  :root{ --plum:#2a1520; --plum-2:#3b1d2c; --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c; --ink:#2f2024; --muted:#8a7078; --line:#efdfde; --paper:#fffdfc; --ok:#3d7a4f; --err:#c0392b; }
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
-  body{padding:22px 16px 60px;}
-  .wrap{max-width:1100px;margin:0 auto;}
-  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
-  .brand{display:flex;align-items:center;gap:10px;}
-  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;font-size:18px;}
-  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
-  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
-  .layout{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start;}
-  @media(max-width:820px){.layout{grid-template-columns:1fr}}
-  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
-  input,textarea,select{font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fdf9f8;color:var(--ink);outline:none;width:100%}
+  html,body{margin:0;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',system-ui,sans-serif;color:var(--ink);}
+  body{min-height:100vh}
+  button{font:inherit}
+  :focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+
+  .stage{max-width:1600px;margin:0 auto;padding:14px 16px 28px;display:grid;gap:14px;grid-template-columns:1fr}
+  .head{display:flex;align-items:center;gap:12px;padding-left:54px;min-height:44px}
+  .head .logo{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;font-size:18px;flex:none}
+  .head h1{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin:0;letter-spacing:.01em}
+  .head .count{font-size:12px;color:var(--muted);margin-left:6px}
+  .head .sp{flex:1}
+  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:9px 12px;border-radius:10px;background:#fff}
+
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 34px rgba(158,47,74,.08);min-height:0}
+  input,textarea,select{font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fdf9f8;color:var(--ink);outline:none;width:100%}
   input:focus,textarea:focus{border-color:var(--rose)}
-  .btn{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
-  .btn.primary{background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff}
+  .btn{border:0;border-radius:11px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;transition:transform .15s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;box-shadow:0 6px 16px rgba(158,47,74,.2)}
   .btn.ghost{background:#f6eeee;color:var(--rose-dark)}
   .btn.danger{background:#fdecea;color:var(--err)}
-  .btn:disabled{opacity:.55}
-  .side-tools{display:flex;gap:8px;margin-bottom:10px}
-  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .btn:disabled{opacity:.55;transform:none}
+
+  /* ---- left: the list ---- */
+  #side{display:flex;flex-direction:column;padding:16px 14px 10px}
+  .side-tools{display:flex;gap:8px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 8px}
   .tag{border:1px solid var(--line);background:#fff;border-radius:20px;padding:3px 10px;font-size:11.5px;cursor:pointer;color:var(--muted)}
   .tag.on{background:var(--rose);color:#fff;border-color:var(--rose)}
-  .nlist{max-height:62vh;overflow:auto;margin:0 -6px}
-  .nitem{display:block;padding:9px 10px;border-radius:10px;cursor:pointer;text-decoration:none;color:var(--ink)}
+  .nlist{flex:1;min-height:0;overflow:auto;margin:0 -6px;padding:0 6px}
+  .nitem{display:block;padding:10px 12px;border-radius:14px;cursor:pointer;text-decoration:none;color:var(--ink);border:1px solid transparent}
   .nitem:hover{background:#fdf1f0}
-  .nitem.cur{background:#fbe4e6}
-  .nitem b{display:block;font-size:13.5px}
+  .nitem.cur{background:#fbe4e6;border-color:#f3cdd2}
+  .nitem b{display:block;font-size:13.5px;font-weight:600}
   .nitem small{color:var(--muted);font-size:11px}
   .empty{color:var(--muted);font-size:13px;padding:18px 6px;line-height:1.6}
-  .note-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}
-  .note-head h1{font-family:'Fraunces',serif;font-size:26px;margin:0;line-height:1.2}
-  .meta{font-size:11.5px;color:var(--muted);margin-bottom:14px}
-  .meta .tg{display:inline-block;background:#fdf1f0;color:var(--rose-dark);border-radius:20px;padding:1px 8px;margin-right:4px}
-  .md{font-size:14px;line-height:1.65}
-  .md h1,.md h2,.md h3{font-family:'Fraunces',serif;margin:18px 0 6px}
-  .md h1{font-size:22px}.md h2{font-size:18px}.md h3{font-size:15.5px}
-  .md p{margin:8px 0}
-  .md ul,.md ol{margin:8px 0 8px 20px;padding:0}
-  .md code{background:#f6eeee;border-radius:5px;padding:1px 5px;font-size:12.5px}
+
+  /* ---- middle: the note ---- */
+  #main{padding:26px 34px 30px;overflow:auto}
+  .note-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+  .note-head h1{font-family:'Fraunces',serif;font-size:30px;font-weight:700;margin:0;line-height:1.15;max-width:30ch}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .meta .tg{display:inline-block;background:#fdf1f0;color:var(--rose-dark);border-radius:20px;padding:1px 9px;margin-right:5px}
+  .md{font-size:14.5px;line-height:1.72;max-width:76ch}
+  .md h1,.md h2,.md h3{font-family:'Fraunces',serif;margin:22px 0 6px;color:var(--plum)}
+  .md h1{font-size:23px}.md h2{font-size:19px}.md h3{font-size:16px}
+  .md p{margin:9px 0}
+  .md ul,.md ol{margin:9px 0 9px 20px;padding:0}
+  .md li{margin:3px 0}
+  .md code{background:#f6eeee;border-radius:6px;padding:1px 6px;font-size:12.5px}
   .md a.wl{color:var(--rose-dark);font-weight:600;text-decoration:none;border-bottom:1px solid var(--rose)}
   .md a.wl.miss{color:var(--muted);border-bottom:1px dashed var(--muted);font-weight:500}
-  .codebox{border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden;background:#fbf7f6}
-  .codebox .ch{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f6eeee;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-  .codebox .copy{border:0;background:var(--rose);color:#fff;border-radius:8px;padding:5px 10px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;letter-spacing:0;text-transform:none}
-  .codebox pre{margin:0;padding:12px;overflow:auto;font-size:12.5px;line-height:1.5;max-height:420px}
-  .back{margin-top:22px;border-top:1px dashed var(--line);padding-top:12px;font-size:12.5px}
-  .back a{display:inline-block;margin:3px 8px 3px 0;color:var(--rose-dark);text-decoration:none;font-weight:600}
-  .edit-grid{display:grid;gap:10px}
-  textarea.body{min-height:360px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55;resize:vertical}
+  .codebox{border-radius:14px;margin:14px 0;overflow:hidden;background:var(--plum);color:#f6e7ea}
+  .codebox .ch{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:rgba(255,255,255,.07);font-size:11.5px;color:rgba(255,255,255,.62)}
+  .codebox .copy{border:0;background:var(--rose);color:#fff;border-radius:8px;padding:5px 11px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+  .codebox pre{margin:0;padding:14px;overflow:auto;font-size:12.5px;line-height:1.55;max-height:420px}
+  .codebox code{background:none;padding:0;color:inherit;font-size:inherit}
+  .edit-grid{display:grid;gap:10px;max-width:860px}
+  textarea.body{min-height:340px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.55;resize:vertical}
   .msg{font-size:12.5px;margin-top:8px;min-height:1em}.msg.err{color:var(--err)}.msg.ok{color:var(--ok)}
-  .hint{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .hint{font-size:12px;color:var(--muted);line-height:1.6}
+  .home h2{font-family:'Fraunces',serif;font-size:30px;font-weight:700;margin:0 0 8px}
+
+  /* ---- right: the map ---- */
+  #map{position:relative;display:flex;flex-direction:column;border-radius:24px;background:radial-gradient(120% 90% at 50% 30%,var(--plum-2) 0%,var(--plum) 62%,#1e0e17 100%);color:#fff;padding:16px 16px 14px;overflow:hidden;box-shadow:0 22px 50px rgba(42,21,32,.28);min-height:0}
+  #map .cap{font-size:12px;color:rgba(255,255,255,.62)}
+  #map .cap b{color:#fff;font-weight:600}
+  #gwrap{flex:1;min-height:200px;display:grid;place-items:center}
+  #gsvg{width:100%;height:100%;max-height:100%;overflow:visible}
+  #gsvg .edge{fill:none;stroke:rgba(255,255,255,.16);stroke-width:1}
+  #gsvg .edge.on{stroke:#f6a7b8;stroke-width:1.8;stroke-opacity:.95}
+  #gsvg .node{cursor:pointer;outline:none}
+  #gsvg .node circle{fill:rgba(255,255,255,.5);transition:r .15s,filter .15s}
+  #gsvg .node.nb circle{fill:var(--gold-light)}
+  #gsvg .node.cur circle{fill:#ff8fa8;filter:drop-shadow(0 0 9px #ff8fa8)}
+  #gsvg .node text{font-size:10.5px;fill:rgba(255,255,255,.72);pointer-events:none;font-family:'Space Grotesk',sans-serif}
+  #gsvg .node.cur text{fill:#fff;font-weight:700}
+  #gsvg .node:hover circle,#gsvg .node:focus circle{filter:drop-shadow(0 0 8px #fff)}
+  #gname{font-family:'Fraunces',serif;font-weight:700;font-size:16px;line-height:1.25;min-height:2.5em;text-align:center;margin:4px 0 8px;overflow-wrap:anywhere}
+  #links{max-height:34%;overflow:auto;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;font-size:12.5px}
+  #links h4{font-family:'Fraunces',serif;font-size:13px;margin:0 0 6px;color:rgba(255,255,255,.75)}
+  #links a{display:inline-block;margin:2px 6px 4px 0;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:#fff;text-decoration:none;font-size:12px}
+  #links a:hover{background:rgba(255,255,255,.2)}
+  #links .none{color:rgba(255,255,255,.5)}
+  #links .grp{margin-bottom:8px}
+
+  /* ---- desktop: one screen, no page scrolling ---- */
+  @media (min-width:1000px) and (min-height:560px){
+    html,body{height:100%;overflow:hidden}
+    .stage{height:100dvh;max-width:none;padding:14px 22px 20px;grid-template-columns:300px minmax(0,1fr) 330px;grid-template-rows:auto minmax(0,1fr)}
+    .head{grid-column:1/-1}
+  }
+  @media (max-width:999px){
+    .nlist{max-height:34vh}
+    #map{order:3;min-height:420px}
+    #main{padding:20px 18px 24px}
+    .note-head h1{font-size:25px}
+    .head{flex-wrap:wrap}
+  }
+  @media (prefers-reduced-motion:reduce){ .btn,#gsvg .node circle{transition:none} }
 </style>
 </head>
 <body>
-<script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
-<div class="wrap">
-  <div class="topbar">
-    <div class="brand"><div class="logo">🧠</div><b>Brain Vault</b></div>
+<script src="shared/nav.js" data-standalone data-shift=".head"></script>
+<main class="stage">
+  <header class="head">
+    <div class="logo" aria-hidden="true">🧠</div>
+    <h1>Brain Vault</h1>
+    <span class="count" id="count"></span>
+    <span class="sp"></span>
     <a class="backlink" href="user-admin.html">← User Management</a>
-  </div>
+  </header>
 
-  <div class="layout">
-    <div class="card" id="side">
-      <div class="side-tools">
-        <input type="search" id="q" placeholder="Search notes…">
-        <button class="btn primary" id="newBtn" style="white-space:nowrap">+ New</button>
-      </div>
-      <div class="tags" id="tagBar"></div>
-      <div class="nlist" id="nlist"></div>
+  <section class="panel" id="side" aria-label="Notes">
+    <div class="side-tools">
+      <input type="search" id="q" placeholder="Search notes…" aria-label="Search notes">
+      <button class="btn primary" id="newBtn" type="button" style="white-space:nowrap">+ New</button>
     </div>
+    <div class="tags" id="tagBar"></div>
+    <div class="nlist" id="nlist"></div>
+  </section>
 
-    <div class="card" id="main">
-      <div class="empty" id="loading">Loading…</div>
-    </div>
-  </div>
-</div>
+  <section class="panel" id="main" aria-live="polite">
+    <div class="empty" id="loading">Loading…</div>
+  </section>
+
+  <aside id="map" aria-label="Map of linked notes">
+    <div class="cap"><b>Map</b> · every dot is a note, every line is a [[link]]</div>
+    <div id="gwrap"><svg id="gsvg" viewBox="0 0 320 320" role="group" aria-label="Notes and their links"></svg></div>
+    <div id="gname"></div>
+    <div id="links"></div>
+  </aside>
+</main>
 
 <!-- Starter notes (plain text, copied into the vault once by the "Add starter notes" button) -->
 <script type="text/plain" class="seed" data-title="System map" data-tags="core,system">
@@ -192,57 +249,6 @@ from public.duty_schedule_archive
 where week_of >= date '2026-10-01';
 ```
 </script>
-<script type="text/plain" class="seed" data-title="Usage limits & storage" data-tags="supabase,limits,chat">
-# Usage limits & storage
-
-Supabase **free plan**: 1 GB file storage, 500 MB database, 5 GB bandwidth a month. The system protects itself — see [[System map]].
-
-## What is already automatic
-- **Chat photos/voice:** max **30 per person per day**; each file max 1.5 MB; voice max 60 s.
-- Chat media is **deleted after 30 days** (shows as "expired").
-- **Storage guard:** when storage reaches **850 MB**, photo/voice sending pauses for everyone (text and GIFs still work).
-- **Banner for you** (admin/IT) when storage or database reaches **70%**.
-- Staff see a banner when they have 5 or fewer photo/voice sends left for the day.
-- Old duty schedule is archived/cleaned monthly — [[Monthly schedule cleanup (SQL)]].
-
-## To change a limit
-Edit the numbers at the top of the `chat` function: `MEDIA_PER_DAY`, `MAX_MEDIA_BYTES`, `RETENTION_DAYS`, `STORAGE_STOP_BYTES`.
-
-## 1. Check how full we are
-```sql
-select pg_size_pretty((public.lb_usage()->>'db_bytes')::bigint) as database,
-       pg_size_pretty((public.lb_usage()->>'storage_bytes')::bigint) as storage,
-       pg_size_pretty((public.lb_usage()->>'chat_bytes')::bigint) as chat_media;
-```
-
-## 2. What is the biggest table?
-```sql
-select relname, pg_size_pretty(pg_total_relation_size(oid)) as size
-from pg_class where relkind = 'r' and relnamespace = 'public'::regnamespace
-order by pg_total_relation_size(oid) desc limit 10;
-```
-
-## 3. Emergency: free chat storage now
-Marks every chat photo/voice older than 7 days as expired. Then delete the files in Supabase → Storage → `chat-media` (select all → Delete).
-```sql
-update public.chat_messages
-set media_expired = true, media_path = null
-where media_path is not null and created_at < now() - interval '7 days';
-```
-</script>
-<script type="text/plain" class="seed" data-title="Security to-do" data-tags="security,todo">
-# Security to-do
-
-Things still open (tick them off by editing this note):
-- [ ] Change the `AUTH_TOKEN` secret (rotate it)
-- [ ] Remove the old legacy admin password
-- [ ] Add `OPENAI_API_KEY` for `nova-fast`
-- [ ] Set `GIF_API_KEY` secret, then test GIFs and stickers in chat
-- [ ] Legal review of the policy pages; mention voice/photos kept for 30 days in the privacy policy
-- [ ] Optional: delete the old backup table `duty_schedule_backup_20261008`
-
-See [[System map]] and [[Usage limits & storage]].
-</script>
 
 <script>
 (function(){
@@ -250,11 +256,19 @@ See [[System map]] and [[Usage limits & storage]].
   let notes = [], curId = null, editing = false, tagFilter = '';
 
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
   async function api(params){
-    const body = new URLSearchParams(Object.assign({}, params, { token: token() }));
-    const res = await fetch(LB_CONFIG.BRAIN_API, { method: 'POST', body });
-    const d = await res.json();
-    return d;
+    // If the 15-minute admin unlock has run out the server answers "reauth". Do NOT reload the page (that made it blink in a loop):
+    // the admin gate shows the password box by itself, so wait for it to be unlocked and then ask again.
+    for(let reauths = 0; ; ){
+      const body = new URLSearchParams(Object.assign({}, params, { token: token() }));
+      const res = await fetch(LB_CONFIG.BRAIN_API, { method: 'POST', body });
+      const d = await res.json();
+      if(!(d && d.reauth)) return d;
+      if(++reauths > 8) return { success: false, error: 'Your admin unlock has expired. Refresh the page and enter your password.' };
+      await sleep(1500);
+      while(document.documentElement.classList.contains('lbgate-locked')) await sleep(700);
+    }
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const byTitle = t => notes.find(n => n.title.toLowerCase() === String(t).trim().toLowerCase());
@@ -307,17 +321,57 @@ See [[System map]] and [[Usage limits & storage]].
     $('tagBar').querySelectorAll('.tag').forEach(el => el.addEventListener('click', () => { tagFilter = tagFilter === el.dataset.t ? '' : el.dataset.t; renderList(); }));
     const list = notes.filter(n => (!tagFilter || (n.tags || []).includes(tagFilter)) && (!q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)));
     $('nlist').innerHTML = list.length ? list.map(n => '<a class="nitem' + (n.id === curId ? ' cur' : '') + '" href="#n' + n.id + '"><b>' + esc(n.title) + '</b><small>' + esc(fmt(n.updatedAt)) + ((n.tags || []).length ? ' · ' + (n.tags || []).map(t => '#' + esc(t)).join(' ') : '') + '</small></a>').join('') : '<div class="empty">No notes found.</div>';
+    $('count').textContent = notes.length ? notes.length + (notes.length === 1 ? ' note' : ' notes') : '';
+    drawMap();
+  }
+
+  // ---------- map of linked notes ----------
+  function linksOf(n){   // titles written as [[...]] in this note that exist in the vault
+    const out = [], re = /\[\[([^\]]+)\]\]/g; let m;
+    while((m = re.exec(n.body || ''))){ const t = byTitle(m[1]); if(t && t.id !== n.id && out.indexOf(t) === -1) out.push(t); }
+    return out;
+  }
+  function drawMap(){
+    const svg = $('gsvg'), N = notes.slice().sort((a, b) => a.title.localeCompare(b.title)), n = N.length;
+    if(!n){ svg.innerHTML = ''; $('gname').textContent = 'Nothing here yet'; $('links').innerHTML = '<div class="none">Notes you link with [[double brackets]] show up here as a map.</div>'; return; }
+    const R = n === 1 ? 0 : 104, pos = {};
+    N.forEach((x, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n; pos[x.id] = { x: 160 + R * Math.cos(a), y: 160 + R * Math.sin(a) }; });
+    const cur = notes.find(x => x.id === curId) || null;
+    const out = cur ? linksOf(cur) : [], inc = cur ? notes.filter(x => x.id !== cur.id && linksOf(x).indexOf(cur) !== -1) : [];
+    const nb = {}; out.concat(inc).forEach(x => { nb[x.id] = 1; });
+    let edges = '';
+    N.forEach(a => linksOf(a).forEach(b => {
+      if(a.id > b.id && linksOf(b).indexOf(a) !== -1) return;          // draw a pair only once
+      const p = pos[a.id], q = pos[b.id], cx = 160 + ((p.x + q.x) / 2 - 160) * .3, cy = 160 + ((p.y + q.y) / 2 - 160) * .3;
+      const on = cur && (a.id === cur.id || b.id === cur.id);
+      edges += '<path class="edge' + (on ? ' on' : '') + '" d="M' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + q.x.toFixed(1) + ' ' + q.y.toFixed(1) + '"/>';
+    }));
+    const nodes = N.map(x => {
+      const c = cur && x.id === cur.id;
+      return '<g class="node' + (c ? ' cur' : nb[x.id] ? ' nb' : '') + '" tabindex="0" role="link" aria-label="' + esc(x.title) + '" data-id="' + x.id + '"><circle cx="' + pos[x.id].x.toFixed(1) + '" cy="' + pos[x.id].y.toFixed(1) + '" r="' + (c ? 11 : 7.5) + '"/>' + (n <= 10 || c || nb[x.id] ? '<text x="' + pos[x.id].x.toFixed(1) + '" y="' + (pos[x.id].y - (c ? 17 : 13)).toFixed(1) + '" text-anchor="middle">' + esc(x.title.length > 16 ? x.title.slice(0, 15) + '…' : x.title) + '</text>' : '') + '<circle cx="' + pos[x.id].x.toFixed(1) + '" cy="' + pos[x.id].y.toFixed(1) + '" r="16" style="fill:transparent;filter:none"/></g>';
+    }).join('');
+    svg.innerHTML = edges + nodes;
+    const def = cur ? cur.title : 'Pick a note';
+    $('gname').textContent = def;
+    svg.querySelectorAll('.node').forEach(g => {
+      const t = notes.find(x => String(x.id) === g.dataset.id);
+      const on = () => { $('gname').textContent = t.title; }, off = () => { $('gname').textContent = def; };
+      g.addEventListener('mouseenter', on); g.addEventListener('focus', on); g.addEventListener('mouseleave', off); g.addEventListener('blur', off);
+      g.addEventListener('click', () => { location.hash = '#n' + t.id; });
+      g.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); location.hash = '#n' + t.id; } });
+    });
+    const chips = arr => arr.length ? arr.map(x => '<a href="#n' + x.id + '">' + esc(x.title) + '</a>').join('') : '<span class="none">None yet</span>';
+    $('links').innerHTML = cur ? '<div class="grp"><h4>Links to</h4>' + chips(out) + '</div><div class="grp"><h4>Linked from</h4>' + chips(inc) + '</div>' : '<div class="none">Pick a note to see what it connects to.</div>';
   }
 
   // ---------- main pane ----------
   function showNote(n){
     editing = false; curId = n.id;
-    const back = notes.filter(x => x.id !== n.id && new RegExp('\\[\\[\\s*' + n.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\]\\]', 'i').test(x.body));
     $('main').innerHTML =
       '<div class="note-head"><h1>' + esc(n.title) + '</h1><div style="display:flex;gap:8px"><button class="btn ghost" id="editBtn">✏️ Edit</button><button class="btn ghost" id="copyAll">Copy note</button></div></div>' +
       '<div class="meta">' + (n.tags || []).map(t => '<span class="tg">#' + esc(t) + '</span>').join('') + 'Updated ' + esc(fmt(n.updatedAt)) + (n.updatedBy && n.updatedBy !== 'seed' ? ' by ' + esc(n.updatedBy) : '') + '</div>' +
       '<div class="md" id="mdBox">' + md(n.body) + '</div>' +
-      (back.length ? '<div class="back">Linked from: ' + back.map(b => '<a href="#n' + b.id + '">' + esc(b.title) + '</a>').join('') + '</div>' : '');
+      '';
     $('editBtn').addEventListener('click', () => showEdit(n));
     $('copyAll').addEventListener('click', ev => copyText(n.body, ev.target));
     renderList();
@@ -352,11 +406,10 @@ See [[System map]] and [[Usage limits & storage]].
   function showHome(){
     curId = null; editing = false; renderList();
     if(!notes.length){
-      $('main').innerHTML = '<h1 style="font-family:Fraunces,serif;margin:0 0 6px">Your vault is empty</h1><p class="hint" style="font-size:13px">Notes live here: system rules, SQL you want to copy, monthly routines. Link them with [[double brackets]] like Obsidian.</p><button class="btn primary" id="seedBtn">Add starter notes</button><div class="msg" id="seedMsg"></div>';
+      $('main').innerHTML = '<div class="home"><h2>Your vault is empty</h2><p class="hint" style="font-size:13.5px;max-width:60ch">Notes live here: system rules, SQL you want to copy, monthly routines. Link them with [[double brackets]] like Obsidian and they appear on the map.</p><button class="btn primary" id="seedBtn">Add starter notes</button><div class="msg" id="seedMsg"></div></div>';
       $('seedBtn').addEventListener('click', seed);
     } else {
-      $('main').innerHTML = '<h1 style="font-family:Fraunces,serif;margin:0 0 6px">Brain Vault</h1><p class="hint" style="font-size:13px;line-height:1.7">Pick a note on the left, or press <b>+ New</b>.<br>Tip: put long SQL or code between three backticks and it gets a <b>Copy</b> button. Reminders can open a note straight from the banner (User Management → Reminders → Link).</p>' + (missingSeeds() ? '<button class="btn primary" id="seedBtn">Add ' + missingSeeds() + ' new starter note' + (missingSeeds() > 1 ? 's' : '') + '</button><div class="msg" id="seedMsg"></div>' : '');
-      if($('seedBtn')) $('seedBtn').addEventListener('click', seed);
+      $('main').innerHTML = '<div class="home"><h2>Brain Vault</h2><p class="hint" style="font-size:13.5px;line-height:1.7;max-width:60ch">Pick a note on the left or on the map, or press <b>+ New</b>.<br>Put long SQL or code between three backticks and it gets a <b>Copy</b> button. A reminder can open a note straight from the banner (User Management → Reminders → Link).</p></div>';
     }
   }
   async function copyText(text, btn){
@@ -371,12 +424,10 @@ See [[System map]] and [[Usage limits & storage]].
   });
 
   // ---------- starter notes ----------
-  function missingSeeds(){ let c = 0; document.querySelectorAll('script.seed').forEach(el => { if(!notes.some(n => n.title.toLowerCase() === el.dataset.title.toLowerCase())) c++; }); return c; }
   async function seed(){
     const btn = $('seedBtn'); btn.disabled = true; $('seedMsg').textContent = 'Adding…';
     let firstId = '', cleanupId = '';
     for(const el of document.querySelectorAll('script.seed')){
-      if(notes.some(n => n.title.toLowerCase() === el.dataset.title.toLowerCase())) continue;
       const d = await api({ action: 'noteSave', title: el.dataset.title, tags: el.dataset.tags, body: el.textContent.replace(/^\n/, '') });
       if(d.success && !firstId) firstId = d.id;
       if(d.success && el.dataset.title.indexOf('cleanup') !== -1) cleanupId = d.id;
@@ -385,7 +436,7 @@ See [[System map]] and [[Usage limits & storage]].
     try{
       const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}');
       const first = String(u.fullName || '').trim().split(/\s+/)[0];
-      if(cleanupId && first && !notes.length) await api({ action: 'adminSave', message: 'Monthly: upload next month’s schedule. The old-month cleanup runs by itself — the SQL code is in this note if you ever need to copy it.', audience: 'user:' + first, kind: 'monthly', dayOfMonth: 25, link: 'brain.html#n' + cleanupId });
+      if(cleanupId && first) await api({ action: 'adminSave', message: 'Monthly: upload next month’s schedule. The old-month cleanup runs by itself — the SQL code is in this note if you ever need to copy it.', audience: 'user:' + first, kind: 'monthly', dayOfMonth: 25, link: 'brain.html#n' + cleanupId });
     }catch(e){}
     await load(); location.hash = firstId ? '#n' + firstId : ''; route();
   }
@@ -398,16 +449,8 @@ See [[System map]] and [[Usage limits & storage]].
     if(nw){ return showEdit({ id: '', title: nw[1] ? decodeURIComponent(nw[1]) : '', tags: [], body: '' }); }
     showHome();
   }
-  const gateLocked = () => document.documentElement.classList.contains('lbgate-locked');
   async function load(){
-    let d = await api({ action: 'noteList' });
-    // Not unlocked yet (password box is showing) → wait for the password, then try again. No page reload.
-    for(let i = 0; d && d.reauth && i < 400; i++){
-      $('main').innerHTML = '<div class="empty">Enter your password to open the vault…</div>';
-      await new Promise(r => setTimeout(r, 1000));
-      if(gateLocked()) continue;
-      d = await api({ action: 'noteList' });
-    }
+    const d = await api({ action: 'noteList' });
     if(!d.success){ $('main').innerHTML = '<div class="empty">' + esc(d.error || 'Could not load the vault.') + '</div>'; return false; }
     notes = d.notes || []; renderList(); return true;
   }
