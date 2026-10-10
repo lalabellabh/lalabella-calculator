@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<script src="shared/admin-gate.js" data-title="System Health"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — System Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --rose:#c9506b; --rose-dark:#9e2f4a; --ink:#2f2024; --muted:#8a7078; --line:#f0dede; --ok:#3d7a4f; --warn:#b07d2b; --err:#c0392b; --okbg:#e8f4ec; --warnbg:#fbf1dc; --errbg:#fdecea; --infobg:#f3eeee; }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
+  body{padding:22px 16px 60px;}
+  .wrap{max-width:980px;margin:0 auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f1d38c,#d9a441);display:grid;place-items:center;font-size:18px;}
+  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
+  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 6px 18px rgba(158,47,74,.06);margin-bottom:14px;}
+  .card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 12px;}
+  .banner{display:flex;align-items:center;gap:14px;padding:18px;border-radius:18px;margin-bottom:14px;border:1px solid transparent}
+  .banner .big{font-size:34px;line-height:1}
+  .banner b{font-family:'Fraunces',serif;font-size:19px;display:block}
+  .banner span{font-size:12.5px;color:var(--muted)}
+  .banner.ok{background:var(--okbg);border-color:#cfe5d6}.banner.warn{background:var(--warnbg);border-color:#efdcae}.banner.fail{background:var(--errbg);border-color:#f3c6c1}.banner.load{background:#fff;border-color:var(--line)}
+  .btn{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff}
+  .btn:disabled{opacity:.55;cursor:default}
+  .banner .btn{margin-left:auto;white-space:nowrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+  .chk{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fffdfd}
+  .chk .top{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.fail{background:var(--err)}.dot.info{background:#b9a9ad}
+  .chk .val{font-size:16px;font-weight:700;margin:6px 0 2px;word-break:break-word}
+  .chk .det{font-size:12px;color:var(--muted);line-height:1.45}
+  .bar{height:7px;border-radius:5px;background:#f1e8e8;overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;border-radius:5px;background:var(--ok)}
+  .bar.warn i{background:var(--warn)}.bar.fail i{background:var(--err)}
+  .fns{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+  .fn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}
+  .fn b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .fn small{color:var(--muted)}
+  .fn.slow small{color:var(--warn);font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}.banner{flex-wrap:wrap}.banner .btn{margin-left:0}}
+  .note{font-size:12px;color:var(--muted);line-height:1.6}
+  .note li{margin-bottom:4px}
+  .err{color:var(--err);font-size:13px;padding:10px 0}
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><div class="logo">🩺</div><b>System Health</b></div>
+    <a class="backlink" href="user-admin.html">← User Management</a>
+  </div>
+
+  <div class="banner load" id="banner"><div class="big">⏳</div><div><b>Checking the system…</b><span>This takes a few seconds.</span></div></div>
+
+  <div class="grid" id="checks"></div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>Server functions</h3>
+    <div class="fns" id="fns"></div>
+  </div>
+
+  <div class="two">
+    <div class="card"><h3>File storage</h3><table id="buckets"></table></div>
+    <div class="card"><h3>Biggest tables</h3><table id="tables"></table></div>
+  </div>
+
+  <div class="card">
+    <h3>Things only the Supabase dashboard can show</h3>
+    <ul class="note">
+      <li><b>Plan and backups</b> — The Free plan usually has no backups you can restore from. Check Settings → Billing and Database → Backups.</li>
+      <li><b>Bandwidth (egress)</b> — Free plan allows about 5 GB a month. See Settings → Usage.</li>
+      <li><b>Paused project</b> — a Free project pauses after a week with no activity. If this page cannot load at all, open the dashboard and press Restore.</li>
+    </ul>
+    <div class="note" id="stamp"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  const fmtBytes = b => b >= 1073741824 ? (b/1073741824).toFixed(2) + ' GB' : b >= 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.max(0, Math.round(b/1024)) + ' KB';
+  const ICON = { ok:'✅', warn:'⚠️', fail:'❌' };
+  const TITLE = { ok:'All good', warn:'Needs attention', fail:'There is a problem' };
+  let busy = false, timer = null;
+
+  async function fetchReport(){
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 30000);
+    try{
+      const body = new URLSearchParams({ action:'report', token: token() });
+      const t0 = Date.now();
+      const res = await fetch(LB_CONFIG.HEALTH_API, { method:'POST', body, signal: ctrl.signal });
+      const d = await res.json();
+      d._rtt = Date.now() - t0;
+      return d;
+    } finally { clearTimeout(t); }
+  }
+
+  function render(d){
+    const ov = d.overall;
+    const problems = d.checks.filter(c => c.level === 'fail' || c.level === 'warn');
+    $('banner').className = 'banner ' + ov;
+    $('banner').innerHTML = '<div class="big">' + ICON[ov] + '</div><div><b>' + TITLE[ov] + '</b><span>' +
+      (problems.length ? esc(problems.map(c => c.label).join(' · ')) : 'Database, storage, server functions and scheduled jobs are all fine.') +
+      '</span></div><button class="btn" id="refresh">↻ Check again</button>';
+    $('refresh').addEventListener('click', load);
+
+    const cards = d.checks.map(c => {
+      const bar = c.pct != null ? '<div class="bar ' + (c.level === 'ok' ? '' : c.level) + '"><i style="width:' + Math.min(100, Math.max(1, c.pct)) + '%"></i></div>' : '';
+      return '<div class="chk"><div class="top"><span class="dot ' + c.level + '"></span>' + esc(c.label) + '</div>' +
+        '<div class="val">' + esc(c.value) + '</div>' + (c.detail ? '<div class="det">' + esc(c.detail) + '</div>' : '') + bar + '</div>';
+    });
+    cards.push('<div class="chk"><div class="top"><span class="dot ' + (d._rtt > 4000 ? 'warn' : 'ok') + '"></span>This device → server</div><div class="val">' + d._rtt + ' ms</div><div class="det">Whole check, including the server testing everything. Under 3 s is normal.</div></div>');
+    $('checks').innerHTML = cards.join('');
+
+    $('fns').innerHTML = d.functions.map(f =>
+      '<div class="fn' + (f.up && f.ms > 3000 ? ' slow' : '') + '"><span class="dot ' + (!f.up ? 'fail' : f.ms > 3000 ? 'warn' : 'ok') + '"></span><b title="' + esc(f.error) + '">' + esc(f.name) + '</b><small>' + (f.up ? f.ms + ' ms' : esc(f.error || 'down')) + '</small></div>').join('');
+
+    $('buckets').innerHTML = '<tr><th>Bucket</th><th class="n">Files</th><th class="n">Size</th></tr>' +
+      (d.buckets.length ? d.buckets.map(b => '<tr><td>' + esc(b.bucket) + '</td><td class="n">' + b.files + '</td><td class="n">' + fmtBytes(b.bytes) + '</td></tr>').join('') : '<tr><td colspan="3">No files yet.</td></tr>');
+    $('tables').innerHTML = '<tr><th>Table</th><th class="n">Rows</th><th class="n">Size</th></tr>' +
+      d.tables.map(t => '<tr><td>' + esc(t.name) + '</td><td class="n">' + t.rows.toLocaleString() + '</td><td class="n">' + fmtBytes(t.bytes) + '</td></tr>').join('');
+
+    $('stamp').textContent = 'Last checked ' + new Date(d.checkedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' · refreshes by itself every 2 minutes while this page is open.';
+  }
+
+  function showError(msg){
+    $('banner').className = 'banner fail';
+    $('banner').innerHTML = '<div class="big">❌</div><div><b>Could not run the check</b><span>' + esc(msg) + '</span></div><button class="btn" id="refresh">↻ Try again</button>';
+    $('refresh').addEventListener('click', load);
+  }
+
+  async function load(){
+    if(busy) return; busy = true;
+    const b = $('refresh'); if(b){ b.disabled = true; b.textContent = 'Checking…'; }
+    try{
+      const d = await fetchReport();
+      if(d && d.reauth){ location.reload(); return; }     // unlock expired → the admin gate asks for the password again
+      if(!d || !d.success){ showError((d && d.error) || 'The server did not answer.'); }
+      else render(d);
+    }catch(e){
+      showError(e && e.name === 'AbortError' ? 'The server took too long to answer (over 30 s). It may be down or paused.' : 'Could not reach the server. Check the internet connection, or the Supabase project may be paused.');
+    }finally{ busy = false; }
+  }
+
+  load();
+  timer = setInterval(() => { if(!document.hidden) load(); }, 120000);
+})();
+</script>
+</body>
+</html>
