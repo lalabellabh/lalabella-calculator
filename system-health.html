@@ -41,8 +41,17 @@
     padding:18px 18px 20px;display:flex;flex-direction:column;align-items:center;min-height:0;overflow:hidden;box-shadow:0 22px 50px rgba(42,21,32,.28)}
   .bloom .cap{align-self:stretch;display:flex;justify-content:space-between;gap:10px;font-size:12px;color:rgba(255,255,255,.62)}
   .bloom .cap b{color:#fff;font-weight:600}
-  .flower{position:relative;flex:1;min-height:0;width:100%;display:grid;place-items:center;padding:4px 0 14px}
-  .flower svg{width:100%;height:100%;max-height:100%;overflow:visible}
+  .flower{position:relative;flex:1;min-height:0;width:100%;display:grid;place-items:center;padding:6px 0 16px}
+  .fl{width:100%;height:100%;display:grid;place-items:center;animation:float 9s ease-in-out infinite}
+  .tilt{position:relative;height:80%;aspect-ratio:1;max-width:88%;transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));will-change:transform}
+  .tilt svg{width:100%;height:100%;overflow:visible;display:block}
+  .sheen{position:absolute;inset:6%;border-radius:50%;pointer-events:none;background:radial-gradient(circle at calc(50% + var(--cx,0) * 34%) calc(50% + var(--cy,0) * 34%),rgba(255,255,255,.13),transparent 52%)}
+  .ring{transform-origin:0 0}
+  .ring.out{animation:spin 150s linear infinite}
+  .ring.in{animation:spin 100s linear infinite reverse;translate:calc(var(--cx,0) * 7px) calc(var(--cy,0) * 7px)}
+  .flower:hover .ring{animation-play-state:paused}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
   .pt{outline:none;cursor:default}
   .pt path{stroke:var(--c);stroke-width:1.2;stroke-opacity:.9;transition:filter .2s,stroke-width .2s;transform-box:fill-box;transform-origin:50% 100%;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 45ms)}
   .pt.ok{--c:var(--p-ok)} .pt.warn{--c:var(--p-warn)} .pt.fail{--c:var(--p-fail)}
@@ -123,13 +132,14 @@
   @media (max-width:999px){
     .bloom{min-height:430px}
     .flower{min-height:300px}
+    .tilt{height:94%}
     .meters{grid-template-columns:1fr}
     .nums{grid-template-columns:repeat(2,1fr)}
     .two{grid-template-columns:1fr;gap:6px}
     .head{flex-wrap:wrap}
     .head .when{display:none}
   }
-  @media (prefers-reduced-motion:reduce){ .pt path{animation:none} .btn{transition:none} }
+  @media (prefers-reduced-motion:reduce){ .pt path,.ring,.fl{animation:none} .btn{transition:none} .tilt{transform:none} }
 </style>
 </head>
 <body>
@@ -146,7 +156,7 @@
 
   <section class="bloom" aria-label="Overall health">
     <div class="cap"><span id="capL"><b>Server functions</b> · outer petals</span><span id="capR"><b>Core checks</b> · inner petals</span></div>
-    <div class="flower" id="flower">
+    <div class="flower" id="flower"><div class="fl"><div class="tilt" id="tilt">
       <svg viewBox="0 0 400 400" id="svg" role="group" aria-label="One petal for each check">
         <defs>
           <linearGradient id="g-ok" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8fd0a6" stop-opacity=".12"/><stop offset="1" stop-color="#8fd0a6" stop-opacity=".92"/></linearGradient>
@@ -155,8 +165,9 @@
         </defs>
         <g id="petals" transform="translate(200 200)"></g>
       </svg>
+      <div class="sheen" aria-hidden="true"></div>
       <div class="core" id="core"><div class="big">Checking…</div><div class="sm">This takes a few seconds.</div></div>
-    </div>
+    </div></div></div>
     <div class="legend"><span><i style="background:var(--p-ok)"></i>Working</span><span><i style="background:var(--p-warn)"></i>Slow or filling up</span><span><i style="background:var(--p-fail)"></i>Down — petal wilts</span></div>
   </section>
 
@@ -219,7 +230,7 @@
     const fns = d.functions.map(f => ({ name: f.name, value: f.up ? f.ms + ' ms' : (f.error || 'not answering'), level: !f.up ? 'fail' : f.ms > 3000 ? 'warn' : 'ok' }));
     const core = d.checks.filter(c => ['functions','sessions','inactive'].indexOf(c.id) === -1)
       .map(c => ({ name: c.label, value: c.value, level: c.level === 'info' ? 'ok' : c.level }));
-    $('petals').innerHTML = ring(core, 54, 36, 180 / Math.max(1, core.length), 0) + ring(fns, 100, 86, 0, core.length);
+    $('petals').innerHTML = '<g class="ring in">' + ring(core, 54, 36, 180 / Math.max(1, core.length), 0) + '</g><g class="ring out">' + ring(fns, 100, 86, 0, core.length) + '</g>';
     const bad = d.checks.filter(c => c.level === 'fail' || c.level === 'warn');
     const down = d.functions.filter(f => !f.up).length;
     const sm = bad.length ? bad.slice(0, 2).map(c => c.label).join(', ') + (bad.length > 2 ? ' +' + (bad.length - 2) : '')
@@ -237,6 +248,28 @@
       p.addEventListener('touchstart', on, { passive:true });
     });
   }
+
+  // ---------- 3D tilt: the flower leans toward the pointer ----------
+  (function(){
+    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = $('tilt'), fl = $('flower');
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+    function step(){
+      cx += (tx - cx) * .12; cy += (ty - cy) * .12;
+      box.style.setProperty('--rx', (-cy * 11).toFixed(2) + 'deg');
+      box.style.setProperty('--ry', (cx * 14).toFixed(2) + 'deg');
+      box.style.setProperty('--cx', cx.toFixed(3)); box.style.setProperty('--cy', cy.toFixed(3));
+      raf = (Math.abs(tx - cx) > .003 || Math.abs(ty - cy) > .003) ? requestAnimationFrame(step) : 0;
+    }
+    const go = () => { if(!raf) raf = requestAnimationFrame(step); };
+    fl.addEventListener('pointermove', e => {
+      const r = fl.getBoundingClientRect();
+      tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - .5) * 2));
+      ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - .5) * 2));
+      go();
+    });
+    fl.addEventListener('pointerleave', () => { tx = 0; ty = 0; go(); });
+  })();
 
   // ---------- the sheet ----------
   function meter(c, caption){
