@@ -65,6 +65,8 @@
       '.lbcm-sub button{border:0;background:none;font-size:18px;padding:3px 7px;border-radius:8px;cursor:pointer}',
       '.lbcm-sub button.on{background:#fdf1f0}',
       '.lbcm-egrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}',
+      '.lbcm-egrid button,.lbcm-sub button{font-family:' + EMOJI_FONT + ',sans-serif}',
+      '.lbcb-msg,#lbcb-input{font-family:"Space Grotesk",Arial,"Noto Color Emoji",sans-serif}',
       '.lbcm-egrid button{border:0;background:none;font-size:22px;padding:4px 0;cursor:pointer;border-radius:8px;position:relative;touch-action:manipulation;user-select:none;-webkit-user-select:none}',
       '.lbcm-egrid button:hover{background:#fdf1f0}',
       '.lbcm-egrid button.fav::after{content:"★";position:absolute;right:1px;top:-1px;font-size:9px;color:#d9a441}',
@@ -334,12 +336,20 @@
     '😊': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😗 😋 😜 🤪 😎 🤩 🥳 😏 😌 😴 🤔 🤗 🤭 😮 😯 😲 😳 🥺 😢 😭 😤 😡 🤯 😱 😬 🙄 😷 🤒 🤧 🥱',
     '👍': '👍 👎 👌 ✌️ 🤞 🤟 🤙 👏 🙌 👐 🙏 💪 👋 🤝 ✋ 👊 ✊ 🫶 👀 💃 🕺 🏃 🙋 🙆 🙅 🤷 🤦',
     '🌸': '🌹 🥀 🌷 🌸 🌺 🌻 🌼 💐 🌿 🍀 🌱 🍃 🎀 🎁 🍫 🍬 🍭 🧁 🎂 🍰 🍩 🍪 ☕ 🧋 🍓 🍒 🍉',
-    '❤️': '❤️ 🧡 💛 💚 💙 💜 🤍 🖤 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ⚠️ ❗ ❓ 📦 🚚 🛵 📍 ⏰ 📅 📝 📸 💰 🎉 🎊'
+    '❤️': '❤️ 🧡 💛 💚 💙 💜 🤍 🖤 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ⚠️ ❗ ❓ 📦 🚚 🛵 📍 ⏰ 📅 📝 📸 💰 🎉 🎊',
+    // Newest emoji (Emoji 17.0 first, then back to 14.0). A phone or PC that is too old may show an empty box for the very newest ones.
+    '🆕': '🫪 🫯 🫍 🫈 🪊 🛘 🪎 🫩 🫆 🪾 🫜 🪉 🪏 🫟 🙂‍↔️ 🙂‍↕️ 🐦‍🔥 🍋‍🟩 🍄‍🟫 ⛓️‍💥 🫨 🩷 🩵 🩶 🫷 🫸 🫎 🫏 🪽 🐦‍⬛ 🪿 🪼 🪻 🫚 🫛 🪭 🪮 🪇 🪈 🪯 🛜 🫠 🫢 🫣 🫡 🫥 🥹 🫰 🫱 🫲 🫳 🫴 🫵 🫶 🪷 🫧 🪩 🧌 🪸 🪹 🪺 🫘 🫙 🛝 🛞 🛟 🪬 🪫 🩼 🩻'
   };
+  const EMOJI_FONT = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'";
 
-  // opts: {host (position:relative), toggleBtn, onEmoji(e), onGif(item, 'gif'|'sticker')}
+  // opts: {host (position:relative), toggleBtn (or toggleBtns[]), tabs (optional, e.g. ['emoji','sticker','fav']), onEmoji(e), onGif(item, 'gif'|'sticker')}
+  // picker.open('emoji'|'gif'|'sticker'|'fav') / picker.toggle(tab) can jump straight to a tab.
   function createPicker(opts){
     addStyle();
+    if (!document.getElementById('lbcm-emoji-font')) {      // fallback font so the newest emoji show on older devices
+      const lk = document.createElement('link'); lk.id = 'lbcm-emoji-font'; lk.rel = 'stylesheet';
+      lk.href = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap'; document.head.appendChild(lk);
+    }
     const root = el('div', 'lbcm-picker'); root.setAttribute('data-lb-theme-skip', '');
     const tabs = el('div', 'lbcm-tabs'), head = el('div', 'lbcm-head'), body = el('div', 'lbcm-body'), attr = el('div', 'lbcm-attr');
     root.append(tabs, head, body, attr);
@@ -350,7 +360,9 @@
     const gifState = { gif: null, sticker: null };       // {q, page, items, hasMore, provider, error, notConfigured, loading}
     let searchTimer = null;
 
-    const TABS = [['emoji', '😊'], ['gif', 'GIF'], ['sticker', 'Stickers'], ['fav', '⭐']];
+    const ALL_TABS = [['emoji', '😊'], ['gif', 'GIF'], ['sticker', 'Stickers'], ['fav', '⭐']];
+    const TABS = opts.tabs ? ALL_TABS.filter(function(t){ return opts.tabs.indexOf(t[0]) !== -1; }) : ALL_TABS;   // opts.tabs = e.g. ['emoji','sticker','fav']
+    if (opts.tabs && TABS.length && !TABS.some(function(t){ return t[0] === tab; })) tab = TABS[0][0];
     function drawTabs(){
       tabs.innerHTML = '';
       TABS.forEach(function(t){
@@ -464,9 +476,9 @@
     const api2 = {
       el: root,
       isOpen: function(){ return root.classList.contains('show'); },
-      open: function(){ root.classList.add('show'); loadFavs().then(function(){ if (api2.isOpen() && (tab === 'emoji' || tab === 'fav')) draw(); }); draw(); },
+      open: function(t){ if (t && TABS.some(function(x){ return x[0] === t; })) tab = t; root.classList.add('show'); loadFavs().then(function(){ if (api2.isOpen() && (tab === 'emoji' || tab === 'fav')) draw(); }); draw(); },
       close: function(){ root.classList.remove('show'); },
-      toggle: function(){ if (api2.isOpen()) api2.close(); else api2.open(); }
+      toggle: function(t){ if (typeof t !== 'string') t = undefined; if (api2.isOpen() && (!t || t === tab)) api2.close(); else api2.open(t); }
     };
     document.addEventListener('click', function(e){
       if (!api2.isOpen()) return;
@@ -474,7 +486,8 @@
       // clicked — so judge by the event's original path, not by "is the target still inside".
       const path = e.composedPath ? e.composedPath() : [];
       if (path.indexOf(root) !== -1 || !e.target.isConnected) return;
-      if (opts.toggleBtn && (opts.toggleBtn === e.target || opts.toggleBtn.contains(e.target))) return;
+      const tbs = [].concat(opts.toggleBtn || [], opts.toggleBtns || []);   // more than one button can open the picker
+      if (tbs.some(function(b){ return b === e.target || b.contains(e.target); })) return;
       api2.close();
     });
     return api2;
