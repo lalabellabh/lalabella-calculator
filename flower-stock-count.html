@@ -69,6 +69,9 @@
     background:#fff8ea !important;
   }
   .add-input::placeholder{ color:var(--gold); opacity:0.6; }
+  .add-waste{ color:#b3413f !important; border-color:#d98b89 !important; background:#fff1f0 !important; }
+  .add-waste::placeholder{ color:#b3413f; opacity:0.6; }
+  @media (max-width:420px){ .flower-inputs{ gap:4px; } .flower-inputs input{ width:50px; padding:6px 3px; } .add-input{ width:32px !important; } }
   .count-flash{ animation:countFlash 0.5s ease; }
   @keyframes countFlash{ 0%{ background:#eaf3ec; } 100%{ background:var(--blush); } }
   .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
@@ -261,6 +264,8 @@
   let hasCountDate = false;
   let isReadOnlyView = false;
   let hasBeenEdited = false;
+  let savedBase = {};         // flower -> {count,waste} already saved this session (branch|date); the server overwrites per flower/day, so new entries are ADDED on top of these
+  const baseKey = n => currentBranch + '|' + document.getElementById('countDate').value + '|' + String(n).trim().toLowerCase();
 
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
 
@@ -303,7 +308,7 @@
     const dateVal = document.getElementById('countDate').value;
     if(!dateVal){ alert('Please choose a Count Date first.'); return; }
 
-    await loadFlowerItemsAndList();
+    await loadFlowerItemsAndList(); savedBase = {};
 
     backing = stockList.map(s => ({
       flowerName: s.flowerName,
@@ -342,7 +347,7 @@
   document.getElementById('recallBtn').addEventListener('click', async ()=>{
     const dateVal = document.getElementById('countDate').value;
     if(!dateVal){ alert('Please choose a Count Date first.'); return; }
-    await loadFlowerItemsAndList();
+    await loadFlowerItemsAndList(); savedBase = {};
     const rows = await (await fetch(API_URL + '?action=getStockCountByDate&branch=' + currentBranch + '&date=' + dateVal)).json();
     if(!rows.length){ alert('No saved count for this branch/date.'); return; }
 
@@ -367,7 +372,7 @@
   document.getElementById('searchBtn').addEventListener('click', async ()=>{
     const dateVal = document.getElementById('countDate').value;
     if(!dateVal){ alert('Please choose a Count Date first.'); return; }
-    await loadFlowerItemsAndList();
+    await loadFlowerItemsAndList(); savedBase = {};
     const rows = await (await fetch(API_URL + '?action=getStockCountByDate&branch=' + currentBranch + '&date=' + dateVal)).json();
     if(!rows.length){ alert('No saved count for this branch/date.'); return; }
 
@@ -406,12 +411,13 @@
         <div class="flower-row">
           <div class="flower-info">
             <div class="flower-name">${b.flowerName}</div>
-            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD</div>
+            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+sb.count+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
           </div>
           <div class="flower-inputs">
             <input type="text" inputmode="decimal" placeholder="Count" value="${b.physicalCount}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="+" class="add-input" data-idx="${idx}" data-field="addCount" ${isReadOnlyView?'disabled':''} />
-            <input type="text" inputmode="decimal" placeholder="Waste" value="${b.wastage}" data-idx="${idx}" data-field="wastage" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="Waste" value="${b.wastage}" data-idx="${idx}" data-field="wastage" id="waste-${idx}" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="+" class="add-input add-waste" data-idx="${idx}" data-field="addWaste" ${isReadOnlyView?'disabled':''} />
           </div>
         </div>`;
       }).join('');
@@ -424,7 +430,7 @@
       inp.addEventListener('input', e=>{
         const idx = Number(e.target.dataset.idx);
         const field = e.target.dataset.field;
-        if(field === 'addCount') return; // handled separately below, not stored directly
+        if(field === 'addCount' || field === 'addWaste') return; // handled separately below, not stored directly
         backing[idx][field] = e.target.value;
         hasBeenEdited = true;
         renderSummary();
@@ -438,12 +444,13 @@
     // head before typing one final number.
     function applyAddCount(input, keepFocus){
       const idx = Number(input.dataset.idx);
+      const isWaste = input.dataset.field === 'addWaste';
       const addVal = parseFloat(input.value);
       if(isNaN(addVal) || addVal === 0){ input.value = ''; return; }
-      const current = parseFloat(backing[idx].physicalCount) || 0;
-      const newTotal = current + addVal;
-      backing[idx].physicalCount = String(newTotal);
-      const countInput = document.getElementById('count-' + idx);
+      const current = parseFloat(isWaste ? backing[idx].wastage : backing[idx].physicalCount) || 0;
+      const newTotal = Math.round((current + addVal) * 1000) / 1000;
+      if(isWaste) backing[idx].wastage = String(newTotal); else backing[idx].physicalCount = String(newTotal);
+      const countInput = document.getElementById((isWaste ? 'waste-' : 'count-') + idx);
       if(countInput){
         countInput.value = newTotal;
         countInput.classList.remove('count-flash');
@@ -514,10 +521,18 @@
     const dateVal = document.getElementById('countDate').value;
     if(!dateVal || backing.length === 0){ alert('Nothing to save.'); return; }
 
-    const toSave = backing.filter(b =>
+    const entered = backing.filter(b =>
       (b.physicalCount !== '' && !isNaN(b.physicalCount)) ||
       (b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0)
     );
+    // Add this round on top of what was already saved this session (the server replaces the day's row per flower)
+    const toSave = entered.map(b => {
+      const sb = savedBase[baseKey(b.flowerName)] || {count:0, waste:0};
+      const hasC = b.physicalCount !== '' && !isNaN(b.physicalCount);
+      const hasW = b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0;
+      const c = (hasC ? Number(b.physicalCount) : 0) + sb.count, w = (hasW ? Number(b.wastage) : 0) + sb.waste;
+      return Object.assign({}, b, { physicalCount: (hasC || sb.count) ? String(Math.round(c*1000)/1000) : '', wastage: w ? String(Math.round(w*1000)/1000) : (b.wastage === '' ? '' : b.wastage) });
+    });
     if(toSave.length === 0){ alert('No Physical Count or Wastage entered yet.'); return; }
 
     const btn = document.getElementById('saveBtn');
@@ -545,6 +560,7 @@
         // numbers as if they haven't been recorded yet.
         toSave.forEach(saved => {
           const row = backing.find(b => b.flowerName === saved.flowerName);
+          savedBase[baseKey(saved.flowerName)] = { count: Number(saved.physicalCount) || 0, waste: Number(saved.wastage) || 0 };
           if(row){ row.physicalCount = ''; row.wastage = ''; }
         });
         renderFlowerList();
