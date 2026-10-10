@@ -79,6 +79,7 @@
     ['branch-config.html', '📍', 'Branch Config'],
     ['user-admin.html', '👥', 'User Management', 'admin'],
     ['brain.html', '🧠', 'Brain Vault', 'admin'],
+    ['system-health.html', '🩺', 'System Health', 'admin'],
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
 
