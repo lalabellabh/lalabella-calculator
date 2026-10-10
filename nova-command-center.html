@@ -119,7 +119,8 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 .cmdreply{display:none;background:rgba(13,16,22,.94);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:13px;line-height:1.5;color:#dfe6f0;white-space:pre-line;max-height:34vh;overflow:auto;backdrop-filter:blur(6px)}
 .cmdreply.show{display:block}.cmdreply .you{color:#7e8da3;font-size:11px;margin-bottom:5px;display:block}.cmdreply .th{color:#e6c46a;font-style:italic;display:block;margin-bottom:4px}
 .cmdform{display:flex;gap:8px;align-items:center;background:#0d1016;border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 14px}
-.cmdform input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e8edf5;font:inherit;font-size:14px;padding:8px 0}
+.cmdform input,.cmdform textarea{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e8edf5;font:inherit;font-size:14px;padding:8px 0;resize:none;max-height:120px;line-height:1.35}
+.cmdreply .offer{display:inline-block;margin-top:8px;padding:8px 14px;border-radius:10px;background:linear-gradient(135deg,#2ee8ff,#2a8cff);color:#04101a;font-weight:700;text-decoration:none}
 .cmdform button{border:0;border-radius:10px;background:linear-gradient(135deg,#2ee8ff,#2a8cff);color:#04101a;font-weight:700;padding:9px 14px;cursor:pointer}
 .cmdform .spk{background:#161b24;color:#9fb0c6;padding:9px 10px}.cmdform .spk.on{color:#2ee8ff}
 
@@ -276,7 +277,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
       <button class="mic" id="mic" title="Manual voice input">◉</button>
       <div class="mic-label">Tap to talk</div>
       <div class="cmdbar"><div class="cmdreply" id="cmdReply"></div>
-        <form class="cmdform" id="cmdForm" autocomplete="off"><input id="cmdInput" type="text" placeholder="Type a command… e.g. stock ng red rose, low stock, open dashboard" enterkeyhint="send"><button type="button" class="spk" id="cmdSpk" title="Speak replies">🔇</button><button type="submit">Send</button></form></div>
+        <form class="cmdform" id="cmdForm" autocomplete="off"><textarea id="cmdInput" rows="1" placeholder="Type a command… or paste a flower count" enterkeyhint="send"></textarea><button type="button" class="spk" id="cmdSpk" title="Speak replies">🔇</button><button type="submit">Send</button></form></div>
       <div class="status-row">
         <span class="dotlabel lbl-listening"><span class="sdot"></span>Listening</span>
         <span class="dotlabel lbl-thinking"><span class="sdot"></span>Thinking</span>
@@ -689,6 +690,7 @@ async function askNova(message){
     if(nb && nb.handled){
       const nav = safeNavTarget_(nb.navigateTo);
       if(nav){ log('Opening ' + nav, 'SYSTEM'); setTimeout(()=>{ window.location.href = nav; }, 1500); }
+      if(nb.offerPage && window.__typedOffer) window.__typedOffer(nb.offerPage, nb.offerLabel);
       return nb.text;
     }
     if(!LBNovaBrain.useApi()) return LBNovaBrain.fallback(message);
@@ -912,16 +914,22 @@ document.getElementById('mic').onclick=manual;
   const paint=()=>{ spk.textContent=voice?'🔊':'🔇'; spk.classList.toggle('on',voice); }; paint();
   spk.onclick=()=>{ voice=!voice; try{localStorage.setItem('novaTypedVoice',voice?'1':'0')}catch(e){} paint(); if(!voice) try{speechSynthesis.cancel()}catch(e){} };
   const hist=[]; let hi=0;
-  inp.addEventListener('keydown',e=>{ if(e.key==='ArrowUp'&&hist.length){ hi=Math.max(0,hi-1); inp.value=hist[hi]; e.preventDefault(); } else if(e.key==='ArrowDown'){ hi=Math.min(hist.length,hi+1); inp.value=hist[hi]||''; e.preventDefault(); } });
+  const grow=()=>{ inp.style.height='auto'; inp.style.height=Math.min(120,inp.scrollHeight)+'px'; };
+  inp.addEventListener('input',grow);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); form.requestSubmit(); return; }
+    const single=inp.value.indexOf('\n')<0;
+    if(single&&e.key==='ArrowUp'&&hist.length){ hi=Math.max(0,hi-1); inp.value=hist[hi]; grow(); e.preventDefault(); } else if(single&&e.key==='ArrowDown'){ hi=Math.min(hist.length,hi+1); inp.value=hist[hi]||''; grow(); e.preventDefault(); } });
   form.addEventListener('submit',async e=>{
-    e.preventDefault(); const t=inp.value.trim(); if(!t) return; inp.value=''; hist.push(t); hi=hist.length;
+    e.preventDefault(); const t=inp.value.trim(); if(!t) return; inp.value=''; grow(); hist.push(t); hi=hist.length;
     awake=true; log(t,'YOU');
-    box.className='cmdreply show'; box.innerHTML=''; const y=document.createElement('span'); y.className='you'; y.textContent='You: '+t; box.appendChild(y);
+    box.className='cmdreply show'; box.innerHTML=''; const y=document.createElement('span'); y.className='you'; { const ln=t.split('\n'); y.textContent='You: '+(ln.length>1?ln[0]+'  (+'+(ln.length-1)+' more lines)':t); } box.appendChild(y);
     const th=document.createElement('span'); th.className='th'; th.textContent='💭 …'; box.appendChild(th);
     const ans=document.createElement('div'); box.appendChild(ans);
     window.__typedThought=s=>{ th.textContent='💭 '+s; };
+    window.__typedOffer=(pg,label)=>{ const a=document.createElement('a'); a.className='offer'; a.href=pg; a.textContent=label||'Open'; ans.after(a); };
     let out=''; try{ out=await askNova(t); }catch(err){ out='Something went wrong, Boss.'; }
-    window.__typedThought=null; th.remove();
+    window.__typedThought=null; window.__typedOffer=null; th.remove();
     ans.textContent=out||'…'; box.scrollTop=0;
     if(out){ if(voice) speak(out); else { log(out,'NOVA'); setState(awake?'awake':'','AWAKE'); } }
   });
