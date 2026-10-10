@@ -10,86 +10,169 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — System Health</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --rose:#c9506b; --rose-dark:#9e2f4a; --ink:#2f2024; --muted:#8a7078; --line:#f0dede; --ok:#3d7a4f; --warn:#b07d2b; --err:#c0392b; --okbg:#e8f4ec; --warnbg:#fbf1dc; --errbg:#fdecea; --infobg:#f3eeee; }
+  :root{
+    --plum:#2a1520; --plum-2:#3b1d2c; --rose:#c9506b; --rose-dark:#9e2f4a;
+    --ink:#2f2024; --muted:#8a7078; --line:#efdfde; --paper:#fffdfc;
+    --ok:#3d7a4f; --warn:#b07d2b; --fail:#c0392b;
+    --p-ok:#8fd0a6; --p-warn:#f2c262; --p-fail:#ff7a6b;
+  }
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink);}
-  body{padding:22px 16px 60px;}
-  .wrap{max-width:980px;margin:0 auto;}
-  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
-  .brand{display:flex;align-items:center;gap:10px;}
-  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f1d38c,#d9a441);display:grid;place-items:center;font-size:18px;}
-  .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
-  .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
-  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 6px 18px rgba(158,47,74,.06);margin-bottom:14px;}
-  .card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 12px;}
-  .banner{display:flex;align-items:center;gap:14px;padding:18px;border-radius:18px;margin-bottom:14px;border:1px solid transparent}
-  .banner .big{font-size:34px;line-height:1}
-  .banner b{font-family:'Fraunces',serif;font-size:19px;display:block}
-  .banner span{font-size:12.5px;color:var(--muted)}
-  .banner.ok{background:var(--okbg);border-color:#cfe5d6}.banner.warn{background:var(--warnbg);border-color:#efdcae}.banner.fail{background:var(--errbg);border-color:#f3c6c1}.banner.load{background:#fff;border-color:var(--line)}
-  .btn{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff}
-  .btn:disabled{opacity:.55;cursor:default}
-  .banner .btn{margin-left:auto;white-space:nowrap}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
-  .chk{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fffdfd}
-  .chk .top{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600}
-  .dot{width:10px;height:10px;border-radius:50%;flex:none}
-  .dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.fail{background:var(--err)}.dot.info{background:#b9a9ad}
-  .chk .val{font-size:16px;font-weight:700;margin:6px 0 2px;word-break:break-word}
-  .chk .det{font-size:12px;color:var(--muted);line-height:1.45}
-  .bar{height:7px;border-radius:5px;background:#f1e8e8;overflow:hidden;margin-top:8px}
-  .bar i{display:block;height:100%;border-radius:5px;background:var(--ok)}
-  .bar.warn i{background:var(--warn)}.bar.fail i{background:var(--err)}
-  .fns{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-  .fn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}
-  .fn b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .fn small{color:var(--muted)}
-  .fn.slow small{color:var(--warn);font-weight:700}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
-  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-  td.n,th.n{text-align:right;white-space:nowrap}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media(max-width:720px){.two{grid-template-columns:1fr}.banner{flex-wrap:wrap}.banner .btn{margin-left:0}}
-  .note{font-size:12px;color:var(--muted);line-height:1.6}
-  .note li{margin-bottom:4px}
-  .err{color:var(--err);font-size:13px;padding:10px 0}
+  html,body{margin:0;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',system-ui,sans-serif;color:var(--ink);}
+  body{min-height:100vh}
+  button{font:inherit}
+
+  .stage{max-width:1500px;margin:0 auto;padding:14px 16px 28px;display:grid;gap:14px;
+    grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .head{display:flex;align-items:center;gap:12px;padding-left:54px;min-height:44px}
+  .head .logo{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#f1d38c,#d9a441);display:grid;place-items:center;font-size:18px;flex:none}
+  .head h1{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin:0;letter-spacing:.01em}
+  .head .when{font-size:12px;color:var(--muted);margin-left:6px}
+  .head .sp{flex:1}
+  .btn{border:0;border-radius:11px;padding:10px 16px;font-weight:700;font-size:12.5px;cursor:pointer;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;box-shadow:0 6px 16px rgba(158,47,74,.22);transition:transform .15s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:disabled{opacity:.55;cursor:default;transform:none}
+  .back{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:9px 12px;border-radius:10px;background:#fff}
+  :focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+
+  /* ---------- the bloom (left) ---------- */
+  .bloom{position:relative;border-radius:26px;background:radial-gradient(120% 90% at 50% 38%,var(--plum-2) 0%,var(--plum) 62%,#1e0e17 100%);color:#fff;
+    padding:18px 18px 20px;display:flex;flex-direction:column;align-items:center;min-height:0;overflow:hidden;box-shadow:0 22px 50px rgba(42,21,32,.28)}
+  .bloom .cap{align-self:stretch;display:flex;justify-content:space-between;gap:10px;font-size:12px;color:rgba(255,255,255,.62)}
+  .bloom .cap b{color:#fff;font-weight:600}
+  .flower{position:relative;flex:1;min-height:0;width:100%;display:grid;place-items:center;padding:4px 0 14px}
+  .flower svg{width:100%;height:100%;max-height:100%;overflow:visible}
+  .pt{outline:none;cursor:default}
+  .pt path{stroke:var(--c);stroke-width:1.2;stroke-opacity:.9;transition:filter .2s,stroke-width .2s;transform-box:fill-box;transform-origin:50% 100%;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 45ms)}
+  .pt.ok{--c:var(--p-ok)} .pt.warn{--c:var(--p-warn)} .pt.fail{--c:var(--p-fail)}
+  .pt.ok path{fill:url(#g-ok)} .pt.warn path{fill:url(#g-warn)} .pt.fail path{fill:url(#g-fail);stroke-dasharray:3 3}
+  .pt:hover path,.pt:focus path{filter:drop-shadow(0 0 7px var(--c));stroke-width:2.2}
+  .pt.info path{fill:rgba(255,255,255,.18);--c:#fff}
+  @keyframes grow{from{transform:scale(.15);opacity:0}to{transform:scale(1);opacity:1}}
+  .core{position:absolute;inset:0;margin:auto;width:25%;height:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+  .core .big{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(15px,1.6vw,26px);line-height:1.05;letter-spacing:.005em}
+  .core .sm{font-size:clamp(10px,.8vw,12px);color:rgba(255,255,255,.7);margin-top:5px;line-height:1.35;max-width:100%;overflow-wrap:anywhere}
+  .core.ok .big{color:var(--p-ok)} .core.warn .big{color:var(--p-warn)} .core.fail .big{color:var(--p-fail)}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:rgba(255,255,255,.62);flex-wrap:wrap;justify-content:center}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+  /* ---------- the sheet (right) ---------- */
+  .sheet{justify-content:space-between;background:var(--paper);border:1px solid var(--line);border-radius:26px;padding:6px 22px;box-shadow:0 12px 34px rgba(158,47,74,.08);display:flex;flex-direction:column;min-height:0}
+  .sec{padding:15px 0;border-bottom:1px solid var(--line)}
+  .sec:last-child{border-bottom:0}
+  .sec h3{font-family:'Fraunces',serif;font-size:14.5px;font-weight:700;margin:0 0 11px;color:var(--plum)}
+  .meters{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .meter .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;margin-bottom:7px}
+  .meter .row span{color:var(--muted)} .meter .row b{font-weight:600}
+  .track{position:relative;height:10px;border-radius:6px;background:#f3e8e8;overflow:visible}
+  .track i{display:block;height:100%;min-width:6px;border-radius:6px;background:linear-gradient(90deg,#79b98f,var(--ok))}
+  .track.warn i{background:linear-gradient(90deg,#f0c060,var(--warn))}
+  .track.fail i{background:linear-gradient(90deg,#ee8a7e,var(--fail))}
+  .track:before,.track:after{content:'';position:absolute;top:-3px;bottom:-3px;width:1px;background:rgba(42,21,32,.28)}
+  .track:before{left:70%} .track:after{left:90%}
+  .meter small{display:block;font-size:11.5px;color:var(--muted);margin-top:6px}
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .num b{display:block;font-family:'Fraunces',serif;font-size:27px;font-weight:700;line-height:1.05;color:var(--plum)}
+  .num b em{font-style:normal;font-size:13px;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-weight:500;margin-left:3px}
+  .num span{font-size:12px;color:var(--muted);display:block;margin-top:5px}
+  .num.warn b{color:var(--warn)} .num.fail b{color:var(--fail)}
+  .jobs{display:grid;gap:8px}
+  .job{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .job .d{width:9px;height:9px;border-radius:50%;flex:none;background:#c8b9bc}
+  .job.ok .d{background:var(--ok)} .job.warn .d{background:var(--warn)} .job.fail .d{background:var(--fail)}
+  .job b{font-weight:600} .job span{color:var(--muted);margin-left:auto;text-align:right}
+  .fchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px 18px}
+  .fc{display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0}
+  .fc .d{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ok)}
+  .fc.warn .d{background:var(--warn)} .fc.fail .d{background:var(--fail)}
+  .fc b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fc span{margin-left:auto;color:var(--muted);white-space:nowrap;font-size:11.5px}
+  .fc.fail span{color:var(--fail);font-weight:600}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  .lst{display:grid;gap:0;font-size:12.5px}
+  .lst div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed #f0e4e3}
+  .lst div:last-child{border-bottom:0}
+  .lst span{color:var(--muted);white-space:nowrap}
+  .lst b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .more{font-size:11.5px;color:var(--muted);line-height:1.55}
+  .more summary{cursor:pointer;font-weight:600;color:var(--rose-dark);list-style:none}
+  .more summary::-webkit-details-marker{display:none}
+  .more p{margin:6px 0 0}
+  .msg{font-size:13px;color:var(--fail);padding:12px 0}
+
+  /* ---------- desktop: one screen, no scrolling ---------- */
+  @media (min-width:1000px) and (min-height:600px){
+    html,body{height:100%;overflow:hidden}
+    .stage{height:100dvh;max-width:none;padding:14px 22px 20px;grid-template-columns:minmax(400px,.92fr) 1.08fr;grid-template-rows:auto minmax(0,1fr)}
+    .head{grid-column:1/-1}
+    .sheet{overflow:hidden}
+    .sec.grow{min-height:0;overflow:hidden}
+    .nums{margin-top:2px}.num b{font-size:30px}
+    .jobs{max-height:96px;overflow:auto}
+  }
+  @media (min-width:1000px) and (min-height:600px) and (max-height:760px){
+    .sec{padding:10px 0}.sec h3{margin-bottom:8px}.num b{font-size:23px}
+    .lst div:nth-child(n+5){display:none}
+    .jobs{max-height:60px}
+    .fnsec{display:none}
+  }
+  @media (min-width:1000px) and (min-height:600px) and (max-height:660px){
+    .lst div:nth-child(n+4){display:none}
+  }
+  @media (max-width:999px){
+    .bloom{min-height:430px}
+    .flower{min-height:300px}
+    .meters{grid-template-columns:1fr}
+    .nums{grid-template-columns:repeat(2,1fr)}
+    .two{grid-template-columns:1fr;gap:6px}
+    .head{flex-wrap:wrap}
+    .head .when{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){ .pt path{animation:none} .btn{transition:none} }
 </style>
 </head>
 <body>
-<script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
-<div class="wrap">
-  <div class="topbar">
-    <div class="brand"><div class="logo">🩺</div><b>System Health</b></div>
-    <a class="backlink" href="user-admin.html">← User Management</a>
-  </div>
+<script src="shared/nav.js" data-standalone data-shift=".head"></script>
+<main class="stage">
+  <header class="head">
+    <div class="logo" aria-hidden="true">🩺</div>
+    <h1>System Health</h1>
+    <span class="when" id="when"></span>
+    <span class="sp"></span>
+    <a class="back" href="user-admin.html">← User Management</a>
+    <button class="btn" id="refresh" type="button">↻ Check again</button>
+  </header>
 
-  <div class="banner load" id="banner"><div class="big">⏳</div><div><b>Checking the system…</b><span>This takes a few seconds.</span></div></div>
+  <section class="bloom" aria-label="Overall health">
+    <div class="cap"><span id="capL"><b>Server functions</b> · outer petals</span><span id="capR"><b>Core checks</b> · inner petals</span></div>
+    <div class="flower" id="flower">
+      <svg viewBox="0 0 400 400" id="svg" role="group" aria-label="One petal for each check">
+        <defs>
+          <linearGradient id="g-ok" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8fd0a6" stop-opacity=".12"/><stop offset="1" stop-color="#8fd0a6" stop-opacity=".92"/></linearGradient>
+          <linearGradient id="g-warn" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f2c262" stop-opacity=".15"/><stop offset="1" stop-color="#f2c262" stop-opacity=".95"/></linearGradient>
+          <linearGradient id="g-fail" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff7a6b" stop-opacity=".15"/><stop offset="1" stop-color="#ff7a6b" stop-opacity=".95"/></linearGradient>
+        </defs>
+        <g id="petals" transform="translate(200 200)"></g>
+      </svg>
+      <div class="core" id="core"><div class="big">Checking…</div><div class="sm">This takes a few seconds.</div></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--p-ok)"></i>Working</span><span><i style="background:var(--p-warn)"></i>Slow or filling up</span><span><i style="background:var(--p-fail)"></i>Down — petal wilts</span></div>
+  </section>
 
-  <div class="grid" id="checks"></div>
-
-  <div class="card" style="margin-top:14px">
-    <h3>Server functions</h3>
-    <div class="fns" id="fns"></div>
-  </div>
-
-  <div class="two">
-    <div class="card"><h3>File storage</h3><table id="buckets"></table></div>
-    <div class="card"><h3>Biggest tables</h3><table id="tables"></table></div>
-  </div>
-
-  <div class="card">
-    <h3>Things only the Supabase dashboard can show</h3>
-    <ul class="note">
-      <li><b>Plan and backups</b> — The Free plan usually has no backups you can restore from. Check Settings → Billing and Database → Backups.</li>
-      <li><b>Bandwidth (egress)</b> — Free plan allows about 5 GB a month. See Settings → Usage.</li>
-      <li><b>Paused project</b> — a Free project pauses after a week with no activity. If this page cannot load at all, open the dashboard and press Restore.</li>
-    </ul>
-    <div class="note" id="stamp"></div>
-  </div>
-</div>
+  <section class="sheet" id="sheet" aria-live="polite">
+    <div class="sec"><h3>Room left on the free plan</h3><div class="meters" id="meters"></div></div>
+    <div class="sec"><h3>Right now</h3><div class="nums" id="nums"></div></div>
+    <div class="sec"><h3>Scheduled jobs</h3><div class="jobs" id="jobs"></div></div>
+    <div class="sec fnsec"><h3>Server functions</h3><div class="fchips" id="fchips"></div></div>
+    <div class="sec grow"><div class="two">
+      <div><h3>Biggest tables</h3><div class="lst" id="tables"></div></div>
+      <div><h3>File storage</h3><div class="lst" id="buckets"></div></div>
+    </div></div>
+    <div class="sec"><details class="more"><summary>What this page cannot see</summary>
+      <p>Plan and backups: the free plan usually has none you can restore from (Supabase dashboard → Database → Backups). Bandwidth is about 5 GB a month (Settings → Usage). A free project pauses after a week with no activity — if this page cannot load at all, open the dashboard and press Restore.</p></details></div>
+  </section>
+</main>
 
 <script>
 (function(){
@@ -97,9 +180,8 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   const fmtBytes = b => b >= 1073741824 ? (b/1073741824).toFixed(2) + ' GB' : b >= 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.max(0, Math.round(b/1024)) + ' KB';
-  const ICON = { ok:'✅', warn:'⚠️', fail:'❌' };
-  const TITLE = { ok:'All good', warn:'Needs attention', fail:'There is a problem' };
-  let busy = false, timer = null;
+  const TITLE = { ok:'All good', warn:'Needs attention', fail:'Problem found' };
+  let busy = false, last = null, coreDefault = null;
 
   async function fetchReport(){
     const ctrl = new AbortController();
@@ -114,70 +196,132 @@
     } finally { clearTimeout(t); }
   }
 
-  function render(d){
-    const ov = d.overall;
-    const problems = d.checks.filter(c => c.level === 'fail' || c.level === 'warn');
-    $('banner').className = 'banner ' + ov;
-    $('banner').innerHTML = '<div class="big">' + ICON[ov] + '</div><div><b>' + TITLE[ov] + '</b><span>' +
-      (problems.length ? esc(problems.map(c => c.label).join(' · ')) : 'Database, storage, server functions and scheduled jobs are all fine.') +
-      '</span></div><button class="btn" id="refresh">↻ Check again</button>';
-    $('refresh').addEventListener('click', load);
-
-    const cards = d.checks.map(c => {
-      const bar = c.pct != null ? '<div class="bar ' + (c.level === 'ok' ? '' : c.level) + '"><i style="width:' + Math.min(100, Math.max(1, c.pct)) + '%"></i></div>' : '';
-      return '<div class="chk"><div class="top"><span class="dot ' + c.level + '"></span>' + esc(c.label) + '</div>' +
-        '<div class="val">' + esc(c.value) + '</div>' + (c.detail ? '<div class="det">' + esc(c.detail) + '</div>' : '') + bar + '</div>';
+  // ---------- the bloom ----------
+  function petalPath(r0, L, w){
+    return 'M0 ' + (-r0) + ' C ' + w + ' ' + (-r0 - L*.25) + ', ' + (w*.9) + ' ' + (-r0 - L*.8) + ', 0 ' + (-r0 - L) +
+           ' C ' + (-w*.9) + ' ' + (-r0 - L*.8) + ', ' + (-w) + ' ' + (-r0 - L*.25) + ', 0 ' + (-r0) + ' Z';
+  }
+  function ring(items, r0, L, offsetDeg, startIdx){
+    const n = items.length; if(!n) return '';
+    const w = Math.min(30, Math.PI * 2 * r0 / n * .6);
+    return items.map((it, i) => {
+      const len = it.level === 'fail' ? L * .55 : L;       // a down service wilts
+      const ang = offsetDeg + i * 360 / n;
+      return '<g class="pt ' + it.level + '" tabindex="0" role="img" aria-label="' + esc(it.name + ': ' + it.value) + '" data-n="' + esc(it.name) + '" data-v="' + esc(it.value) + '" data-l="' + it.level + '" transform="rotate(' + ang.toFixed(2) + ')">' +
+        '<path style="--i:' + (startIdx + i) + '" d="' + petalPath(r0, len, w) + '"/></g>';
+    }).join('');
+  }
+  function setCore(level, big, sm){
+    const c = $('core'); c.className = 'core ' + level;
+    c.innerHTML = '<div class="big">' + esc(big) + '</div><div class="sm">' + esc(sm) + '</div>';
+  }
+  function drawBloom(d){
+    const fns = d.functions.map(f => ({ name: f.name, value: f.up ? f.ms + ' ms' : (f.error || 'not answering'), level: !f.up ? 'fail' : f.ms > 3000 ? 'warn' : 'ok' }));
+    const core = d.checks.filter(c => ['functions','sessions','inactive'].indexOf(c.id) === -1)
+      .map(c => ({ name: c.label, value: c.value, level: c.level === 'info' ? 'ok' : c.level }));
+    $('petals').innerHTML = ring(core, 54, 36, 180 / Math.max(1, core.length), 0) + ring(fns, 100, 86, 0, core.length);
+    const bad = d.checks.filter(c => c.level === 'fail' || c.level === 'warn');
+    const down = d.functions.filter(f => !f.up).length;
+    const sm = bad.length ? bad.slice(0, 2).map(c => c.label).join(', ') + (bad.length > 2 ? ' +' + (bad.length - 2) : '')
+                          : (d.functions.length - down) + ' of ' + d.functions.length + ' functions answering';
+    coreDefault = [d.overall, TITLE[d.overall], sm];
+    setCore.apply(null, coreDefault);
+  }
+  function wireHover(){
+    const pts = document.querySelectorAll('.pt');
+    pts.forEach(p => {
+      const on = () => setCore(p.dataset.l, p.dataset.n, p.dataset.v);
+      const off = () => { if(coreDefault) setCore.apply(null, coreDefault); };
+      p.addEventListener('mouseenter', on); p.addEventListener('focus', on);
+      p.addEventListener('mouseleave', off); p.addEventListener('blur', off);
+      p.addEventListener('touchstart', on, { passive:true });
     });
-    cards.push('<div class="chk"><div class="top"><span class="dot ' + (d._rtt > 4000 ? 'warn' : 'ok') + '"></span>This device → server</div><div class="val">' + d._rtt + ' ms</div><div class="det">Whole check, including the server testing everything. Under 3 s is normal.</div></div>');
-    $('checks').innerHTML = cards.join('');
+  }
 
-    $('fns').innerHTML = d.functions.map(f =>
-      '<div class="fn' + (f.up && f.ms > 3000 ? ' slow' : '') + '"><span class="dot ' + (!f.up ? 'fail' : f.ms > 3000 ? 'warn' : 'ok') + '"></span><b title="' + esc(f.error) + '">' + esc(f.name) + '</b><small>' + (f.up ? f.ms + ' ms' : esc(f.error || 'down')) + '</small></div>').join('');
+  // ---------- the sheet ----------
+  function meter(c, caption){
+    const pct = Math.min(100, Math.max(1, c.pct || 0));
+    return '<div class="meter"><div class="row"><span>' + esc(c.label) + '</span><b>' + esc(c.value) + '</b></div>' +
+      '<div class="track ' + (c.level === 'ok' ? '' : c.level) + '"><i style="width:' + pct + '%"></i></div><small>' + esc(caption || c.detail || '') + '</small></div>';
+  }
+  function num(value, unit, label, level){
+    return '<div class="num ' + (level || '') + '"><b>' + esc(value) + (unit ? '<em>' + esc(unit) + '</em>' : '') + '</b><span>' + esc(label) + '</span></div>';
+  }
+  function drawSheet(d){
+    const by = id => d.checks.find(c => c.id === id);
+    const m = ['dbsize','storage','conns'].map(by).filter(Boolean);
+    $('meters').innerHTML = m.map(c => meter(c, c.pct != null ? Math.round(c.pct * 10) / 10 + '% used' + (c.id === 'conns' ? '' : ' · warns at 70%') : '')).join('') ||
+      '<div class="msg">Usage numbers are not available right now.</div>';
 
-    $('buckets').innerHTML = '<tr><th>Bucket</th><th class="n">Files</th><th class="n">Size</th></tr>' +
-      (d.buckets.length ? d.buckets.map(b => '<tr><td>' + esc(b.bucket) + '</td><td class="n">' + b.files + '</td><td class="n">' + fmtBytes(b.bytes) + '</td></tr>').join('') : '<tr><td colspan="3">No files yet.</td></tr>');
-    $('tables').innerHTML = '<tr><th>Table</th><th class="n">Rows</th><th class="n">Size</th></tr>' +
-      d.tables.map(t => '<tr><td>' + esc(t.name) + '</td><td class="n">' + t.rows.toLocaleString() + '</td><td class="n">' + fmtBytes(t.bytes) + '</td></tr>').join('');
+    const db = by('db'), stale = by('stale'), ses = by('sessions');
+    const dbMs = db && /(\d+) ms/.exec(db.value);
+    const fnMs = d.functions.filter(f => f.up).map(f => f.ms).sort((a,b) => a - b);
+    const med = fnMs.length ? fnMs[Math.floor(fnMs.length / 2)] : null;
+    $('nums').innerHTML = [
+      num(db && db.level === 'fail' ? 'Offline' : (dbMs ? dbMs[1] : '–'), db && db.level === 'fail' ? '' : 'ms', 'Database answers in', db ? (db.level === 'info' ? '' : db.level) : ''),
+      num(med == null ? '–' : med, 'ms', 'Typical function reply'),
+      num(d._rtt, 'ms', 'This device to server', d._rtt > 4000 ? 'warn' : ''),
+      num(ses ? ses.value : '–', '', 'Logins in the last 24 h')
+    ].join('');
+    if(stale && stale.level !== 'ok') $('nums').insertAdjacentHTML('beforeend', num(stale.value, '', 'Old statuses left', stale.level));
 
-    $('stamp').textContent = 'Last checked ' + new Date(d.checkedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' · refreshes by itself every 2 minutes while this page is open.';
+    const jobs = d.checks.filter(c => c.id.indexOf('job:') === 0 || c.id === 'jobs');
+    $('jobs').innerHTML = jobs.length ? jobs.map(c => '<div class="job ' + c.level + '"><i class="d"></i><b>' + esc(c.label.replace(/^Job · /, '')) + '</b><span>' + esc(c.detail || c.value) + '</span></div>').join('') : '<div class="job"><i class="d"></i><span style="margin-left:0">No scheduled jobs.</span></div>';
+
+    $('fchips').innerHTML = d.functions.map(f => '<div class="fc ' + (!f.up ? 'fail' : f.ms > 3000 ? 'warn' : '') + '"><i class="d"></i><b title="' + esc(f.name) + '">' + esc(f.name) + '</b><span>' + (f.up ? f.ms + ' ms' : esc(f.error || 'down')) + '</span></div>').join('');
+    const rows = (arr, name, val) => arr.length ? arr.map(x => '<div><b title="' + esc(name(x)) + '">' + esc(name(x)) + '</b><span>' + esc(val(x)) + '</span></div>').join('') : '<div><b>Nothing yet</b></div>';
+    $('tables').innerHTML = rows(d.tables.slice(0, 6), t => t.name, t => t.rows.toLocaleString() + ' rows · ' + fmtBytes(t.bytes));
+    $('buckets').innerHTML = rows(d.buckets, b => b.bucket, b => b.files + ' files · ' + fmtBytes(b.bytes));
+
+    // Anything the server reported that has no home above (for example a failed usage report) still shows up.
+    const shown = { db:1, dbsize:1, storage:1, conns:1, functions:1, sessions:1, inactive:1, stale:1, jobs:1 };
+    const extra = d.checks.filter(c => !shown[c.id] && c.id.indexOf('job:') !== 0);
+    if(extra.length) $('meters').insertAdjacentHTML('beforeend', extra.map(c => '<div class="msg">' + esc(c.label + ': ' + c.value + (c.detail ? ' — ' + c.detail : '')) + '</div>').join(''));
+  }
+
+  function render(d){
+    last = d;
+    drawBloom(d); wireHover(); drawSheet(d);
+    $('when').textContent = 'Checked ' + new Date(d.checkedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) + ' · updates every 2 minutes';
   }
 
   function showError(msg){
-    $('banner').className = 'banner fail';
-    $('banner').innerHTML = '<div class="big">❌</div><div><b>Could not run the check</b><span>' + esc(msg) + '</span></div><button class="btn" id="refresh">↻ Try again</button>';
-    $('refresh').addEventListener('click', load);
+    $('petals').innerHTML = ''; coreDefault = null;
+    setCore('fail', 'No answer', msg);
+    $('meters').innerHTML = '<div class="msg">' + esc(msg) + '</div>';
+    ['nums','jobs','tables','buckets'].forEach(id => $(id).innerHTML = '');
   }
 
   // The server says the 15-minute unlock has run out. Do NOT reload the page (that made it blink in a loop):
-  // the admin gate shows the password box by itself, so just wait here and check again after it is unlocked.
+  // the admin gate shows the password box by itself, so wait here and check again once it is unlocked.
   let waits = 0, waiter = null;
   function waitForUnlock(){
-    $('banner').className = 'banner load';
-    $('banner').innerHTML = '<div class="big">🔐</div><div><b>Waiting for your password</b><span>Enter it in the box to continue.</span></div>';
+    setCore('warn', 'Password needed', 'Enter it in the box to continue.');
     if(waiter) return;
     waiter = setInterval(() => {
       const locked = document.documentElement.classList.contains('lbgate-locked');
-      if(locked){ waits = 0; return; }                    // password box is showing — keep waiting
-      if(++waits > 6){ clearInterval(waiter); waiter = null; showError('Your admin unlock has expired. Please refresh the page and enter your password.'); return; }
-      clearInterval(waiter); waiter = null; load();       // gate is open → try the check again
+      if(locked){ waits = 0; return; }
+      if(++waits > 6){ clearInterval(waiter); waiter = null; showError('Your admin unlock has expired. Refresh the page and enter your password.'); return; }
+      clearInterval(waiter); waiter = null; load();
     }, 1500);
   }
 
   async function load(){
     if(busy) return; busy = true;
-    const b = $('refresh'); if(b){ b.disabled = true; b.textContent = 'Checking…'; }
+    const b = $('refresh'); b.disabled = true; b.textContent = 'Checking…';
     try{
       const d = await fetchReport();
-      if(d && d.reauth){ waitForUnlock(); return; }       // unlock expired → the admin gate asks for the password; check again once it is unlocked
-      if(!d || !d.success){ showError((d && d.error) || 'The server did not answer.'); }
+      if(d && d.reauth){ waitForUnlock(); return; }
+      if(!d || !d.success) showError((d && d.error) || 'The server did not answer.');
       else render(d);
     }catch(e){
-      showError(e && e.name === 'AbortError' ? 'The server took too long to answer (over 30 s). It may be down or paused.' : 'Could not reach the server. Check the internet connection, or the Supabase project may be paused.');
-    }finally{ busy = false; }
+      showError(e && e.name === 'AbortError' ? 'The server took over 30 seconds to answer. It may be down or paused.' : 'Could not reach the server. Check the internet connection — the Supabase project may be paused.');
+    }finally{ busy = false; b.disabled = false; b.textContent = '↻ Check again'; }
   }
 
+  $('refresh').addEventListener('click', load);
   load();
-  timer = setInterval(() => { if(!document.hidden) load(); }, 120000);
+  setInterval(() => { if(!document.hidden) load(); }, 120000);
 })();
 </script>
 </body>
