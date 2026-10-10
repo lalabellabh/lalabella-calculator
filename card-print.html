@@ -538,7 +538,6 @@ body::before{
       <button data-dir="rtl" title="Right to Left (Arabic)">← RTL</button>
     </div>
     <button id="backTools" title="Back to Flower Tools">← Flower Tools</button>
-    <a class="seedsLink" id="seedsLink" href="seeds-card.html" title="Open the Seeds of Success card">🌱 Seeds</a>
     <div class="group"><span class="label">CARD</span>
       <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 9.9 × 9.9 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option><option value="custom">✏️ CUSTOM size…</option></select>
       <span id="customSize" style="display:none;align-items:center;gap:6px;"><input type="number" id="customW" min="20" max="297" step="0.5" value="100" style="width:78px;"> × <input type="number" id="customH" min="20" max="420" step="0.5" value="150" style="width:78px;"> <span style="font-size:12px;opacity:.7">mm (W × H)</span></span>
@@ -569,7 +568,8 @@ body::before{
     </div>
     <button id="addImage">🖼️ Add Image</button>
     <button id="addQrBtn">🔗 Add QR Code</button>
-    <span id="cpEmojiHost"><button id="emojiBtn" type="button" title="Add an emoji to the message">😊 Emoji</button><button id="stickerBtn" type="button" title="Add a sticker to the card">✨ Sticker</button></span>
+    <span id="cpEmojiHost"><button id="emojiBtn" type="button" title="Add an emoji or a sticker">😊 Emoji &amp; Sticker</button></span>
+    <a class="seedsLink" id="seedsLink" href="seeds-card.html" title="Open the Seeds of Success card">🌱 Seeds</a>
     <button id="clear">Clear</button>
     <button id="removeSpaceBtn" title="Remove extra blank lines/spacing from the text">🧹 Remove Space</button>
     <button id="watermarkToggleBtn" title="Show/hide the small leaf watermark on the card" style="background:#eaf7ec;">🌿 Watermark: ON</button>
@@ -1926,7 +1926,7 @@ document.getElementById('saveCard').onclick = saveCard;
 
 // ---------- Emoji + Sticker buttons (the same picker as the chat) ----------
 (function(){
-  const host = document.getElementById('cpEmojiHost'), eb = document.getElementById('emojiBtn'), sb = document.getElementById('stickerBtn');
+  const host = document.getElementById('cpEmojiHost'), eb = document.getElementById('emojiBtn');
   if(!host) return;
   let picker = null, lastRange = null, loading = null;
 
@@ -2006,7 +2006,7 @@ document.getElementById('saveCard').onclick = saveCard;
     if(!ok){ alert('The emoji and sticker panel could not load. Check the internet and try again.'); return; }
     if(!picker){
       picker = window.lbChatMedia.createPicker({
-        host, toggleBtns: [eb, sb], tabs: ['emoji', 'sticker', 'fav'],
+        host, toggleBtns: [eb], tabs: ['emoji', 'sticker', 'fav'],
         onEmoji: insertEmoji,
         onGif: (item, kind) => { if(kind === 'sticker') addSticker(item); }
       });
@@ -2019,9 +2019,8 @@ document.getElementById('saveCard').onclick = saveCard;
     }
   }
   // keep the typing cursor in the message while pressing the buttons
-  [eb, sb].forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+  [eb].forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
   eb.addEventListener('click', () => openTab('emoji'));
-  sb.addEventListener('click', () => openTab('sticker'));
 })();
 
 document.getElementById('loadCard').onclick = ()=> document.getElementById('fileLoad').click();
