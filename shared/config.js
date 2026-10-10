@@ -15,6 +15,9 @@ window.LB_CONFIG = Object.freeze({
   // Everything else (profile photo, password change, User Management,
   // Team Status) still goes through AUTH_API above — unchanged.
   AUTH_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/auth-fast',
+  // Profile page extras (Team Status + Gallery pictures, saved as files in Storage). If a call to it fails with a server
+  // error, profile.html automatically retries the same call on AUTH_FAST_API. To switch it off, delete this one line.
+  PROFILE_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/profile-fast',
   CHOCOLATE_API:    'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec',
   // Fast path (Supabase Edge Function) for Chocolate Dashboard only —
   // pilot slice #1. Every other Chocolate action still uses CHOCOLATE_API
