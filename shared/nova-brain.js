@@ -393,6 +393,47 @@
       return { handled: true, text: say(at(0), tl ? 'ngayon' : 'today') };
     }).catch(function () { return netMsg(raw); });
   }
+
+  /* ---------------------------------------------------------- live: someone ELSE's schedule (anyone logged in, same as the Duty Schedule page) */
+  var ALIAS_NAMES = { aguinaldo: 'aldo', mohammed: 'mohamed', mahmoud: 'mahmood', nabadda: 'zaharah' };
+  function isAdminUser() { return String(me().role || '').toLowerCase() === 'admin'; }
+  function staffName(t) {   // "schedule ni oliver", "is oliver off today", "off ba si oliver", "oliver's shift"
+    var m = t.match(/\b(?:ni|si|of|for|kay)\s+([a-z][a-z .'-]{1,24}?)(?:\s+(?:today|tomorrow|ngayon|bukas|this week|next|sa|on|ba|po)\b|$)/) ||
+            t.match(/\bis\s+([a-z][a-z .'-]{1,24}?)\s+(?:off|working|on duty)\b/) ||
+            t.match(/\b([a-z][a-z'-]{1,20})'s\s+(?:schedule|shift|duty|day ?off)\b/);
+    return m ? m[1].trim() : '';
+  }
+  function otherSchedule(raw, t) {
+    var q = staffName(t).replace(/\s+/g, ' ');
+    if (!q) return Promise.resolve({ handled: true, text: L(raw, 'Whose schedule? Say it like "schedule ni Oliver".', 'Kaninong schedule? Sabihin mo lang tulad ng "schedule ni Oliver".') });
+    think('Looking up ' + q + '…', 'Hinahanap ko si ' + q + '…', raw);
+    return getJson(CFG.SCHEDULE_FAST_API, { action: 'getEmployees' }, 300000).then(function (d) {
+      var list = (d && d.employees) || [], key = ALIAS_NAMES[q.split(' ')[0]] || q.split(' ')[0], best = null, bs = 0;
+      list.forEach(function (e) {
+        var n = norm(e.name), sc = n === norm(q) ? 2 : (n.split(' ')[0] === key || n === key) ? 1.5 : n.indexOf(key) === 0 ? 1.2 : sim(n.split(' ')[0], key);
+        if (sc > bs) { bs = sc; best = e; }
+      });
+      if (!best || bs < 0.75) return { handled: true, text: L(raw, 'I could not find "' + q + '" on the schedule list.', 'Wala akong makitang "' + q + '" sa schedule list.') };
+      return getJson(CFG.SCHEDULE_FAST_API, { action: 'getSchedule', employee: best.name }, 120000).then(function (r) {
+        var map = {};
+        ((r && r.schedule) || []).forEach(function (x) {
+          var wk = parseYmd(x.WeekOf), idx = DAYS.indexOf(String(x.Day).toUpperCase().slice(0, 3)); if (!wk || idx < 0) return;
+          var dt = new Date(wk); dt.setDate(wk.getDate() + idx); map[ymd(dt)] = String(x.ScheduleDetail || '').trim();
+        });
+        var today = bhToday(), tl = isTl(raw), who = best.name + (best.branch ? ' (' + best.branch + ')' : '');
+        function at(off) { var d = new Date(today); d.setDate(d.getDate() + off); return { d: d, v: map[ymd(d)] }; }
+        function line(x) { return dayLabel(x.d) + ': ' + (x.v ? (/^off$/i.test(x.v) ? 'OFF 🌴' : x.v) : '—'); }
+        if (!Object.keys(map).length) return { handled: true, text: L(raw, 'No schedule saved yet for ' + who + '.', 'Wala pang naka-save na schedule para kay ' + who + '.') };
+        if (/this week|week|linggo|buong/.test(t)) { var ls = []; for (var j = 0; j < 7; j++) ls.push('• ' + line(at(j))); return { handled: true, text: who + (tl ? ' - susunod na 7 araw:\n' : ' - next 7 days:\n') + ls.join('\n') }; }
+        if (/next off|susunod na (day )?off|day ?off|kailan.*off|when.*off/.test(t) && !/today|ngayon/.test(t)) {
+          for (var i = 0; i < 60; i++) { var x = at(i); if (/^off$/i.test(x.v || '')) return { handled: true, text: who + (tl ? ': susunod na day off ' : ': next day off ') + dayLabel(x.d) + (i === 0 ? (tl ? ' (ngayon!)' : ' (today!)') : '') + ' 🌴' }; }
+          return { handled: true, text: L(raw, 'No day off for ' + who + ' in the next 60 days.', 'Walang day off si ' + who + ' sa susunod na 60 araw.') };
+        }
+        if (/tomorrow|bukas/.test(t)) return { handled: true, text: who + ' - ' + line(at(1)) };
+        return { handled: true, text: who + ' - ' + line(at(0)) };
+      });
+    }).catch(function () { return netMsg(raw); });
+  }
   function reminderIntent(raw) {
     think('Checking your reminders…', 'Chine-check ko ang mga reminder mo…', raw);
     return getJson(CFG.SCHEDULE_FAST_API, { action: 'getMyReminders' }, 30000).then(function (d) {
@@ -544,6 +585,7 @@
     if (/\b(low stock|lowstock|below min|minimum stock|running low|paubos|nauubos|ubos na|kulang na|kulang ang stock|mababa ang stock|need(s)? restock|restock)\b/.test(t)) return lowStock(raw, t, ctx);
     if (/\b(near expiry|nearly expired|expir(ed|ing|y)|malapit mag ?expire|paso na|expired na)\b/.test(t)) return expiry(raw, t);
     if (/\b(reminders?|paalala|pending reminders?)\b/.test(t) && /\b(my|ko|ano|what|any|may|meron|show|check|list|pending)\b/.test(t)) return reminderIntent(raw);
+    if (/\b(schedule|shift|duty|day ?off|off)\b/.test(t) && staffName(t) && !/\b(ko|my)\b/.test(t)) return otherSchedule(raw, t);
     if (/\b(day ?off|off ko|my schedule|schedule ko|duty ko|shift ko|my shift|am i off|off ba ako|duty ba ako|may duty|anong (shift|schedule)|what.?s my (shift|schedule)|when.*off|kailan.*off|next off)\b/.test(t) || (/\b(schedule|shift|duty)\b/.test(t) && /\b(today|tomorrow|ngayon|bukas|this week|my|ko)\b/.test(t))) return scheduleIntent(raw, t);
     if (/\b(summary|overview|status|report|buod|kumusta ang (stock|inventory|branch)|how.?s (the )?(stock|inventory|business))\b/.test(t) && /\b(stock|inventory|chocolate|flower|branch|dashboard|today|ngayon|business|buod|summary|overview|status|report)\b/.test(t)) return summary(raw, t);
     if (/\b(stock|stocks|ilan|how many|how much|dami|meron|mayroon|may .* ba|available|natitira|tira|left|quantity|qty|on hand|in stock|count of)\b/.test(t) && !/\b(how to|paano|pano)\b/.test(t)) {
