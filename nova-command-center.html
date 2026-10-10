@@ -80,6 +80,15 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
 @keyframes spin{to{transform:rotate(360deg)}}
 .matrix{position:absolute;inset:0;overflow:hidden;opacity:.34;pointer-events:none;mask-image:radial-gradient(circle at center,transparent 5%,#000 48%,#000 100%)}.matrix i{position:absolute;top:-20%;font-style:normal;font-family:monospace;font-size:11px;line-height:1.8;color:#1485ff;text-shadow:0 0 8px #1687ff;white-space:pre;animation:matrixFall linear infinite}.matrix i:nth-child(3n){color:#2ee8ff}.matrix i:nth-child(5n){opacity:.55}
 @keyframes matrixFall{to{transform:translateY(140vh)}}
+/* ---------- falling sample commands (right side card) ---------- */
+.cmdcard{flex:0 0 auto}
+.cmdfeed{position:relative;height:210px;overflow:hidden;border-radius:9px;background:linear-gradient(180deg,rgba(6,22,48,.55),rgba(3,8,17,.2));-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 18%,#000 82%,transparent 100%)}
+.cmdfeed i{position:absolute;top:0;left:0;max-width:100%;padding:0 4px;font-style:normal;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2ee8ff;text-shadow:0 0 6px #1687ff,0 0 14px rgba(22,135,255,.8);opacity:0;animation:cmdFall var(--d,16s) linear infinite;animation-delay:var(--dl,0s);transform:translateY(-24px)}
+.cmdfeed i:before{content:"> ";color:#1687ff}
+.cmdfeed i:nth-child(3n){color:#8fd8ff}.cmdfeed i:nth-child(4n){color:#1485ff}
+@keyframes cmdFall{0%{transform:translateY(-24px);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateY(212px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.cmdfeed i{animation-duration:60s}}
+
 .core{width:330px;height:330px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#eafaff 0,#42c9ff 4%,#1677ff 13%,#071a39 34%,#030811 67%,#02040a 78%);border:1px solid rgba(70,190,255,.75);box-shadow:0 0 45px rgba(22,135,255,.55),0 0 110px rgba(22,135,255,.28),inset 0 0 70px #000;animation:blueBreath 3s ease-in-out infinite;z-index:2}
 .core:before,.core:after{content:"";position:absolute;border-radius:50%;inset:16px;border:1px solid rgba(88,207,255,.62);box-shadow:0 0 20px rgba(46,232,255,.16)}.core:after{inset:34px;border-style:dashed;border-color:rgba(46,232,255,.42);animation:spin 8s linear infinite}
 @keyframes blueBreath{0%,100%{transform:scale(1);box-shadow:0 0 45px rgba(22,135,255,.5),0 0 100px rgba(22,135,255,.24),inset 0 0 70px #000}50%{transform:scale(1.035);box-shadow:0 0 75px rgba(22,135,255,.82),0 0 170px rgba(22,135,255,.38),inset 0 0 85px #000}}
@@ -293,6 +302,7 @@ radial-gradient(circle at 50% 45%,rgba(22,135,255,.16),transparent 38%),radial-g
       <button data-say="show dashboard">Show Dashboard</button>
       <button data-say="start inventory">Start Inventory</button>
     </div></div>
+    <div class="card cmdcard"><h3>Try saying</h3><div class="cmdfeed" id="cmdfeed" aria-hidden="true"></div></div>
   </aside>
 </div>
 
@@ -378,6 +388,21 @@ viToggle.addEventListener('click', ()=>{
 const matrix=document.getElementById('matrix');
 const glyphs='01NOVA<>[]{}/*\\+-=|AI';
 for(let i=0;i<46;i++){const col=document.createElement('i'); col.textContent=Array.from({length:Math.floor(7+Math.random()*18)},()=>glyphs[Math.floor(Math.random()*glyphs.length)]).join('\n'); col.style.left=(Math.random()*100)+'%'; col.style.animationDuration=(5+Math.random()*9)+'s'; col.style.animationDelay=(-Math.random()*12)+'s'; col.style.fontSize=(8+Math.random()*6)+'px'; matrix.appendChild(col)}
+// Falling sample commands (decorative): evenly spaced so they never overlap, repeat forever
+(function(){
+  const feed=document.getElementById('cmdfeed'); if(!feed) return;
+  const cmds=['open inventory','show dashboard','stock ng red rose sa Hamala','low stock','near expiry','schedule ni Oliver','my schedule','kailan next day off ko','is Oliver off today','flower dashboard','item inventory','start inventory','chocolate summary','open card print','stock ng Ferrero','what time is it','schedule ko bukas','Oliver\'s schedule this week','hey Nova'];
+  const D=16, slots=9; let next=0;   // 9 lines in a 210px box = no overlap; each line swaps to the next command every time it restarts
+  cmds.sort(()=>Math.random()-.5);
+  const take=()=>cmds[(next++)%cmds.length];
+  for(let k=0;k<slots;k++){
+    const i=document.createElement('i'); i.textContent=take();
+    i.style.setProperty('--d',D+'s'); i.style.setProperty('--dl',(-k*D/slots)+'s');
+    i.style.left=(Math.random()*22)+'%';
+    i.addEventListener('animationiteration',()=>{ i.textContent=take(); i.style.left=(Math.random()*22)+'%'; });
+    feed.appendChild(i);
+  }
+})();
 for(let i=0;i<36;i++){const x=document.createElement('i');wave.appendChild(x)}
 function setState(s,label){app.className='app '+s;state.innerHTML='CORE <b>'+label+'</b>'}
 function log(text,type='SYSTEM'){const d=document.createElement('div');d.className='event';d.innerHTML='<span>'+type+' · NOW</span><b>'+escapeHtml(text)+'</b>';activity.prepend(d)}
