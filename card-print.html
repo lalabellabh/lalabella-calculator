@@ -6,6 +6,7 @@
 <script src="shared/theme.js"></script>
 <meta name="lb-theme-keep" content="#card, .card, #printSheet, .textArea, .placeholder, .image-item, #centerGuideV, #userGuidesLayer, .plain-color-swatch, .plain-sticker-preview">
 <script src="auth-guard.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -203,6 +204,10 @@ body::before{
 }
 
 /* Design / Plain / Sleeve toggles below the envelope */
+/* Emoji + Sticker picker (same panel as the chat) */
+#cpEmojiHost{position:relative;display:inline-flex;gap:8px;align-items:center}
+#cpEmojiHost .lbcm-picker{left:0;right:auto;bottom:auto;top:100%;margin:8px 0 0;width:min(340px,92vw);max-width:none;z-index:9300}
+.toolbar .seedsLink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;border:1px solid #ead6da;background:#fff;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px}
 .sticker-toggles{display:flex;gap:6px;margin-top:14px;justify-content:center;flex-wrap:wrap;}
 .voice-picker{display:flex;gap:5px;margin-top:10px;justify-content:center;align-items:center;flex-wrap:wrap;}
 .voice-picker-label{font-size:10px;color:#8a7078;}
@@ -532,6 +537,7 @@ body::before{
       <button data-dir="rtl" title="Right to Left (Arabic)">← RTL</button>
     </div>
     <button id="backTools" title="Back to Flower Tools">← Flower Tools</button>
+    <a class="seedsLink" id="seedsLink" href="seeds-card.html" title="Open the Seeds of Success card">🌱 Seeds</a>
     <div class="group"><span class="label">CARD</span>
       <select id="size"><option value="big">BIG • 4.33 × 4.33 in</option><option value="small">SMALL • 2.95 × 2.95 in</option><option value="circle2in">CIRCLE • 2 × 2 in</option><option value="circle10">CIRCLE • 9.9 × 9.9 cm (4pcs/A4 sticker)</option><option value="a4">A4 • 210 × 297 mm</option><option value="custom">✏️ CUSTOM size…</option></select>
       <span id="customSize" style="display:none;align-items:center;gap:6px;"><input type="number" id="customW" min="20" max="297" step="0.5" value="100" style="width:78px;"> × <input type="number" id="customH" min="20" max="420" step="0.5" value="150" style="width:78px;"> <span style="font-size:12px;opacity:.7">mm (W × H)</span></span>
@@ -562,6 +568,7 @@ body::before{
     </div>
     <button id="addImage">🖼️ Add Image</button>
     <button id="addQrBtn">🔗 Add QR Code</button>
+    <span id="cpEmojiHost"><button id="emojiBtn" type="button" title="Add an emoji to the message">😊 Emoji</button><button id="stickerBtn" type="button" title="Add a sticker to the card">✨ Sticker</button></span>
     <button id="clear">Clear</button>
     <button id="removeSpaceBtn" title="Remove extra blank lines/spacing from the text">🧹 Remove Space</button>
     <button id="watermarkToggleBtn" title="Show/hide the small leaf watermark on the card" style="background:#eaf7ec;">🌿 Watermark: ON</button>
@@ -1139,6 +1146,9 @@ document.getElementById('usePlainBtn').addEventListener('click', () => {
 });
 
 
+// Fonts for emoji: tried in this order, so even a very new emoji prints on a PC whose own emoji font is old.
+const EMOJI_FB = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"';
+function emojiSafe(f){ return String(f).replace(/,(serif|cursive)$/, ',' + EMOJI_FB + ',$1'); }
 const FONT_FAMILY_MAP = {
   bask: '"Baskerville Old Face",Baskerville,Georgia,serif',
   arabic: '"Noto Naskh Arabic","Amiri","Traditional Arabic",serif',
@@ -1150,6 +1160,7 @@ const FONT_FAMILY_MAP = {
   playfair: '"Playfair Display",serif',
   cinzel: '"Cinzel Decorative",serif',
 };
+Object.keys(FONT_FAMILY_MAP).forEach(k => { FONT_FAMILY_MAP[k] = emojiSafe(FONT_FAMILY_MAP[k]); });
 const ITALIC_FONTS = ['bodoni', 'cormorant', 'playfair']; // these were imported as italic-only weights
 font.addEventListener('change',()=>{
   textArea.style.fontFamily = FONT_FAMILY_MAP[font.value] || FONT_FAMILY_MAP.bask;
@@ -1911,6 +1922,87 @@ function saveCard(){
 }
 document.getElementById('saveCard').onclick = saveCard;
 
+
+// ---------- Emoji + Sticker buttons (the same picker as the chat) ----------
+(function(){
+  const host = document.getElementById('cpEmojiHost'), eb = document.getElementById('emojiBtn'), sb = document.getElementById('stickerBtn');
+  if(!host) return;
+  let picker = null, lastRange = null, loading = null;
+
+  // remember where the cursor was in the message, so an emoji goes exactly there
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && textArea.contains(sel.anchorNode)) lastRange = sel.getRangeAt(0).cloneRange();
+  });
+
+  function insertEmoji(e){
+    textArea.focus();
+    const sel = window.getSelection();
+    if(textArea.classList.contains('placeholder') || textArea.textContent.trim() === 'Type or paste your message here…'){ textArea.innerHTML = ''; textArea.classList.remove('placeholder'); lastRange = null; }
+    sel.removeAllRanges();
+    if(lastRange && textArea.contains(lastRange.startContainer)) sel.addRange(lastRange);
+    else { const r = document.createRange(); r.selectNodeContents(textArea); r.collapse(false); sel.addRange(r); }
+    document.execCommand('insertText', false, e);
+    if(sel.rangeCount) lastRange = sel.getRangeAt(0).cloneRange();
+    playClick();
+  }
+
+  async function urlToDataUrl(url){
+    try{
+      const r = await fetch(url); if(!r.ok) throw 0;
+      const b = await r.blob();
+      return await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(b); });
+    }catch(err){ return url; }     // if the picture's host does not allow it, use the link itself
+  }
+  async function addSticker(item){
+    const box = addImage(await urlToDataUrl(item.url || item.preview));
+    box.style.width = '90px';
+    box.dataset.sticker = '1';
+    playClick();
+    picker && picker.close();
+  }
+
+  function ensure(){
+    if(window.lbChatMedia && window.lbChatApi) return Promise.resolve(true);
+    if(loading) return loading;
+    const need = [['shared/chat-live.js', () => window.lbChatApi], ['shared/chat-media.js', () => window.lbChatMedia]];
+    loading = new Promise(resolve => {
+      need.forEach(([src, ready]) => {
+        if(ready() || document.querySelector('script[src="' + src + '"]')) return;
+        const sc = document.createElement('script'); sc.src = src; document.head.appendChild(sc);   // the chat bubble normally loads these already
+      });
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        if(window.lbChatMedia && window.lbChatApi){ clearInterval(iv); resolve(true); }
+        else if(Date.now() - t0 > 8000){ clearInterval(iv); loading = null; resolve(false); }
+      }, 150);
+    });
+    return loading;
+  }
+
+  async function openTab(tab){
+    const ok = await ensure();
+    if(!ok){ alert('The emoji and sticker panel could not load. Check the internet and try again.'); return; }
+    if(!picker){
+      picker = window.lbChatMedia.createPicker({
+        host, toggleBtns: [eb, sb], tabs: ['emoji', 'sticker', 'fav'],
+        onEmoji: insertEmoji,
+        onGif: (item, kind) => { if(kind === 'sticker') addSticker(item); }
+      });
+    }
+    picker.toggle(tab);
+    if(picker.isOpen()){        // keep the panel on screen
+      picker.el.style.left = '0px';
+      const r = picker.el.getBoundingClientRect(), over = r.right - (window.innerWidth - 8);
+      if(over > 0) picker.el.style.left = (-over) + 'px';
+    }
+  }
+  // keep the typing cursor in the message while pressing the buttons
+  [eb, sb].forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+  eb.addEventListener('click', () => openTab('emoji'));
+  sb.addEventListener('click', () => openTab('sticker'));
+})();
+
 document.getElementById('loadCard').onclick = ()=> document.getElementById('fileLoad').click();
 document.getElementById('fileLoad').addEventListener('change', (e)=>{
   const file = e.target.files[0];
@@ -1940,9 +2032,9 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
       textArea.style.columnCount = cols.value;
       textArea.style.columnGap = '14px';
       font.value = data.font || 'bask';
-      textArea.style.fontFamily = font.value === 'arabic'
+      textArea.style.fontFamily = emojiSafe(font.value === 'arabic'
         ? '"Noto Naskh Arabic","Amiri","Traditional Arabic",serif'
-        : '"Baskerville Old Face",Baskerville,Georgia,serif';
+        : '"Baskerville Old Face",Baskerville,Georgia,serif');
       fontSize.value = data.fontSize || 16;
       textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
       if(window.LBCardBg){ LBCardBg.set(data.bg || 'none'); LBCardBg.setOpacity(data.bgOpacity == null ? 100 : data.bgOpacity); }
