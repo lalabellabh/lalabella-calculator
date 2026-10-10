@@ -660,17 +660,8 @@
     if(!result){ alert('Nothing to print.'); return; }
     const { dateVal, toPrint } = result;
 
+    // Print only. (The old server-side "print log" call was removed — the backend has no such action anymore and it just returned a 400.)
     window.print();
-
-    const params = new URLSearchParams({
-      action: 'printStockCount',
-      branch: currentBranch,
-      date: dateVal,
-      inventoryWeeklyStock: document.getElementById('sumInventory').textContent,
-      costWeeklyWastage: document.getElementById('sumWastageCost').textContent,
-      rows: JSON.stringify(toPrint)
-    });
-    fetch(API_URL + '?' + params.toString()).catch(()=>{});
   });
 
   // ---- Share to WhatsApp: render the same print view to an image,
