@@ -18,6 +18,9 @@ window.LB_CONFIG = Object.freeze({
   // Profile page extras (Team Status + Gallery pictures, saved as files in Storage). If a call to it fails with a server
   // error, profile.html automatically retries the same call on AUTH_FAST_API. To switch it off, delete this one line.
   PROFILE_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/profile-fast',
+  // Video status (30 sec / 40 MB, auto-deleted after 24 h) is built and ready on the server but switched OFF.
+  // To turn it on later (best on a paid Supabase plan), change false to true.
+  STATUS_VIDEO: false,
   CHOCOLATE_API:    'https://script.google.com/macros/s/AKfycbznLqWonLj9K1NR0kb3KfzZcSTxbxCMEJJS9CQFYd6GYcGPv9Alwk2dO4mpjwxGVg/exec',
   // Fast path (Supabase Edge Function) for Chocolate Dashboard only —
   // pilot slice #1. Every other Chocolate action still uses CHOCOLATE_API
