@@ -114,6 +114,7 @@
     ['branch-config.html', 'Branch Config', /branch\s*config|branch settings/],
     ['user-admin.html', 'User Management', /user\s*(management|admin)|users\b|accounts?/],
     ['brain.html', 'Brain Vault', /brain\s*vault|\bbrain\b/],
+    ['system-health.html', 'System Health', /system\s*health|health\s*check|\bkalusugan\b/],
     ['nova-command-center.html', 'NOVA Command Center', /\bnova\b|command center|joyboy/],
     ['chocolate-calc.html', 'Chocolate Calculator', /calculator/],
     ['index.html', 'Home', /\bhome\b|main (page|menu)|^menu$/]
