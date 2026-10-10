@@ -233,7 +233,7 @@
   function weatherHtml() {
     const p1 = wxPick('lbWxP1', 'bh'), p2 = wxPick('lbWxP2', 'spl');
     let hid = false; try { hid = localStorage.getItem('lbWxHide') === '1'; } catch (e) {}
-    return '<div class="lb-menu-weather' + (hid ? ' lbw-hid' : '') + '"><button type="button" class="lbw-tg" aria-label="Hide or show weather"><span class="lbw-sum"></span><span class="lbw-chev">⌃</span></button><div class="lbw-wrap"><div class="lbw-body"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
+    return '<div class="lb-menu-weather' + (hid ? ' lbw-hid' : '') + '"><button type="button" class="lbw-tg" aria-label="Hide or show weather"><span class="wxs"></span><span class="lbw-sum"></span><span class="lbw-chev">⌃</span></button><div class="lbw-wrap"><div class="lbw-body"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
       '<div class="lbw-row"><span class="lbw-ico"></span>' +
       '<span class="lbw-main"><span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
       '<span class="lbw-feels">Feels like --</span></span>' +
@@ -295,7 +295,16 @@
     };
     const sumPaint = () => {
       const el = box.querySelector('.lbw-sum'); if (!el) return;
-      el.textContent = WX_PLACES[p1].f + ' ' + (cur ? conv(cur.d.t) + '°' : '--') + '  ·  ' + WX_PLACES[p2].f + ' ' + (cur2 ? conv(cur2.d.t) + '°' : '--') + '  ' + (cur ? condTxt(cur.d.code, WX_PLACES[p1].tz) : '');
+      const t1 = cur ? conv(cur.d.t) + '°' : '--', t2 = cur2 ? conv(cur2.d.t) + '°' : '--';
+      const sc = box.querySelector('.wxs');
+      let sub = cur ? condTxt(cur.d.code, WX_PLACES[p1].tz) : '';
+      if (cur) {
+        const d = cur.d;
+        const run = () => { try { const k = LBWxScene.apply(sc, { code: d.code, t: d.t, w: d.w, h: d.h, night: isNightIn(WX_PLACES[p1].tz) }); LBWxScene.tilt(box.querySelector('.lbw-tg'), sc); } catch (e) {} };
+        if (window.LBWxScene) run(); else { const sx = document.createElement('script'); sx.src = 'shared/weather-scene.js'; sx.onload = run; document.body.appendChild(sx); }
+        sub += ' · 💨 ' + Math.round(d.w) + ' km/h · 💧 ' + Math.round(d.h) + '%';
+      }
+      el.innerHTML = '<b>' + WX_PLACES[p1].f + ' ' + t1 + '</b> <i>' + WX_PLACES[p2].f + ' ' + t2 + '</i><br><small>' + sub + '</small>';
     };
     const tg = box.querySelector('.lbw-tg');
     if (tg) tg.addEventListener('click', e => {
@@ -383,8 +392,10 @@
       '.lbw-wrap{display:grid;grid-template-rows:1fr;transition:grid-template-rows .32s ease,opacity .25s ease;opacity:1;}.lbw-body{overflow:hidden;min-height:0;}' +
       '.lbw-hid .lbw-wrap{grid-template-rows:0fr;opacity:0;}' +
       '.lbw-tg{position:absolute;top:0;right:4px;z-index:3;display:flex;align-items:center;gap:8px;border:0;background:rgba(128,128,128,.14);color:inherit;border-radius:999px;padding:2px 9px;font:600 12px inherit;cursor:pointer;line-height:1.4;}' +
-      '.lbw-sum{display:none;font-size:12.5px;font-weight:600;}.lbw-chev{display:inline-block;transition:transform .3s;font-size:13px;}' +
-      '.lbw-hid .lbw-tg{position:static;width:100%;justify-content:space-between;padding:7px 12px;border-radius:12px;}.lbw-hid .lbw-sum{display:inline;}.lbw-hid .lbw-chev{transform:rotate(180deg);}' +
+      '.lbw-sum{display:none;position:relative;z-index:2;font-size:15px;line-height:1.25;text-align:left;}.lbw-sum i{font-style:normal;opacity:.9;margin-left:6px;font-weight:600}.lbw-sum small{font-size:11px;font-weight:600;opacity:.95}.lbw-chev{position:relative;z-index:2;display:inline-block;transition:transform .3s;font-size:13px;}' +
+      '.lb-menu-weather .lbw-tg>.wxs{display:none}.lbw-hid .lbw-tg>.wxs{display:block}' +
+      '.lbw-hid .lbw-tg{position:relative;overflow:hidden;min-height:66px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);background:#6aa8e8;}' +
+      '.lbw-hid .lbw-tg{position:relative;width:100%;justify-content:space-between;padding:9px 14px;border-radius:14px;}.lbw-hid .lbw-sum{display:inline;}.lbw-hid .lbw-chev{transform:rotate(180deg);}' +
       '.lbw-row{display:flex;align-items:center;gap:10px;}' +
       '.lbw-ico{flex:0 0 54px;width:54px;height:54px;display:block;}' +
       '.lbw-ico .weather-emoji,.lbw-ico .h3-wrap,.lbw-ico svg{width:54px!important;height:54px!important;}' +
