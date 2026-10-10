@@ -18,7 +18,11 @@
   .wrap{max-width:1100px;margin:0 auto;padding-top:60px}
   .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700}
   h1{font-family:'Fraunces',serif;font-size:32px;margin:6px 0 4px}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .adminlinks{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+  .adminlinks a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 14px;font-weight:700;font-size:12.5px;box-shadow:0 4px 12px rgba(47,101,112,.06);transition:transform .15s,border-color .15s}
+  .adminlinks a:hover{transform:translateY(-1px);border-color:var(--teal)}
+  .adminlinks a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(47,101,112,.06)}
   .card h2{font-family:'Fraunces',serif;font-size:19px;margin:0}
   .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -119,6 +123,10 @@
   <div class="eyebrow">Admin</div>
   <h1>User Management</h1>
   <p class="sub">Change positions, roles and branches, unlock accounts, reset passwords, disable staff who left, and manage the invite code.</p>
+  <nav class="adminlinks" aria-label="Other admin pages">
+    <a href="system-health.html">🩺 System Health</a>
+    <a href="brain.html">🧠 Brain Vault</a>
+  </nav>
 
   <div id="lockCard" class="card" style="display:none;max-width:420px;margin:30px auto;text-align:center;">
     <div style="font-size:34px;margin-bottom:6px;">🔐</div>
