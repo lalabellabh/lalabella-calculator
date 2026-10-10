@@ -52,6 +52,7 @@ window.LB_CONFIG = Object.freeze({
   BRAIN_API:        'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/brain-fast',
   // System Health page (admin only, read-only report).
   HEALTH_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/health-fast',
+  BACKUP_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/backup-fast',
 
   // Supabase (fast path). The publishable key is MEANT to be public: the
   // browser still cannot read or write any table (no grants + RLS) — it is
