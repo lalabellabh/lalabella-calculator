@@ -637,6 +637,25 @@
   }
   setDateToToday();
 
+  // ---- Nova hand-off: a pasted count drafted by Nova fills the sheet; nothing is saved until Save is pressed ----
+  (async function applyNovaDraft(){
+    let d=null; try{ d=JSON.parse(sessionStorage.getItem('lbNovaCountDraft')||'null'); sessionStorage.removeItem('lbNovaCountDraft'); }catch(e){}
+    if(!d || !Array.isArray(d.items) || !d.items.length || Date.now()-d.ts > 30*60*1000) return;
+    const tab = document.querySelector('.branch-tab[data-branch="'+d.branch+'"]'); if(tab) tab.click();
+    document.getElementById('loadBtn').click();
+    for(let i=0;i<80 && !(backing.length && hasCountDate);i++) await new Promise(r=>setTimeout(r,150));
+    if(!backing.length) return;
+    let filled=0;
+    d.items.forEach(it=>{
+      let row = backing.find(b=>b.flowerName.trim().toLowerCase()===String(it.name).trim().toLowerCase());
+      if(!row){ row={flowerName:it.name,contributingItemCodes:'',physicalCount:'',wastage:'',legacyRate:legacyRateFor(it.name)}; backing.push(row); }
+      row.physicalCount=String(it.count); if(it.waste) row.wastage=String(it.waste); filled++;
+    });
+    if(d.by){ const cb=document.getElementById('countedByInput'); if(cb && !cb.value) cb.value=d.by; }
+    hasBeenEdited=true; renderFlowerList(); renderSummary();
+    document.getElementById('statusLabel').innerHTML='<span class="badge baseline">🤖 Nova filled '+filled+' flowers for '+d.branch+' — review, then press Save</span>';
+  })();
+
   // If this same browser tab is left open across midnight (very
   // common — people don't close their phone browser between shifts),
   // the date field would otherwise stay frozen on whatever day the
