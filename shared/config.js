@@ -50,6 +50,8 @@ window.LB_CONFIG = Object.freeze({
   NOVA_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/nova-fast',
   // System "brain": reminders + smart alerts (shared/brain.js, User Management → Reminders).
   BRAIN_API:        'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/brain-fast',
+  // System Health page (admin only, read-only report).
+  HEALTH_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/health-fast',
 
   // Supabase (fast path). The publishable key is MEANT to be public: the
   // browser still cannot read or write any table (no grants + RLS) — it is
