@@ -205,6 +205,7 @@ body::before{
 
 /* Design / Plain / Sleeve toggles below the envelope */
 /* Emoji + Sticker picker (same panel as the chat) */
+.panel:has(#cpEmojiHost){position:relative;z-index:9100}
 #cpEmojiHost{position:relative;display:inline-flex;gap:8px;align-items:center}
 #cpEmojiHost .lbcm-picker{left:0;right:auto;bottom:auto;top:100%;margin:8px 0 0;width:min(340px,92vw);max-width:none;z-index:9300}
 .toolbar .seedsLink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;border:1px solid #ead6da;background:#fff;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px}
@@ -1947,12 +1948,32 @@ document.getElementById('saveCard').onclick = saveCard;
     playClick();
   }
 
+  // Stickers are often animated (GIF/WebP). A printed card cannot move, so keep only the first frame as a still PNG.
+  function frameToPng(src){
+    return new Promise((ok, no) => {
+      const done = bmp => {
+        try{
+          const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(bmp, 0, 0); ok(c.toDataURL('image/png'));
+        }catch(e){ no(e); }
+      };
+      if(src instanceof Blob && window.createImageBitmap){ createImageBitmap(src).then(done, no); return; }
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => done(im); im.onerror = no;
+      im.src = src instanceof Blob ? URL.createObjectURL(src) : src;
+    });
+  }
   async function urlToDataUrl(url){
+    let blob = null;
     try{
       const r = await fetch(url); if(!r.ok) throw 0;
-      const b = await r.blob();
-      return await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(b); });
-    }catch(err){ return url; }     // if the picture's host does not allow it, use the link itself
+      blob = await r.blob();
+      return await frameToPng(blob);
+    }catch(err){}
+    try{ return await frameToPng(url); }catch(err){}     // host blocks fetch: try drawing the picture directly
+    if(blob){ try{ return await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(blob); }); }catch(e){} }
+    return url;                                           // last resort: the link itself (may still move)
   }
   async function addSticker(item){
     const box = addImage(await urlToDataUrl(item.url || item.preview));
