@@ -34,6 +34,9 @@
   .btn:hover{transform:translateY(-1px)}
   .btn:disabled{opacity:.55;cursor:default;transform:none}
   .back{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:9px 12px;border-radius:10px;background:#fff}
+  .bk{cursor:pointer;font-weight:700;color:var(--ink)} .bk:disabled{opacity:.55;cursor:default}
+  .bkmsg{font-size:11.5px;color:var(--muted);max-width:340px;text-align:right;line-height:1.3}
+  .bkmsg.bad{color:#b3352a}
   :focus-visible{outline:2px solid var(--rose);outline-offset:2px}
 
   /* ---------- the bloom (left) ---------- */
@@ -152,6 +155,8 @@
     <h1>System Health</h1>
     <span class="when" id="when"></span>
     <span class="sp"></span>
+    <span class="bkmsg" id="bkmsg" role="status"></span>
+    <button class="back bk" id="bk" type="button" title="Download a copy of all the data (keep the file private)">⬇ Backup</button>
     <a class="back" href="user-admin.html">← User Management</a>
     <button class="btn" id="refresh" type="button">↻ Check again</button>
   </header>
@@ -360,6 +365,45 @@
     }finally{ busy = false; b.disabled = false; b.textContent = '↻ Check again'; }
   }
 
+  // ---------- backup: download a copy of all the data ----------
+  const BK_KEY = 'lbLastBackup';
+  function bkSay(msg, bad){ const m = $('bkmsg'); m.textContent = msg; m.className = 'bkmsg' + (bad ? ' bad' : ''); }
+  function ago(ts){
+    const m = Math.round((Date.now() - ts) / 60000);
+    return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago';
+  }
+  function bkLast(){
+    let t = 0; try{ t = +localStorage.getItem(BK_KEY) || 0; }catch(e){}
+    bkSay(t ? 'Last backup on this device: ' + ago(t) : 'No backup downloaded on this device yet.', t && Date.now() - t > 7 * 864e5);
+  }
+  let bkBusy = false;
+  async function backup(){
+    if(bkBusy) return; bkBusy = true;
+    const b = $('bk'); b.disabled = true; b.textContent = 'Preparing…'; bkSay('Collecting every table… this can take a few seconds.');
+    const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 120000);
+    try{
+      const res = await fetch(LB_CONFIG.BACKUP_API, { method:'POST', body: new URLSearchParams({ action:'export', token: token() }), signal: ctrl.signal });
+      const d = await res.json();
+      if(d && d.reauth){ bkSay('Enter your admin password in the box, then press Backup again.', true); return; }
+      if(!d || !d.tables){ bkSay((d && d.error) || 'The server did not answer.', true); return; }
+      const now = new Date(), pad = n => String(n).padStart(2, '0');
+      const name = 'lalabella-backup-' + now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.json';
+      const blob = new Blob([JSON.stringify(d)], { type:'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      const rows = Object.values(d.counts || {}).reduce((x, y) => x + y, 0);
+      if(d.failed && d.failed.length){
+        bkSay('Saved ' + name + ', but ' + d.failed.length + ' table(s) could not be read: ' + d.failed.map(f => f.table).join(', ') + '. Try again.', true);
+      }else{
+        try{ localStorage.setItem(BK_KEY, String(Date.now())); }catch(e){}
+        bkSay('Saved ' + name + ' · ' + d.tableCount + ' tables, ' + rows.toLocaleString() + ' rows. Keep it private.');
+      }
+    }catch(e){
+      bkSay(e && e.name === 'AbortError' ? 'The backup took over 2 minutes. Try again.' : 'Could not reach the server. Check the internet connection.', true);
+    }finally{ clearTimeout(t); bkBusy = false; b.disabled = false; b.textContent = '⬇ Backup'; }
+  }
+  $('bk').addEventListener('click', backup);
+  bkLast();
   $('refresh').addEventListener('click', load);
   load();
   setInterval(() => { if(!document.hidden) load(); }, 120000);
