@@ -52,13 +52,15 @@
   .flower:hover .ring{animation-play-state:paused}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-  .pt{outline:none;cursor:default}
-  .pt path{stroke:var(--c);stroke-width:1.2;stroke-opacity:.9;transition:filter .2s,stroke-width .2s;transform-box:fill-box;transform-origin:50% 100%;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 45ms)}
-  .pt.ok{--c:var(--p-ok)} .pt.warn{--c:var(--p-warn)} .pt.fail{--c:var(--p-fail)}
-  .pt.ok path{fill:url(#g-ok)} .pt.warn path{fill:url(#g-warn)} .pt.fail path{fill:url(#g-fail);stroke-dasharray:3 3}
-  .pt:hover path,.pt:focus path{filter:drop-shadow(0 0 7px var(--c));stroke-width:2.2}
-  .pt.info path{fill:rgba(255,255,255,.18);--c:#fff}
-  @keyframes grow{from{transform:scale(.15);opacity:0}to{transform:scale(1);opacity:1}}
+  .pt{outline:none;cursor:default;animation:fade .9s ease both;animation-delay:calc(var(--i) * 50ms);transition:filter .25s}
+  .pt path{fill:none;stroke-width:.9;stroke-linejoin:round;transform-box:view-box;transform-origin:0 0;animation:breathe 6.5s ease-in-out infinite;animation-delay:calc(var(--k) * -.22s)}
+  .pt path.hit{fill:rgba(255,255,255,.05);stroke:none;animation:none}
+  .pt.fail path:not(.hit){stroke-dasharray:3 3}
+  .pt:hover,.pt:focus{filter:drop-shadow(0 0 5px rgba(255,255,255,.55))}
+  .pt:hover path.hit,.pt:focus path.hit{fill:rgba(255,255,255,.12)}
+  .ring.in .pt path{animation-duration:5s}
+  @keyframes breathe{0%,100%{transform:scale(.92)}50%{transform:scale(1.07)}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
   .core{position:absolute;inset:0;margin:auto;width:25%;height:25%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
   .core .big{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(15px,1.6vw,26px);line-height:1.05;letter-spacing:.005em}
   .core .sm{font-size:clamp(10px,.8vw,12px);color:rgba(255,255,255,.7);margin-top:5px;line-height:1.35;max-width:100%;overflow-wrap:anywhere}
@@ -139,7 +141,7 @@
     .head{flex-wrap:wrap}
     .head .when{display:none}
   }
-  @media (prefers-reduced-motion:reduce){ .pt path,.ring,.fl{animation:none} .btn{transition:none} .tilt{transform:none} }
+  @media (prefers-reduced-motion:reduce){ .pt,.pt path,.ring,.fl,.halo{animation:none} .btn{transition:none} .tilt{transform:none} }
 </style>
 </head>
 <body>
@@ -159,11 +161,9 @@
     <div class="flower" id="flower"><div class="fl"><div class="tilt" id="tilt">
       <svg viewBox="0 0 400 400" id="svg" role="group" aria-label="One petal for each check">
         <defs>
-          <linearGradient id="g-ok" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8fd0a6" stop-opacity=".12"/><stop offset="1" stop-color="#8fd0a6" stop-opacity=".92"/></linearGradient>
-          <linearGradient id="g-warn" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f2c262" stop-opacity=".15"/><stop offset="1" stop-color="#f2c262" stop-opacity=".95"/></linearGradient>
-          <linearGradient id="g-fail" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff7a6b" stop-opacity=".15"/><stop offset="1" stop-color="#ff7a6b" stop-opacity=".95"/></linearGradient>
+          <radialGradient id="halo"><stop offset="0" stop-color="#05030a"/><stop offset=".55" stop-color="#0a1330"/><stop offset=".8" stop-color="#1b4fc4" stop-opacity=".75"/><stop offset="1" stop-color="#2d6cdf" stop-opacity="0"/></radialGradient>
         </defs>
-        <g id="petals" transform="translate(200 200)"></g>
+        <g transform="translate(200 200)"><circle class="halo" r="66" fill="url(#halo)"/><g id="petals"></g></g>
       </svg>
       <div class="sheen" aria-hidden="true"></div>
       <div class="core" id="core"><div class="big">Checking…</div><div class="sm">This takes a few seconds.</div></div>
@@ -212,14 +212,22 @@
     return 'M0 ' + (-r0) + ' C ' + w + ' ' + (-r0 - L*.25) + ', ' + (w*.9) + ' ' + (-r0 - L*.8) + ', 0 ' + (-r0 - L) +
            ' C ' + (-w*.9) + ' ' + (-r0 - L*.8) + ', ' + (-w) + ' ' + (-r0 - L*.25) + ', 0 ' + (-r0) + ' Z';
   }
-  function ring(items, r0, L, offsetDeg, startIdx){
+  // line-art colours: inner layers -> outer layers, per status
+  const TONE = { ok:[[45,108,223],[70,214,164]], warn:[[224,144,42],[246,208,112]], fail:[[192,57,43],[255,138,120]] };
+  function mix(a, b, t){ return 'rgb(' + [0,1,2].map(i => Math.round(a[i] + (b[i]-a[i]) * t)).join(',') + ')'; }
+  function ring(items, r0, L, offsetDeg, startIdx, layers){
     const n = items.length; if(!n) return '';
-    const w = Math.min(30, Math.PI * 2 * r0 / n * .6);
+    const w0 = Math.min(46, Math.PI * 2 * r0 / n * 1.0);
     return items.map((it, i) => {
       const len = it.level === 'fail' ? L * .55 : L;       // a down service wilts
-      const ang = offsetDeg + i * 360 / n;
-      return '<g class="pt ' + it.level + '" tabindex="0" role="img" aria-label="' + esc(it.name + ': ' + it.value) + '" data-n="' + esc(it.name) + '" data-v="' + esc(it.value) + '" data-l="' + it.level + '" transform="rotate(' + ang.toFixed(2) + ')">' +
-        '<path style="--i:' + (startIdx + i) + '" d="' + petalPath(r0, len, w) + '"/></g>';
+      const ang = offsetDeg + i * 360 / n, tone = TONE[it.level] || TONE.ok;
+      let ls = '';
+      for(let k = 0; k < layers; k++){
+        const t = k / (layers - 1);
+        ls += '<path style="--k:' + k + '" stroke="' + mix(tone[0], tone[1], t) + '" stroke-opacity="' + (.5 + .45 * t).toFixed(2) + '" d="' + petalPath(r0, len * (.38 + .62 * t), w0 * (.45 + .6 * t)) + '"/>';
+      }
+      return '<g class="pt ' + it.level + '" style="--i:' + (startIdx + i) + '" tabindex="0" role="img" aria-label="' + esc(it.name + ': ' + it.value) + '" data-n="' + esc(it.name) + '" data-v="' + esc(it.value) + '" data-l="' + it.level + '" transform="rotate(' + ang.toFixed(2) + ')">' +
+        '<path class="hit" d="' + petalPath(r0, len, w0 * 1.05) + '"/>' + ls + '</g>';
     }).join('');
   }
   function setCore(level, big, sm){
@@ -230,7 +238,7 @@
     const fns = d.functions.map(f => ({ name: f.name, value: f.up ? f.ms + ' ms' : (f.error || 'not answering'), level: !f.up ? 'fail' : f.ms > 3000 ? 'warn' : 'ok' }));
     const core = d.checks.filter(c => ['functions','sessions','inactive'].indexOf(c.id) === -1)
       .map(c => ({ name: c.label, value: c.value, level: c.level === 'info' ? 'ok' : c.level }));
-    $('petals').innerHTML = '<g class="ring in">' + ring(core, 54, 36, 180 / Math.max(1, core.length), 0) + '</g><g class="ring out">' + ring(fns, 100, 86, 0, core.length) + '</g>';
+    $('petals').innerHTML = '<g class="ring in">' + ring(core, 54, 40, 180 / Math.max(1, core.length), 0, 9) + '</g><g class="ring out">' + ring(fns, 100, 86, 0, core.length, 12) + '</g>';
     const bad = d.checks.filter(c => c.level === 'fail' || c.level === 'warn');
     const down = d.functions.filter(f => !f.up).length;
     const sm = bad.length ? bad.slice(0, 2).map(c => c.label).join(', ') + (bad.length > 2 ? ' +' + (bad.length - 2) : '')
