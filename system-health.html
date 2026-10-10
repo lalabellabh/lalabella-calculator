@@ -148,12 +148,27 @@
     $('refresh').addEventListener('click', load);
   }
 
+  // The server says the 15-minute unlock has run out. Do NOT reload the page (that made it blink in a loop):
+  // the admin gate shows the password box by itself, so just wait here and check again after it is unlocked.
+  let waits = 0, waiter = null;
+  function waitForUnlock(){
+    $('banner').className = 'banner load';
+    $('banner').innerHTML = '<div class="big">🔐</div><div><b>Waiting for your password</b><span>Enter it in the box to continue.</span></div>';
+    if(waiter) return;
+    waiter = setInterval(() => {
+      const locked = document.documentElement.classList.contains('lbgate-locked');
+      if(locked){ waits = 0; return; }                    // password box is showing — keep waiting
+      if(++waits > 6){ clearInterval(waiter); waiter = null; showError('Your admin unlock has expired. Please refresh the page and enter your password.'); return; }
+      clearInterval(waiter); waiter = null; load();       // gate is open → try the check again
+    }, 1500);
+  }
+
   async function load(){
     if(busy) return; busy = true;
     const b = $('refresh'); if(b){ b.disabled = true; b.textContent = 'Checking…'; }
     try{
       const d = await fetchReport();
-      if(d && d.reauth){ location.reload(); return; }     // unlock expired → the admin gate asks for the password again
+      if(d && d.reauth){ waitForUnlock(); return; }       // unlock expired → the admin gate asks for the password; check again once it is unlocked
       if(!d || !d.success){ showError((d && d.error) || 'The server did not answer.'); }
       else render(d);
     }catch(e){
