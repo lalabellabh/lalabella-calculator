@@ -453,17 +453,31 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
   acctModal.addEventListener('click', e=>{ if(e.target === acctModal) closeAcct(); });
 
   // ---------- helpers ----------
-  const API = LB_CONFIG.AUTH_FAST_API;
+  const API = LB_CONFIG.PROFILE_FAST_API || LB_CONFIG.AUTH_FAST_API;   // Team Status + Gallery
+  const API_BACKUP = LB_CONFIG.AUTH_FAST_API;                          // same actions still exist here (safety net)
+  // Calls the profile API; if it answers with a server error (5xx/404) the same call is retried on the backup API.
+  // Network errors are retried only for reads (GET) so a save can never be sent twice.
+  async function hit(path, init){
+    const bases = API === API_BACKUP ? [API] : [API, API_BACKUP];
+    const isRead = !init || !init.method || init.method === 'GET';
+    let last;
+    for(let i = 0; i < bases.length; i++){
+      try{
+        const r = await fetch(bases[i] + path, init);
+        if((r.status >= 500 || r.status === 404) && i < bases.length - 1){ last = new Error('HTTP ' + r.status); continue; }
+        return await r.json();
+      }catch(e){ last = e; if(!isRead) break; }
+    }
+    throw last;
+  }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function apiGet(action, extra){
     const q = new URLSearchParams(Object.assign({action, token:getToken(), _ts:Date.now()}, extra||{}));
-    const r = await fetch(API + '?' + q.toString());
-    return r.json();
+    return hit('?' + q.toString());
   }
   async function apiPost(action, fields){
     const body = new URLSearchParams(Object.assign({action, token:getToken()}, fields||{}));
-    const r = await fetch(API, { method:'POST', body });
-    return r.json();
+    return hit('', { method:'POST', body });
   }
   function initials(name){
     const parts = String(name||'?').trim().split(/\s+/);
