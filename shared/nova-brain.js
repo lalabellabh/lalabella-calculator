@@ -397,11 +397,24 @@
   /* ---------------------------------------------------------- live: someone ELSE's schedule (anyone logged in, same as the Duty Schedule page) */
   var ALIAS_NAMES = { aguinaldo: 'aldo', mohammed: 'mohamed', mahmoud: 'mahmood', nabadda: 'zaharah' };
   function isAdminUser() { return String(me().role || '').toLowerCase() === 'admin'; }
-  function staffName(t) {   // "schedule ni oliver", "is oliver off today", "off ba si oliver", "oliver's shift"
-    var m = t.match(/\b(?:ni|si|of|for|kay)\s+([a-z][a-z .'-]{1,24}?)(?:\s+(?:today|tomorrow|ngayon|bukas|this week|next|sa|on|ba|po)\b|$)/) ||
-            t.match(/\bis\s+([a-z][a-z .'-]{1,24}?)\s+(?:off|working|on duty)\b/) ||
-            t.match(/\b([a-z][a-z'-]{1,20})'s\s+(?:schedule|shift|duty|day ?off)\b/);
-    return m ? m[1].trim() : '';
+  var NOT_NAMES = /^(my|the|our|your|a|an|this|next|last|today|tomorrow|duty|work|weekly|week|full|whole|team|staff|shop|day|off|his|her|their|what|when|who|which|how|show|check|tell|me|please|pls|is|are|does|will|can|could|ang|ng|sa|ba)$/;
+  function staffName(t) {   // "schedule ni oliver", "is oliver off today", "oliver's shift", "when is oliver off", "oliver schedule tomorrow"
+    // note: norm() already removed apostrophes, so "oliver's" arrives as "olivers"
+    var N = '([a-z][a-z .-]{1,24}?)', m, nm;
+    var pats = [
+      new RegExp('\\b(?:ni|si|of|for|kay)\\s+' + N + '(?:\\s+(?:today|tomorrow|ngayon|bukas|this week|next|sa|on|ba|po)\\b|$)'),
+      new RegExp('\\b(?:is|does|will|can)\\s+' + N + '\\s+(?:off|working|work|on duty|on shift|free|in)\\b'),
+      new RegExp('\\b(?:when|what time|what shift)\\s+(?:is|does|will)\\s+' + N + '\\s+(?:off|working|work|next|have|on|start|finish)\\b'),
+      new RegExp('\\b([a-z]{2,20}?)s?\\s+(?:next |upcoming |weekly )?(?:schedule|shift|duty|day ?off|days off)\\b')
+    ];
+    for (var i = 0; i < pats.length; i++) {
+      m = t.match(pats[i]); if (!m) continue;
+      nm = m[1].replace(/\s+(?:next|upcoming|weekly|day|days|schedule|shift|duty)\b.*$/, '').trim().replace(/\s+(?:s|the|a)$/, '');
+      var first = nm.split(' ')[0];
+      if (NOT_NAMES.test(first) || NOT_NAMES.test(nm)) continue;
+      return nm;
+    }
+    return '';
   }
   function otherSchedule(raw, t) {
     var q = staffName(t).replace(/\s+/g, ' ');
@@ -585,7 +598,7 @@
     if (/\b(low stock|lowstock|below min|minimum stock|running low|paubos|nauubos|ubos na|kulang na|kulang ang stock|mababa ang stock|need(s)? restock|restock)\b/.test(t)) return lowStock(raw, t, ctx);
     if (/\b(near expiry|nearly expired|expir(ed|ing|y)|malapit mag ?expire|paso na|expired na)\b/.test(t)) return expiry(raw, t);
     if (/\b(reminders?|paalala|pending reminders?)\b/.test(t) && /\b(my|ko|ano|what|any|may|meron|show|check|list|pending)\b/.test(t)) return reminderIntent(raw);
-    if (/\b(schedule|shift|duty|day ?off|off)\b/.test(t) && staffName(t) && !/\b(ko|my)\b/.test(t)) return otherSchedule(raw, t);
+    if (/\b(schedule|shift|duty|day ?off|days off|off|working)\b/.test(t) && staffName(t) && !/\b(ko|my)\b/.test(t)) return otherSchedule(raw, t);
     if (/\b(day ?off|off ko|my schedule|schedule ko|duty ko|shift ko|my shift|am i off|off ba ako|duty ba ako|may duty|anong (shift|schedule)|what.?s my (shift|schedule)|when.*off|kailan.*off|next off)\b/.test(t) || (/\b(schedule|shift|duty)\b/.test(t) && /\b(today|tomorrow|ngayon|bukas|this week|my|ko)\b/.test(t))) return scheduleIntent(raw, t);
     if (/\b(summary|overview|status|report|buod|kumusta ang (stock|inventory|branch)|how.?s (the )?(stock|inventory|business))\b/.test(t) && /\b(stock|inventory|chocolate|flower|branch|dashboard|today|ngayon|business|buod|summary|overview|status|report)\b/.test(t)) return summary(raw, t);
     if (/\b(stock|stocks|ilan|how many|how much|dami|meron|mayroon|may .* ba|available|natitira|tira|left|quantity|qty|on hand|in stock|count of)\b/.test(t) && !/\b(how to|paano|pano)\b/.test(t)) {
