@@ -458,6 +458,60 @@
     });
   }
 
+  // ---------- paste a flower count -> draft for Flower Stock Count ----------
+  function parseCountText(raw) {
+    var txt = String(raw || '').replace(/\r/g, '');
+    var lines = txt.split('\n');
+    if (lines.length < 2) lines = txt.split(/(?<=\d)\s+(?=[A-Za-z])/); // single-line paste fallback
+    var rows = [];
+    lines.forEach(function (ln) {
+      var l = ln.replace(/^[\s\-*•·>]+/, '').replace(/^\d{1,2}[.)]\s+(?=[A-Za-z])/, '').trim();
+      if (!l || l.length > 80) return;
+      var waste = 0, w = l.match(/[\s,(]*(?:waste|wastage|wst|w)\s*[:=]?\s*(\d+(?:\.\d+)?)\)?\s*$/i);
+      if (w) { waste = Number(w[1]); l = l.slice(0, w.index).trim(); }
+      var m = l.match(/^(.*?[A-Za-z][A-Za-z .&'\/\-]*?)\s*[:=\-–—]*\s*(\d+(?:\.\d+)?(?:\s*\+\s*\d+(?:\.\d+)?)*)\s*(?:stems?|stem|pcs?|pieces?|bunch(?:es)?|bundles?|bd|x)?\.?$/i)
+        || l.match(/^(\d+(?:\.\d+)?(?:\s*\+\s*\d+(?:\.\d+)?)*)\s*(?:x|×|pcs?|stems?)?\s+([A-Za-z].*)$/i);
+      if (!m) return;
+      var name, num;
+      if (/^\d/.test(m[1])) { num = m[1]; name = m[2]; } else { name = m[1]; num = m[2]; }
+      name = name.replace(/[\s:=\-–—]+$/, '').trim();
+      if (name.length < 2 || /^(date|total|branch|count|stock count|week|weekly)$/i.test(name)) return;
+      var cnt = num.split('+').reduce(function (a, b) { return a + Number(b); }, 0);
+      if (!isFinite(cnt)) return;
+      rows.push({ raw: name, count: cnt, waste: waste });
+    });
+    return rows;
+  }
+  function countIntent(raw, t) {
+    var rows = parseCountText(raw);
+    var kw = /\b(stock count|count|bilang|i-?input|input|ilagay|ilista|enter|encode)\b/.test(norm(raw));
+    if (!(rows.length >= 3 || (kw && rows.length >= 1))) return null;
+    var branch = branchIn(t) || 'ModaMall';
+    think('That looks like a flower count (' + rows.length + ' lines) — matching the names to the flower list…', 'Mukhang flower count ito (' + rows.length + ' linya) — ima-match ko ang mga pangalan sa flower list…', raw);
+    return getJson(CFG.FLOWER_FAST_API, { action: 'getFlowerStockList' }, 120000).then(function (list) {
+      var names = (Array.isArray(list) ? list : []).map(function (x) { return String(x.flowerName || x.Flower || '').trim(); }).filter(Boolean);
+      if (!names.length) return { handled: true, text: L(raw, "I couldn't load the flower list, Boss — try again in a moment.", 'Hindi ko ma-load ang flower list, Boss — subukan ulit mamaya.') };
+      var merged = {}, order = [], bad = [], guess = [];
+      rows.forEach(function (r) {
+        var best = '', sc = 0;
+        names.forEach(function (n) { var v = nameScore(r.raw, n); if (v > sc) { sc = v; best = n; } });
+        if (sc < 0.62) { bad.push(r.raw + ' ' + r.count); return; }
+        if (!merged[best]) { merged[best] = { name: best, count: 0, waste: 0 }; order.push(best); }
+        merged[best].count += r.count; merged[best].waste += r.waste;
+        if (sc < 0.85) guess.push(r.raw + ' → ' + best);
+      });
+      var items = order.map(function (k) { return merged[k]; });
+      if (!items.length) return { handled: true, text: L(raw, "I couldn't match any of those names to the flower list, Boss.", 'Walang nag-match sa flower list, Boss.') };
+      try { sessionStorage.setItem('lbNovaCountDraft', JSON.stringify({ branch: branch, items: items, ts: Date.now(), by: me().fullName || '' })); } catch (e) {}
+      var out = L(raw, '📋 Got it! ' + items.length + ' flowers for ' + branch + ':\n', '📋 Nakuha ko! ' + items.length + ' na bulaklak para sa ' + branch + ':\n') +
+        items.map(function (i) { return '• ' + i.name + ' — ' + fmtNum(i.count) + (i.waste ? ' (' + L(raw, 'waste', 'waste') + ' ' + fmtNum(i.waste) + ')' : ''); }).join('\n');
+      if (guess.length) out += '\n\n❓ ' + L(raw, 'Not 100% sure (please check): ', 'Hindi ako sigurado (paki-check): ') + guess.join('; ');
+      if (bad.length) out += '\n\n⚠️ ' + L(raw, "Couldn't match: ", 'Hindi nahanap: ') + bad.join('; ');
+      out += tip(raw, 'Tap "Open Stock Count" — I will fill it in for you. Nothing is saved until you press Save.', 'I-tap ang "Open Stock Count" — ako na ang magpupuno. Walang masi-save hangga\'t hindi mo pinipindot ang Save.');
+      return { handled: true, text: out, navigateTo: null, offerPage: 'flower-stock-count.html', offerLabel: '📋 Open Stock Count' };
+    }).catch(function () { return netMsg(raw); });
+  }
+
   var ctx = { item: '', branch: '', last: '' };
   var thoughtCb = null;
   function think(en, tl, raw) { try { if (thoughtCb) thoughtCb(L(raw || '', en, tl)); } catch (e) {} }
@@ -469,6 +523,7 @@
     var t = norm(raw);
     if (!t) return Promise.resolve({ handled: false });
 
+    if (/\n/.test(raw) || /\d\s+[A-Za-z].*\d/.test(raw)) { var ci = countIntent(raw, t); if (ci) return ci; }
     var st = smallTalk(raw, t); if (st) return ok(st);
     if (/\b(weather|panahon|temperature|temp|init|mainit|malamig|lamig|ulan|umuulan|maulan|rain(ing)?|hot|cold|humidity|forecast|bagyo|maaraw|sunny|heat)\b/.test(t) && !/\b(stock|schedule|reminder|expiry|order|sales)\b/.test(t)) return weatherIntent(raw, t);
     var tm = timeIntent(raw, t); if (tm) return ok(tm);
