@@ -75,9 +75,9 @@ body.hide-watermark .card-deco-leaf{display:none;}
  body.printing-card .message-workspace{display:none!important}
  body.printing-card #printSheet{display:flex!important;position:relative!important;width:100%!important;height:100vh!important;margin:0!important;padding:0!important;align-items:flex-start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-card #printSheet .card{display:block!important;margin:0!important;transform:translate(var(--printOffsetX,0mm),var(--printOffsetY,0mm))!important;break-after:auto!important;page-break-after:auto!important;box-shadow:none!important;box-sizing:border-box!important;flex:0 0 auto!important}
- /* FULL BLEED: background layer extends 3mm past every edge so printer shift/trim never leaves a white rim (page clips the overflow) */
+ /* FULL BLEED: background layer extends 5mm past every edge, plus the Print Position shift, so printer shift/trim never leaves a white rim (page clips the overflow) */
  body.printing-card #printSheet .card{overflow:visible!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
- body.printing-card #printSheet .card .card-bgl{inset:-3mm!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body.printing-card #printSheet .card .card-bgl{inset:auto!important;top:calc(-5mm - max(0mm, var(--printOffsetY,0mm)))!important;bottom:calc(-5mm - max(0mm, -1 * var(--printOffsetY,0mm)))!important;left:calc(-5mm - max(0mm, var(--printOffsetX,0mm)))!important;right:calc(-5mm - max(0mm, -1 * var(--printOffsetX,0mm)))!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
  body.printing-circle #printSheet{display:grid!important;position:relative!important;width:210mm!important;height:297mm!important;margin:0!important;padding:6mm 0 0!important;align-content:start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-circle #printSheet .card{display:block!important;border-radius:50%!important;margin:0!important;transform:none!important;break-after:auto!important;page-break-after:auto!important;overflow:hidden!important;border:1px dashed #999!important;box-sizing:border-box!important}
  /* Cutting guide: visible circle outline, not the editor guide/ruler. */
@@ -281,7 +281,7 @@ body::before{
   .message-workspace > .art-panel:before,
   .message-workspace > .art-panel:after{ display:none; }
   .message-workspace .envelope{
-    position:absolute;left:12px;top:150px;width:205px;height:138px;margin:0;
+    position:absolute;left:12px;top:106px;width:205px;height:138px;margin:0;
   }
   .message-workspace .envelope:hover{ transform:none; }
   .message-workspace .envelope .env-seal{ top:50px; width:40px; height:40px; font-size:18px; }
@@ -304,19 +304,19 @@ body::before{
   }
   .message-workspace .envelope:not(.open) .hidden-card{ transform:none; }
   .message-workspace .envelope.open .hidden-card{
-    /* With the envelope now starting 150px down, this same -118px
-       lift keeps the popup's top a comfortable 59px inside the panel
-       (150+27-118 = +59px) instead of crowding the toolbar above. */
+    /* With the envelope now starting 106px down, this same -118px
+       lift keeps the popup's top 15px inside the panel
+       (106+27-118 = +15px) instead of crowding the toolbar above. */
     transform:translateY(-118px) rotate(-2deg) scale(1.03);
   }
   .message-workspace .voice-picker{
-    position:absolute;left:12px;top:296px;width:225px;margin:0;justify-content:flex-start;
+    position:absolute;left:12px;top:252px;width:225px;margin:0;justify-content:flex-start;
   }
   .message-workspace .sticker-toggles{
-    position:absolute;left:12px;top:324px;width:225px;margin:0;justify-content:flex-start;
+    position:absolute;left:12px;top:280px;width:225px;margin:0;justify-content:flex-start;
   }
   .message-workspace .sticker-drawer{
-    position:absolute;left:12px;top:358px;width:225px;z-index:15;
+    position:absolute;left:12px;top:314px;width:225px;z-index:15;
   }
   .message-workspace > .stage{
     position:absolute;left:50%;top:0;transform:translateX(-50%);
