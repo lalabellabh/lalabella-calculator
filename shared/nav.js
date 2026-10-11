@@ -686,6 +686,13 @@
     document.body.appendChild(ra);
   }
 
+  // Browser-tab icon (favicon) = the Lalabella logo, on every page that has no icon of its own.
+  if (!document.querySelector('link[rel~="icon"]')) {
+    const fi = document.createElement('link');
+    fi.rel = 'icon'; fi.type = 'image/png'; fi.href = '/icons/icon-192.png';
+    document.head.appendChild(fi);
+  }
+
   // Push notifications (new messages / orders even when the app is closed). See shared/push.js.
   if (!window.LBPush && !document.querySelector('script[src="shared/push.js"]')) {
     const pu = document.createElement('script');
