@@ -573,6 +573,49 @@
   function tip(raw, en, tl) { return '\n💡 ' + L(raw, en, tl); }
   function ok(text, nav) { return Promise.resolve({ handled: true, text: text, navigateTo: nav || null }); }
 
+
+  /* ---------------------------------------------------------- "is <name> pretty / handsome?" (light-hearted) */
+  var FEM = /^(janice|maria|marie|anna|ana|joy|grace|rose|jane|joan|lyn|jen|jenny|jennifer|mary|kate|katherine|sarah|sara|lisa|nancy|rhea|maricel|michelle|shiela|sheila|cherry|cherie|liza|lea|leah|ruth|esther|fatima|aisha|noor|mariam|maryam|zainab|priya|sunita|aya|mona|hana|layla|laila|rina|ria|nina|dina|diana|jasmine|cristina|christine|kristine|kristina|aileen|arlene|marilou|marites|mercy|gloria|rowena|vivian|vilma|wendy|april|mae|may|joyce|jocelyn|jessa|jessica|jenelyn|angela|andrea|bea|bianca|carla|catherine|cynthia|donna|elaine|emily|erika|faith|gina|irene|jackie|jovelyn|karen|kim|lorna|lovely|maan|maricar|melody|nene|pia|queenie|rachel|rica|sandra|sharon|shane|tina|trisha|vanessa|yna|zara)$/;
+  var MAL = /^(oliver|john|james|mark|michael|paul|peter|joshua|jose|juan|carlo|carlos|ali|mohammed|mohamed|muhammad|ahmed|ahmad|hamza|hassan|hussain|hussein|omar|yusuf|ibrahim|khalid|rahul|raj|kumar|bench|ryan|ken|kenneth|jun|ron|ronald|rey|reynaldo|jonathan|jay|jayson|jason|mike|noel|noah|luca|elijah|jonah|nikola|mustafa|kevin|dennis|dan|daniel|david|arnold|arnel|jericho|vincent|vince|justin|aaron|abdul|abdullah|sameer|joel|jomar|jerome|jerry|john|joseph|kurt|leo|lloyd|marvin|nathan|neil|nico|patrick|ralph|ramon|raymond|renz|rico|robert|roy|samuel|santos|simon|tony|victor|william)$/;
+  var LOOK_NOT = /^(it|this|that|she|he|they|nova|joyboy|you|ako|me|mo|ba|the|a|an|there|here|my|your|our|ang|ung|yung|mga|rose|tulip|orchid|peony|carnation|sunflower|hydrangea|gerbera|lavender|eustoma|chocolate|bouquet|card|box|vase|ribbon)$/;
+  function genderOf(name, adj) {
+    var f = name.split(' ')[0];
+    if (FEM.test(f)) return 'f';
+    if (MAL.test(f)) return 'm';
+    if (/^(handsome|gwapo|pogi)$/.test(adj)) return 'm';
+    if (/^(pretty|beautiful|gorgeous|maganda|ganda)$/.test(adj)) return 'f';
+    if (/(a|ie|ey|ine|elle|ette|yn|lyn|ly|ia|een|ita|ina)$/.test(f) && !/^(joshua|luca|noah|jonah|elijah|nikola|mustafa|hamza|isa|musa)$/.test(f)) return 'f';
+    if (/(o|er|on|el|us|im|ar)$/.test(f)) return 'm';
+    return '';
+  }
+  function looksAbout(raw, t) {
+    var ADJ = '(pretty|beautiful|gorgeous|handsome|cute|good looking|gwapo|pogi|maganda|ganda)';
+    var m = t.match(new RegExp('\\b(?:is|si|ni|ba si|bang)\\s+([a-z]{2,20})\\s+(?:so |very |really |ba |naman )?' + ADJ + '\\b'))
+         || t.match(new RegExp('\\b' + ADJ + '\\s+(?:ba\\s+)?(?:si|ni)\\s+([a-z]{2,20})\\b'));
+    if (!m) return null;
+    var adj, nm;
+    if (new RegExp('^' + ADJ + '$').test(m[1] + (m[2] ? ' ' + m[2] : '')) || /^(pretty|beautiful|gorgeous|handsome|cute|good|gwapo|pogi|maganda|ganda)$/.test(m[1])) { adj = m[1]; nm = m[2]; }
+    else { nm = m[1]; adj = m[2]; }
+    if (!nm || LOOK_NOT.test(nm)) return null;
+    var Name = nm.charAt(0).toUpperCase() + nm.slice(1), g = genderOf(nm, adj), tl = isTl(raw);
+    var word = tl ? (g === 'f' ? 'maganda' : g === 'm' ? 'gwapo' : 'kaaya-aya') : (g === 'f' ? 'pretty' : g === 'm' ? 'handsome' : 'good-looking');
+    var r = Math.random();
+    if (r < 0.65) {   // mostly: a kind, work-friendly answer
+      return { handled: true, navigateTo: null, text: pick(tl
+        ? ['Oo naman, ' + word + ' si ' + Name + ' — at mabuting empleyado pa! 👏', 'Si ' + Name + '? ' + word.charAt(0).toUpperCase() + word.slice(1) + ', at isa sa mga mabubuting empleyado natin, Admin. 😊', 'Sa totoo lang, ' + word + ' si ' + Name + ' — at maaasahan pa sa trabaho. 👍']
+        : ['Yes — ' + Name + ' is ' + word + ', and a good employee too! 👏', Name + '? ' + word.charAt(0).toUpperCase() + word.slice(1) + ', and one of our good employees, Admin. 😊', 'Honestly, ' + Name + ' is ' + word + ' — and reliable at work too. 👍']) };
+    }
+    if (r < 0.85) {   // a little joke, one message
+      return { handled: true, navigateTo: null, text: pick(tl
+        ? ['Sandali, i-che-check ko muna ang CCTV… 📹 Kumpirmado: ' + word + ' si ' + Name + '. Case closed, Admin. 😄', 'Hindi ko pwedeng sabihin, nakatingin ang HR. 😅 Pero mabuting empleyado si ' + Name + ', yan sigurado!']
+        : ['Let me check the CCTV… 📹 Verified: ' + Name + ' is ' + word + '. Case closed, Admin. 😄', "I can't say, HR is watching. 😅 But " + Name + ' is definitely a good employee!']) };
+    }
+    // sometimes: the two-message version, like the Janice one but kind
+    return { handled: true, navigateTo: null, followUpDelay: 2200,
+      text: tl ? 'Hmmmm… sandali lang, pag-iisipan ko muna… 🤔' : 'Hmmmm… let me think about that… 🤔',
+      followUp: tl ? 'Oo, ' + word + ' si ' + Name + ' — at ' + (g === 'm' ? 'magaling' : 'magaling') + ' pang magtrabaho, Admin! 😄' : 'Yes, ' + Name + ' is ' + word + ' — and works hard too, Admin! 😄' };
+  }
+
   function ask(raw) {
     raw = String(raw || '').trim();
     var t = norm(raw);
@@ -586,6 +629,13 @@
         text: jtl ? 'Hmmmm… sandali lang, pag-iisipan ko muna… 🤔 Alam ko, MATABA siya. 😂' : 'Hmmmm… let me think about that… 🤔 I know she is MATABA. 😂',
         followUp: jtl ? 'Joke lang! Oo, maganda si Janice, Admin. 😄' : 'Just kidding! Yes, Janice is pretty, Admin. 😄' });
     }
+    // inside joke about the system's builder
+    if (/\b(?:who(?:s| is| was)|sino(?: si| ba si)?|ano ba si)\s+(?:bench|benj|benjamin)\b/.test(t)) {
+      return Promise.resolve({ handled: true, navigateTo: null, text: isTl(raw)
+        ? pick(['Si Bench? Ang pinakamatalino at pinakamabait na lalaki — sobrang cute at gwapo pa! 😎', 'Si Bench (o Benj)? Ang pinakamatalino, mabait, at sobrang cute at gwapo. Siya ang gumawa sa akin! 😎'])
+        : pick(['Bench (or Benj)? The smartest and nicest guy around — way too cute and handsome! 😎', 'Bench, a.k.a. Benj? The smartest, kindest guy, and way too cute and handsome. He built me, so I might be a little biased! 😎']) });
+    }
+    var lk = looksAbout(raw, t); if (lk) return Promise.resolve(lk);
     var st = smallTalk(raw, t); if (st) return ok(st);
     if (/\b(weather|panahon|temperature|temp|init|mainit|malamig|lamig|ulan|umuulan|maulan|rain(ing)?|hot|cold|humidity|forecast|bagyo|maaraw|sunny|heat)\b/.test(t) && !/\b(stock|schedule|reminder|expiry|order|sales)\b/.test(t)) return weatherIntent(raw, t);
     var tm = timeIntent(raw, t); if (tm) return ok(tm);
