@@ -685,6 +685,13 @@
     document.body.appendChild(ra);
   }
 
+  // Drag-to-move for the floating chat bubble and Nova mic. See shared/drag-float.js.
+  if (!window.LBDragFloat && !document.querySelector('script[src="shared/drag-float.js"]')) {
+    const df = document.createElement('script');
+    df.src = 'shared/drag-float.js';
+    document.body.appendChild(df);
+  }
+
   // Floating unassigned-orders bell (draggable). Steps aside on pages that have their own #lalaBellBtn. See shared/order-bell.js.
   if (!window.LBOrderBell && !document.getElementById('lalaBellBtn') && !document.querySelector('script[src="shared/order-bell.js"]')) {
     const ob = document.createElement('script');
