@@ -67,6 +67,7 @@
       '.lbcm-egrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}',
       '.lbcm-egrid button,.lbcm-sub button{font-family:' + EMOJI_FONT + ',sans-serif}',
       '.lbcb-msg,#lbcb-input{font-family:"Space Grotesk",Arial,"Noto Color Emoji",sans-serif}',
+      '.bubble,.composer textarea,.conv .txt{font-family:"Space Grotesk",Arial,"Noto Color Emoji",sans-serif}',
       '.lbcm-egrid button{border:0;background:none;font-size:22px;padding:4px 0;cursor:pointer;border-radius:8px;position:relative;touch-action:manipulation;user-select:none;-webkit-user-select:none}',
       '.lbcm-egrid button:hover{background:#fdf1f0}',
       '.lbcm-egrid button.fav::after{content:"★";position:absolute;right:1px;top:-1px;font-size:9px;color:#d9a441}',
