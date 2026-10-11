@@ -716,7 +716,7 @@ async function askNova(message){
       const nav = safeNavTarget_(nb.navigateTo);
       if(nav){ log('Opening ' + nav, 'SYSTEM'); setTimeout(()=>{ window.location.href = nav; }, 1500); }
       if(nb.offerPage && window.__typedOffer) window.__typedOffer(nb.offerPage, nb.offerLabel);
-      return nb.text;
+      return nb.followUp ? nb.text + ' ' + nb.followUp : nb.text;
     }
     if(!LBNovaBrain.useApi()) return LBNovaBrain.fallback(message);
   }
