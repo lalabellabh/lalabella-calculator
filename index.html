@@ -1028,6 +1028,16 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     }catch(e){}
   }
 
+  // One line per unassigned order: where it should go. No branch = the assistant could not decide (for manual assign).
+  function bellOrderHtml(o){
+    var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+    var line = o.branch
+      ? '<div style="font-size:12px;font-weight:700;color:#2f7a4f;margin-top:3px;">➜ ' + esc(o.branch) + (o.note ? ' <span style="font-weight:400;color:#8a7078;font-size:11px;">' + esc(o.note) + '</span>' : '') + '</div>'
+      : '<div style="font-size:12px;font-weight:700;color:#b2402e;margin-top:3px;">⚠ For manual assign' + (o.note ? ' <span style="font-weight:400;color:#8a7078;font-size:11px;">— ' + esc(o.note) + '</span>' : '') + '</div>';
+    return '<div class="lala-bell-order"><b>' + esc(o.orderNo) + '</b>' +
+      (o.address ? '<div style="font-size:11px;color:#8a7078;margin-top:2px;">' + esc(o.address) + '</div>' : '') + line + '</div>';
+  }
+
   function refresh(){
     // Only poll while an actual session exists — this widget's backend
     // (Order Assignment) requires a valid token like every other
@@ -1057,7 +1067,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
         lastCount = count;
 
         list.innerHTML = ordersDetail.length
-          ? ordersDetail.map(o => `<div class="lala-bell-order"><b>${o.orderNo}</b>${o.address ? `<div style="font-size:11px;color:#8a7078;margin-top:2px;">${o.address}</div>` : ''}</div>`).join('')
+          ? ordersDetail.map(bellOrderHtml).join('')
           : '<div class="lala-bell-empty">No unassigned orders right now.</div>';
       })
       .catch(()=>{});
