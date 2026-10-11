@@ -685,6 +685,13 @@
     document.body.appendChild(ra);
   }
 
+  // Installable app (PWA): service worker + install button. See shared/pwa.js.
+  if (!window.LBPwa && !document.querySelector('script[src="shared/pwa.js"]')) {
+    const pw = document.createElement('script');
+    pw.src = 'shared/pwa.js';
+    document.body.appendChild(pw);
+  }
+
   // Drag-to-move for the floating chat bubble and Nova mic. See shared/drag-float.js.
   if (!window.LBDragFloat && !document.querySelector('script[src="shared/drag-float.js"]')) {
     const df = document.createElement('script');
