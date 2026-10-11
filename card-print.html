@@ -73,7 +73,7 @@ body.hide-watermark .card-deco-leaf{display:none;}
  /* PRINT ISOLATION: print a temporary clone, never the live editor. */
  #printSheet{display:none!important}
  body.printing-card .message-workspace{display:none!important}
- body.printing-card #printSheet{display:flex!important;position:relative!important;width:100%!important;height:100vh!important;margin:0!important;padding:0!important;align-items:flex-start!important;justify-content:center!important;box-sizing:border-box!important}
+ body.printing-card #printSheet{overflow:hidden!important;display:flex!important;position:relative!important;width:100%!important;height:100vh!important;margin:0!important;padding:0!important;align-items:flex-start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-card #printSheet .card{display:block!important;margin:0!important;transform:translate(var(--printOffsetX,0mm),var(--printOffsetY,0mm))!important;break-after:auto!important;page-break-after:auto!important;box-shadow:none!important;box-sizing:border-box!important;flex:0 0 auto!important}
  /* FULL BLEED: background layer extends 20mm past every edge (60mm at the bottom), plus the Print Position shift, so the paper is covered edge to edge whatever the paper size or printer shift (page clips the overflow) */
  body.printing-card #printSheet .card{overflow:visible!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
