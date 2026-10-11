@@ -150,7 +150,8 @@
         if(nb && nb.handled || !LBNovaBrain.useApi()){
           clearTimeout(slowTimer); thinkingEl.remove();
           const out = (nb && nb.handled) ? nb.text : LBNovaBrain.fallback(message);
-          addMsg(out || '...', 'bot'); speak(out);
+          addMsg(out || '...', 'bot'); speak(nb && nb.followUp ? out + ' ' + nb.followUp : out);
+          if(nb && nb.followUp){ setTimeout(()=>{ addMsg(nb.followUp, 'bot'); }, nb.followUpDelay || 2000); }
           const nav = safeNavTarget_(nb && nb.navigateTo);
           if(nav){ addMsg('Opening ' + nav + '…', 'bot'); setTimeout(()=>{ window.location.href = nav; }, 1400); }
           return;
