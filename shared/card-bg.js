@@ -67,7 +67,12 @@
   add('stripes', 'Pastel stripes', e('<defs><pattern id="s" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="20" height="40" fill="#fff6f8"/><rect x="20" width="20" height="40" fill="#fde5ea"/></pattern></defs><rect width="400" height="400" fill="url(#s)"/>'));
 
   // ------------------------------------------------------------ apply / save
-  let cur = 'none', op = 100;
+  let cur = 'none', op = 100, restoring = false;
+  // remember the last background + opacity on this device (until the user changes it)
+  function remember(){
+    if (restoring) return;
+    try { localStorage.setItem(KEY, JSON.stringify({ bg: cur, op: op })); } catch (e) { /* picture too big or storage blocked: skip */ }
+  }
   function cssFor(v){
     if (v && v.indexOf('color:') === 0) return { bg: v.slice(6), size: '' };
     if (v && v.indexOf('img:') === 0) return { bg: 'url("' + v.slice(4) + '") center/cover no-repeat', size: '' };
@@ -89,12 +94,14 @@
     l.style.opacity = String(op / 100);
     l.style.webkitPrintColorAdjust = 'exact'; l.style.printColorAdjust = 'exact';
     document.querySelectorAll('.lbbg-th').forEach(t => t.classList.toggle('on', t.getAttribute('data-id') === cur));
+    remember();
   }
   function setOpacity(n){
     op = Math.max(0, Math.min(100, Math.round(Number(n)))); if (isNaN(op)) op = 100;
     const l = layer(); if (l) l.style.opacity = String(op / 100);
     document.querySelectorAll('.lbbg-op').forEach(i => { i.value = op; });
     document.querySelectorAll('.lbbg-opn').forEach(i => { i.textContent = op + '%'; });
+    remember();
   }
 
   // ------------------------------------------------------------ picker
@@ -149,7 +156,10 @@
     g.innerHTML = '<span class="label">BACKGROUND</span><button type="button" id="bgBtn" title="Change the card background">🎨 Choose…</button>';
     const host = sz.closest('.group'); host.parentNode.insertBefore(g, host.nextSibling);
     g.querySelector('#bgBtn').addEventListener('click', open);
-    apply('none'); setOpacity(100);   // always starts white so a forgotten background never ends up on a print
+    // start from the last background you used (white if none yet); changing or resetting it is saved the same way
+    let sv = null; try { sv = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    restoring = true;
+    try { apply(sv && typeof sv.bg === 'string' ? sv.bg : 'none'); setOpacity(sv && isFinite(sv.op) ? sv.op : 100); } finally { restoring = false; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
   window.LBCardBg = { get: () => cur, getOpacity: () => op, setOpacity: setOpacity, set: apply, open: open, list: D };
