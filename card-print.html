@@ -1729,8 +1729,17 @@ watermarkBtn.addEventListener('click', () => {
   const isHidden = document.body.classList.toggle('hide-watermark');
   watermarkBtn.textContent = isHidden ? '🌿 Watermark: OFF' : '🌿 Watermark: ON';
   watermarkBtn.style.background = isHidden ? '#f5eaea' : '#eaf7ec';
+  try { localStorage.setItem('lalabellaWatermark', isHidden ? 'off' : 'on'); } catch(e) {}
   playClick();
 });
+// remember the last Watermark choice (ON/OFF) across refreshes
+try {
+  if (localStorage.getItem('lalabellaWatermark') === 'off') {
+    document.body.classList.add('hide-watermark');
+    watermarkBtn.textContent = '🌿 Watermark: OFF';
+    watermarkBtn.style.background = '#f5eaea';
+  }
+} catch(e) {}
 document.getElementById('backTools').onclick=()=>{ playClick(); window.location.href=backTarget; };
 // ---------- Print position offset ----------
 // Nudges the whole card left/right/up/down for print only — the
