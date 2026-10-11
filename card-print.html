@@ -75,9 +75,11 @@ body.hide-watermark .card-deco-leaf{display:none;}
  body.printing-card .message-workspace{display:none!important}
  body.printing-card #printSheet{display:flex!important;position:relative!important;width:100%!important;height:100vh!important;margin:0!important;padding:0!important;align-items:flex-start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-card #printSheet .card{display:block!important;margin:0!important;transform:translate(var(--printOffsetX,0mm),var(--printOffsetY,0mm))!important;break-after:auto!important;page-break-after:auto!important;box-shadow:none!important;box-sizing:border-box!important;flex:0 0 auto!important}
- /* FULL BLEED: background layer extends 5mm past every edge, plus the Print Position shift, so printer shift/trim never leaves a white rim (page clips the overflow) */
+ /* FULL BLEED: background layer extends 20mm past every edge (60mm at the bottom), plus the Print Position shift, so the paper is covered edge to edge whatever the paper size or printer shift (page clips the overflow) */
  body.printing-card #printSheet .card{overflow:visible!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
- body.printing-card #printSheet .card .card-bgl{inset:auto!important;top:calc(-5mm - max(0mm, var(--printOffsetY,0mm)))!important;bottom:calc(-5mm - max(0mm, -1 * var(--printOffsetY,0mm)))!important;left:calc(-5mm - max(0mm, var(--printOffsetX,0mm)))!important;right:calc(-5mm - max(0mm, -1 * var(--printOffsetX,0mm)))!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body.printing-card #printSheet .card .card-bgl{--bl:calc(20mm + max(0mm, var(--printOffsetX,0mm)));--br:calc(20mm + max(0mm, -1 * var(--printOffsetX,0mm)));--bt:calc(20mm + max(0mm, var(--printOffsetY,0mm)));--bb:calc(60mm + max(0mm, -1 * var(--printOffsetY,0mm)));inset:auto!important;top:calc(-1 * var(--bt))!important;bottom:calc(-1 * var(--bb))!important;left:calc(-1 * var(--bl))!important;right:calc(-1 * var(--br))!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ /* the design stays exactly card-sized and aligned to the card; outside the card it simply repeats, so the paper is covered edge to edge */
+ body.printing-card #printSheet .card .card-bgl.bg-tile{background-size:calc(100% - var(--bl) - var(--br)) calc(100% - var(--bt) - var(--bb))!important;background-position:var(--bl) var(--bt)!important;background-repeat:repeat!important}
  body.printing-circle #printSheet{display:grid!important;position:relative!important;width:210mm!important;height:297mm!important;margin:0!important;padding:6mm 0 0!important;align-content:start!important;justify-content:center!important;box-sizing:border-box!important}
  body.printing-circle #printSheet .card{display:block!important;border-radius:50%!important;margin:0!important;transform:none!important;break-after:auto!important;page-break-after:auto!important;overflow:hidden!important;border:1px dashed #999!important;box-sizing:border-box!important}
  /* Cutting guide: visible circle outline, not the editor guide/ruler. */
@@ -1872,6 +1874,7 @@ function printCardExact(){
     copy.removeAttribute('id');
     copy.querySelectorAll('.resize-handle,.delete-handle,#centerGuideV,.userGuideH').forEach(x=>x.remove());
     copy.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+    { const lb=copy.querySelector(':scope > .card-bgl'); if(lb && /url\(/.test(lb.style.background) && !/cover/.test(lb.style.background)) lb.classList.add('bg-tile'); }   // drawn designs repeat outside the card; photos and colours just stretch
     sheet.appendChild(copy);
     document.body.classList.add('printing-card');
     updatePrintSize();
