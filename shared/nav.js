@@ -187,6 +187,7 @@
         }).catch(() => {});
       } catch (e) {}
     }
+    try { if (window.LBPush) window.LBPush.off(); } catch (e) {} // this device stops getting this user's notifications
     ['lalabellaToken', 'lalabellaUser', 'lalabellaVerifiedToken', 'lalabellaVerifiedAt'].forEach(k => {
       sessionStorage.removeItem(k); localStorage.removeItem(k);
     });
@@ -683,6 +684,13 @@
     const ra = document.createElement('script');
     ra.src = 'shared/reminder-alarm.js';
     document.body.appendChild(ra);
+  }
+
+  // Push notifications (new messages / orders even when the app is closed). See shared/push.js.
+  if (!window.LBPush && !document.querySelector('script[src="shared/push.js"]')) {
+    const pu = document.createElement('script');
+    pu.src = 'shared/push.js';
+    document.body.appendChild(pu);
   }
 
   // Installable app (PWA): service worker + install button. See shared/pwa.js.
