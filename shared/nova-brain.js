@@ -397,7 +397,7 @@
   /* ---------------------------------------------------------- live: someone ELSE's schedule (anyone logged in, same as the Duty Schedule page) */
   var ALIAS_NAMES = { aguinaldo: 'aldo', mohammed: 'mohamed', mahmoud: 'mahmood', nabadda: 'zaharah' };
   function isAdminUser() { return String(me().role || '').toLowerCase() === 'admin'; }
-  var NOT_NAMES = /^(my|the|our|your|a|an|this|next|last|today|tomorrow|duty|work|weekly|week|full|whole|team|staff|shop|day|off|his|her|their|what|when|who|which|how|show|check|tell|me|please|pls|is|are|does|will|can|could|ang|ng|sa|ba)$/;
+  var NOT_NAMES = /^(my|the|our|your|a|an|this|next|last|today|tomorrow|duty|work|weekly|week|full|whole|team|staff|shop|day|off|his|her|their|what|when|who|which|how|show|check|tell|me|please|pls|is|are|does|will|can|could|ang|ng|sa|ba|on|in|at|there|here|it|that|nova|you|who)$/;
   function staffName(t) {   // "schedule ni oliver", "is oliver off today", "oliver's shift", "when is oliver off", "oliver schedule tomorrow"
     // note: norm() already removed apostrophes, so "oliver's" arrives as "olivers"
     var N = '([a-z][a-z .-]{1,24}?)', m, nm;
@@ -616,6 +616,42 @@
       followUp: tl ? 'Oo, ' + word + ' si ' + Name + ' — at ' + (g === 'm' ? 'magaling' : 'magaling') + ' pang magtrabaho, Admin! 😄' : 'Yes, ' + Name + ' is ' + word + ' — and works hard too, Admin! 😄' };
   }
 
+
+  /* ---------------------------------------------------------- "who is <name>?" for staff */
+  var WHO_NOT = /^(on|in|at|the|a|an|going|responsible|available|working|off|there|here|that|this|doing|supposed|handling|asking|calling|next|today|tomorrow|ngayon|bukas|may|ang|yung|ung|nasa|pwede|nova|joyboy|you|admin|boss|it|he|she|they|we|i|me|my|your|our|who|what|when|where|how|why|ako|ka|mo|ikaw|siya|sino|ano|bench|benj|benjamin)$/;
+  function whoIsName(t) {
+    var m = t.match(/\b(?:who(?:s| is| was)|sino(?: si| ba si)?|ano ba si)\s+([a-z]{2,20}(?: [a-z]{2,20})?)$/);
+    if (!m) return '';
+    var nm = m[1].trim(), first = nm.split(' ')[0];
+    if (WHO_NOT.test(first) || LOOK_NOT.test(first)) return '';
+    if (nm.split(' ').length > 1 && WHO_NOT.test(nm.split(' ')[1])) nm = first;
+    return nm;
+  }
+  function whoIs(raw, t, nm) {
+    var tl = isTl(raw);
+    think('Checking the team list for ' + nm + '…', 'Chine-check ko ang team list para kay ' + nm + '…', raw);
+    return getJson(CFG.SCHEDULE_FAST_API, { action: 'getEmployees' }, 300000).then(function (d) {
+      var list = (d && d.employees) || [], key = (ALIAS_NAMES[nm.split(' ')[0]] || nm.split(' ')[0]), best = null, bs = 0;
+      list.forEach(function (e) {
+        var n = norm(e.name), sc = n === norm(nm) ? 2 : (n.split(' ')[0] === key || n === key) ? 1.5 : n.indexOf(key) === 0 ? 1.2 : sim(n.split(' ')[0], key);
+        if (sc > bs) { bs = sc; best = e; }
+      });
+      if (!best || bs < 0.8) return { handled: true, navigateTo: null, text: L(raw, 'I could not find "' + nm + '" in the team list, Boss. Maybe a different spelling?', 'Wala akong makitang "' + nm + '" sa team list, Boss. Baka iba ang spelling?') };
+      var first = best.name.split(' ')[0], g = genderOf(norm(first), ''), br = best.branch ? (tl ? ' sa ' + best.branch : ' at ' + best.branch) : '';
+      var look = tl ? (g === 'f' ? 'maganda' : g === 'm' ? 'gwapo' : '') : (g === 'f' ? 'pretty' : g === 'm' ? 'handsome' : '');
+      var r = Math.random();
+      if (r < 0.6) return { handled: true, navigateTo: null, text: pick(tl
+        ? [best.name + ' — parte ng Lalabella team' + br + ', at mabuting empleyado! 👏', 'Si ' + best.name + '? Isa sa mga mabubuting empleyado natin' + br + ', Admin. 😊']
+        : [best.name + ' — part of the Lalabella team' + br + ', and a good employee! 👏', best.name + '? One of our good employees' + br + ', Admin. 😊']) };
+      if (r < 0.85 && look) return { handled: true, navigateTo: null, text: tl
+        ? best.name + ' — mabuting empleyado' + br + ', at ' + look + ' pa! 😄'
+        : best.name + ' — a good employee' + br + ', and ' + look + ' too! 😄' };
+      return { handled: true, navigateTo: null, text: pick(tl
+        ? ['Sandali, tinitingnan ko ang file ni ' + best.name + '… 📂 Resulta: mabuting empleyado' + br + '. Case closed, Admin. 😄']
+        : ["Let me pull " + best.name + "'s file… 📂 Result: a good employee" + br + '. Case closed, Admin. 😄']) };
+    }).catch(function () { return netMsg(raw); });
+  }
+
   function ask(raw) {
     raw = String(raw || '').trim();
     var t = norm(raw);
@@ -635,6 +671,7 @@
         ? pick(['Si Bench? Ang pinakamatalino at pinakamabait na lalaki — sobrang cute at gwapo pa! 😎', 'Si Bench (o Benj)? Ang pinakamatalino, mabait, at sobrang cute at gwapo. Siya ang gumawa sa akin! 😎'])
         : pick(['Bench (or Benj)? The smartest and nicest guy around — way too cute and handsome! 😎', 'Bench, a.k.a. Benj? The smartest, kindest guy, and way too cute and handsome. He built me, so I might be a little biased! 😎']) });
     }
+    var wn = whoIsName(t); if (wn) return whoIs(raw, t, wn);
     var lk = looksAbout(raw, t); if (lk) return Promise.resolve(lk);
     var st = smallTalk(raw, t); if (st) return ok(st);
     if (/\b(weather|panahon|temperature|temp|init|mainit|malamig|lamig|ulan|umuulan|maulan|rain(ing)?|hot|cold|humidity|forecast|bagyo|maaraw|sunny|heat)\b/.test(t) && !/\b(stock|schedule|reminder|expiry|order|sales)\b/.test(t)) return weatherIntent(raw, t);
