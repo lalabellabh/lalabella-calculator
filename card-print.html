@@ -1242,7 +1242,14 @@ function currentSelectionSpan(){
   if(!sel || sel.rangeCount === 0) return null;
   let node = sel.getRangeAt(0).commonAncestorContainer;
   if(node.nodeType === 3) node = node.parentElement; // text node -> its element
-  return node && node.tagName === 'SPAN' && textArea.contains(node) ? node : null;
+  if(!(node && node.tagName === 'SPAN' && textArea.contains(node))) return null;
+  // Only reuse an existing span when the selection covers ALL of it. If just part of its text is
+  // highlighted, return null so only that part gets wrapped (otherwise the un-highlighted rest moves too).
+  try{
+    const r = sel.getRangeAt(0), whole = document.createRange(); whole.selectNodeContents(node);
+    if(r.compareBoundaryPoints(Range.START_TO_START, whole) > 0 || r.compareBoundaryPoints(Range.END_TO_END, whole) < 0) return null;
+  }catch(e){}
+  return node;
 }
 
 function adjustHighlightSize(delta){
