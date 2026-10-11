@@ -685,6 +685,13 @@
     document.body.appendChild(ra);
   }
 
+  // Floating unassigned-orders bell (draggable). Steps aside on pages that have their own #lalaBellBtn. See shared/order-bell.js.
+  if (!window.LBOrderBell && !document.getElementById('lalaBellBtn') && !document.querySelector('script[src="shared/order-bell.js"]')) {
+    const ob = document.createElement('script');
+    ob.src = 'shared/order-bell.js';
+    document.body.appendChild(ob);
+  }
+
   // System "brain" (reminders + smart alerts) — loaded here once, same
   // one-file-change reasoning as the bubbles above. See shared/brain.js.
   if (!window.LBBrain && !document.querySelector('script[src="shared/brain.js"]')) {
