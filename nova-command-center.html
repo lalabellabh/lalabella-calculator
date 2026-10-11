@@ -391,7 +391,7 @@ for(let i=0;i<46;i++){const col=document.createElement('i'); col.textContent=Arr
 // Falling sample commands (decorative): evenly spaced so they never overlap, repeat forever
 (function(){
   const feed=document.getElementById('cmdfeed'); if(!feed) return;
-  const cmds=['open inventory','show dashboard','stock ng red rose sa Hamala','low stock','near expiry','schedule ni Oliver','my schedule','kailan next day off ko','is Oliver off today','flower dashboard','item inventory','start inventory','chocolate summary','open card print','stock ng Ferrero','what time is it','schedule ko bukas','Oliver\'s schedule this week','hey Nova'];
+  const cmds=['open inventory','show dashboard','stock ng red rose sa Hamala','low stock','near expiry','schedule ni Oliver','my schedule','kailan next day off ko','is Oliver off today','flower dashboard','item inventory','start inventory','chocolate summary','open card print','stock ng Ferrero','what time is it','schedule ko bukas','Oliver\'s schedule this week','who is Oliver','sino si Maria','when is Oliver off','hey Nova'];
   const D=16, slots=9; let next=0;   // 9 lines in a 210px box = no overlap; each line swaps to the next command every time it restarts
   cmds.sort(()=>Math.random()-.5);
   const take=()=>cmds[(next++)%cmds.length];
