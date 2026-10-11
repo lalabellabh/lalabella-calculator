@@ -232,8 +232,6 @@
     if (/how are you|kumusta ka|musta ka|how r u/.test(t)) return tl ? 'Ayos lang ako, Boss — handa na. Ikaw?' : "Running smoothly, Boss. How about you?";
     if (/who are you|sino ka|what are you|your name|pangalan mo/.test(t)) return tl ? 'Ako si Nova (Joyboy), ang assistant ng Lalabella system.' : "I'm Nova — also called Joyboy — the Lalabella system assistant.";
     if (/who (made|built|created) you|sino gumawa sayo/.test(t)) return tl ? 'Si Bench ang gumawa sa akin para sa Lalabella.' : 'Bench built me for the Lalabella system.';
-    // inside joke: asked whether Janice is pretty -> a little pause, then the (kind) punchline
-    if (/\bjanice\b/.test(t) && /(pretty|beautiful|gorgeous|cute|maganda|ganda)/.test(t)) return tl ? 'Hmm… sandali lang, pag-iisipan ko muna… 🤔 Joke lang! Oo, maganda si Janice, Admin. 😄' : 'Hmm… let me think about that… 🤔 Just kidding! Yes, Janice is pretty, Admin. 😄';
     if (/joke|patawa|biro/.test(t)) return pick(tl ? JOKES_TL : JOKES);
     if (/i love you|mahal kita/.test(t)) return tl ? 'Aww, salamat Boss! Balik tayo sa stock count. 😄' : 'Aww, thanks Boss! Now, back to the stock count. 😄';
     if (/are you (online|offline)|ai|openai|api/.test(t) && /(offline|online|api|openai|subscription)/.test(t))
@@ -581,6 +579,13 @@
     if (!t) return Promise.resolve({ handled: false });
 
     if (/\n/.test(raw) || /\d\s+[A-Za-z].*\d/.test(raw)) { var ci = countIntent(raw, t); if (ci) return ci; }
+    // inside joke, only when Janice is asked about: first message, a beat, then the punchline as a second message
+    if (/\bjanice\b/.test(t) && /(pretty|beautiful|gorgeous|cute|maganda|ganda)/.test(t)) {
+      var jtl = isTl(raw);
+      return Promise.resolve({ handled: true, navigateTo: null, followUpDelay: 2200,
+        text: jtl ? 'Hmmmm… sandali lang, pag-iisipan ko muna… 🤔 Alam ko, MATABA siya. 😂' : 'Hmmmm… let me think about that… 🤔 I know she is MATABA. 😂',
+        followUp: jtl ? 'Joke lang! Oo, maganda si Janice, Admin. 😄' : 'Just kidding! Yes, Janice is pretty, Admin. 😄' });
+    }
     var st = smallTalk(raw, t); if (st) return ok(st);
     if (/\b(weather|panahon|temperature|temp|init|mainit|malamig|lamig|ulan|umuulan|maulan|rain(ing)?|hot|cold|humidity|forecast|bagyo|maaraw|sunny|heat)\b/.test(t) && !/\b(stock|schedule|reminder|expiry|order|sales)\b/.test(t)) return weatherIntent(raw, t);
     var tm = timeIntent(raw, t); if (tm) return ok(tm);
