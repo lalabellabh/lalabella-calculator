@@ -97,11 +97,8 @@
         <div class="msg" id="rulesMsg"></div>
       </div>
       <div class="card">
-        <h2>👁️ Who can see these records</h2>
-        <div class="muted" style="font-size:12.5px;color:var(--muted)">You (owner) always can. Tick others you trust — being an Admin alone is not enough.</div>
-        <div class="chk" id="viewers"></div>
-        <button class="primary" id="saveViewers" type="button">Save</button>
-        <div class="msg" id="viewMsg"></div>
+        <h2>🔒 Who can open this page</h2>
+        <div class="muted" style="font-size:12.5px;color:var(--muted)">Only you (owner) and staff who have <b>User Management</b> access. Being an Admin alone is not enough. To give someone access, tick it for them in User Management.</div>
       </div>
       <div class="card">
         <h2>🎫 Events (allow time-in away from the shop)</h2>
@@ -219,10 +216,6 @@
       S.settings = d; $('ownerBox').style.display = d.isOwner ? 'block' : 'none';
       if (!d.isOwner) return;
       $('radius').value = d.radius; $('grace').value = d.grace;
-      $('viewers').innerHTML = d.users.map(function(u){
-        var on = d.viewers.indexOf(u.id) >= 0 || u.id === d.owner;
-        return '<label><input type="checkbox" value="' + u.id + '"' + (on ? ' checked' : '') + (u.id === d.owner ? ' disabled' : '') + '> ' + esc(u.name) + (u.id === d.owner ? ' (you)' : '') + '</label>';
-      }).join('');
       $('evWho').innerHTML = '<option value="">Everyone</option>' + d.users.map(function(u){ return '<option value="' + u.id + '">' + esc(u.name) + '</option>'; }).join('');
       if (!$('evDay').value) $('evDay').value = bhToday();
       $('evList').innerHTML = d.events.length ? d.events.map(function(e){
@@ -242,10 +235,6 @@
   }
   function flash(id, d, okText){ var m = $(id); m.style.color = d.success ? '#2e8b57' : '#b23a3a'; m.textContent = d.success ? okText : (d.error || 'Failed.'); }
   $('saveRules').onclick = function(){ api({ action:'radiusSet', radius: $('radius').value, grace: $('grace').value }).then(function(d){ flash('rulesMsg', d, 'Saved.'); }); };
-  $('saveViewers').onclick = function(){
-    var ids = []; Array.prototype.forEach.call($('viewers').querySelectorAll('input:checked'), function(i){ ids.push(Number(i.value)); });
-    api({ action:'viewerSet', viewers: ids }).then(function(d){ flash('viewMsg', d, 'Saved.'); });
-  };
   $('evAdd').onclick = function(){
     api({ action:'eventAdd', day: $('evDay').value, userId: $('evWho').value || 0, reason: $('evReason').value }).then(function(d){
       flash('evMsg', d, 'Event added.'); if (d.success) { $('evReason').value = ''; loadSettings(); }
