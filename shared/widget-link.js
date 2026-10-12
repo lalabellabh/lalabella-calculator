@@ -49,11 +49,23 @@
       return { group: Math.max(Number(s.group) || 0, g), dm: s.dm || {}, grp: s.grp || {} };
     } catch (e) { return null; }
   }
+  // menu profile animation the person picked (Ocean / Snowfall / Fire / Petals / Off): the profile widget copies it
+  function readTheme() {
+    try {
+      var u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
+      var who = String(u.username || u.fullName || 'anon').toLowerCase();
+      var all = JSON.parse(localStorage.getItem('lbProfileFx') || '{}') || {};
+      var v = String(all[who] || '');
+      return /^(fish|snow|fire|petals|off)$/.test(v) ? v : '';
+    } catch (e) { return ''; }
+  }
   function syncSeen() {
     var t = token();
     if (!API || !t) return;
-    var s = readSeen();
-    if (!s || (!s.group && !Object.keys(s.dm).length && !Object.keys(s.grp).length)) return;
+    var s = readSeen() || { group: 0, dm: {}, grp: {} };
+    var th = readTheme();
+    if (!s.group && !Object.keys(s.dm).length && !Object.keys(s.grp).length && !th) return;
+    s.theme = th;
     var sig = JSON.stringify(s) + '|' + t.slice(-8);
     if (sig === lastSent) return;
     lastSent = sig;
