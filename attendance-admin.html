@@ -47,6 +47,17 @@
   .chk label{display:flex;gap:6px;align-items:center;text-transform:none;font-size:13px;color:var(--ink);font-weight:500;letter-spacing:0;margin:0}
   .ev{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
   .back{font-size:12.5px;color:var(--muted);text-decoration:none}
+
+  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:3px;vertical-align:middle;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+  .dot.g{background:#2e8b57} .dot.r{background:#c0392b} .dot.n{background:#b8b0ac}
+  tr.main.far td{background:#fdf0ee} tr.main.far td:first-child{box-shadow:inset 4px 0 0 #c0392b}
+  tr.main.okl td:first-child{box-shadow:inset 4px 0 0 #2e8b57}
+  .lg>div{padding:5px 9px;border-radius:8px;margin-bottom:4px;border-left:4px solid transparent}
+  .lg>div.gl{background:#eaf6ef;border-left-color:#2e8b57}
+  .lg>div.rl{background:#fdecea;border-left-color:#c0392b;color:#8e2a20}
+  .lg>div.nl{background:#f3efec;border-left-color:#b8b0ac}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:6px;vertical-align:1px}
+  .tag.g{background:#2e8b57;color:#fff} .tag.r{background:#c0392b;color:#fff}
 </style>
 </head>
 <body>
@@ -167,6 +178,7 @@
     });
     return h ? '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">' + h + '</div>' : '';
   }
+  function loc(l){ return l.kind === 'blocked' ? 'r' : (l.dist == null ? 'n' : (l.inRange ? 'g' : 'r')); }
   function renderTable(){
     var br = $('br').value, only = $('st').value === 'problems';
     var rows = S.rows.filter(function(r){
@@ -174,19 +186,22 @@
       if (only && ['late','absent','not-in'].indexOf(r.status) < 0 && !r.breakOver && !r.blocked) return false;
       return true;
     });
-    var c = { present:0, late:0, absent:0, lm:0 };
-    rows.forEach(function(r){ if (r.status === 'present') c.present++; if (r.status === 'late') { c.late++; c.lm += r.lateMin; } if (r.status === 'absent') c.absent++; });
-    $('stats').innerHTML = '<div class="stat"><b>' + c.present + '</b>On time</div><div class="stat"><b>' + c.late + '</b>Late (' + mins(c.lm) + ' total)</div><div class="stat"><b>' + c.absent + '</b>Absent</div>';
+    var c = { present:0, late:0, absent:0, lm:0, far:0 };
+    rows.forEach(function(r){ r.logs.forEach(function(l){ if (loc(l) === 'r') c.far++; }); if (r.status === 'present') c.present++; if (r.status === 'late') { c.late++; c.lm += r.lateMin; } if (r.status === 'absent') c.absent++; });
+    $('stats').innerHTML = '<div class="stat"><b>' + c.present + '</b>On time</div><div class="stat"><b>' + c.late + '</b>Late (' + mins(c.lm) + ' total)</div><div class="stat"><b>' + c.absent + '</b>Absent</div><div class="stat"><b style="color:#c0392b">' + c.far + '</b>Outside-shop punches</div>';
     if (!rows.length) { $('tbl').innerHTML = '<div class="empty">No records for this selection.</div>'; return; }
-    var h = '<table><thead><tr><th>Day</th><th>Name</th><th>Shift</th><th>In</th><th>Out</th><th>Worked</th><th>Break</th><th>Status</th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>Day</th><th>Name</th><th>Shift</th><th>In</th><th>Out</th><th>Worked</th><th>Break</th><th>Where</th><th>Status</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
       var key = r.day + '-' + r.userId;
-      h += '<tr class="main" data-k="' + key + '"><td>' + esc(fD(r.day)) + '</td><td><b>' + esc(r.name) + '</b><br><small style="color:#8f8581">' + esc(r.branch) + '</small></td><td>' + (r.shiftStart ? esc(r.shiftStart + ' – ' + r.shiftEnd) : esc(r.shift || '—')) + '</td><td>' + (r.firstIn ? esc(fT(r.firstIn)) : '—') + '</td><td>' + (r.lastOut ? esc(fT(r.lastOut)) : '—') + '</td><td>' + (r.workedMin ? mins(r.workedMin) : '—') +
-        '</td><td>' + (r.breakMin ? mins(r.breakMin) + (r.breakOver ? ' <span class="chip warn">+' + r.breakOver + 'm</span>' : '') : '—') + '</td><td>' + chip(r) + (r.earlyMin ? ' <span class="chip warn">left ' + r.earlyMin + 'm early</span>' : '') + (r.blocked ? ' <span class="chip bad">⛔ ' + r.blocked + '</span>' : '') + '</td></tr>';
+      var lc = r.logs.map(loc), far = lc.indexOf('r') >= 0, allOk = r.logs.length && lc.every(function(x){ return x === 'g'; });
+      var dots = r.logs.length ? r.logs.map(function(l, j){ return '<span class="dot ' + lc[j] + '" title="' + esc((KIND[l.kind] || l.kind) + ' ' + fT(l.at) + (l.dist != null ? ' — ' + l.dist + ' m' : '')) + '"></span>'; }).join('') : '—';
+      h += '<tr class="main' + (far ? ' far' : (allOk ? ' okl' : '')) + '" data-k="' + key + '"><td>' + esc(fD(r.day)) + '</td><td><b>' + esc(r.name) + '</b><br><small style="color:#8f8581">' + esc(r.branch) + '</small></td><td>' + (r.shiftStart ? esc(r.shiftStart + ' – ' + r.shiftEnd) : esc(r.shift || '—')) + '</td><td>' + (r.firstIn ? esc(fT(r.firstIn)) : '—') + '</td><td>' + (r.lastOut ? esc(fT(r.lastOut)) : '—') + '</td><td>' + (r.workedMin ? mins(r.workedMin) : '—') +
+        '</td><td>' + (r.breakMin ? mins(r.breakMin) + (r.breakOver ? ' <span class="chip warn">+' + r.breakOver + 'm</span>' : '') : '—') + '</td><td>' + dots + '</td><td>' + chip(r) + (r.earlyMin ? ' <span class="chip warn">left ' + r.earlyMin + 'm early</span>' : '') + (r.blocked ? ' <span class="chip bad">⛔ ' + r.blocked + '</span>' : '') + '</td></tr>';
       if (S.open[key]) {
-        h += '<tr class="det"><td colspan="8"><div class="lg">' + (r.logs.length ? r.logs.map(function(l){
+        h += '<tr class="det"><td colspan="9"><div class="lg">' + (r.logs.length ? r.logs.map(function(l){
           var map = l.lat != null ? ' · <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + l.lat + ',' + l.lng + '">map</a>' : '';
-          return '<div class="' + (l.kind === 'blocked' ? 'bad' : '') + '"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) : 'no location') + (l.inRange ? ' ✓' : '') + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
+          var k = loc(l);
+          return '<div class="' + k + 'l"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) : 'no location') + (k === 'g' ? '<span class="tag g">IN SHOP ✓</span>' : (k === 'r' ? '<span class="tag r">' + (l.kind === 'blocked' ? 'BLOCKED' : 'OUTSIDE SHOP') + '</span>' : '')) + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
         }).join('') : 'No punches.') + '</div>' + maps(r) + '</td></tr>';
       }
     });
