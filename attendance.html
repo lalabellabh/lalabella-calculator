@@ -55,6 +55,38 @@
   .empty{color:var(--muted);font-size:13px;text-align:center;padding:8px}
   .brk{margin-top:8px;font-size:13px;color:var(--warn);font-weight:700;text-align:center}
   a.adm{display:block;text-align:center;margin-top:6px;font-size:13px;font-weight:700;color:var(--rose-dark);text-decoration:none}
+
+  /* ---- v2 look ---- */
+  body{background:radial-gradient(circle at 15% 0%,#fde7e4 0,transparent 45%),radial-gradient(circle at 100% 30%,#e3f1e8 0,transparent 40%),#fbf3f0}
+  .hero{position:relative;overflow:hidden;border:0;color:#fff;background:linear-gradient(145deg,#c9506b 0%,#9e2f4a 60%,#7d2540 100%);box-shadow:0 16px 36px rgba(158,47,74,.32);text-align:center;padding:22px 18px 20px}
+  .hero:before{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.08)}
+  .hero:after{content:'';position:absolute;left:-40px;bottom:-70px;width:160px;height:160px;border-radius:50%;background:rgba(217,164,65,.18)}
+  .hero>*{position:relative;z-index:1}
+  .face{width:92px;height:92px;border-radius:50%;margin:0 auto 10px;background:#f3d9de center/cover no-repeat;border:3px solid #fff;box-shadow:0 0 0 4px rgba(255,255,255,.25),0 10px 22px rgba(0,0,0,.22);display:grid;place-items:center;font-family:'Fraunces',serif;font-size:34px;font-weight:700;color:var(--rose-dark);position:relative}
+  .face.ring-ok{box-shadow:0 0 0 4px rgba(120,230,160,.65),0 10px 22px rgba(0,0,0,.22)}
+  .face.ring-warn{box-shadow:0 0 0 4px rgba(255,200,90,.7),0 10px 22px rgba(0,0,0,.22)}
+  .hero .nm{font-family:'Fraunces',serif;font-size:21px;font-weight:700}
+  .hero .br{font-size:12px;opacity:.85;margin-top:1px}
+  .hero .clock-t{font-family:'Fraunces',serif;font-size:44px;font-weight:700;line-height:1.05;margin-top:12px;letter-spacing:.02em}
+  .hero .d{color:rgba(255,255,255,.82);font-size:12.5px;margin-top:2px}
+  .hero .shift{color:#fff;background:rgba(255,255,255,.14);border-radius:12px;padding:8px 12px;margin-top:12px;font-size:13px}
+  .hero .chip{background:rgba(255,255,255,.95)}
+  .hero .brk{color:#ffe29a}
+  .card{border-radius:20px}
+  .card h2{display:flex;align-items:center;gap:8px}
+  .btns button{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;padding:18px;border-radius:18px}
+  .btns button.alt{font-size:15px}
+  .btns button.in{background:linear-gradient(135deg,#3aa56b,#2e8b57);box-shadow:0 10px 22px rgba(46,139,87,.3)}
+  .btns button.out{background:linear-gradient(135deg,#d9604f,#c0392b);box-shadow:0 10px 22px rgba(192,57,43,.3)}
+  .btns button.brkb{background:linear-gradient(135deg,#e6a93a,#cf8a14);box-shadow:0 10px 22px rgba(207,138,20,.3)}
+  .tl li{border-bottom:0;background:#fbf6f5;border-radius:12px;margin-bottom:6px;padding:9px 10px}
+  .tl li.empty{background:none}
+  .faceNeed{text-align:center}
+  .faceNeed .face{margin:0 auto 12px;width:104px;height:104px;font-size:40px;border:3px dashed var(--rose);background:#fdf1f0;box-shadow:none}
+  .faceNeed p{font-size:13.5px;line-height:1.45;margin:0 0 12px}
+  .faceNeed .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .faceNeed button{font-size:14px;padding:12px 16px}
+  .need .btns button{opacity:.45;pointer-events:none}
 </style>
 </head>
 <body>
@@ -65,12 +97,28 @@
     <a class="backlink" href="index.html">← Back to Lalabella</a>
   </div>
 
-  <div class="card clock">
-    <div class="t" id="clock">--:--:--</div>
+  <div class="card hero clock">
+    <div class="face" id="face">·</div>
+    <div class="nm" id="meName">&nbsp;</div>
+    <div class="br" id="meBranch">&nbsp;</div>
+    <div class="clock-t" id="clock">--:--:--</div>
     <div class="d" id="date"></div>
     <div class="shift" id="shift">Loading…</div>
-    <div style="margin-top:8px"><span class="chip" id="status">…</span></div>
+    <div style="margin-top:10px"><span class="chip" id="status">…</span></div>
     <div class="brk" id="brk" style="display:none"></div>
+  </div>
+
+  <div class="card faceNeed" id="faceCard" style="display:none">
+    <div class="face" id="faceBig">📷</div>
+    <h2 style="justify-content:center">Add your photo first</h2>
+    <p>Para makita sa attendance records na ikaw talaga ang nag-time in, kailangan muna ng malinaw na picture ng mukha mo. Saka ka pa makakapag-Time In.</p>
+    <div class="row">
+      <button type="button" id="faceSelfie">🤳 Take selfie</button>
+      <button type="button" class="alt" id="faceFile">🖼️ Choose photo</button>
+    </div>
+    <input type="file" id="faceInSelfie" accept="image/*" capture="user" style="display:none">
+    <input type="file" id="faceInFile" accept="image/*" style="display:none">
+    <div class="msg" id="faceMsg"></div>
   </div>
 
   <div class="card">
@@ -233,9 +281,62 @@
     return e;
   }
 
+
+  // ---------- face photo (profile picture) ----------
+  var FACE = { url: '', checked: false };
+  function authBase(){ return LB_CONFIG.AUTH_FAST_API || LB_CONFIG.AUTH_API; }
+  function authCall(action, extra){
+    var p = new URLSearchParams(Object.assign({ action: action, token: token() }, extra || {}));
+    return fetch(authBase() + '?' + p.toString()).then(function(r){ return r.json(); });
+  }
+  function initials(n){ n = String(n || '?').trim().split(/\s+/); return ((n[0] || '?').charAt(0) + (n[1] ? n[1].charAt(0) : '')).toUpperCase(); }
+  function paintFace(){
+    var f = $('face'), nm = S.me && S.me.user ? S.me.user.name : '';
+    if (FACE.url) { f.style.backgroundImage = 'url("' + FACE.url.replace(/"/g, '%22') + '")'; f.textContent = ''; }
+    else { f.style.backgroundImage = ''; f.textContent = initials(nm); }
+    var st = S.me && S.me.report && S.me.report.state;
+    f.className = 'face' + (st === 'in' || st === 'break_in' ? ' ring-ok' : (st === 'break_out' ? ' ring-warn' : ''));
+    $('faceCard').style.display = (FACE.checked && !FACE.url) ? '' : 'none';
+    document.body.classList.toggle('need', FACE.checked && !FACE.url);
+    $('faceBig').textContent = initials(nm) === '?' ? '📷' : '📷';
+  }
+  function loadFace(){
+    return authCall('getProfile').then(function(g){
+      var p = g && g.profile; FACE.url = (p && (p.photoDataUri || p.photo)) || ''; FACE.checked = !!(g && g.success);
+    }).catch(function(){ FACE.checked = false; }).then(paintFace);
+  }
+  function pickFace(file){
+    var m = $('faceMsg'); if (!file) return;
+    m.textContent = 'Saving your photo…'; m.className = 'msg';
+    var rd = new FileReader();
+    rd.onerror = function(){ m.textContent = 'Could not read that picture.'; m.className = 'msg bad'; };
+    rd.onload = function(){
+      var img = new Image();
+      img.onerror = function(){ m.textContent = 'Could not read that picture. Try a JPG or PNG.'; m.className = 'msg bad'; };
+      img.onload = function(){
+        var side = Math.min(img.width, img.height), sx = (img.width - side) / 2, sy = Math.max(0, (img.height - side) / 2 - side * 0.08);
+        var cv = document.createElement('canvas'); cv.width = cv.height = 240;
+        cv.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, 240, 240);
+        var data = cv.toDataURL('image/jpeg', 0.72);
+        authCall('updateProfile', { photoBase64: data }).then(function(d){
+          if (!d || !d.success) throw new Error((d && d.error) || 'Could not save your photo.');
+          FACE.url = data; FACE.checked = true; paintFace(); m.textContent = '';
+          try { [sessionStorage, localStorage].forEach(function(st){ var u = JSON.parse(st.getItem('lalabellaUser') || 'null'); if (u) { u.photo = data; st.setItem('lalabellaUser', JSON.stringify(u)); } }); } catch (e) {}
+          msg('Photo saved ✓ — you can time in now.', 'ok');
+        }).catch(function(e){ m.textContent = (e && e.message) || 'Connection problem. Try again.'; m.className = 'msg bad'; });
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  }
+  $('faceSelfie').addEventListener('click', function(){ $('faceInSelfie').click(); });
+  $('faceFile').addEventListener('click', function(){ $('faceInFile').click(); });
+  ['faceInSelfie','faceInFile'].forEach(function(id){ $(id).addEventListener('change', function(e){ pickFace(e.target.files && e.target.files[0]); e.target.value = ''; }); });
+
   // ---------- actions ----------
   function punch(kind){
     if (S.busy) return;
+    if (FACE.checked && !FACE.url) { msg('Add your photo first (see above).', 'bad'); return; }
     if (kind === 'out' && !confirm('Time out now?')) return;
     S.busy = true; render(); msg('Getting your location…');
     var extra = {};
@@ -265,6 +366,7 @@
   function render(){
     var me = S.me; if (!me) return;
     var r = me.report, sh = me.shift;
+    $('meName').textContent = me.user ? me.user.name : ''; $('meBranch').textContent = me.user && me.user.branch ? '📍 ' + me.user.branch : '';
     $('shift').innerHTML = sh && sh.startText ? '🗓️ <b>' + esc(sh.startText) + ' – ' + esc(sh.endText) + '</b> · ' + sh.brk + ' min break' : (sh && sh.off ? 'Today is your day off.' : (sh && sh.detail ? esc(sh.detail) : 'No shift found for you today.'));
     var c = chipFor(r), chip = $('status');
     var label = c[0];
@@ -278,7 +380,7 @@
     if (!next.length) { b.innerHTML = '<div class="empty">All done for today 🌸</div>'; }
     next.forEach(function(k, i){
       var btn = document.createElement('button'); btn.type = 'button';
-      btn.className = i === 0 ? '' : 'alt';
+      btn.className = (i === 0 ? '' : 'alt') + (i === 0 ? (k === 'in' || k === 'break_in' ? ' in' : (k === 'out' ? ' out' : ' brkb')) : '');
       btn.textContent = (ICON[k] || '') + ' ' + LABEL[k];
       btn.disabled = S.busy;
       btn.addEventListener('click', function(){ punch(k); });
@@ -295,7 +397,7 @@
       tl.appendChild(li);
     });
     $('admLink').style.display = me.isViewer ? 'block' : 'none';
-    renderFp(); breakTick();
+    renderFp(); breakTick(); paintFace();
   }
   function renderFp(){
     var el = $('fp'), me = S.me; if (!me) return;
@@ -340,7 +442,7 @@
   }
   $('locBtn').addEventListener('click', locate);
   document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.me) load(true); });
-  detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate(); });
+  loadFace(); detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate(); });
 })();
 </script>
 </body>
