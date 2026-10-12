@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lalabella</string>
+    <string name="widget_name">Lalabella Orders &amp; Messages</string>
+    <string name="widget_desc">Unassigned orders and new messages at a glance.</string>
+    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://mysystemlla.com\"}}]</string>
+</resources>
