@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#fdf1f0">
+<title>Get the Lalabella App</title>
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fdf1f0; --ink:#2f2018; --muted:#7a6653; --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#a9761f;
+  --card:rgba(255,255,255,.88); --line:rgba(158,47,74,.16);
+  --page:radial-gradient(circle at 50% 0%,rgba(201,80,107,.12),transparent 40%),linear-gradient(160deg,#fdf1f0 0%,#f6e6e2 50%,#eef3ec 100%);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#090506; --ink:#f7eee5; --muted:#b39a98; --rose:#d77b91; --rose-deep:#e8a0b2; --gold:#e6c47a;
+    --card:rgba(30,16,19,.9); --line:rgba(230,196,122,.25);
+    --page:radial-gradient(circle at 50% 0%,rgba(170,45,78,.2),transparent 40%),linear-gradient(145deg,#070405,#12090b 52%,#080405); }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--ink);font-family:Inter,system-ui,sans-serif;line-height:1.55;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:28px 16px 56px}
+.back{display:inline-block;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:18px}
+.back:hover{color:var(--rose)}
+.head{text-align:center;margin-bottom:26px}
+.head img{width:84px;height:84px;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px}
+h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:38px;margin:14px 0 4px;letter-spacing:.3px}
+.head p{margin:0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 20px 22px;margin-bottom:16px;box-shadow:0 6px 22px rgba(0,0,0,.06)}
+.card.hl{border-color:var(--rose);box-shadow:0 8px 28px rgba(201,80,107,.22)}
+.card h2{font-family:'Cormorant Garamond',serif;font-size:26px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.card h2 .tag{font:600 11px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;background:var(--rose);color:#fff;border-radius:20px;padding:3px 9px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 14px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#e6c47a,#b8860b);color:#2a1a0a;font-weight:700;font-size:16px;text-decoration:none;border:0;border-radius:14px;padding:13px 22px;cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.btn.alt{background:none;color:var(--rose-deep);border:1px solid var(--line);font-weight:600;font-size:14px;padding:10px 16px}
+ol{margin:12px 0 0;padding-left:22px}
+ol li{margin:7px 0}
+ol li b{color:var(--rose-deep)}
+.note{font-size:13px;color:var(--muted);margin-top:12px}
+.kbd{display:inline-block;border:1px solid var(--line);border-radius:7px;padding:0 7px;font-size:13px;background:rgba(158,47,74,.06)}
+.qr{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.qr img{width:190px;height:190px;border-radius:14px;background:#fff;padding:8px;border:1px solid var(--line)}
+.qr .t{flex:1;min-width:200px}
+.url{font-weight:600;color:var(--rose-deep);word-break:break-all}
+.done{display:none;text-align:center;padding:14px;border-radius:14px;background:rgba(60,160,90,.12);border:1px solid rgba(60,160,90,.4);margin-bottom:16px;font-weight:600}
+.is-app .done{display:block}
+.is-app .card{display:none}
+.is-app .card.keep{display:block}
+.order{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to Lalabella</a>
+
+  <div class="head">
+    <img src="/icons/icon-192.png" alt="">
+    <h1>Get the Lalabella App</h1>
+    <p>Same system, one tap from your home screen. Notifications for messages and orders.</p>
+  </div>
+
+  <div class="done" id="done">✅ You are already using the app.</div>
+
+  <div class="order" id="order">
+
+    <section class="card" id="cAndroid" style="order:2">
+      <h2>🤖 Android <span class="tag" id="tagAndroid" hidden>Your phone</span></h2>
+      <p class="sub">Download the app file (about 2 MB) and install it. No Play Store needed.</p>
+      <a class="btn" id="apkBtn" href="downloads/Lalabella.apk" download="Lalabella.apk">⬇ Download Lalabella.apk</a>
+      <ol>
+        <li>Tap the downloaded file (<span class="kbd">Lalabella.apk</span>). Find it in <b>Downloads</b> if you do not see it.</li>
+        <li>If Android asks, allow <b>Install unknown apps</b> for your browser, then go back and tap Install.</li>
+        <li>If you see <b>Play Protect</b>, choose <b>Install anyway</b>. It shows this because the app is not from the Play Store.</li>
+        <li>Open Lalabella, log in, and tap <b>Turn on</b> when it asks about notifications.</li>
+      </ol>
+      <p class="note">Prefer no file? In Chrome, tap <span class="kbd">⋮</span> → <b>Install app</b> (or <b>Add to Home screen</b>). It works the same.</p>
+    </section>
+
+    <section class="card" id="cIos" style="order:3">
+      <h2>🍎 iPhone / iPad <span class="tag" id="tagIos" hidden>Your phone</span></h2>
+      <p class="sub">Apple does not allow app files outside the App Store, so add it to your home screen. It then opens like an app.</p>
+      <ol>
+        <li>Open this site in <b>Safari</b> (not Chrome or another browser).</li>
+        <li>Tap the <b>Share</b> button <span class="kbd">⬆︎</span> at the bottom of the screen.</li>
+        <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+        <li>Tap <b>Add</b> at the top right. The Lalabella icon appears on your home screen.</li>
+        <li>Open Lalabella <b>from that icon</b>, log in, and tap <b>Turn on</b> for notifications.</li>
+      </ol>
+      <p class="note">Notifications on iPhone need iOS 16.4 or newer, and only work when opened from the home screen icon.</p>
+    </section>
+
+    <section class="card" id="cQr" style="order:1">
+      <h2>📱 Scan with your phone <span class="tag" id="tagQr" hidden>Easiest</span></h2>
+      <div class="qr">
+        <img src="icons/qr-get-app.png" alt="QR code to this page">
+        <div class="t">
+          <p class="sub" style="margin-bottom:8px">Point your phone camera at the code. This page opens and shows the right steps for your phone.</p>
+          <div class="url">mysystemlla.com/get-app.html</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var ua = navigator.userAgent || '';
+  var isAndroid = /android/i.test(ua);
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  var $ = function(id){ return document.getElementById(id); };
+
+  if (standalone) { document.body.classList.add('is-app'); $('done').parentNode.insertBefore($('done'), $('done').parentNode.firstChild); return; }
+
+  if (isAndroid) {
+    $('cAndroid').style.order = 0; $('cAndroid').classList.add('hl'); $('tagAndroid').hidden = false;
+    $('cQr').style.display = 'none';
+  } else if (isIOS) {
+    $('cIos').style.order = 0; $('cIos').classList.add('hl'); $('tagIos').hidden = false;
+    $('cQr').style.display = 'none'; $('cAndroid').style.order = 5;
+  } else {
+    $('tagQr').hidden = false; $('cQr').classList.add('hl');
+  }
+
+  // ?dl=1 starts the Android download straight away (button still there if the browser blocks it)
+  if (isAndroid && /[?&]dl=1\b/.test(location.search)) {
+    setTimeout(function(){ try { $('apkBtn').click(); } catch(e){} }, 600);
+  }
+})();
+</script>
+</body>
+</html>
