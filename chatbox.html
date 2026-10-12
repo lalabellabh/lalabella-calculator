@@ -789,7 +789,14 @@
 
   Promise.all([loadPeople(), loadGroups()]).then(() => {
     renderHead();
-    if(window.innerWidth > 820) openConv(null);    // desktop: open the group chat
+    // opened from a push notification: ?dm=<userId> | ?g=<groupId> | ?team=1
+    let dl = null;
+    try { dl = new URLSearchParams(location.search); } catch (e) { dl = null; }
+    const dlDm = dl ? parseInt(dl.get('dm'), 10) : 0, dlG = dl ? parseInt(dl.get('g'), 10) : 0;
+    if(dlG > 0 && groupsById[dlG]) openConv(null, dlG);
+    else if(dlDm > 0 && peopleById[dlDm]) openConv(dlDm, null);
+    else if(dl && dl.get('team')) openConv(null);
+    else if(window.innerWidth > 820) openConv(null);    // desktop: open the group chat
     else { renderConvs(); refreshUnread(); }       // phone: start on the chat list
   });
 })();
