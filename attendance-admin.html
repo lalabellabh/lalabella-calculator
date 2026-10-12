@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Attendance Records</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--teal:#2f6570;--teal-dark:#214e57;--ink:#3a3533;--muted:#8f8581;--line:#e8e2de;--bg:#f8f7f4;--red:#b23a3a;--amber:#b9770e;--ok:#2e8b57}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:'Space Grotesk',Arial,sans-serif;color:var(--ink);padding:22px 14px 70px}
+  .wrap{max-width:1100px;margin:0 auto;padding-top:56px}
+  h1{font-family:'Fraunces',serif;font-size:28px;margin:4px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(47,101,112,.06)}
+  .card h2{font-family:'Fraunces',serif;font-size:17px;margin:0 0 10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+  input,select{font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fcfbf9;color:var(--ink);outline:none}
+  button{font:inherit;font-weight:700;font-size:12.5px;border-radius:9px;padding:9px 13px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+  button.danger{color:var(--red)}
+  button:disabled{opacity:.55}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+  .stat{background:#faf8f6;border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:12px;color:var(--muted)}
+  .stat b{display:block;font-size:20px;color:var(--ink);font-family:'Fraunces',serif}
+  .tw{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  th{text-align:left;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:9px 6px;border-bottom:1px solid #f1ecea;vertical-align:top}
+  tr.main{cursor:pointer} tr.main:hover{background:#faf8f6}
+  tr.det td{background:#faf8f6;padding:10px 14px}
+  .chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#f1ecea;color:var(--muted)}
+  .chip.ok{background:#e3f4ea;color:var(--ok)} .chip.warn{background:#fdf0d8;color:var(--amber)} .chip.bad{background:#fbe3e0;color:var(--red)}
+  .lg{font-size:12.5px;line-height:1.7}
+  .lg .bad{color:var(--red)}
+  .lg a{color:var(--teal-dark)}
+  .msg{font-size:12.5px;min-height:1em;margin-top:8px}
+  .empty{color:var(--muted);text-align:center;padding:16px;font-size:13px}
+  .chk{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 10px}
+  .chk label{display:flex;gap:6px;align-items:center;text-transform:none;font-size:13px;color:var(--ink);font-weight:500;letter-spacing:0;margin:0}
+  .ev{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .back{font-size:12.5px;color:var(--muted);text-decoration:none}
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<div class="wrap">
+  <a class="back" href="attendance.html">← My attendance</a>
+  <h1>🕒 Attendance Records</h1>
+  <p class="sub">Time in / break / time out of all staff, with location and fingerprint. Only people you authorise can see this page.</p>
+
+  <div id="denied" class="card" style="display:none"></div>
+
+  <div id="main" style="display:none">
+    <div class="card">
+      <div class="row">
+        <div><label>From</label><input type="date" id="from"></div>
+        <div><label>To</label><input type="date" id="to"></div>
+        <div><label>Person</label><select id="who"><option value="">Everyone</option></select></div>
+        <div><label>Branch</label><select id="br"><option value="">All branches</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div>
+        <div><label>Show</label><select id="st"><option value="">All</option><option value="problems">Late / absent only</option></select></div>
+        <button class="primary" id="go" type="button">Show</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" id="qToday">Today</button><button type="button" id="qYest">Yesterday</button><button type="button" id="qWeek">Last 7 days</button><button type="button" id="qMonth">This month</button>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="card"><div class="tw" id="tbl"><div class="empty">Loading…</div></div></div>
+
+    <div id="ownerBox" style="display:none">
+      <div class="card">
+        <h2>⚙️ Rules</h2>
+        <div class="row">
+          <div><label>Allowed distance from a shop (m)</label><input type="number" id="radius" min="20" max="500" style="width:120px"></div>
+          <div><label>Grace before “late” (min)</label><input type="number" id="grace" min="0" max="60" style="width:120px"></div>
+          <button class="primary" id="saveRules" type="button">Save</button>
+        </div>
+        <div class="msg" id="rulesMsg"></div>
+      </div>
+      <div class="card">
+        <h2>👁️ Who can see these records</h2>
+        <div class="muted" style="font-size:12.5px;color:var(--muted)">You (owner) always can. Tick others you trust — being an Admin alone is not enough.</div>
+        <div class="chk" id="viewers"></div>
+        <button class="primary" id="saveViewers" type="button">Save</button>
+        <div class="msg" id="viewMsg"></div>
+      </div>
+      <div class="card">
+        <h2>🎫 Events (allow time-in away from the shop)</h2>
+        <div class="row">
+          <div><label>Date</label><input type="date" id="evDay"></div>
+          <div><label>For</label><select id="evWho"><option value="">Everyone</option></select></div>
+          <div style="flex:1;min-width:180px"><label>Reason</label><input type="text" id="evReason" maxlength="160" placeholder="e.g. Delivery to Hamad Town expo" style="width:100%"></div>
+          <button class="primary" id="evAdd" type="button">Add event</button>
+        </div>
+        <div class="msg" id="evMsg"></div>
+        <div id="evList"></div>
+      </div>
+      <div class="card">
+        <h2>🖐️ Fingerprints</h2>
+        <div class="muted" style="font-size:12.5px;color:var(--muted)">Reset when someone changes phone — they register the new one on their next time-in.</div>
+        <div id="fpList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var API = (window.LB_CONFIG && LB_CONFIG.ATTENDANCE_API) || (LB_CONFIG.SUPABASE_URL + '/functions/v1/attendance-fast');
+  var $ = function(id){ return document.getElementById(id); };
+  var S = { rows: [], users: [], settings: null, open: {} };
+  var TZ = 'Asia/Bahrain';
+  var KIND = { 'in':'Time In', 'out':'Time Out', 'break_out':'Break start', 'break_in':'Break end', 'blocked':'⛔ Blocked' };
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function api(b){ return fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify(Object.assign({ token: token() }, b)) }).then(function(r){ return r.json(); }); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function bhToday(){ return new Date(Date.now() + 3*3600000).toISOString().slice(0,10); }
+  function addDays(y, n){ return new Date(new Date(y + 'T00:00:00Z').getTime() + n*86400000).toISOString().slice(0,10); }
+  function fT(iso){ return new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour:'numeric', minute:'2-digit' }); }
+  function fD(y){ return new Date(y + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone:'UTC', weekday:'short', day:'2-digit', month:'short' }); }
+  function mins(m){ m = Math.round(m); return m < 60 ? m + 'm' : Math.floor(m/60) + 'h ' + (m%60) + 'm'; }
+  function chip(r){
+    var m = { present:['On time','ok'], late:['Late ' + r.lateMin + ' min','warn'], absent:['Absent','bad'], 'not-in':['Not in yet','bad'], off:['Day off',''], upcoming:['Not started',''], 'no-schedule':['No schedule',''], unknown:['Shift unclear',''] }[r.status] || ['',''];
+    return '<span class="chip ' + m[1] + '">' + esc(m[0]) + '</span>';
+  }
+
+  function setRange(a, b){ $('from').value = a; $('to').value = b; load(); }
+  $('qToday').onclick = function(){ var t = bhToday(); setRange(t, t); };
+  $('qYest').onclick = function(){ var t = addDays(bhToday(), -1); setRange(t, t); };
+  $('qWeek').onclick = function(){ var t = bhToday(); setRange(addDays(t, -6), t); };
+  $('qMonth').onclick = function(){ var t = bhToday(); setRange(t.slice(0,8) + '01', t); };
+  $('go').onclick = load;
+
+  function load(){
+    $('tbl').innerHTML = '<div class="empty">Loading…</div>';
+    api({ action:'adminRange', from: $('from').value, to: $('to').value, userId: $('who').value || 0 }).then(function(d){
+      if (!d.success) { deny(d.error); return; }
+      $('denied').style.display = 'none'; $('main').style.display = 'block';
+      S.rows = d.rows || [];
+      if (!S.users.length) {
+        S.users = d.users || [];
+        $('who').innerHTML = '<option value="">Everyone</option>' + S.users.map(function(u){ return '<option value="' + u.id + '">' + esc(u.name) + '</option>'; }).join('');
+      }
+      renderTable();
+      if (d.isOwner && !S.settings) loadSettings();
+    }).catch(function(){ $('tbl').innerHTML = '<div class="empty">Could not reach the server.</div>'; });
+  }
+  function deny(t){
+    $('main').style.display = 'none'; var el = $('denied'); el.style.display = 'block';
+    el.innerHTML = '<div class="empty">🔒 ' + esc(t || 'You are not allowed to see attendance records.') + '</div>';
+  }
+  function renderTable(){
+    var br = $('br').value, only = $('st').value === 'problems';
+    var rows = S.rows.filter(function(r){
+      if (br && String(r.branch).replace(/\s+/g,'').toLowerCase() !== br.toLowerCase()) return false;
+      if (only && ['late','absent','not-in'].indexOf(r.status) < 0 && !r.breakOver && !r.blocked) return false;
+      return true;
+    });
+    var c = { present:0, late:0, absent:0, lm:0 };
+    rows.forEach(function(r){ if (r.status === 'present') c.present++; if (r.status === 'late') { c.late++; c.lm += r.lateMin; } if (r.status === 'absent') c.absent++; });
+    $('stats').innerHTML = '<div class="stat"><b>' + c.present + '</b>On time</div><div class="stat"><b>' + c.late + '</b>Late (' + mins(c.lm) + ' total)</div><div class="stat"><b>' + c.absent + '</b>Absent</div>';
+    if (!rows.length) { $('tbl').innerHTML = '<div class="empty">No records for this selection.</div>'; return; }
+    var h = '<table><thead><tr><th>Day</th><th>Name</th><th>Shift</th><th>In</th><th>Out</th><th>Worked</th><th>Break</th><th>Status</th></tr></thead><tbody>';
+    rows.forEach(function(r, i){
+      var key = r.day + '-' + r.userId;
+      h += '<tr class="main" data-k="' + key + '"><td>' + esc(fD(r.day)) + '</td><td><b>' + esc(r.name) + '</b><br><small style="color:#8f8581">' + esc(r.branch) + '</small></td><td>' + (r.shiftStart ? esc(r.shiftStart + ' – ' + r.shiftEnd) : esc(r.shift || '—')) + '</td><td>' + (r.firstIn ? esc(fT(r.firstIn)) : '—') + '</td><td>' + (r.lastOut ? esc(fT(r.lastOut)) : '—') + '</td><td>' + (r.workedMin ? mins(r.workedMin) : '—') +
+        '</td><td>' + (r.breakMin ? mins(r.breakMin) + (r.breakOver ? ' <span class="chip warn">+' + r.breakOver + 'm</span>' : '') : '—') + '</td><td>' + chip(r) + (r.earlyMin ? ' <span class="chip warn">left ' + r.earlyMin + 'm early</span>' : '') + (r.blocked ? ' <span class="chip bad">⛔ ' + r.blocked + '</span>' : '') + '</td></tr>';
+      if (S.open[key]) {
+        h += '<tr class="det"><td colspan="8"><div class="lg">' + (r.logs.length ? r.logs.map(function(l){
+          var map = l.lat != null ? ' · <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + l.lat + ',' + l.lng + '">map</a>' : '';
+          return '<div class="' + (l.kind === 'blocked' ? 'bad' : '') + '"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) : 'no location') + (l.inRange ? ' ✓' : '') + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
+        }).join('') : 'No punches.') + '</div></td></tr>';
+      }
+    });
+    $('tbl').innerHTML = h + '</tbody></table>';
+    Array.prototype.forEach.call(document.querySelectorAll('tr.main'), function(tr){
+      tr.onclick = function(){ var k = tr.getAttribute('data-k'); S.open[k] = !S.open[k]; renderTable(); };
+    });
+  }
+  $('br').onchange = renderTable; $('st').onchange = renderTable; $('who').onchange = load;
+
+  // ---------- owner panel ----------
+  function loadSettings(){
+    api({ action:'adminSettings' }).then(function(d){
+      if (!d.success) return;
+      S.settings = d; $('ownerBox').style.display = d.isOwner ? 'block' : 'none';
+      if (!d.isOwner) return;
+      $('radius').value = d.radius; $('grace').value = d.grace;
+      $('viewers').innerHTML = d.users.map(function(u){
+        var on = d.viewers.indexOf(u.id) >= 0 || u.id === d.owner;
+        return '<label><input type="checkbox" value="' + u.id + '"' + (on ? ' checked' : '') + (u.id === d.owner ? ' disabled' : '') + '> ' + esc(u.name) + (u.id === d.owner ? ' (you)' : '') + '</label>';
+      }).join('');
+      $('evWho').innerHTML = '<option value="">Everyone</option>' + d.users.map(function(u){ return '<option value="' + u.id + '">' + esc(u.name) + '</option>'; }).join('');
+      if (!$('evDay').value) $('evDay').value = bhToday();
+      $('evList').innerHTML = d.events.length ? d.events.map(function(e){
+        var who = e.user_id ? ((d.users.filter(function(u){ return u.id === e.user_id; })[0] || {}).name || 'Someone') : (e.branch || 'Everyone');
+        return '<div class="ev"><span><b>' + esc(fD(String(e.day).slice(0,10))) + '</b> · ' + esc(who) + ' — ' + esc(e.reason) + '</span><button class="danger" data-id="' + e.id + '" type="button">Remove</button></div>';
+      }).join('') : '<div class="empty">No events in the last 7 days or ahead.</div>';
+      Array.prototype.forEach.call($('evList').querySelectorAll('button[data-id]'), function(b){
+        b.onclick = function(){ api({ action:'eventDelete', id: b.getAttribute('data-id') }).then(loadSettings); };
+      });
+      $('fpList').innerHTML = d.users.map(function(u){
+        return '<div class="ev"><span>' + esc(u.name) + ' — ' + (u.hasPasskey ? '🖐️ registered' : 'not registered') + '</span>' + (u.hasPasskey ? '<button class="danger" data-u="' + u.id + '" type="button">Reset</button>' : '') + '</div>';
+      }).join('');
+      Array.prototype.forEach.call($('fpList').querySelectorAll('button[data-u]'), function(b){
+        b.onclick = function(){ if (confirm('Reset this person\'s fingerprint?')) api({ action:'credReset', userId: b.getAttribute('data-u') }).then(loadSettings); };
+      });
+    });
+  }
+  function flash(id, d, okText){ var m = $(id); m.style.color = d.success ? '#2e8b57' : '#b23a3a'; m.textContent = d.success ? okText : (d.error || 'Failed.'); }
+  $('saveRules').onclick = function(){ api({ action:'radiusSet', radius: $('radius').value, grace: $('grace').value }).then(function(d){ flash('rulesMsg', d, 'Saved.'); }); };
+  $('saveViewers').onclick = function(){
+    var ids = []; Array.prototype.forEach.call($('viewers').querySelectorAll('input:checked'), function(i){ ids.push(Number(i.value)); });
+    api({ action:'viewerSet', viewers: ids }).then(function(d){ flash('viewMsg', d, 'Saved.'); });
+  };
+  $('evAdd').onclick = function(){
+    api({ action:'eventAdd', day: $('evDay').value, userId: $('evWho').value || 0, reason: $('evReason').value }).then(function(d){
+      flash('evMsg', d, 'Event added.'); if (d.success) { $('evReason').value = ''; loadSettings(); }
+    });
+  };
+
+  var t = bhToday(); $('from').value = t; $('to').value = t;
+  load();
+})();
+</script>
+</body>
+</html>

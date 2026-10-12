@@ -126,6 +126,7 @@
   <nav class="adminlinks" aria-label="Other admin pages">
     <a href="system-health.html">🩺 System Health</a>
     <a href="brain.html">🧠 Brain Vault</a>
+    <a href="attendance-admin.html" id="attLink" style="display:none">🕒 Attendance Records</a>
   </nav>
 
   <div id="lockCard" class="card" style="display:none;max-width:420px;margin:30px auto;text-align:center;">
@@ -533,5 +534,16 @@ document.getElementById('unlockPw').addEventListener('keydown',e=>{ if(e.key==='
 })();
 </script>
 <script src="joyboy-bubble.js"></script>
+<script>
+/* Attendance Records link: shown only to the people the owner authorised (the server decides). */
+(function(){
+  try {
+    var t = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+    if (!t || !window.LB_CONFIG || !LB_CONFIG.ATTENDANCE_API) return;
+    fetch(LB_CONFIG.ATTENDANCE_API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ action:'me', token: t }) })
+      .then(function(r){ return r.json(); }).then(function(d){ if (d && d.success && d.isViewer) document.getElementById('attLink').style.display = ''; }).catch(function(){});
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>
