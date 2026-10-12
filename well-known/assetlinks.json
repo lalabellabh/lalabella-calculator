@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.mysystemlla.twa",
-        "sha256_cert_fingerprints": ["A9:5E:38:9B:B4:22:12:89:D7:85:97:A5:97:E5:5A:EC:B2:0C:45:01:C6:4F:E3:D5:B5:C7:4B:8A:8C:AB:F3:3B"]
-      }
-    }]
