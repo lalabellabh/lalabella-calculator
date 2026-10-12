@@ -12,7 +12,18 @@
   }
 
   var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-  if (standalone) return;
+  if (standalone) {
+    // Inside the installed app / Android app: no pinch-zoom (Chrome in the browser keeps its normal zoom).
+    try {
+      var vp = document.querySelector('meta[name=viewport]');
+      if (!vp) { vp = document.createElement('meta'); vp.name = 'viewport'; document.head.appendChild(vp); }
+      if (!/user-scalable/i.test(vp.content)) vp.content = (vp.content || 'width=device-width, initial-scale=1') + ', maximum-scale=1, user-scalable=no';
+      var st = document.createElement('style');
+      st.textContent = 'html{touch-action:pan-x pan-y}';
+      document.head.appendChild(st);
+    } catch (x) {}
+    return;
+  }
 
   var deferred = null;
   window.addEventListener('beforeinstallprompt', function (e) {
