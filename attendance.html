@@ -87,6 +87,40 @@
   .faceNeed .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
   .faceNeed button{font-size:14px;padding:12px 16px}
   .need .btns button{opacity:.45;pointer-events:none}
+
+  /* ---- desktop + scroll ---- */
+  .cols,.colA,.colB{display:contents}
+  #hist{max-height:380px;overflow:auto;border-radius:12px}
+  #hist thead th{position:sticky;top:0;background:#fff;z-index:1}
+  #tl{max-height:300px;overflow:auto;padding-right:2px}
+  #hist::-webkit-scrollbar,#tl::-webkit-scrollbar{width:6px}
+  #hist::-webkit-scrollbar-thumb,#tl::-webkit-scrollbar-thumb{background:#e4cfd2;border-radius:6px}
+  @media (min-width:900px){
+    body{padding:0 0 60px;overflow-x:hidden}
+    .wrap{max-width:1120px;padding:0 32px}
+    .topbar{position:sticky;top:0;z-index:20;margin:0 calc(50% - 50vw) 26px;padding:14px calc(50vw - 50%);background:rgba(255,255,255,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+    .brand .logo{width:38px;height:38px}
+    .brand b{font-size:20px}
+    .backlink{font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .backlink:hover{border-color:var(--rose);color:var(--rose-dark)}
+    .cols{display:grid;grid-template-columns:400px minmax(0,1fr);gap:26px;align-items:start}
+    .colA{display:block;position:sticky;top:86px}
+    .colB{display:block}
+    .hero{padding:30px 24px 26px}
+    .hero .face{width:112px;height:112px;font-size:40px}
+    .hero .clock-t{font-size:54px}
+    .card{padding:22px 24px;margin-bottom:18px}
+    .card h2{font-size:18px}
+    .btns{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:0 0 10px}
+    .btns button{padding:22px;font-size:19px;transition:transform .15s,box-shadow .15s}
+    .btns button:not(:disabled):hover{transform:translateY(-2px)}
+    .btns .empty{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;font-size:15px}
+    #hist{max-height:420px} #tl{max-height:340px}
+    table{font-size:13.5px} td{padding:10px 6px}
+    #fp,#alarmCard{font-size:14px}
+    .pairs{display:block}
+  }
+  @media (min-width:1300px){ .wrap{max-width:1240px} .cols{grid-template-columns:440px minmax(0,1fr)} }
 </style>
 </head>
 <body>
@@ -97,6 +131,8 @@
     <a class="backlink" href="index.html">← Back to Lalabella</a>
   </div>
 
+  <div class="cols">
+  <div class="colA">
   <div class="card hero clock">
     <div class="face" id="face">·</div>
     <div class="nm" id="meName">&nbsp;</div>
@@ -131,6 +167,8 @@
 
   <div class="card" id="mapCard" style="display:none;padding:10px"><div id="mapBox"></div></div>
 
+  </div>
+  <div class="colB">
   <div class="btns" id="btns"></div>
   <div class="msg" id="msg"></div>
 
@@ -157,6 +195,8 @@
   </div>
 
   <a class="adm" id="admLink" href="attendance-admin.html" style="display:none">👁️ Open attendance records</a>
+  </div>
+  </div>
 </div>
 
 <script>
