@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/att-map.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Attendance</title>
@@ -80,6 +81,8 @@
     </div>
   </div>
 
+  <div class="card" id="mapCard" style="display:none;padding:10px"><div id="mapBox"></div></div>
+
   <div class="btns" id="btns"></div>
   <div class="msg" id="msg"></div>
 
@@ -95,7 +98,7 @@
 
   <div class="card" id="alarmCard" style="display:none">
     <h2>Alarms</h2>
-    <div class="fp"><span class="i">⏰</span><span>Your phone rings 1 minute before Time In, Break, End of break and Time Out — even when the app is closed. Needs the latest Lalabella app, linked once (menu → Link home-screen widget).</span></div>
+    <div class="fp"><span class="i">⏰</span><span>Your phone rings 1 minute before Time In, Time Out, and when your break is about to end — even when the app is closed. Needs the latest Lalabella app, linked once (menu → Link home-screen widget).</span></div>
     <div style="display:flex;gap:8px;margin-top:10px"><button class="small alt" id="alOn" type="button">🔔 Turn on</button><button class="small alt" id="alOff" type="button">🔕 Turn off</button></div>
     <div class="msg" id="alMsg"></div>
   </div>
@@ -162,6 +165,7 @@
     if (!best) { el.textContent = 'Location found.'; return; }
     var rad = S.me.radius, ok = best.d <= rad, ev = S.me.event;
     pin.textContent = ok ? '✅' : (ev ? '🎫' : '❌');
+    try { if (window.LBAttMap) { $('mapBox').innerHTML = LBAttMap.svg(S.pos, S.me.branches, rad, best.n, 320, 190); $('mapCard').style.display = ''; } } catch (e) {}
     el.innerHTML = '<b>' + Math.round(best.d) + ' m</b> from ' + esc(best.n) + ' — ' + (ok ? 'you are in range' : (ev ? 'outside, but today has an event: ' + esc(ev.reason) : 'outside the ' + rad + ' m range')) +
       '<br><small>GPS accuracy ±' + Math.round(S.pos.acc) + ' m</small>';
   }
