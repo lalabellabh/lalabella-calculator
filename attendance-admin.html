@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/att-map.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Attendance Records</title>
@@ -149,12 +150,22 @@
         $('who').innerHTML = '<option value="">Everyone</option>' + S.users.map(function(u){ return '<option value="' + u.id + '">' + esc(u.name) + '</option>'; }).join('');
       }
       renderTable();
-      if (d.isOwner && !S.settings) loadSettings();
+      if (!S.settings) loadSettings();
     }).catch(function(){ $('tbl').innerHTML = '<div class="empty">Could not reach the server.</div>'; });
   }
   function deny(t){
     $('main').style.display = 'none'; var el = $('denied'); el.style.display = 'block';
     el.innerHTML = '<div class="empty">🔒 ' + esc(t || 'You are not allowed to see attendance records.') + '</div>';
+  }
+  function maps(r){
+    if (!S.settings || !window.LBAttMap) return '';
+    var h = '';
+    r.logs.forEach(function(l){
+      if (l.lat == null) return;
+      var m = LBAttMap.svg({ lat: l.lat, lng: l.lng, acc: 0 }, S.settings.branches, S.settings.radius, l.near, 260, 150);
+      if (m) h += '<div style="width:260px;max-width:100%"><div style="font-size:11px;color:#8f8581;margin:0 0 3px">' + esc(KIND[l.kind] || l.kind) + ' ' + esc(fT(l.at)) + '</div>' + m + '</div>';
+    });
+    return h ? '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">' + h + '</div>' : '';
   }
   function renderTable(){
     var br = $('br').value, only = $('st').value === 'problems';
@@ -176,7 +187,7 @@
         h += '<tr class="det"><td colspan="8"><div class="lg">' + (r.logs.length ? r.logs.map(function(l){
           var map = l.lat != null ? ' · <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + l.lat + ',' + l.lng + '">map</a>' : '';
           return '<div class="' + (l.kind === 'blocked' ? 'bad' : '') + '"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) : 'no location') + (l.inRange ? ' ✓' : '') + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
-        }).join('') : 'No punches.') + '</div></td></tr>';
+        }).join('') : 'No punches.') + '</div>' + maps(r) + '</td></tr>';
       }
     });
     $('tbl').innerHTML = h + '</tbody></table>';
