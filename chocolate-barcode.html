@@ -179,7 +179,7 @@
       padding:6mm;
     }
     .label-grid{
-      display:grid; grid-template-columns:repeat(3, 1fr); gap:4mm;
+      display:grid; grid-template-columns:repeat(2, 1fr); gap:4mm;
     }
     .label-cell{
       border:1px dotted #999; border-radius:2mm; padding:3mm; text-align:center;
@@ -902,7 +902,7 @@
 
     barcodeJobs.forEach(job=>{
       try{
-        JsBarcode(job.cls, String(job.code), { format: "CODE128", width: 1, height: 22, displayValue: false });
+        fitBarcode(job.cls, job.code, 330, 42);
       }catch(e){}
     });
 
@@ -911,6 +911,18 @@
     setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
   });
 
+
+  // Barcode that prints cleanly: whole-pixel bar widths as wide as the space allows,
+  // plus a proper quiet zone (blank margin) on both sides.
+  function fitBarcode(target, code, maxPx, height){
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    code = String(code);
+    const mods = 11 * (code.length + 2) + 13;          // Code 128 modules (upper bound)
+    let k = Math.floor(maxPx / (mods + 20));
+    if(k < 2) k = Math.max(1, Math.floor(maxPx / (mods + 20) * 2) / 2);
+    k = Math.min(k, 3);
+    JsBarcode(el, code, { format:'CODE128', width:k, margin:Math.round(10 * k), height:height, displayValue:false });
+  }
   /* ---------- Look Up Release ---------- */
   document.getElementById('lookupBtn').addEventListener('click', async ()=>{
     const releaseNo = document.getElementById('fReleaseNo').value.trim();
@@ -1264,7 +1276,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
     </div>
   `;
   try{
-    JsBarcode("#printDpBarcode", lastSavedDisplay.code, { format: "CODE128", width: 1, height: 22, displayValue: false });
+    fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, 42);
   }catch(e){}
   document.getElementById('labelPrintArea').classList.add('printing');
   window.print();
