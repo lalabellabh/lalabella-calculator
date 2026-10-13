@@ -1194,6 +1194,11 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       <span>Grand Total</span>
       <span id="rGrandTotal">0.000 BD</span>
     </div>
+    <div class="r-bc" id="rListBc" style="display:none; margin-top:8px;">
+      <svg id="rListSvg"></svg>
+      <div class="r-code" id="rListCode"></div>
+      <div class="r-code">Scan to see this list</div>
+    </div>
     <div class="r-footer">Thank you!</div>
   </div>
 
@@ -1218,7 +1223,9 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
           brand: it['Brand'] || 'N/A',
           category: it['Category'] || 'Uncategorized',
           pricePerKg: parseFloat(String(it['Standard Price / Kg'] || '0').replace(/[^0-9.]/g,'')) || 0,
-          grams: parseFloat(it['Grams']) || 0
+          grams: parseFloat(it['Grams']) || 0,
+          // Box / Can items: the catalog price is the price of ONE box/can, not per kg.
+          whole: String(it['Packaging Type'] || 'Piece').trim().toLowerCase() !== 'piece'
         }));
       CATEGORIES = [...new Set(DATA.map(d => d.category))];
     }catch(e){
@@ -1426,7 +1433,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     if(mode === 'pieces') kg = (n * selected.grams) / 1000;
     else if(mode === 'grams') kg = n / 1000;
     else kg = n;
-    const total = kg * selected.pricePerKg;
+    const total = (selected.whole && mode === 'pieces') ? n * selected.pricePerKg : kg * selected.pricePerKg;
     totalKgEl.textContent = kg.toFixed(3) + ' kg';
     totalAmountEl.textContent = fmtBD(total);
     currentKg = kg;
@@ -1553,6 +1560,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     return DATA.find(d => String(d.code || '').trim().toLowerCase() === c) || null;
   }
   function useCode(v){
+    if(/^DISP-\d+$/i.test(String(v).trim())){ loadSavedList(String(v).trim()); return true; }
     const hit = findByCode(v);
     if(hit){ selectItem(hit); return true; }
     searchEl.value = String(v || '').trim();
@@ -1561,6 +1569,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   }
   searchEl.addEventListener('keydown', e=>{
     if(e.key !== 'Enter') return;
+    if(/^DISP-\d+$/i.test(searchEl.value.trim())){ e.preventDefault(); loadSavedList(searchEl.value.trim()); return; }
     const hit = findByCode(searchEl.value);
     if(hit){ e.preventDefault(); selectItem(hit); }
   });
@@ -1675,19 +1684,68 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     }catch(e){}
   }
 
-  function addReceiptBarcode(entry){
-    const code = String(entry.code || '').trim();
-    if(!code || code === 'N/A' || typeof JsBarcode === 'undefined') return;
-    const box = document.createElement('div');
-    box.className = 'r-bc';
-    box.innerHTML = '<svg></svg><div class="r-code">' + code.replace(/[<>&]/g,'') + '</div>';
-    rItemsEl.appendChild(box);
+  // ONE barcode for the whole list. The list is saved (same table as Build Display,
+  // named "Calc · date") so the code can be scanned/typed later to see what is inside.
+  let lastListSave = null;
+  function userName(){
+    try{ const u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; return u.name || u.username || ''; }catch(e){ return ''; }
+  }
+  function listAsDisplayItems(){
+    const rows = cart.map(c => ({
+      name: c.name, qty: c.amount, unit: c.mode === 'pieces' ? 'piece' : (c.mode === 'grams' ? 'g' : 'kg'),
+      price: c.amount > 0 ? Math.round(c.total / c.amount * 1e6) / 1e6 : 0
+    }));
+    extras.forEach(e => rows.push({ name: e.description, qty: 1, unit: 'piece', price: e.amount, extra: true }));
+    return rows;
+  }
+  async function saveListCode(){
+    const items = listAsDisplayItems();
+    const sig = JSON.stringify(items);
+    if(lastListSave && lastListSave.sig === sig) return lastListSave.code;     // same list printed again: same code
+    const ctrl = new AbortController(), timer = setTimeout(()=> ctrl.abort(), 9000);
     try{
-      JsBarcode(box.querySelector('svg'), code, { format:'CODE128', width:1.2, height:26, displayValue:false, margin:0 });
-    }catch(e){ box.remove(); }
+      const d = new Date();
+      const name = 'Calc · ' + d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const params = new URLSearchParams({ action:'saveDisplay', displayName:name, createdBy:userName(), items:sig });
+      const data = await (await fetch(API_URL + '?' + params.toString(), { signal: ctrl.signal })).json();
+      if(data && data.displayCode){ lastListSave = { sig, code: data.displayCode }; return data.displayCode; }
+    }catch(e){ console.error('[Lalabella] saving the list failed:', e && e.message); }
+    finally{ clearTimeout(timer); }
+    return '';
+  }
+  async function addListBarcode(){
+    const box = document.getElementById('rListBc');
+    box.style.display = 'none';
+    if(typeof JsBarcode === 'undefined') return;
+    const code = await saveListCode();
+    if(!code) return;
+    try{
+      JsBarcode(document.getElementById('rListSvg'), code, { format:'CODE128', width:1.6, height:34, displayValue:false, margin:0 });
+      document.getElementById('rListCode').textContent = code;
+      box.style.display = 'block';
+    }catch(e){}
   }
 
-  printBtn.addEventListener('click', ()=>{
+  // Scan / type a saved list code (DISP-xxxxx) to bring that list back.
+  async function loadSavedList(code){
+    try{
+      const rows = await (await fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now())).json();
+      const hit = (Array.isArray(rows) ? rows : []).find(r => String(r['Display Code']).toLowerCase() === String(code).trim().toLowerCase());
+      if(!hit){ alert('No saved list found for ' + code); return; }
+      (hit['Items'] || []).forEach(it=>{
+        if(it.extra){ extras.push({ description: it.name, amount: (Number(it.qty) || 1) * (Number(it.price) || 0) }); return; }
+        const mode = it.unit === 'g' ? 'grams' : (it.unit === 'kg' ? 'kg' : 'pieces');
+        const cat = DATA.find(d => String(d.name).trim().toLowerCase() === String(it.name).trim().toLowerCase());
+        const qty = Number(it.qty) || 0;
+        const kg = mode === 'pieces' ? qty * ((cat && cat.grams) || 0) / 1000 : (mode === 'grams' ? qty / 1000 : qty);
+        cart.push({ name: it.name, code: cat ? cat.code : '', amount: qty, mode, kg, total: qty * (Number(it.price) || 0) });
+      });
+      renderCart();
+      searchEl.value = ''; handleSearchTyping('');
+    }catch(e){ alert('Could not open that list. Check your internet and try again.'); }
+  }
+
+  printBtn.addEventListener('click', async ()=>{
     if(cart.length === 0 && extras.length === 0) return;
 
     rDateEl.textContent = new Date().toLocaleString('en-GB', {
@@ -1706,7 +1764,6 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
-      addReceiptBarcode(entry);
     });
 
     extras.forEach(extra=>{
@@ -1721,6 +1778,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     });
 
     rGrandTotalEl.textContent = fmtBD(grandTotal);
+    printBtn.disabled = true;
+    try{ await addListBarcode(); }finally{ printBtn.disabled = false; }
     fitThermalPage();
     window.print();
   });
@@ -1747,7 +1806,6 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
-      addReceiptBarcode(entry);
     });
 
     extras.forEach(extra=>{
@@ -1764,6 +1822,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     rGrandTotalEl.textContent = fmtBD(grandTotal);
 
     shareBtn.disabled = true;
+    await addListBarcode();
     shareBtn.textContent = 'Preparing…';
 
     const receipt = document.getElementById('receipt');
