@@ -572,7 +572,7 @@ body{background:
       preparedByNames.map(n => `<option value="${n}"></option>`).join('');
     document.getElementById('fDisplayPicker').innerHTML =
       '<option value="">Select a display…</option>' +
-      savedDisplays.map((d, i) => `<option value="${i}">${d['Display Name']} — ${fmtBD(d['Total Price'])}</option>`).join('');
+      savedDisplays.map((d, i) => `<option value="${i}">${d['Display Name']} — ${fmtBD(d['Total Price'])}${d['Created By'] ? ' · by ' + d['Created By'] : ''}</option>`).join('');
 
     renderHistory();
   }
