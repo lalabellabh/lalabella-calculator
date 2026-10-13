@@ -179,7 +179,7 @@
     background:var(--cacao-2);
     border:2px solid var(--line);
     border-radius:2px;
-    padding:18px 46px 18px 20px;
+    padding:18px 84px 18px 20px;
     font-size:16px;
     color:var(--cream);
     font-family:'Space Grotesk',sans-serif;
@@ -189,6 +189,18 @@
   #search::placeholder{color:var(--dim); opacity:.75;}
   html.idx-dark-ui #search::placeholder{color:#5a463a; opacity:1;}
   #search:focus{border-color:var(--foil);}
+  #scanBtn{
+    position:absolute; right:44px; top:50%; transform:translateY(-50%);
+    background:none; border:none; font-size:22px; cursor:pointer; line-height:1; padding:4px;
+  }
+  .scanner-modal{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:9999;
+    align-items:center; justify-content:center; flex-direction:column; padding:20px;
+  }
+  .scanner-modal.show{ display:flex; }
+  .scanner-modal video{ width:100%; max-width:400px; border-radius:6px; }
+  .scanner-modal .close-scan{ margin-top:16px; background:#b5532a; color:#fff; border:none; padding:10px 24px; border-radius:20px; font-weight:700; cursor:pointer; }
+  .scanner-hint{ color:#fff; font-size:12px; margin-top:10px; text-align:center; }
   #clearBtn{
     position:absolute;
     right:14px; top:50%;
@@ -1050,7 +1062,13 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 
     <div class="search-box">
       <input id="search" type="text" placeholder="Type the chocolate name..." autocomplete="off" />
+      <button id="scanBtn" type="button" aria-label="Scan barcode" title="Scan barcode">📷</button>
       <button id="clearBtn" aria-label="Clear">&times;</button>
+    </div>
+    <div class="scanner-modal" id="scannerModal">
+      <video id="scannerVideo" autoplay playsinline muted></video>
+      <div class="scanner-hint">Point the camera at a chocolate barcode</div>
+      <button class="close-scan" id="closeScanBtn" type="button">Cancel</button>
     </div>
 
     <div id="categoryPills"></div>
@@ -1516,6 +1534,65 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   // clean 'input' event on every keystroke, so 'keyup' is a safety net.
   searchEl.addEventListener('input', e=> handleSearchTyping(e.target.value));
   searchEl.addEventListener('keyup', e=> handleSearchTyping(e.target.value));
+
+
+  /* ---------- Barcode: camera scan, or a scanner gun / typed code + Enter ---------- */
+  function findByCode(v){
+    const c = String(v || '').trim().toLowerCase();
+    if(!c) return null;
+    return DATA.find(d => String(d.code || '').trim().toLowerCase() === c) || null;
+  }
+  function useCode(v){
+    const hit = findByCode(v);
+    if(hit){ selectItem(hit); return true; }
+    searchEl.value = String(v || '').trim();
+    handleSearchTyping(searchEl.value);
+    return false;
+  }
+  searchEl.addEventListener('keydown', e=>{
+    if(e.key !== 'Enter') return;
+    const hit = findByCode(searchEl.value);
+    if(hit){ e.preventDefault(); selectItem(hit); }
+  });
+  let scanStream = null, scanLoopActive = false;
+  function stopScanner(){
+    scanLoopActive = false;
+    if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    document.getElementById('scannerModal').classList.remove('show');
+  }
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+  document.getElementById('scanBtn').addEventListener('click', async ()=>{
+    if(!('BarcodeDetector' in window)){
+      alert('Camera barcode scanning is not supported in this browser. Use a barcode scanner, or type the code.');
+      searchEl.focus();
+      return;
+    }
+    const modal = document.getElementById('scannerModal'), video = document.getElementById('scannerVideo');
+    modal.classList.add('show');
+    try{
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = scanStream;
+      scanLoopActive = true;
+      const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+      const loop = async ()=>{
+        if(!scanLoopActive) return;
+        try{
+          const codes = await detector.detect(video);
+          if(codes.length){
+            const raw = codes[0].rawValue;
+            stopScanner();
+            if(!useCode(raw)) { /* code not in the list: it is shown in the search box */ }
+            return;
+          }
+        }catch(e){}
+        requestAnimationFrame(loop);
+      };
+      loop();
+    }catch(e){
+      alert('Could not open the camera. Allow camera permission and try again.');
+      stopScanner();
+    }
+  });
 
   clearBtn.addEventListener('click', ()=>{
     searchEl.value = '';
