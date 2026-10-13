@@ -30,7 +30,8 @@
   var BUILTIN = [
     { id: 'lbcb-btn', icon: '💬', label: 'Chat', badge: 'lbcb-badge' },
     { id: 'joyboy-bubble-btn', icon: '🎙️', label: 'Nova' },
-    { id: 'lbob-btn', icon: '🔔', label: 'Orders', badge: 'lbob-badge' }
+    { id: 'lbob-btn', icon: '🔔', label: 'Orders', badge: 'lbob-badge' },
+    { id: 'lalaBellBtn', icon: '🔔', label: 'Orders', badge: 'lalaBellBadge' }      /* the bell the home / Flower Tools / Item Inventory pages have of their own */
   ];
 
   function load() {
@@ -49,7 +50,7 @@
   var css = document.createElement('style');
   css.textContent =
     /* the old floating buttons stay in the page (the dock presses them) but are invisible */
-    'html.lb-dock #lbcb-btn,html.lb-dock #joyboy-bubble-btn,html.lb-dock #lbob-btn{opacity:0 !important;pointer-events:none !important;}' +
+    'html.lb-dock #lbcb-btn,html.lb-dock #joyboy-bubble-btn,html.lb-dock #lbob-btn,html.lb-dock #lalaBellBtn{opacity:0 !important;pointer-events:none !important;}' +
     '@media(min-width:601px){html[data-lbside="right"].lb-dock #lbcb-panel{left:auto !important;right:84px !important;}html[data-lbside="left"].lb-dock #lbcb-panel{left:84px !important;}}' +
     '#lbdock-handle{position:fixed;z-index:9400;width:16px;height:68px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.3);' +
     '-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 12px rgba(60,20,35,.25);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;padding:0;transition:width .15s,background .15s;}' +
@@ -124,7 +125,7 @@
     var made = {}, keys = [];
     BUILTIN.forEach(function (b) {
       var o = document.getElementById(b.id); if (!o) return;
-      if (b.id === 'lbob-btn' && getComputedStyle(o).display === 'none') return;   // the bell only shows for people who can see orders
+      if ((b.id === 'lbob-btn' || b.id === 'lalaBellBtn') && !o.getClientRects().length) return;   // the bell only shows for people who can see orders
       var el = document.createElement('button'); el.type = 'button'; el.className = 'lbd-it'; el.title = b.label; el.setAttribute('aria-label', b.label);
       el.innerHTML = b.icon + (b.badge ? '<span class="lbd-b" data-b="' + b.badge + '"></span>' : '');
       el.addEventListener('click', function () { if (tray.classList.contains('edit')) return; closeTray(); var t = document.getElementById(b.id); if (t) t.click(); });
@@ -200,7 +201,7 @@
       var n = parseInt(v, 10); total += isNaN(n) ? (v ? 1 : 0) : n;
     });
     // chat badge also counts when the tray has not been built with it yet
-    if (!tray.querySelector('.lbd-b')) { total = parseInt(badgeOf('lbcb-badge'), 10) || 0; total += parseInt(badgeOf('lbob-badge'), 10) || 0; }
+    if (!tray.querySelector('.lbd-b')) { total = parseInt(badgeOf('lbcb-badge'), 10) || 0; total += parseInt(badgeOf('lbob-badge'), 10) || 0; total += parseInt(badgeOf('lalaBellBadge'), 10) || 0; }
     dot.textContent = total > 99 ? '99+' : String(total); dot.classList.toggle('show', total > 0); handle.classList.toggle('alert', total > 0);
   }
 
