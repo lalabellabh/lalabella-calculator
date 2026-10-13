@@ -44,7 +44,9 @@
     loadScriptOnce('shared/chat-live.js'),
     loadScriptOnce('shared/chat-sounds.js'),
     loadScriptOnce('shared/chat-avatar.js'),
-    loadScriptOnce('shared/chat-media.js')
+    loadScriptOnce('shared/chat-media.js'),
+    loadScriptOnce('shared/chat-react.js'),
+    loadScriptOnce('shared/chat-status.js')
   ]).then(init);
 
   function init(){
@@ -97,6 +99,7 @@
       #lbcb-close:hover{ opacity:1; }
       #lbcb-search{ padding:8px 10px; border-bottom:1px solid #f0dede; }
       #lbcb-search input{ width:100%; padding:7px 10px; border:1px solid #f0dede; border-radius:10px; font-size:12px; outline:none; background:#fdf1f0; font-family:inherit; }
+      #lbcb-team .lbs-strip{ padding:6px 8px 2px; }
       #lbcb-list{ flex:1; overflow-y:auto; padding:5px; }
       .lbcb-sep{ font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#8a7078; padding:8px 8px 3px; }
       .lbcb-empty{ font-size:10.5px; color:#8a7078; padding:2px 8px 8px; font-style:italic; }
@@ -115,6 +118,7 @@
       #lbcb-msgs.show{ display:flex; }
       .lbcb-msg{ max-width:82%; padding:8px 11px; border-radius:12px; font-size:12.5px; line-height:1.45; align-self:flex-start; background:#fff; color:#2f2024; border:1px solid #f0dede; border-bottom-left-radius:3px; word-break:break-word; white-space:pre-wrap; }
       .lbcb-msg.me{ align-self:flex-end; background:#c9506b; color:#fff; border:none; border-bottom-right-radius:3px; }
+      #lbcb-msgs .lbr-chips{ margin:-6px 6px 0; }
       .lbcb-msg .t{ display:block; font-size:9px; opacity:.6; margin-top:3px; text-align:right; }
       #lbcb-input-row{ display:none; gap:6px; padding:10px; border-top:1px solid #f0dede; background:#fff; position:relative; align-items:center; }
       #lbcb-input-row.show{ display:flex; }
@@ -145,6 +149,7 @@
         <button id="lbcb-close" aria-label="Close">✕</button>
       </div>
       <div id="lbcb-search"><input type="search" id="lbcb-search-input" placeholder="Search people…"></div>
+      <div id="lbcb-team"></div>
       <div id="lbcb-list"></div>
       <div id="lbcb-msgs"></div>
       <div id="lbcb-input-row">
@@ -158,6 +163,8 @@
     document.body.appendChild(panel);
 
     const listEl = document.getElementById('lbcb-list');
+    const teamEl = document.getElementById('lbcb-team');
+    let statusOn = false;
     const msgsEl = document.getElementById('lbcb-msgs');
     const searchInput = document.getElementById('lbcb-search-input');
     const inputRow = document.getElementById('lbcb-input-row');
@@ -184,7 +191,7 @@
         img.onerror = function(){ img.remove(); el.insertBefore(document.createTextNode(initials(p.name)), el.firstChild); };
         el.appendChild(img);
       } else el.textContent = initials(p && p.name);
-      if (dot) { const d = document.createElement('span'); d.className = 'dot' + (p && p.online ? ' on' : ''); el.appendChild(d); }
+      if (dot) { const d = document.createElement('span'); d.className = 'dot' + (p && p.online ? ' on' : ''); el.appendChild(d); if (p && p.id && window.lbChatStatus) lbChatStatus.decorate(el, p.id); }
       return el;
     }
 
@@ -268,7 +275,7 @@
     function showListView(){
       conv = null;
       if (picker) picker.close();
-      listEl.style.display = ''; searchInput.parentElement.style.display = '';
+      listEl.style.display = ''; searchInput.parentElement.style.display = ''; teamEl.style.display = '';
       msgsEl.classList.remove('show'); inputRow.classList.remove('show'); backBtn.classList.remove('show');
       headName.textContent = 'Chats'; headSub.textContent = '';
       renderList();
@@ -301,13 +308,14 @@
       el.appendChild(tm);
       msgsEl.appendChild(el);
       lastMsg = v;
+      if (window.lbChatReact) lbChatReact.mount({ id: v.id, bubble: el, after: el, mine: mine, ctx: { get meId(){ return meId; }, nameOf: function(u){ return (peopleById[u] || {}).name || ''; } } });
       if (!mine && !firstLoad && window.lbChatSound) lbChatSound.play('receive');
     }
 
     function openConv(peerId){
       conv = { peerId: peerId || null };
       lastId = 0; delSince = ''; lastMsg = null; firstLoad = true;
-      listEl.style.display = 'none'; searchInput.parentElement.style.display = 'none';
+      listEl.style.display = 'none'; searchInput.parentElement.style.display = 'none'; teamEl.style.display = 'none';
       msgsEl.classList.add('show'); inputRow.classList.add('show'); backBtn.classList.add('show');
       msgsEl.innerHTML = '';
       if (peerId) {
@@ -338,6 +346,7 @@
         meId = d.meId; if (d.serverTime) delSince = d.serverTime;
         const nearBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
         (d.messages || []).forEach(addMsg);
+        if (window.lbChatReact) lbChatReact.refresh();
         if (firstLoad && !msgsEl.children.length) {
           const e = document.createElement('div'); e.className = 'lbcb-empty-chat';
           e.style.cssText = 'text-align:center;color:#8a7078;font-size:11.5px;padding:20px 8px;align-self:center;';
@@ -359,6 +368,7 @@
         meId = d.meId; people = d.people || []; peopleById = {};
         people.forEach(function(p){ peopleById[p.id] = p; });
         if (!opened || conv === null) renderList();
+        if (window.lbChatStatus && !statusOn) { statusOn = true; lbChatStatus.mount(teamEl, function(){ if (conv === null) renderList(); }); }
       }catch(e){}
     }
 
