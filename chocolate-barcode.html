@@ -538,6 +538,15 @@
       <div id="displayLineHint" style="font-size:12px; color:var(--ink-dim); margin-top:6px; min-height:1em;"></div>
       <button class="submit-btn" id="addToDisplayBtn" style="margin-top:10px;">+ Add to Display</button>
 
+      <div style="margin-top:16px; border-top:1px dashed var(--line); padding-top:12px;">
+        <label>Extras <span style="font-weight:400; color:var(--ink-dim);">(vase, hand work, plate, ribbon…)</span></label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input type="text" id="displayExtraDesc" placeholder="e.g. Vase" style="flex:2;" />
+          <input type="number" id="displayExtraAmt" min="0" step="0.001" placeholder="0.000 BD" style="flex:1;" />
+        </div>
+        <button class="submit-btn" id="addDisplayExtraBtn" type="button" style="margin-top:8px;">+ Add Extra</button>
+      </div>
+
       <div id="displayCartList" style="margin-top:16px;"></div>
       <div class="lookup-result" id="displayTotalRow" style="display:none; font-weight:800; text-align:right;"></div>
 
@@ -1129,6 +1138,15 @@ document.getElementById('addToDisplayBtn').addEventListener('click', ()=>{
   renderDisplayCart();
 });
 
+document.getElementById('addDisplayExtraBtn').addEventListener('click', ()=>{
+  const d = document.getElementById('displayExtraDesc'), a = document.getElementById('displayExtraAmt');
+  const name = d.value.trim(), amt = parseFloat(a.value);
+  if(!name || isNaN(amt) || amt <= 0){ alert('Enter the extra (e.g. Vase) and its amount.'); return; }
+  displayCart.push({ name, qty: 1, price: amt, unit: 'piece', extra: true });
+  d.value = ''; a.value = '';
+  renderDisplayCart();
+});
+
 function displayQtyText(c){
   const u = c.unit || 'piece';
   return c.qty + ' ' + DISPLAY_UNIT_SHORT[u];
@@ -1144,8 +1162,8 @@ function renderDisplayCart(){
   el.innerHTML = displayCart.map((c, i) => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--line);">
       <div>
-        <div style="font-weight:600; font-size:13px;">${c.name}</div>
-        <div style="font-size:11px; color:var(--ink-dim);">${displayQtyText(c)} × ${fmtBD(c.price)}${(c.unit && c.unit !== 'piece') ? ' / ' + DISPLAY_UNIT_SHORT[c.unit] : ''} = ${fmtBD(c.qty * c.price)}</div>
+        <div style="font-weight:600; font-size:13px;">${c.extra ? '✨ ' : ''}${c.name}</div>
+        <div style="font-size:11px; color:var(--ink-dim);">${c.extra ? 'Extra · ' + fmtBD(c.price) : displayQtyText(c) + ' × ' + fmtBD(c.price) + ((c.unit && c.unit !== 'piece') ? ' / ' + DISPLAY_UNIT_SHORT[c.unit] : '') + ' = ' + fmtBD(c.qty * c.price)}</div>
       </div>
       <button data-idx="${i}" class="remove-display-item" style="background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer;">✕</button>
     </div>
@@ -1168,7 +1186,7 @@ let lastSavedDisplay = null;
 document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   const displayName = document.getElementById('displayName').value.trim();
   if(!displayName){ alert('Enter a Display Name.'); return; }
-  if(displayCart.length === 0){ alert('Add at least one chocolate.'); return; }
+  if(!displayCart.some(c => !c.extra)){ alert('Add at least one chocolate.'); return; }
 
   const btn = document.getElementById('saveDisplayBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -1262,7 +1280,7 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
   // even though Odoo shows it as one product, opening the product
   // record (not just scanning) reveals the breakdown.
   const displayRows = savedDisplays.map(d => {
-    const contents = (d['Items'] || []).map(it => (!it.unit || it.unit === 'piece') ? (it.qty + 'x ' + it.name) : (it.qty + (it.unit === 'kg' ? 'kg ' : 'g ') + it.name)).join(', ');
+    const contents = (d['Items'] || []).map(it => it.extra ? it.name : (!it.unit || it.unit === 'piece') ? (it.qty + 'x ' + it.name) : (it.qty + (it.unit === 'kg' ? 'kg ' : 'g ') + it.name)).join(', ');
     return [d['Display Name'], d['Display Code'], Number(d['Total Price']).toFixed(3), contents];
   });
 
