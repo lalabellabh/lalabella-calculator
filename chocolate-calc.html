@@ -703,6 +703,7 @@
       font-weight:700;
       margin-top:8px;
     }
+    #receipt .r-sum{ text-align:right; font-size:10px; color:#444; margin-top:3px; }
     #receipt .r-footer{
       text-align:center;
       font-size:9px;
@@ -1225,6 +1226,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       <span>Grand Total</span>
       <span id="rGrandTotal">0.000 BD</span>
     </div>
+    <div class="r-sum" id="rSummary"></div>
     <div class="r-bc" id="rListBc" style="display:none; margin-top:8px;">
       <svg id="rListSvg"></svg>
       <div class="r-code" id="rListCode"></div>
@@ -1507,7 +1509,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       listItemsEl.appendChild(row);
     });
 
-    grandCountEl.textContent = cart.length + (cart.length === 1 ? ' item' : ' items');
+    grandCountEl.textContent = cart.length + (cart.length === 1 ? ' item' : ' items') + (cart.length ? ' · ' + listSummary() : '');
 
     listItemsEl.querySelectorAll('.list-row-remove').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1705,6 +1707,12 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   // printed list can be scanned straight into Odoo.
   // Thermal roll: make the printed page exactly as long as the receipt
   // (80 mm wide), so a long list is never cut at a fixed 200 mm.
+  // "100pcs / 1.220kgs" - every piece counted, and the total weight of the whole list.
+  function listSummary(){
+    let pcs = 0, kg = 0;
+    cart.forEach(c=>{ if(c.mode === 'pieces') pcs += Number(c.amount) || 0; kg += Number(c.kg) || 0; });
+    return (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs';
+  }
   function fitThermalPage(){
     try{
       const r = document.getElementById('receipt'), keep = r.getAttribute('style');
@@ -1812,6 +1820,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     });
 
     rGrandTotalEl.textContent = fmtBD(grandTotal);
+    document.getElementById('rSummary').textContent = listSummary() + ' vat inclusive';
     printBtn.disabled = true;
     try{ await addListBarcode(); }finally{ printBtn.disabled = false; }
     fitThermalPage();
@@ -1854,6 +1863,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     });
 
     rGrandTotalEl.textContent = fmtBD(grandTotal);
+    document.getElementById('rSummary').textContent = listSummary() + ' vat inclusive';
 
     shareBtn.disabled = true;
     await addListBarcode();
