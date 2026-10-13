@@ -1032,12 +1032,17 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     #listEmpty{ position:sticky; top:16px; border:1px dashed var(--line); border-radius:6px; padding:60px 24px; text-align:center; color:var(--dim); font-size:14px; line-height:1.6; }
     #listEmpty{ display:block; }
     body.has-list #listEmpty{ display:none; }
-    .wrap{ grid-template-rows:auto auto auto auto minmax(380px,auto) 0; }   /* results/card share one fixed-height slot so nothing jumps */
+    .wrap{ grid-template-rows:auto auto auto auto minmax(250px,auto) auto; }   /* results/card share one fixed-height slot so nothing jumps */
     .wrap > .back-link{ grid-row:1; } .wrap > header{ grid-row:2; } .wrap > .search-box{ grid-row:3; }
     .wrap > #categoryPills{ grid-row:4; } .wrap > #results{ grid-row:5; } .wrap > #card{ grid-row:5; }
-    .wrap > .mario-addon{ display:none !important; }   /* mini game stays on phones; on desktop it only added page scroll */
-    .wrap{ padding-bottom:24px !important; }
-    .wrap > header{ margin-bottom:18px; }
+    .wrap > .mario-addon{ grid-column:2; grid-row:6; margin:14px 0 0; max-width:none; min-height:130px; height:130px; }
+    .wrap{ padding-bottom:16px !important; padding-top:48px !important; }
+    .wrap > header{ margin-bottom:10px; }
+    .wrap > header h1{ font-size:clamp(34px,3.4vw,46px) !important; line-height:1.05 !important; margin:0 0 6px !important; }
+    .wrap > header .eyebrow{ margin-bottom:4px !important; }
+    .wrap > header .sub{ margin-top:6px !important; }
+    .wrap > .mario-addon{ min-height:110px; height:110px; margin-top:10px; }
+    .wrap > #card{ padding:18px 22px; }
   }
 </style>
 
