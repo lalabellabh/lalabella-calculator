@@ -727,6 +727,15 @@
     document.body.appendChild(pw);
   }
 
+  // Side dock: one slim glass handle on the screen edge that slides out the chat, Nova, the orders bell and your own
+  // shortcuts (replaces the separate floating buttons). "⟲" in its tray switches back. See shared/side-dock.js.
+  try { if (localStorage.getItem('lbDockOff') !== '1') document.documentElement.classList.add('lb-dock'); } catch (e) {}
+  if (document.documentElement.classList.contains('lb-dock') && !window.LBSideDock && !document.querySelector('script[src="shared/side-dock.js"]')) {
+    const sd = document.createElement('script');
+    sd.src = 'shared/side-dock.js';
+    document.body.appendChild(sd);
+  }
+
   // Drag-to-move for the floating chat bubble and Nova mic. See shared/drag-float.js.
   if (!window.LBDragFloat && !document.querySelector('script[src="shared/drag-float.js"]')) {
     const df = document.createElement('script');
