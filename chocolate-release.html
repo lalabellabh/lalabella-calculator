@@ -645,7 +645,7 @@ body{background:
         chocolateName: comp.name, productCode: batch.ProductCode || '', batch: batch.Batch,
         databaseId: batch.DatabaseID, qty: relQty, unit: relUnit,
         price, total, expiryDate: batch.ExpiryDate || '',
-        stockQty: stockEq(relQty, relUnit, batch), stockUnit: batch.Unit
+        stockQty: stockEq(relQty, relUnit, batch), stockUnit: batch.Unit, wpp: Number(batch.WeightPerPiece) || 0
       });
       added.push(comp.name);
     }
@@ -852,7 +852,7 @@ body{background:
     cart.push({
       chocolateName, productCode: selectedBatch.ProductCode || '', batch: selectedBatch.Batch,
       databaseId: selectedBatch.DatabaseID, qty, unit, price, total, expiryDate: selectedBatch.ExpiryDate || '',
-      stockQty, stockUnit: selectedBatch.Unit
+      stockQty, stockUnit: selectedBatch.Unit, wpp: Number(selectedBatch.WeightPerPiece) || 0
     });
     playAddChime();
 
@@ -1035,6 +1035,19 @@ body{background:
     saveBtn.disabled = false; saveBtn.textContent = 'Save Release';
   });
 
+  // Weight of one receipt line in Kg: Kg lines as they are, piece lines = pieces x grams-per-piece.
+  function lineKg(c){
+    const qty = Number(c.qty) || 0;
+    if(String(c.unit).toLowerCase() !== 'piece') return qty;
+    let g = Number(c.wpp) || 0;
+    if(!g){
+      const m = items.find(ci => String(ci['Chocolate Name']||'').trim().toLowerCase() === String(c.chocolateName||'').trim().toLowerCase());
+      g = m ? Number(m['Grams']) || 0 : 0;
+    }
+    if(g > 0) return qty * g / 1000;
+    return (String(c.stockUnit||'').toLowerCase() === 'kg' && c.stockQty != null) ? Number(c.stockQty) || 0 : 0;
+  }
+
   function populateReceipt(releaseNo, releaseDate, itemLines, extraLines){
     let itemsHtml = '';
     let subtotal = 0;
@@ -1046,15 +1059,15 @@ body{background:
       const price = Number(c.price);
       const total = Number(c.total);
       subtotal += total;
-      if(c.unit === 'Piece') totalPieces += qty;
-      else totalWeightKg += qty;
+      if(String(c.unit).toLowerCase() === 'piece') totalPieces += qty;
+      totalWeightKg += lineKg(c);
       if(c.expiryDate){
         const d = new Date(c.expiryDate);
         if(!isNaN(d) && (earliestExpiry === null || d < earliestExpiry)) earliestExpiry = d;
       }
       itemsHtml += `
         <div class="r-item">${c.chocolateName}</div>
-        <div class="r-line r-sub"><span>${qty.toFixed(2)} x ${fmtBD(price)} / ${c.unit}</span><span>${fmtBD(total)}</span></div>
+        <div class="r-line r-sub"><span>${String(c.unit).toLowerCase() === 'piece' ? qty : qty.toFixed(2)} x ${fmtBD(price)} / ${c.unit}</span><span>${fmtBD(total)}</span></div>
       `;
     });
     extraLines.forEach(ex=>{
