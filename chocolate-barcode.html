@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 
@@ -998,48 +999,22 @@
   }
 
   /* ---------- Barcode scanning (native BarcodeDetector, camera-based) ---------- */
-  let scanStream = null;
-  let scanLoopActive = false;
+  let scanStop = null;
 
   document.getElementById('scanBtn').addEventListener('click', async ()=>{
-    if(!('BarcodeDetector' in window)){
-      alert('Barcode scanning is not supported in this browser. Please type the Release No manually.');
-      return;
-    }
-    const modal = document.getElementById('scannerModal');
-    const video = document.getElementById('scannerVideo');
+    const modal = document.getElementById('scannerModal'), video = document.getElementById('scannerVideo');
+    if(typeof LBScan === 'undefined'){ alert('Scanner file missing - upload shared/scanner.js.'); return; }
     modal.classList.add('show');
     try{
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = scanStream;
-      scanLoopActive = true;
-      const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
-      const scanLoop = async ()=>{
-        if(!scanLoopActive) return;
-        try{
-          const codes = await detector.detect(video);
-          if(codes.length > 0){
-            stopScanner();
-            document.getElementById('fReleaseNo').value = codes[0].rawValue;
-            document.getElementById('lookupBtn').click();
-            return;
-          }
-        }catch(e){}
-        requestAnimationFrame(scanLoop);
-      };
-      scanLoop();
+      scanStop = await LBScan.start(video, function(raw){ scanStop = null; stopScanner(); document.getElementById('fReleaseNo').value = raw; document.getElementById('lookupBtn').click(); });
     }catch(e){
-      alert('Could not access the camera. Check permissions and try again.');
-      modal.classList.remove('show');
+      alert(LBScan.message(e));
+      stopScanner();
     }
   });
 
   function stopScanner(){
-    scanLoopActive = false;
-    if(scanStream){
-      scanStream.getTracks().forEach(t => t.stop());
-      scanStream = null;
-    }
+    if(scanStop){ try{ scanStop(); }catch(e){} scanStop = null; }
     document.getElementById('scannerModal').classList.remove('show');
   }
 
