@@ -618,6 +618,9 @@
 
   /* Print-only receipt, hidden on screen */
   #receipt{display:none;}
+  #receipt .r-bc{ text-align:center; margin:-2px 0 8px; }
+  #receipt .r-bc svg{ max-width:100%; height:34px; }
+  #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
 
   @media print{
     html, body{
@@ -690,6 +693,9 @@
       color:#555;
       display:block;
     }
+    #receipt .r-bc{ text-align:center; margin:-2px 0 8px; }
+    #receipt .r-bc svg{ max-width:100%; height:34px; }
+    #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
     #receipt .r-grand{
       display:flex;
       justify-content:space-between;
@@ -1189,6 +1195,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script>
   const API_URL = LB_CONFIG.CHOCOLATE_FAST_API;
   let DATA = [];
@@ -1533,7 +1540,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   // combinations have historically been inconsistent about firing a
   // clean 'input' event on every keystroke, so 'keyup' is a safety net.
   searchEl.addEventListener('input', e=> handleSearchTyping(e.target.value));
-  searchEl.addEventListener('keyup', e=> handleSearchTyping(e.target.value));
+  searchEl.addEventListener('keyup', e=>{ if(e.key === 'Enter') return; handleSearchTyping(e.target.value); });
 
 
   /* ---------- Barcode: camera scan, or a scanner gun / typed code + Enter ---------- */
@@ -1625,6 +1632,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     spawnFloatingChoco(addBtn);
     cart.push({
       name: selected.name,
+      code: selected.code,
       amount: parseFloat(amountEl.value),
       mode: mode,
       kg: currentKg,
@@ -1646,6 +1654,21 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     renderCart();
   });
 
+  // Each chocolate line on the receipt carries its Product Code as a Code 128
+  // barcode - the same code that is the Barcode of the product in Odoo - so the
+  // printed list can be scanned straight into Odoo.
+  function addReceiptBarcode(entry){
+    const code = String(entry.code || '').trim();
+    if(!code || code === 'N/A' || typeof JsBarcode === 'undefined') return;
+    const box = document.createElement('div');
+    box.className = 'r-bc';
+    box.innerHTML = '<svg></svg><div class="r-code">' + code.replace(/[<>&]/g,'') + '</div>';
+    rItemsEl.appendChild(box);
+    try{
+      JsBarcode(box.querySelector('svg'), code, { format:'CODE128', width:1.4, height:34, displayValue:false, margin:0 });
+    }catch(e){ box.remove(); }
+  }
+
   printBtn.addEventListener('click', ()=>{
     if(cart.length === 0 && extras.length === 0) return;
 
@@ -1665,6 +1688,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
+      addReceiptBarcode(entry);
     });
 
     extras.forEach(extra=>{
@@ -1704,6 +1728,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
+      addReceiptBarcode(entry);
     });
 
     extras.forEach(extra=>{
