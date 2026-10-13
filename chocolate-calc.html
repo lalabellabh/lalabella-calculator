@@ -623,6 +623,7 @@
   #receipt .r-ex{ text-decoration:underline; text-underline-offset:2px; }
   #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
 
+  @page{ size:80mm 200mm; margin:0; }   /* top level: valid in every browser */
   @media print{
     html, body{
       margin:0 !important;
@@ -653,10 +654,6 @@
       background:#fff !important;
       color:#111 !important;
       font-family:'Space Grotesk',sans-serif;
-    }
-    @page{
-      size:80mm 200mm;
-      margin:0;
     }
     #receipt{
       page-break-before:avoid !important;
@@ -1717,7 +1714,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const mm = Math.max(60, Math.ceil(h * 25.4 / 96) + 8);
       let st = document.getElementById('lbPageSize');
       if(!st){ st = document.createElement('style'); st.id = 'lbPageSize'; document.head.appendChild(st); }
-      st.textContent = '@media print{ @page{ size:80mm ' + mm + 'mm; margin:0; } }';
+      st.textContent = '@page{ size:80mm ' + mm + 'mm; margin:0; }';
     }catch(e){}
   }
 
