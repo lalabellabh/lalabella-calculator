@@ -720,6 +720,7 @@ body{background:
     const bu = String((batch && batch.Unit) || '').trim().toLowerCase(), ru = String(unit || '').trim().toLowerCase();
     const wpp = Number(batch && batch.WeightPerPiece) || 0;
     if(!bu || bu === ru) return qty;
+    if(String((batch && batch.PackagingType) || 'Piece').trim().toLowerCase() !== 'piece') return qty;   // box/can: 1 = 1, no grams maths
     if(bu === 'kg' && ru === 'piece' && wpp > 0) return Math.round(qty * wpp) / 1000;
     if(bu === 'piece' && ru === 'kg' && wpp > 0) return Math.round(qty * 1000 / wpp * 1000) / 1000;
     return qty;
@@ -736,6 +737,8 @@ body{background:
     if(!selectedBatch) return { price: 0, total: 0 };
     let price, total;
     const pricePerKg = Number(selectedBatch.PricePerKg) || 0;
+    // Boxes/cans keep their own price in Price/Piece (Price/Kg is empty on those batches).
+    const wholePrice = pricePerKg || Number(selectedBatch.PricePerPiece) || 0;
     if(unit === 'Kg'){
       price = pricePerKg;
       total = qty * price;
@@ -745,7 +748,7 @@ body{background:
       // weight conversion involved. Selecting Box/Can here is an
       // explicit choice, so it's honored directly regardless of what
       // the catalog's own Packaging Type says.
-      price = pricePerKg;
+      price = wholePrice;
       total = qty * price;
     } else {
       // Items catalogued as Box/Can Packaging Type store their real
@@ -756,7 +759,7 @@ body{background:
       // apply to this kind of item.
       const isWholePackagedItem = String(selectedBatch.PackagingType||'Piece').trim().toLowerCase() !== 'piece';
       if(isWholePackagedItem){
-        price = pricePerKg;
+        price = wholePrice;
       } else {
         // Match the same conversion the Price Calculator uses: a piece
         // isn't a whole kilogram, so its price has to come from the
