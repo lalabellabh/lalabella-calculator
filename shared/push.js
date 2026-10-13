@@ -30,10 +30,29 @@
     return out;
   }
 
+  // Hand the service worker what it needs to send a reply typed inside a notification (same origin only).
+  function idbOpen(cb) {
+    try {
+      var r = indexedDB.open('lbsw', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+      r.onsuccess = function () { cb(r.result); };
+      r.onerror = function () {};
+    } catch (e) {}
+  }
+  function saveCreds() {
+    var t = token();
+    if (!t || !CFG.CHAT_API) return;
+    idbOpen(function (db) {
+      try { db.transaction('kv', 'readwrite').objectStore('kv').put({ token: t, chatApi: CFG.CHAT_API, apikey: CFG.SUPABASE_PUBLISHABLE_KEY || '' }, 'creds'); } catch (e) {}
+    });
+  }
+  function clearCreds() { idbOpen(function (db) { try { db.transaction('kv', 'readwrite').objectStore('kv').delete('creds'); } catch (e) {} }); }
+
   // Register (or refresh) this device for the logged-in user.
   function subscribe() {
     var t = token();
     if (!t || !supported() || Notification.permission !== 'granted') return Promise.resolve(false);
+    saveCreds();
     return navigator.serviceWorker.ready.then(function (reg) {
       return reg.pushManager.getSubscription().then(function (sub) {
         if (sub) return sub;
@@ -53,6 +72,7 @@
   // Called by logout: stop sending the previous user's notifications to this device.
   function off() {
     var t = token(), ep = '';
+    clearCreds();
     try { ep = localStorage.getItem(EP_KEY) || ''; localStorage.removeItem(EP_KEY); } catch (e) {}
     if (t && ep) { try { call({ action: 'unsubscribe', token: t, endpoint: ep }, true).catch(function () {}); } catch (e) {} }
   }
