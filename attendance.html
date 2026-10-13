@@ -98,7 +98,7 @@
   @media (min-width:900px){
     body{padding:0 0 60px;overflow-x:hidden}
     .wrap{max-width:1120px;padding:0 32px}
-    .topbar{position:sticky;top:0;z-index:20;margin:0 calc(50% - 50vw) 26px;padding:14px calc(50vw - 50%) 14px max(calc(50vw - 50%),68px)!important;background:rgba(255,255,255,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+    .wrap>.topbar.topbar{position:sticky;top:0;z-index:20;margin:0 calc(50% - 50vw) 26px;padding:14px calc(50vw - 50%) 14px max(calc(50vw - 50%),68px)!important;background:rgba(255,255,255,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
     .brand .logo{width:38px;height:38px}
     .brand b{font-size:20px}
     .backlink{font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
@@ -121,13 +121,78 @@
     .pairs{display:block}
   }
   @media (min-width:1300px){ .wrap{max-width:1240px} .cols{grid-template-columns:440px minmax(0,1fr)} }
+
+  /* ---- v3 polish ---- */
+  body{background:radial-gradient(520px 380px at 8% -4%,#fcd9d6 0,transparent 70%),radial-gradient(560px 420px at 102% 22%,#d9eddf 0,transparent 70%),radial-gradient(460px 360px at 60% 108%,#f9e6c4 0,transparent 70%),#fbf3f0;background-attachment:fixed}
+  .ic{width:1em;height:1em;display:inline-block;vertical-align:-.14em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .brand .logo{color:#fff;background:linear-gradient(135deg,#e6b755,#c98f1f);box-shadow:0 6px 14px rgba(201,143,31,.35)}
+  .brand .logo .ic{width:20px;height:20px}
+  .card{border:1px solid rgba(240,222,222,.9);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 12px 30px rgba(158,47,74,.08)}
+  .card h2{font-size:15px;letter-spacing:.01em;margin-bottom:12px}
+  .card h2 .hi{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#fbe9ec;color:var(--rose-dark);font-size:15px}
+  .card h2 .hi.g{background:#e3f4ea;color:var(--ok)} .card h2 .hi.y{background:#fdf0d8;color:var(--warn)} .card h2 .hi.b{background:#e6eefb;color:#3b6bb5}
+  .hero{background:linear-gradient(150deg,#d1587a 0%,#a63353 55%,#7a2140 100%)}
+  .hero .face{width:96px;height:96px}
+  .hero .br{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.16);border-radius:99px;padding:3px 11px;margin-top:6px;font-size:12px;opacity:1}
+  .hero .br:empty{display:none}
+  .hero .clock-t{font-variant-numeric:tabular-nums;text-shadow:0 4px 18px rgba(0,0,0,.18)}
+  .hero .shift{display:flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(2px)}
+  .hero .shift .ic{opacity:.9}
+  .where{gap:14px}
+  .where .pin{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#f3ecec;color:var(--muted);font-size:24px;flex:none}
+  .where .pin.ok{background:#e3f4ea;color:var(--ok)} .where .pin.bad{background:#fbe3e0;color:var(--bad)} .where .pin.warn{background:#fdf0d8;color:var(--warn)}
+  .where .txt b{font-size:15px}
+  #mapCard{padding:12px;overflow:hidden}
+  #mapBox svg{width:100%;height:auto;border-radius:14px;display:block}
+  .btns button{position:relative;overflow:hidden;flex-direction:column;gap:4px;letter-spacing:.01em}
+  .btns button .bt{display:flex;align-items:center;gap:10px}
+  .btns button .bt .ic{width:22px;height:22px;stroke-width:2.3}
+  .btns button small{font-size:12px;font-weight:600;opacity:.88}
+  .btns button.alt{color:var(--rose-dark)}
+  .btns button:not(.alt):before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.22),transparent 45%);pointer-events:none}
+  .greet{display:none}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 14px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px rgba(158,47,74,.06);position:relative;overflow:hidden}
+  .stat:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rose)}
+  .stat.g:before{background:var(--ok)} .stat.y:before{background:#e6a93a} .stat.b:before{background:#4f7fc4}
+  .stat small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .stat b{display:block;font-family:'Fraunces',serif;font-size:21px;margin-top:5px;line-height:1.15;font-variant-numeric:tabular-nums}
+  .stat em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .tl{position:relative}
+  .tl li{background:none;border-radius:0;margin:0;padding:10px 0 10px 0;position:relative;border-bottom:0}
+  .tl li:not(.empty):not(:last-child):after{content:'';position:absolute;left:17px;top:42px;bottom:-8px;width:2px;background:#f0dede}
+  .tl .k{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:#f3ecec;color:var(--muted);flex:none;position:relative;z-index:1}
+  .tl .k.in,.tl .k.break_in{background:#e3f4ea;color:var(--ok)} .tl .k.out,.tl .k.blocked{background:#fbe3e0;color:var(--bad)} .tl .k.break_out{background:#fdf0d8;color:var(--warn)}
+  .tl .w b{font-size:14px} .tl .time{font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .fp .i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:#e6eefb;color:#3b6bb5;font-size:24px;flex:none}
+  .fp .i.on{background:#e3f4ea;color:var(--ok)} .fp .i.off{background:#f3ecec;color:var(--muted)}
+  .fp .i.al{background:#fdf0d8;color:var(--warn)}
+  .faceNeed .face .ic{width:42px;height:42px;stroke-width:1.7;color:var(--rose)}
+  #hist tbody tr:nth-child(even) td{background:#fcf7f6}
+  .empty{padding:14px}
+  @media (max-width:899px){
+    .topbar{padding-right:56px}
+    .cols{display:flex;flex-direction:column}
+    .hero{order:1}.faceNeed{order:2}.btns{order:3;margin-bottom:6px}.colB>.msg{order:4}.stats{order:5}
+    .colA>.card:not(.hero):not(.faceNeed){order:6}#mapCard{order:7}.colB>.card{order:8}
+    #alarmCard{order:9}.adm{order:10}
+  }
+  @media (min-width:900px){
+    .topbar .brand{margin-left:0}
+    .greet{display:flex;align-items:flex-end;justify-content:space-between;margin:2px 0 16px;gap:12px}
+    .greet small{color:var(--muted);font-size:13px;font-weight:600}
+    .greet h1{font-family:'Fraunces',serif;font-size:30px;margin:2px 0 0;line-height:1.1}
+    .stats{grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+    .stat{padding:14px 16px}.stat b{font-size:23px}
+    .btns button{padding:24px;font-size:20px}
+  }
 </style>
 </head>
 <body>
 <script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
 <div class="wrap">
   <div class="topbar">
-    <div class="brand"><div class="logo">🕒</div><b>Attendance</b></div>
+    <div class="brand"><div class="logo" id="logoIc"></div><b>Attendance</b></div>
     <a class="backlink" href="index.html">← Back to Lalabella</a>
   </div>
 
@@ -145,12 +210,12 @@
   </div>
 
   <div class="card faceNeed" id="faceCard" style="display:none">
-    <div class="face" id="faceBig">📷</div>
+    <div class="face" id="faceBig"></div>
     <h2 style="justify-content:center">Add your photo first</h2>
     <p>Para makita sa attendance records na ikaw talaga ang nag-time in, kailangan muna ng malinaw na picture ng mukha mo. Saka ka pa makakapag-Time In.</p>
     <div class="row">
-      <button type="button" id="faceSelfie">🤳 Take selfie</button>
-      <button type="button" class="alt" id="faceFile">🖼️ Choose photo</button>
+      <button type="button" id="faceSelfie">Take selfie</button>
+      <button type="button" class="alt" id="faceFile">Choose photo</button>
     </div>
     <input type="file" id="faceInSelfie" accept="image/*" capture="user" style="display:none">
     <input type="file" id="faceInFile" accept="image/*" style="display:none">
@@ -159,42 +224,44 @@
 
   <div class="card">
     <div class="where">
-      <div class="pin" id="pin">📍</div>
+      <div class="pin" id="pin"></div>
       <div class="txt" id="whereTxt">Checking your location…</div>
       <button class="small alt" id="locBtn" type="button">Refresh</button>
     </div>
   </div>
 
-  <div class="card" id="mapCard" style="display:none;padding:10px"><div id="mapBox"></div></div>
+  <div class="card" id="mapCard" style="display:none"><h2><span class="hi g" data-ic="pin"></span>Where you are</h2><div id="mapBox"></div></div>
 
   </div>
   <div class="colB">
+  <div class="greet"><div><small id="gDate"></small><h1 id="gHi">Hello</h1></div></div>
+  <div class="stats" id="stats"></div>
   <div class="btns" id="btns"></div>
   <div class="msg" id="msg"></div>
 
   <div class="card">
-    <h2>Today</h2>
+    <h2><span class="hi g" data-ic="cal"></span>Today</h2>
     <ul class="tl" id="tl"><li class="empty">No time-in yet.</li></ul>
   </div>
 
   <div class="card">
-    <h2>Fingerprint</h2>
+    <h2><span class="hi b" data-ic="fp"></span>Fingerprint</h2>
     <div class="fp" id="fp">…</div>
   </div>
 
   <div class="card" id="alarmCard" style="display:none">
-    <h2>Alarms</h2>
-    <div class="fp"><span class="i">⏰</span><span>Your phone rings 1 minute before Time In, Time Out, and when your break is about to end — even when the app is closed. Needs the latest Lalabella app, linked once (menu → Link home-screen widget).</span></div>
-    <div style="display:flex;gap:8px;margin-top:10px"><button class="small alt" id="alOn" type="button">🔔 Turn on</button><button class="small alt" id="alOff" type="button">🔕 Turn off</button></div>
+    <h2><span class="hi y" data-ic="bell"></span>Alarms</h2>
+    <div class="fp"><span class="i al" data-ic="bell"></span><span>Your phone rings 1 minute before Time In, Time Out, and when your break is about to end — even when the app is closed. Needs the latest Lalabella app, linked once (menu → Link home-screen widget).</span></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="small alt" id="alOn" type="button">Turn on</button><button class="small alt" id="alOff" type="button">Turn off</button></div>
     <div class="msg" id="alMsg"></div>
   </div>
 
   <div class="card">
-    <h2>Last 14 days</h2>
+    <h2><span class="hi" data-ic="clock"></span>Last 14 days</h2>
     <div id="hist"><div class="empty">Loading…</div></div>
   </div>
 
-  <a class="adm" id="admLink" href="attendance-admin.html" style="display:none">👁️ Open attendance records</a>
+  <a class="adm" id="admLink" href="attendance-admin.html" style="display:none">Open attendance records</a>
   </div>
   </div>
 </div>
@@ -206,6 +273,25 @@
   var $ = function(id){ return document.getElementById(id); };
   var LABEL = { 'in':'Time In', 'out':'Time Out', 'break_out':'Start Break', 'break_in':'End Break' };
   var ICON  = { 'in':'🟢', 'out':'🔴', 'break_out':'☕', 'break_in':'💼', 'blocked':'⛔' };
+
+  var IC = {
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    pin:'<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>', warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+    ticket:'<path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3z"/><path d="M13 6v12" stroke-dasharray="2 3"/>',
+    'in':'<path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/><path d="M4 12h10M10 8l4 4-4 4"/>',
+    out:'<path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5"/><path d="M20 12H10M16 8l4 4-4 4"/>',
+    break_out:'<path d="M5 9h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2"/>',
+    break_in:'<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    blocked:'<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
+    fp:'<path d="M5 11a7 7 0 0 1 14 0"/><path d="M8 20c-1-2-1.5-4-1.5-6.5a5.5 5.5 0 0 1 11 0c0 1.5.2 2.7.5 3.8"/><path d="M12 12.5c0 3 .5 5 1.8 7M9.3 14c0 2 .3 3.5 1 5"/>',
+    cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+    cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    work:'<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    cup:'<path d="M5 9h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/>'
+  };
+  function ic(n, extra){ return '<svg class="ic' + (extra ? ' ' + extra : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (IC[n] || '') + '</svg>'; }
 
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   function api(body){
@@ -220,12 +306,51 @@
   function mins(m){ m = Math.round(m); if (m < 60) return m + 'm'; return Math.floor(m/60) + 'h ' + (m % 60) + 'm'; }
   function msg(t, cls){ var m = $('msg'); m.textContent = t || ''; m.className = 'msg' + (cls ? ' ' + cls : ''); }
 
+
+  // ---------- today tiles + greeting ----------
+  function sums(){
+    var r = S.me && S.me.report, logs = (r && r.logs) || [], now = nowMs(), work = 0, brk = 0, ws = null, bs = null, firstIn = null;
+    logs.forEach(function(l){
+      var t = new Date(l.at).getTime();
+      if (l.kind === 'in') { if (!firstIn) firstIn = l.at; ws = t; }
+      else if (l.kind === 'break_in') { if (bs != null) { brk += t - bs; bs = null; } ws = t; }
+      else if (l.kind === 'break_out') { if (ws != null) { work += t - ws; ws = null; } bs = t; }
+      else if (l.kind === 'out') { if (ws != null) { work += t - ws; ws = null; } }
+    });
+    if (ws != null) work += Math.max(0, now - ws);
+    if (bs != null) brk += Math.max(0, now - bs);
+    return { work: work / 60000, brk: brk / 60000, firstIn: firstIn };
+  }
+  function renderStats(){
+    var me = S.me; if (!me || !me.report) return;
+    var r = me.report, sh = me.shift || {}, x = sums(), el = $('stats');
+    var late = r.status === 'late' ? 'Late ' + r.lateMin + ' min' : (x.firstIn ? 'On time' : 'Not yet');
+    var h = '';
+    h += '<div class="stat g"><small>' + ic('in') + 'Time in</small><b>' + (x.firstIn ? esc(fmtT(x.firstIn)) : '—') + '</b><em>' + late + '</em></div>';
+    h += '<div class="stat"><small>' + ic('clock') + 'Worked today</small><b>' + (x.firstIn ? mins(x.work) : '—') + '</b><em>' + (r.state === 'out' ? 'Done for the day' : (x.firstIn ? 'Counting…' : 'Not started')) + '</em></div>';
+    h += '<div class="stat y"><small>' + ic('cup') + 'Break used</small><b>' + (x.brk > 0 ? mins(x.brk) : '—') + '</b><em>' + (sh.brk ? 'of ' + sh.brk + ' min' : 'No break set') + '</em></div>';
+    h += '<div class="stat b"><small>' + ic('cal') + 'Shift</small><b style="white-space:nowrap;font-size:' + (sh.startText ? '15px' : '19px') + '">' + (sh.startText ? esc(sh.startText) + ' – ' + esc(sh.endText) : (sh.off ? 'Day off' : '—')) + '</b><em>' + (sh.startText ? 'Today' : 'No shift today') + '</em></div>';
+    el.innerHTML = h;
+  }
+  function paintGreet(){
+    if (!S.me || !S.me.user) return;
+    var hr = +new Date(nowMs()).toLocaleString('en-GB', { timeZone: TZ, hour: 'numeric', hour12: false }) % 24;
+    var g = hr < 12 ? 'Good morning' : (hr < 18 ? 'Good afternoon' : 'Good evening');
+    $('gHi').textContent = g + ', ' + String(S.me.user.name || '').split(' ')[0];
+    $('gDate').textContent = new Date(nowMs()).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  function staticIcons(){
+    $('logoIc').innerHTML = ic('clock');
+    var n = document.querySelectorAll('[data-ic]'); for (var i = 0; i < n.length; i++) n[i].innerHTML = ic(n[i].getAttribute('data-ic'));
+    setPin('pin', '');
+  }
+
   // ---------- clock ----------
   function tick(){
     var d = new Date(nowMs());
     $('clock').textContent = d.toLocaleTimeString('en-GB', { timeZone: TZ, hour12:false });
     $('date').textContent = d.toLocaleDateString('en-GB', { timeZone: TZ, weekday:'long', day:'numeric', month:'long', year:'numeric' });
-    breakTick();
+    breakTick(); tick.n = (tick.n || 0) + 1; if (S.me && tick.n % 15 === 0) { renderStats(); paintGreet(); }
   }
   function breakTick(){
     var el = $('brk'), r = S.me && S.me.report, sh = S.me && S.me.shift;
@@ -234,8 +359,8 @@
     if (!last) { el.style.display = 'none'; return; }
     var left = Math.round((new Date(last.at).getTime() + sh.brk * 60000 - nowMs()) / 1000);
     el.style.display = 'block';
-    if (left >= 0) el.textContent = '☕ Break ends in ' + Math.floor(left/60) + ':' + String(left % 60).padStart(2,'0');
-    else el.textContent = '⏰ Break is over by ' + Math.floor(-left/60) + ' min — please end your break';
+    if (left >= 0) el.textContent = 'Break ends in ' + Math.floor(left/60) + ':' + String(left % 60).padStart(2,'0');
+    else el.textContent = 'Break is over by ' + Math.floor(-left/60) + ' min — please end your break';
   }
   setInterval(tick, 1000);
 
@@ -245,6 +370,7 @@
     var x = Math.sin(dLa/2)*Math.sin(dLa/2) + Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLo/2)*Math.sin(dLo/2);
     return 2*R*Math.asin(Math.sqrt(x));
   }
+  function setPin(n, cls){ var p = $('pin'); p.innerHTML = ic(n); p.className = 'pin' + (cls ? ' ' + cls : ''); }
   function showWhere(){
     var el = $('whereTxt'), pin = $('pin');
     if (!S.pos) return;
@@ -252,20 +378,20 @@
     ((S.me && S.me.branches) || []).forEach(function(b){ var d = dist(S.pos.lat, S.pos.lng, b.lat, b.lng); if (!best || d < best.d) best = { n: b.name, d: d }; });
     if (!best) { el.textContent = 'Location found.'; return; }
     var rad = S.me.radius, ok = best.d <= rad, ev = S.me.event;
-    pin.textContent = ok ? '✅' : (ev ? '🎫' : '❌');
+    if (ok) setPin('check','ok'); else if (ev) setPin('ticket','warn'); else setPin('x','bad');
     try { if (window.LBAttMap) { $('mapBox').innerHTML = LBAttMap.svg(S.pos, S.me.branches, rad, best.n, 320, 190); $('mapCard').style.display = ''; } } catch (e) {}
     el.innerHTML = '<b>' + Math.round(best.d) + ' m</b> from ' + esc(best.n) + ' — ' + (ok ? 'you are in range' : (ev ? 'outside, but today has an event: ' + esc(ev.reason) : 'outside the ' + rad + ' m range')) +
       '<br><small>GPS accuracy ±' + Math.round(S.pos.acc) + ' m</small>';
   }
   function locate(){
-    if (!navigator.geolocation) { $('whereTxt').textContent = 'This phone/browser has no location. Attendance needs GPS.'; $('pin').textContent = '⚠️'; return; }
-    $('pin').textContent = '📍'; $('whereTxt').textContent = 'Checking your location…';
+    if (!navigator.geolocation) { $('whereTxt').textContent = 'This phone/browser has no location. Attendance needs GPS.'; setPin('warn','warn'); return; }
+    setPin('pin',''); $('whereTxt').textContent = 'Checking your location…';
     if (S.watch != null) { try { navigator.geolocation.clearWatch(S.watch); } catch(e){} }
     S.watch = navigator.geolocation.watchPosition(function(p){
       S.pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy || 0, t: Date.now() };
       showWhere();
     }, function(e){
-      $('pin').textContent = '⚠️';
+      setPin('warn','warn');
       $('whereTxt').textContent = e && e.code === 1 ? 'Location is blocked. Allow location for this app, then tap Refresh.' : 'Cannot get your location yet. Turn on GPS and tap Refresh.';
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
   }
@@ -338,7 +464,7 @@
     f.className = 'face' + (st === 'in' || st === 'break_in' ? ' ring-ok' : (st === 'break_out' ? ' ring-warn' : ''));
     $('faceCard').style.display = (FACE.checked && !FACE.url) ? '' : 'none';
     document.body.classList.toggle('need', FACE.checked && !FACE.url);
-    $('faceBig').textContent = initials(nm) === '?' ? '📷' : '📷';
+    $('faceBig').innerHTML = ic('cam');
   }
   function loadFace(){
     return authCall('getProfile').then(function(g){
@@ -406,8 +532,8 @@
   function render(){
     var me = S.me; if (!me) return;
     var r = me.report, sh = me.shift;
-    $('meName').textContent = me.user ? me.user.name : ''; $('meBranch').textContent = me.user && me.user.branch ? '📍 ' + me.user.branch : '';
-    $('shift').innerHTML = sh && sh.startText ? '🗓️ <b>' + esc(sh.startText) + ' – ' + esc(sh.endText) + '</b> · ' + sh.brk + ' min break' : (sh && sh.off ? 'Today is your day off.' : (sh && sh.detail ? esc(sh.detail) : 'No shift found for you today.'));
+    $('meName').textContent = me.user ? me.user.name : ''; $('meBranch').innerHTML = me.user && me.user.branch ? ic('pin') + esc(me.user.branch) : '';
+    $('shift').innerHTML = sh && sh.startText ? ic('cal') + '<span><b>' + esc(sh.startText) + ' – ' + esc(sh.endText) + '</b> · ' + sh.brk + ' min break</span>' : (sh && sh.off ? 'Today is your day off.' : (sh && sh.detail ? esc(sh.detail) : 'No shift found for you today.'));
     var c = chipFor(r), chip = $('status');
     var label = c[0];
     if (r.state === 'in' || r.state === 'break_in') label = (r.status === 'late' ? 'Working · late ' + r.lateMin + 'm' : 'Working');
@@ -417,11 +543,12 @@
 
     var b = $('btns'); b.innerHTML = '';
     var next = me.next || [];
-    if (!next.length) { b.innerHTML = '<div class="empty">All done for today 🌸</div>'; }
+    if (!next.length) { b.innerHTML = '<div class="empty">All done for today. Thank you!</div>'; }
     next.forEach(function(k, i){
       var btn = document.createElement('button'); btn.type = 'button';
       btn.className = (i === 0 ? '' : 'alt') + (i === 0 ? (k === 'in' || k === 'break_in' ? ' in' : (k === 'out' ? ' out' : ' brkb')) : '');
-      btn.textContent = (ICON[k] || '') + ' ' + LABEL[k];
+      var sub = (k === 'in' && sh && sh.startText) ? 'Shift starts ' + esc(sh.startText) : (k === 'out' && sh && sh.endText ? 'Shift ends ' + esc(sh.endText) : '');
+      btn.innerHTML = '<span class="bt">' + ic(k) + LABEL[k] + '</span>' + (sub && i === 0 ? '<small>' + sub + '</small>' : '');
       btn.disabled = S.busy;
       btn.addEventListener('click', function(){ punch(k); });
       b.appendChild(btn);
@@ -432,18 +559,18 @@
     if (!logs.length) tl.innerHTML = '<li class="empty">No time-in yet.</li>';
     logs.forEach(function(l){
       var li = document.createElement('li');
-      var sub = l.kind === 'blocked' ? esc(l.note || 'Blocked') : (esc(l.near || '') + (l.dist != null ? ' · ' + l.dist + ' m' : '') + (l.via === 'fingerprint' ? ' · 🖐️' : ''));
-      li.innerHTML = '<span class="k">' + (ICON[l.kind] || '•') + '</span><span class="w"><b' + (l.kind === 'blocked' ? ' class="x"' : '') + '>' + (l.kind === 'blocked' ? 'Blocked attempt' : LABEL[l.kind]) + '</b><small>' + sub + '</small></span><span>' + esc(fmtT(l.at)) + '</span>';
+      var sub = l.kind === 'blocked' ? esc(l.note || 'Blocked') : (esc(l.near || '') + (l.dist != null ? ' · ' + l.dist + ' m' : '') + (l.via === 'fingerprint' ? ' · fingerprint' : ''));
+      li.innerHTML = '<span class="k ' + l.kind + '">' + ic(l.kind) + '</span><span class="w"><b' + (l.kind === 'blocked' ? ' class="x"' : '') + '>' + (l.kind === 'blocked' ? 'Blocked attempt' : LABEL[l.kind]) + '</b><small>' + sub + '</small></span><span class="time">' + esc(fmtT(l.at)) + '</span>';
       tl.appendChild(li);
     });
     $('admLink').style.display = me.isViewer ? 'block' : 'none';
-    renderFp(); breakTick(); paintFace();
+    renderFp(); breakTick(); paintFace(); renderStats();
   }
   function renderFp(){
     var el = $('fp'), me = S.me; if (!me) return;
-    if (me.hasPasskey) el.innerHTML = '<span class="i">🖐️</span><span>Fingerprint is on. You confirm it every time you time in / out. If you change phone, ask the owner to reset it.</span>';
-    else if (S.canFp) el.innerHTML = '<span class="i">🖐️</span><span>This phone supports fingerprint. It will be set up automatically the first time you time in.</span>';
-    else el.innerHTML = '<span class="i">👆</span><span>No fingerprint on this phone/browser — you time in with the button and your location.</span>';
+    if (me.hasPasskey) el.innerHTML = '<span class="i on">' + ic('fp') + '</span><span>Fingerprint is on. You confirm it every time you time in / out. If you change phone, ask the owner to reset it.</span>';
+    else if (S.canFp) el.innerHTML = '<span class="i">' + ic('fp') + '</span><span>This phone supports fingerprint. It will be set up automatically the first time you time in.</span>';
+    else el.innerHTML = '<span class="i off">' + ic('fp') + '</span><span>No fingerprint on this phone/browser — you time in with the button and your location.</span>';
   }
   function history(){
     api({ action:'history' }).then(function(d){
@@ -466,7 +593,7 @@
     return api({ action:'me' }).then(function(d){
       if (!d.success) { $('shift').textContent = d.error || 'Could not load.'; return; }
       S.me = d; S.offset = new Date(d.now).getTime() - Date.now();
-      render(); tick(); showWhere();
+      render(); paintGreet(); tick(); showWhere();
       history();
     }).catch(function(){ $('shift').textContent = 'Could not reach the server. Check your internet.'; });
   }
@@ -482,7 +609,7 @@
   }
   $('locBtn').addEventListener('click', locate);
   document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.me) load(true); });
-  loadFace(); detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate(); });
+  staticIcons(); loadFace(); detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate(); });
 })();
 </script>
 </body>
