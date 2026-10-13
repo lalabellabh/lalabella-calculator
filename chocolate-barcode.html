@@ -553,6 +553,10 @@
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
 
+      <label style="margin-top:12px;">Done by</label>
+      <input type="text" id="displayDoneBy" list="displayDoneByList" placeholder="Who made this display?" autocomplete="off" />
+      <datalist id="displayDoneByList"></datalist>
+
       <button class="submit-btn" id="saveDisplayBtn" style="margin-top:14px;">💾 Save &amp; Generate Barcode</button>
 
       <div class="preview-label" id="displayPreview" style="display:none; margin-top:16px;">
@@ -1183,9 +1187,20 @@ document.getElementById('displayCartList').addEventListener('click', e=>{
 
 let lastSavedDisplay = null;
 
+// "Done by": remembers the last name used on this device and suggests the staff names.
+(function(){
+  try{ document.getElementById('displayDoneBy').value = localStorage.getItem('lbDisplayDoneBy') || ''; }catch(e){}
+  fetch(API_URL + '?action=getReceivedBy&_ts=' + Date.now()).then(r=>r.json()).then(names=>{
+    if(!Array.isArray(names)) return;
+    document.getElementById('displayDoneByList').innerHTML = names.map(n => '<option value="' + String(n).replace(/"/g,'&quot;') + '"></option>').join('');
+  }).catch(()=>{});
+})();
+
 document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   const displayName = document.getElementById('displayName').value.trim();
+  const doneBy = document.getElementById('displayDoneBy').value.trim();
   if(!displayName){ alert('Enter a Display Name.'); return; }
+  if(!doneBy){ alert('Enter who made this display (Done by).'); return; }
   if(!displayCart.some(c => !c.extra)){ alert('Add at least one chocolate.'); return; }
 
   const btn = document.getElementById('saveDisplayBtn');
@@ -1195,6 +1210,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
     const params = new URLSearchParams({
       action: 'saveDisplay',
       displayName,
+      createdBy: doneBy,
       items: JSON.stringify(displayCart)
     });
     const res = await fetch(API_URL + '?' + params.toString());
@@ -1212,6 +1228,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       }catch(e){}
       document.getElementById('displayPreview').style.display = 'block';
       document.getElementById('printDisplayBtn').style.display = 'block';
+      try{ localStorage.setItem('lbDisplayDoneBy', doneBy); }catch(e){}
       alert('Saved! Display Code: ' + data.displayCode);
 
       displayCart = [];
