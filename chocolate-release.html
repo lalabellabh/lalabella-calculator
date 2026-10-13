@@ -1049,6 +1049,18 @@ body{background:
     return (String(c.stockUnit||'').toLowerCase() === 'kg' && c.stockQty != null) ? Number(c.stockQty) || 0 : 0;
   }
 
+
+  // Barcode that prints cleanly: whole-pixel bar widths as wide as the space allows,
+  // plus a proper quiet zone (blank margin) on both sides.
+  function fitBarcode(target, code, maxPx, height){
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    code = String(code);
+    const mods = 11 * (code.length + 2) + 13;          // Code 128 modules (upper bound)
+    let k = Math.floor(maxPx / (mods + 20));
+    if(k < 2) k = Math.max(1, Math.floor(maxPx / (mods + 20) * 2) / 2);
+    k = Math.min(k, 3);
+    JsBarcode(el, code, { format:'CODE128', width:k, margin:Math.round(10 * k), height:height, displayValue:false });
+  }
   function populateReceipt(releaseNo, releaseDate, itemLines, extraLines){
     let itemsHtml = '';
     let subtotal = 0;
@@ -1098,7 +1110,7 @@ body{background:
 
     document.getElementById('pBarcodeSvg').innerHTML = '';
     try{
-      JsBarcode("#pBarcodeSvg", releaseNo, { format: "CODE128", width: 1.5, height: 40, displayValue: false });
+      fitBarcode("#pBarcodeSvg", releaseNo, 280, 42);
     }catch(e){}
   }
 
