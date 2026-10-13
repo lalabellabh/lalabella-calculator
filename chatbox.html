@@ -192,6 +192,8 @@
 <script src="shared/chat-sounds.js"></script>
 <script src="shared/chat-avatar.js"></script>
 <script src="shared/chat-media.js"></script>
+<script src="shared/chat-react.js"></script>
+<script src="shared/chat-status.js"></script>
 
 <div class="page">
   <div class="topline">
@@ -248,6 +250,7 @@
     <aside class="convs card">
       <div class="convs-head">
         <h2>💬 Chats</h2>
+        <div id="teamStatus"></div>
         <input type="search" id="convSearch" placeholder="Search people…">
         <button type="button" class="new-grp" id="newGroupBtn">➕ New group</button>
       </div>
@@ -316,7 +319,7 @@
       img.onerror = () => { img.remove(); el.insertBefore(document.createTextNode(initials(p.name)), el.firstChild); };
       el.appendChild(img);
     } else el.textContent = initials(p && p.name);
-    if(dot){ const d = document.createElement('span'); d.className = 'dot' + (p.online ? ' on' : ''); el.appendChild(d); }
+    if(dot){ const d = document.createElement('span'); d.className = 'dot' + (p.online ? ' on' : ''); el.appendChild(d); if(p.id && window.lbChatStatus) lbChatStatus.decorate(el, p.id); }
     return el;
   }
   function lastSeenText(iso){
@@ -498,6 +501,7 @@
     }
     body.appendChild(br); row.appendChild(body); box.appendChild(row);
     nodes[v.id] = row; lastMsg = v;
+    if(window.lbChatReact) lbChatReact.mount({ id: v.id, bubble: b, after: br, button: br, mine, ctx: { get meId(){ return meId; }, nameOf: uid => (peopleById[uid] || {}).name || '' } });
     if(!mine && !firstLoad) beep('receive');
   }
   function removeMsg(id){
@@ -529,6 +533,7 @@
       if(firstLoad) box.innerHTML = '';
       (d.messages || []).forEach(add);
       (d.deletedIds || []).forEach(removeMsg);
+      if(window.lbChatReact) lbChatReact.refresh();
       if(firstLoad && !box.children.length){
         box.innerHTML = '<div class="empty-chat">' + (conv.groupId ? 'No messages yet — say hi to the group 👋' : conv.peerId ? '🔒 This is a private chat. Say hi 👋' : 'No messages yet — say hi to the team 🌹') + '</div>';
       }
@@ -568,8 +573,10 @@
       if(!d.success) return;
       meId = d.meId; people = d.people || []; peopleById = {}; people.forEach(p => peopleById[p.id] = p);
       renderConvs(); renderHead();
+      if(window.lbChatStatus && !statusOn){ statusOn = true; lbChatStatus.mount($('teamStatus'), () => { renderConvs(); renderHead(); }); }
     }catch(e){}
   }
+  let statusOn = false;
 
   let groupsAt = 0;
   async function loadGroups(){
