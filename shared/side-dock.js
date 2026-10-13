@@ -12,8 +12,17 @@
   'use strict';
   if (window.LBSideDock) return;
   var root = document.documentElement;
-  if (!root.classList.contains('lb-dock')) return;          // old floating buttons selected (or not set)
+  if (!root.classList.contains('lb-dock')) return;
   window.LBSideDock = true;
+
+  // The old floating buttons, the top 💬 message buttons and the date shift are retired for good — dock on OR off.
+  var retire = document.createElement('style');
+  retire.textContent =
+    'html.lb-dock #lbcb-btn,html.lb-dock #joyboy-bubble-btn,html.lb-dock #lbob-btn,html.lb-dock #lalaBellBtn{opacity:0 !important;pointer-events:none !important;}' +
+    'html.lb-dock a#msgBtn,html.lb-dock a#chatBtn{display:none !important;}' +
+    '@media(min-width:901px){html.lb-dock .topbar .today{transform:none !important;right:22px !important;left:auto !important;}}';
+  document.head.appendChild(retire);
+  if (root.classList.contains('lb-dock-off')) return;   // dock switched off in Settings: nothing floats at all
 
   var KEY = 'lbDock', MAX_CUSTOM = 6;
   var PAGES = [
