@@ -1621,7 +1621,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     if(typeof LBScan === 'undefined'){ alert('Scanner file missing - upload shared/scanner.js.'); return; }
     modal.classList.add('show');
     try{
-      scanStop = await LBScan.start(video, function(raw){ scanStop = null; stopScanner(); useCode(raw); });
+      scanStop = await LBScan.start(video, function(raw){ scanStop = null; stopScanner(); useCode(raw); }, function(e){ alert(LBScan.message(e)); stopScanner(); });
     }catch(e){
       alert(LBScan.message(e));
       stopScanner();
