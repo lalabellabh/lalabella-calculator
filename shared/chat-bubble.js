@@ -156,6 +156,13 @@
       #lbcb-send{ background:none; color:#c9506b; font-size:20px; width:36px; flex-basis:36px; }
       #lbcb-send:hover{ background:#fdf1f0; }
       #lbcb-send:disabled{ opacity:.35; }
+      /* ---- full-screen chat on phones ---- */
+      @media(max-width:600px){
+        #lbcb-panel{ left:0 !important; right:0 !important; top:0 !important; bottom:0 !important; width:100vw; height:100vh; height:100dvh; border-radius:0; z-index:100000; transform-origin:bottom center; }
+        #lbcb-head{ padding-top:max(12px, env(safe-area-inset-top)); }
+        #lbcb-input-row{ padding-bottom:max(10px, env(safe-area-inset-bottom)); }
+        #lbcb-btn.panel-open{ display:none; }
+      }
       @media print{ #lbcb-btn, #lbcb-panel{ display:none !important; } }
       @media(max-width:420px){ #lbcb-panel{ left:12px; bottom:84px; } #lbcb-btn{ left:12px; width:52px; height:52px; font-size:23px; } }
     `;
@@ -473,7 +480,7 @@
     inputEl.addEventListener('keydown', function(e){ if (e.key === 'Enter') sendMessage(); });
 
     btn.addEventListener('click', function(){
-      panel.classList.toggle('show');
+      panel.classList.toggle('show'); btn.classList.toggle('panel-open', panel.classList.contains('show'));
       if (panel.classList.contains('show') && !opened) {
         opened = true;
         loadPeople().then(showListView);
@@ -481,7 +488,7 @@
         if (conv === null) refreshUnread();
       }
     });
-    document.getElementById('lbcb-close').addEventListener('click', function(){ panel.classList.remove('show'); });
+    document.getElementById('lbcb-close').addEventListener('click', function(){ panel.classList.remove('show'); btn.classList.remove('panel-open'); });
 
     if (window.lbChatLive) {
       lbChatLive.onPing(function(){ if (conv) poll(); else refreshUnread(); });
