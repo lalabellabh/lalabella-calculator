@@ -46,13 +46,13 @@
       el.style.cssText = 'display:block;text-align:center;font:600 11.5px "Space Grotesk",system-ui,sans-serif;padding:10px 12px 14px;opacity:.9';
       if (s.kind === 'update') el.innerHTML = '<a href="' + PAGE + '" style="display:block;padding:9px 12px;border-radius:10px;background:#c9506b;color:#fff;text-decoration:none">⬆️ New version ' + s.latest + ' is ready — tap to update<br><span style="font-weight:500;opacity:.85">You have v' + s.inst + '</span></a>';
       else if (s.kind === 'ok') el.innerHTML = '<span style="opacity:.65">Lalabella app v' + s.inst + ' ✓ up to date</span>';
-      else el.innerHTML = '<a href="' + PAGE + '" style="color:#c9506b;text-decoration:none">App version not detected — tap to get the latest app</a>';
+      else el.innerHTML = '<span style="opacity:.65">App version not detected yet — close the app and open it from its icon</span>';
     }
     toastOnce(s);
   }
   function toastOnce(s) {
-    if (!s || (s.kind !== 'update' && s.kind !== 'unknown') || !latest) return;
-    var tag = (s.kind === 'update' ? s.latest : 'unknown-' + latest.versionName);
+    if (!s || s.kind !== 'update' || !latest) return;
+    var tag = s.latest;
     if (get('lbUpdToast') === tag || document.getElementById('lb-upd-toast')) return;
     set('lbUpdToast', tag);
     var t = document.createElement('a');
