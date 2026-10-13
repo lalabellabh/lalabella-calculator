@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js?v=5"></script>
 
@@ -1609,42 +1610,20 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     const hit = findByCode(searchEl.value);
     if(hit){ e.preventDefault(); selectItem(hit); }
   });
-  let scanStream = null, scanLoopActive = false;
+  let scanStop = null;
   function stopScanner(){
-    scanLoopActive = false;
-    if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    if(scanStop){ try{ scanStop(); }catch(e){} scanStop = null; }
     document.getElementById('scannerModal').classList.remove('show');
   }
   document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
   document.getElementById('scanBtn').addEventListener('click', async ()=>{
-    if(!('BarcodeDetector' in window)){
-      alert('Camera barcode scanning is not supported in this browser. Use a barcode scanner, or type the code.');
-      searchEl.focus();
-      return;
-    }
     const modal = document.getElementById('scannerModal'), video = document.getElementById('scannerVideo');
+    if(typeof LBScan === 'undefined'){ alert('Scanner file missing - upload shared/scanner.js.'); return; }
     modal.classList.add('show');
     try{
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = scanStream;
-      scanLoopActive = true;
-      const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
-      const loop = async ()=>{
-        if(!scanLoopActive) return;
-        try{
-          const codes = await detector.detect(video);
-          if(codes.length){
-            const raw = codes[0].rawValue;
-            stopScanner();
-            if(!useCode(raw)) { /* code not in the list: it is shown in the search box */ }
-            return;
-          }
-        }catch(e){}
-        requestAnimationFrame(loop);
-      };
-      loop();
+      scanStop = await LBScan.start(video, function(raw){ scanStop = null; stopScanner(); useCode(raw); });
     }catch(e){
-      alert('Could not open the camera. Allow camera permission and try again.');
+      alert(LBScan.message(e));
       stopScanner();
     }
   });
