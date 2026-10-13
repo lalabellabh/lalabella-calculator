@@ -491,9 +491,9 @@
 
   <div class="panel" id="panelLookup">
     <div class="card">
-      <div class="card-title">Scan or Enter Release No</div>
+      <div class="card-title">Scan or Enter Release No / List Code</div>
       <div class="scan-row">
-        <input type="text" id="fReleaseNo" placeholder="e.g. REL-000001" autocomplete="off" />
+        <input type="text" id="fReleaseNo" placeholder="REL-000001 or DISP-00006" autocomplete="off" />
         <button class="scan-btn" id="scanBtn" title="Scan barcode">📷</button>
       </div>
       <button class="submit-btn" id="lookupBtn">Look Up</button>
@@ -919,6 +919,17 @@
     }
     const el = document.getElementById('lookupResult');
     el.innerHTML = '<div class="empty-note">Looking up...</div>';
+    // DISP-xxxxx = a saved list (from the Calculator or Build Display)
+    if(/^DISP-\d+$/i.test(releaseNo)){
+      try{
+        const rows = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now())).json());
+        const hit = (Array.isArray(rows) ? rows : []).find(r => String(r['Display Code']).toLowerCase() === releaseNo.toLowerCase());
+        renderDisplayLookup(releaseNo, hit);
+      }catch(e){
+        el.innerHTML = '<div class="empty-note">Could not look up this list.</div>';
+      }
+      return;
+    }
     try{
       const t = Date.now();
       const data = await (await fetch(API_URL + '?action=getReleaseByNo&releaseNo=' + encodeURIComponent(releaseNo) + '&_ts=' + t)).json();
@@ -927,6 +938,31 @@
       el.innerHTML = '<div class="empty-note">Could not look up this release.</div>';
     }
   });
+
+  function renderDisplayLookup(code, d){
+    const el = document.getElementById('lookupResult');
+    if(!d){ el.innerHTML = '<div class="empty-note">No saved list found for ' + code + '.</div>'; return; }
+    let pcs = 0, kg = 0, total = 0;
+    const rows = (d['Items'] || []).map(it=>{
+      const qty = Number(it.qty) || 0, price = Number(it.price) || 0, line = qty * price;
+      total += line;
+      if(it.extra) return `<div class="lookup-row"><span><u>${it.name}</u> · Extra</span><span>${fmtBD(line)}</span></div>`;
+      const u = it.unit === 'g' ? 'g' : (it.unit === 'kg' ? 'kg' : 'pcs');
+      const cat = (items || []).find(c => String(c['Chocolate Name']||'').trim().toLowerCase() === String(it.name).trim().toLowerCase());
+      const gpp = cat ? Number(cat['Grams']) || 0 : 0;
+      if(u === 'pcs'){ pcs += qty; kg += qty * gpp / 1000; } else { kg += u === 'g' ? qty / 1000 : qty; }
+      return `<div class="lookup-row"><span>${it.name} (${qty} ${u})</span><span>${fmtBD(line)}</span></div>`;
+    }).join('');
+    const sum = (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs';
+    el.innerHTML = `
+      <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
+        ${code} · ${d['Display Name'] || ''} · ${fmtDate(d['Date'])}${d['Created By'] ? ' · by ' + d['Created By'] : ''}
+      </div>
+      ${rows}
+      <div class="lookup-total"><span>Total</span><span>${fmtBD(total)}</span></div>
+      <div style="font-size:12px; color:var(--ink-dim); text-align:right; margin-top:4px;">${sum}</div>
+    `;
+  }
 
   function renderLookupResult(releaseNo, data){
     const el = document.getElementById('lookupResult');
