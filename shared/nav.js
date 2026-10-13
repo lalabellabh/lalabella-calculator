@@ -369,6 +369,7 @@
     if (/Android/i.test(navigator.userAgent || '')) html += '<a href="#" data-lb-widget>' + icon_('📱') + 'Link home-screen widget</a>';
     html += '<a href="#" data-lb-settings>' + icon_('⚙️') + 'Settings</a>';
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
+    html += '<div data-lb-appver style="display:none"></div>';
 
     el.innerHTML = html;
     fillWeather(el);
@@ -377,6 +378,7 @@
     const wl = el.querySelector('[data-lb-widget]');
     if (wl) wl.addEventListener('click', e => { e.preventDefault(); if (window.LBWidget) window.LBWidget.link(); });
     el.querySelector('[data-lb-settings]').addEventListener('click', e => { e.preventDefault(); openSettings(); });
+    if (window.LBAppUpdate) window.LBAppUpdate.paint();
   }
 
   if (!document.getElementById('lb-nav-style')) {
@@ -709,6 +711,13 @@
     const wg = document.createElement('script');
     wg.src = 'shared/widget-link.js';
     document.body.appendChild(wg);
+  }
+
+  // Android app version + "new version ready" notice (menu footer). See shared/app-update.js.
+  if (!window.LBAppUpdate && !document.querySelector('script[src="shared/app-update.js"]')) {
+    const au = document.createElement('script');
+    au.src = 'shared/app-update.js';
+    document.body.appendChild(au);
   }
 
   // Installable app (PWA): service worker + install button. See shared/pwa.js.
