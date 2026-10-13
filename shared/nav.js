@@ -339,6 +339,8 @@
     lastTouch = Date.now(); load(false); paint();
   }
 
+  function dockOff_() { try { return localStorage.getItem('lbDockOff') === '1'; } catch (e) { return false; } }
+
   function render(el) {
     const hubClass = el.getAttribute('data-hub-class') || 'choco-hub-grid';
     const titleClass = el.getAttribute('data-title-class') || 'choco-drawer-title';
@@ -368,6 +370,7 @@
     html += quick.map(i => link(i[0], i[1], i[2])).join('');
     if (/Android/i.test(navigator.userAgent || '')) html += '<a href="#" data-lb-widget>' + icon_('📱') + 'Link home-screen widget</a>';
     html += '<a href="#" data-lb-settings>' + icon_('⚙️') + 'Settings</a>';
+    html += '<a href="#" data-lb-dock>' + icon_('🧲') + 'Side dock: ' + (dockOff_() ? 'Off (tap to turn on)' : 'On (tap to turn off)') + '</a>';
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
     html += '<div data-lb-appver style="display:none"></div>';
 
@@ -375,6 +378,8 @@
     fillWeather(el);
     el.style.display = 'contents';   // links stay direct flex children of the drawer
     el.querySelector('[data-lb-logout]').addEventListener('click', e => { e.preventDefault(); logout(); });
+    const dk = el.querySelector('[data-lb-dock]');
+    if (dk) dk.addEventListener('click', e => { e.preventDefault(); try { if (dockOff_()) localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); });
     const wl = el.querySelector('[data-lb-widget]');
     if (wl) wl.addEventListener('click', e => { e.preventDefault(); if (window.LBWidget) window.LBWidget.link(); });
     el.querySelector('[data-lb-settings]').addEventListener('click', e => { e.preventDefault(); openSettings(); });
@@ -729,6 +734,7 @@
 
   // Side dock: one slim glass handle on the screen edge that slides out the chat, Nova, the orders bell and your own
   // shortcuts (replaces the separate floating buttons). "⟲" in its tray switches back. See shared/side-dock.js.
+  try { if (/[?&]dock=on\b/.test(location.search)) localStorage.removeItem('lbDockOff'); } catch (e) {}
   try { if (localStorage.getItem('lbDockOff') !== '1') document.documentElement.classList.add('lb-dock'); } catch (e) {}
   if (document.documentElement.classList.contains('lb-dock') && !window.LBSideDock && !document.querySelector('script[src="shared/side-dock.js"]')) {
     const sd = document.createElement('script');
