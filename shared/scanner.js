@@ -34,7 +34,7 @@
       throw err(window.isSecureContext === false ? 'insecure' : 'nocamera');
     }
     var tries = [
-      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
       { video: { facingMode: 'environment' }, audio: false },
       { video: true, audio: false }
     ];
@@ -58,7 +58,7 @@
     }catch(e){ return null; }
   }
 
-  async function start(video, onCode){
+  async function start(video, onCode, onFail){
     var stream = await openCamera();
     var alive = true;
     function stop(){
@@ -70,10 +70,43 @@
     video.srcObject = stream;
     try{ await video.play(); }catch(e){}
 
+    // keep the picture sharp (the phone otherwise often leaves it slightly out of focus)
+    try{
+      var tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+      if(caps.focusMode && caps.focusMode.indexOf('continuous') !== -1) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    }catch(e){}
+
     var done = false;
     function found(v){ if(done || !alive || !v) return; done = true; stop(); onCode(String(v)); }
 
     var det = await nativeDetector();
+    var zxStarted = false;
+    function startZXing(){
+      if(zxStarted || !alive) return; zxStarted = true;
+      loadZXing().then(function(Z){
+        if(!alive) return;
+        var hints = new Map();
+        hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.QR_CODE]);
+        hints.set(Z.DecodeHintType.TRY_HARDER, true);
+        var reader = new Z.MultiFormatReader(); reader.setHints(hints);
+        var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+        (function loop(){
+          if(!alive) return;
+          try{
+            if(video.videoWidth){
+              var w = Math.min(video.videoWidth, 1280), h = Math.round(video.videoHeight * w / video.videoWidth);
+              canvas.width = w; canvas.height = h;
+              ctx.drawImage(video, 0, 0, w, h);
+              var bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)));
+              var res = reader.decode(bmp);
+              if(res){ found(res.getText()); return; }
+            }
+          }catch(e){ /* no code in this frame */ }
+          setTimeout(loop, 150);
+        })();
+      }).catch(function(){ if(!det && onFail) onFail(err('noscanner')); });
+    }
+
     if(det){
       (async function loop(){
         while(alive){
@@ -81,31 +114,11 @@
           await new Promise(function(r){ setTimeout(r, 120); });
         }
       })();
-      return stop;
+      // the phone's own scanner sometimes misses a code that ZXing reads: run both if nothing is read in 2.5 s
+      setTimeout(startZXing, 2500);
+    }else{
+      startZXing();
     }
-
-    // Fallback: ZXing on frames drawn to a canvas.
-    var Z;
-    try{ Z = await loadZXing(); }catch(e){ stop(); throw e; }
-    var hints = new Map();
-    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.QR_CODE]);
-    hints.set(Z.DecodeHintType.TRY_HARDER, true);
-    var reader = new Z.MultiFormatReader(); reader.setHints(hints);
-    var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
-    (function loop(){
-      if(!alive) return;
-      try{
-        if(video.videoWidth){
-          var w = Math.min(video.videoWidth, 960), h = Math.round(video.videoHeight * w / video.videoWidth);
-          canvas.width = w; canvas.height = h;
-          ctx.drawImage(video, 0, 0, w, h);
-          var bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)));
-          var res = reader.decode(bmp);
-          if(res){ found(res.getText()); return; }
-        }
-      }catch(e){ /* NotFoundException: no code in this frame */ }
-      setTimeout(loop, 130);
-    })();
     return stop;
   }
 
