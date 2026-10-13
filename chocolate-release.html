@@ -616,7 +616,13 @@ body{background:
     const added = [];
     const t = Date.now();
 
+    const displayExtras = [];
     for(const comp of display['Items']){
+      // Extras saved inside a display (vase, hand work, plate...) go to the Extras list, not the stock cart.
+      if(comp.extra){ displayExtras.push({ description: comp.name, amount: (Number(comp.qty) || 1) * (Number(comp.price) || 0) }); continue; }
+      const cu = String(comp.unit || 'piece').toLowerCase();
+      const relUnit = cu === 'piece' ? 'Piece' : 'Kg';
+      const relQty = cu === 'g' ? Number(comp.qty) / 1000 : Number(comp.qty);
       let batches = [];
       try{
         batches = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getBatchesForChocolate&branch=' + currentBranch + '&chocolateName=' + encodeURIComponent(comp.name) + '&_ts=' + t)).json());
@@ -625,21 +631,26 @@ body{background:
       // Prefer the batch expiring soonest, so displays naturally use
       // up older stock first (FIFO) instead of leaving it to expire.
       batches.sort((a, b) => new Date(a.ExpiryDate) - new Date(b.ExpiryDate));
-      const batch = batches.find(b => Number(b.AvailableStock) >= Number(comp.qty));
+      const batch = batches.find(b => Number(b.AvailableStock) >= stockEq(relQty, relUnit, b) - 1e-9);
 
       if(!batch){
-        shortages.push(comp.name + ' (need ' + comp.qty + ')');
+        shortages.push(comp.name + ' (need ' + comp.qty + ' ' + (comp.unit || 'piece') + ')');
         continue;
       }
 
-      const price = Number(batch.PricePerPiece) || 0;
+      let price, total;
+      if(relUnit === 'Piece'){ price = Number(batch.PricePerPiece) || 0; total = relQty * price; }
+      else { total = Number(comp.qty) * (Number(comp.price) || 0); price = relQty > 0 ? total / relQty : 0; }
       cart.push({
         chocolateName: comp.name, productCode: batch.ProductCode || '', batch: batch.Batch,
-        databaseId: batch.DatabaseID, qty: Number(comp.qty), unit: 'Piece',
-        price, total: Number(comp.qty) * price, expiryDate: batch.ExpiryDate || ''
+        databaseId: batch.DatabaseID, qty: relQty, unit: relUnit,
+        price, total, expiryDate: batch.ExpiryDate || '',
+        stockQty: stockEq(relQty, relUnit, batch), stockUnit: batch.Unit
       });
       added.push(comp.name);
     }
+    displayExtras.forEach(x => extras.push(x));
+    if(displayExtras.length) renderExtras();
 
     renderCart();
     playAddChime();
@@ -647,7 +658,7 @@ body{background:
     const resultEl = document.getElementById('displayLoadResult');
     if(shortages.length === 0){
       resultEl.style.color = 'var(--ok)';
-      resultEl.textContent = '✓ Added all ' + added.length + ' chocolate(s) from "' + display['Display Name'] + '" to the cart.';
+      resultEl.textContent = '✓ Added all ' + added.length + ' chocolate(s)' + (displayExtras.length ? ' + ' + displayExtras.length + ' extra(s)' : '') + ' from "' + display['Display Name'] + '" to the cart.';
     } else {
       resultEl.style.color = '#c0392b';
       resultEl.textContent = '⚠ Added ' + added.length + ' item(s). Not enough stock for: ' + shortages.join(', ') + '.';
@@ -701,6 +712,25 @@ body{background:
 
   document.getElementById('fQty').addEventListener('input', computeRelease);
   document.getElementById('fReleaseUnit').addEventListener('change', computeRelease);
+
+  // Stock is kept in the batch's own unit (usually Kg). When the release is
+  // typed in another unit (e.g. 16 Pieces of a Kg batch) convert it first,
+  // otherwise 16 pieces would be compared with 3.1 Kg.
+  function stockEq(qty, unit, batch){
+    const bu = String((batch && batch.Unit) || '').trim().toLowerCase(), ru = String(unit || '').trim().toLowerCase();
+    const wpp = Number(batch && batch.WeightPerPiece) || 0;
+    if(!bu || bu === ru) return qty;
+    if(bu === 'kg' && ru === 'piece' && wpp > 0) return Math.round(qty * wpp) / 1000;
+    if(bu === 'piece' && ru === 'kg' && wpp > 0) return Math.round(qty * 1000 / wpp * 1000) / 1000;
+    return qty;
+  }
+  // What the server must deduct/record: the batch's own unit, same money total.
+  function toServerItem(c){
+    if(c.stockUnit && c.stockQty != null && String(c.stockUnit).trim().toLowerCase() !== String(c.unit).trim().toLowerCase()){
+      return Object.assign({}, c, { qty: c.stockQty, unit: c.stockUnit, price: c.stockQty > 0 ? c.total / c.stockQty : c.price });
+    }
+    return c;
+  }
 
   function computeReleasePrice(qty, unit){
     if(!selectedBatch) return { price: 0, total: 0 };
@@ -807,8 +837,10 @@ body{background:
       alert('Pick a chocolate, a batch, and enter a valid quantity.');
       return;
     }
-    if(qty > selectedBatch.AvailableStock){
-      alert(`Insufficient stock. Available: ${selectedBatch.AvailableStock} ${selectedBatch.Unit}`);
+    const stockQty = stockEq(qty, unit, selectedBatch);
+    if(stockQty > Number(selectedBatch.AvailableStock) + 1e-9){
+      const conv = (String(unit).toLowerCase() !== String(selectedBatch.Unit).toLowerCase()) ? ` (${qty} ${unit} = ${stockQty} ${selectedBatch.Unit})` : '';
+      alert(`Insufficient stock. Available: ${selectedBatch.AvailableStock} ${selectedBatch.Unit}${conv}`);
       return;
     }
 
@@ -816,7 +848,8 @@ body{background:
 
     cart.push({
       chocolateName, productCode: selectedBatch.ProductCode || '', batch: selectedBatch.Batch,
-      databaseId: selectedBatch.DatabaseID, qty, unit, price, total, expiryDate: selectedBatch.ExpiryDate || ''
+      databaseId: selectedBatch.DatabaseID, qty, unit, price, total, expiryDate: selectedBatch.ExpiryDate || '',
+      stockQty, stockUnit: selectedBatch.Unit
     });
     playAddChime();
 
@@ -959,7 +992,7 @@ body{background:
       const params = new URLSearchParams({
         action: 'saveRelease',
         branch: currentBranch, toBranch, transactionType, customerDept, preparedBy, remarks, releaseDate,
-        items: JSON.stringify(cart), extras: JSON.stringify(extras)
+        items: JSON.stringify(cart.map(toServerItem)), extras: JSON.stringify(extras)
       });
       const res = await fetch(
         `${LB_CONFIG.CHOCOLATE_FAST_API}?${params.toString()}&token=${encodeURIComponent(window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || '')}`,
