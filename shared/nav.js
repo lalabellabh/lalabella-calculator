@@ -84,6 +84,9 @@
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
 
+  // System / admin pages live in ⚙️ Settings now (keeps the menu short). Still reachable from there.
+  const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html'];
+
   // Pages that show a "Back" link based on ?from=<page they came from>.
   const FROM_AWARE = ['notes.html', 'order-form.html', 'card-print.html', 'branch-config.html',
     'flower-guide.html', 'chocolate-guide.html'];
@@ -157,7 +160,7 @@
       list.sort((a, b) => (pos(a[0]) - pos(b[0])) || (orig.indexOf(a) - orig.indexOf(b)));
     }
     const hidden = p.hidden || [];
-    return list.filter(itemAllowed).map(i => ({ item: i, hidden: hidden.indexOf(i[0]) !== -1,
+    return list.filter(i => itemAllowed(i) && !(key === 'quick' && SYS.indexOf(i[0]) !== -1)).map(i => ({ item: i, hidden: hidden.indexOf(i[0]) !== -1,
       added: !defaults.some(d => d[0] === i[0]) }));
   }
 
@@ -370,7 +373,6 @@
     html += quick.map(i => link(i[0], i[1], i[2])).join('');
     if (/Android/i.test(navigator.userAgent || '')) html += '<a href="#" data-lb-widget>' + icon_('📱') + 'Link home-screen widget</a>';
     html += '<a href="#" data-lb-settings>' + icon_('⚙️') + 'Settings</a>';
-    html += '<a href="#" data-lb-dock>' + icon_('🧲') + 'Side dock: ' + (dockOff_() ? 'Off (tap to turn on)' : 'On (tap to turn off)') + '</a>';
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
     html += '<div data-lb-appver style="display:none"></div>';
 
@@ -378,8 +380,6 @@
     fillWeather(el);
     el.style.display = 'contents';   // links stay direct flex children of the drawer
     el.querySelector('[data-lb-logout]').addEventListener('click', e => { e.preventDefault(); logout(); });
-    const dk = el.querySelector('[data-lb-dock]');
-    if (dk) dk.addEventListener('click', e => { e.preventDefault(); try { if (dockOff_()) localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); });
     const wl = el.querySelector('[data-lb-widget]');
     if (wl) wl.addEventListener('click', e => { e.preventDefault(); if (window.LBWidget) window.LBWidget.link(); });
     el.querySelector('[data-lb-settings]').addEventListener('click', e => { e.preventDefault(); openSettings(); });
@@ -501,7 +501,8 @@
       '.lbset-head b{font-size:17px}',
       '.lbset-x{background:none;border:0;font-size:20px;color:var(--s-dim);cursor:pointer;padding:4px 8px}',
       '.lbset h4{margin:16px 0 8px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--s-acc)}',
-      '.lbset-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}',
+      '.lbset-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.lbset-seg2{grid-template-columns:1fr 1fr}',
+      '.lbset-link{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--s-line);color:var(--s-ink);text-decoration:none;font-size:13.5px;font-weight:600}.lbset-link:last-child{border-bottom:0}.lbset-link:hover{background:var(--s-acc-soft)}',
       '.lbset-seg button,.lbset-tabs button{border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);border-radius:10px;padding:10px 4px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}',
       '.lbset-seg button.on,.lbset-tabs button.on{background:var(--s-acc);border-color:var(--s-acc);color:#fff}',
       'html[data-lb-theme="dark"] .lbset-seg button.on,html[data-lb-theme="dark"] .lbset-tabs button.on{color:#1d1719}',
@@ -550,6 +551,18 @@
     else if (T.isNativeDark()) h += '<div class="lbset-note">This page already has its own dark design, so it stays as is. Other pages follow your choice.</div>';
     else if (mode === 'auto') h += '<div class="lbset-note">Auto follows your phone or computer setting.</div>';
 
+    // Side dock on/off
+    const dockOn = !dockOff_();
+    h += '<h4>Side Dock</h4><div class="lbset-seg lbset-seg2">' +
+      '<button type="button" data-dock="on" class="' + (dockOn ? 'on' : '') + '">🧲 On</button>' +
+      '<button type="button" data-dock="off" class="' + (dockOn ? '' : 'on') + '">Floating buttons</button></div>' +
+      '<div class="lbset-note">On = one slim glass handle on the screen edge that slides out Chat, Nova, the orders bell and your own shortcuts. Off = the separate floating buttons.</div>';
+
+    // System & admin pages
+    const sys = SYS.map(h2 => REG[h2] && REG[h2].item).filter(i => i && itemAllowed(i));
+    if (sys.length) h += '<h4>System &amp; Admin</h4><div class="lbset-list">' + sys.map(i =>
+      '<a class="lbset-link" href="' + esc(FROM_AWARE.indexOf(i[0]) !== -1 ? i[0] + '?from=' + encodeURIComponent(stem) : i[0]) + '"><span>' + i[1] + '</span><span class="lbset-lbl">' + esc(i[2]) + '</span><span aria-hidden="true">›</span></a>').join('') + '</div>';
+
     const modKey = moduleOf(page);
     const tabs = [];
     if (modKey && moduleAllowed(modKey)) tabs.push(modKey);
@@ -573,7 +586,7 @@
     }).join('') + '</div>';
 
     const inSection = list.map(x => x.item[0]);
-    const addable = Object.keys(REG).map(k => REG[k].item).filter(i => inSection.indexOf(i[0]) === -1 && itemAllowed(i));
+    const addable = Object.keys(REG).map(k => REG[k].item).filter(i => inSection.indexOf(i[0]) === -1 && itemAllowed(i) && SYS.indexOf(i[0]) === -1);
     if (addable.length) {
       h += '<div class="lbset-add"><select id="lbsetAdd"><option value="">＋ Add a link from another section…</option>' +
         addable.map(i => {
@@ -589,6 +602,7 @@
   function onSettingsClick(e) {
     const t = e.target.closest('button,input');
     if (!t) return;
+    if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
     if (t.dataset.mode) { if (window.LBTheme) window.LBTheme.set(t.dataset.mode); drawSettings(); return; }
     if (t.dataset.tab) { setTab = t.dataset.tab; drawSettings(); return; }
     if (t.dataset.show) {
