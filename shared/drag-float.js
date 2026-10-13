@@ -36,6 +36,10 @@
     }
     function layoutPanel() {
       if (!panel.classList.contains('show')) return;
+      if (t.btn === 'lbcb-btn' && window.innerWidth <= 600) {        // phones: the chat is full screen
+        ['left', 'top', 'right', 'bottom'].forEach(function (k) { panel.style.removeProperty(k); });
+        return;
+      }
       if (!btn.style.left) return; // never moved: leave the original CSS position alone
       var r = btn.getBoundingClientRect(), pr = panel.getBoundingClientRect();
       var pw = pr.width || 320, ph = pr.height || 400;
