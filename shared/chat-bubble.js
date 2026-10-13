@@ -18,7 +18,8 @@
   // To add/remove a page, just edit this list (file name without .html).
   const HIDE_ON = ['index', 'flower-tools', 'item-inventory'];
   const page = (location.pathname.split('/').pop() || 'index').replace(/\.html?$/i, '') || 'index';
-  if (HIDE_ON.indexOf(page.toLowerCase()) !== -1) return;
+  // (with the side dock on, the bubble is created everywhere — the dock presses it — so those pages get Chat in the dock too)
+  if (HIDE_ON.indexOf(page.toLowerCase()) !== -1 && !document.documentElement.classList.contains('lb-dock')) return;
 
   function loadScriptOnce(src){
     return new Promise(function(resolve){
