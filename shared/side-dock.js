@@ -4,7 +4,7 @@
    • A small see-through handle sits on the edge. Tap it, or swipe it inward, and a glass tray slides out.
    • Move the handle: drag it up/down; press-and-hold then drag to put it anywhere / on the other side.
    • Tray = the chat, Nova and the orders bell (when the page has them) + up to 6 of your own page shortcuts.
-   • ⚙ in the tray: edit shortcuts, switch side, or go back to the old floating buttons.
+   • ✎ in the tray: drag the icons up/down to rearrange them, ✕ removes a shortcut. Move the handle itself by press-and-hold + drag.
    The old buttons are still there (just hidden) — the dock simply presses them, so nothing else changes.
    Remembered per device in localStorage 'lbDock'. Loaded by shared/nav.js.
    ========================================================== */
@@ -40,6 +40,7 @@
   var st = load();
   st.side = st.side === 'left' ? 'left' : 'right';
   st.y = isFinite(st.y) ? st.y : Math.round(window.innerHeight * 0.42);
+  st.order = Array.isArray(st.order) ? st.order : [];
   st.items = Array.isArray(st.items) ? st.items.filter(function (h) { return PAGES.some(function (p) { return p[0] === h; }); }).slice(0, MAX_CUSTOM) : [];
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -68,10 +69,11 @@
     '#lbdock-tray.open{visibility:visible;opacity:1;transform:none;transition:transform .2s ease,opacity .18s;}' +
     '.lbd-it{position:relative;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.45);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(60,20,35,.15);transition:transform .12s,background .12s;flex:0 0 auto;}' +
     '.lbd-it:hover,.lbd-it:active{transform:scale(1.1);background:rgba(255,255,255,.7);}' +
+    '.lbd-w{position:relative;align-self:center;flex:0 0 auto;touch-action:none;}#lbdock-tray.edit .lbd-w{cursor:grab;}' +
     '.lbd-it.add{font-size:24px;color:#9e2f4a;border-style:dashed;}.lbd-it.tool{width:34px;height:34px;font-size:15px;align-self:center;background:rgba(255,255,255,.3);}' +
     '.lbd-b{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e03a3a;color:#fff;font:700 10px "Space Grotesk",Arial,sans-serif;display:none;align-items:center;justify-content:center;border:2px solid #fff;}.lbd-b.show{display:flex;}' +
     '.lbd-x{position:absolute;top:-5px;left:-5px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#c9506b;color:#fff;font-size:11px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;}' +
-    '#lbdock-tray.edit .lbd-x{display:flex;}#lbdock-tray.edit .lbd-it.cu{animation:lbdWig .5s ease-in-out infinite alternate;}' +
+    '#lbdock-tray.edit .lbd-x{display:flex;}#lbdock-tray.edit .lbd-w .lbd-it:not(.drag){animation:lbdWig .5s ease-in-out infinite alternate;}' +
     '@keyframes lbdWig{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}' +
     '.lbd-sep{height:1px;background:rgba(255,255,255,.55);margin:0 6px;flex:0 0 auto;}' +
     '#lbdock-pick{position:fixed;inset:0;z-index:100002;background:rgba(40,20,28,.35);display:none;align-items:center;justify-content:center;padding:14px;}#lbdock-pick.show{display:flex;}' +
@@ -112,44 +114,85 @@
 
   // ---------- tray content ----------
   function badgeOf(id) { var b = document.getElementById(id); return b && b.classList.contains('show') ? b.textContent : ''; }
+  function orderKeys(keys) {
+    var ord = Array.isArray(st.order) ? st.order : [];
+    var pos = function (k) { var i = ord.indexOf(k); return i === -1 ? 1e6 : i; };
+    return keys.map(function (k, i) { return [k, i]; }).sort(function (a, b) { return (pos(a[0]) - pos(b[0])) || (a[1] - b[1]); }).map(function (x) { return x[0]; });
+  }
   function build() {
     tray.innerHTML = '';
-    var any = false;
+    var made = {}, keys = [];
     BUILTIN.forEach(function (b) {
       var o = document.getElementById(b.id); if (!o) return;
       if (b.id === 'lbob-btn' && getComputedStyle(o).display === 'none') return;   // the bell only shows for people who can see orders
-      any = true;
       var el = document.createElement('button'); el.type = 'button'; el.className = 'lbd-it'; el.title = b.label; el.setAttribute('aria-label', b.label);
       el.innerHTML = b.icon + (b.badge ? '<span class="lbd-b" data-b="' + b.badge + '"></span>' : '');
-      el.addEventListener('click', function () { closeTray(); var t = document.getElementById(b.id); if (t) t.click(); });
-      tray.appendChild(el);
+      el.addEventListener('click', function () { if (tray.classList.contains('edit')) return; closeTray(); var t = document.getElementById(b.id); if (t) t.click(); });
+      var w = document.createElement('div'); w.className = 'lbd-w'; w.appendChild(el);
+      made['b:' + b.id] = w; keys.push('b:' + b.id);
     });
-    if (any && st.items.length) { var sp = document.createElement('div'); sp.className = 'lbd-sep'; tray.appendChild(sp); }
     st.items.forEach(function (h) {
       var pg = PAGES.filter(function (p) { return p[0] === h; })[0]; if (!pg) return;
-      var wrap = document.createElement('div'); wrap.style.position = 'relative'; wrap.style.alignSelf = 'center';
+      var w = document.createElement('div'); w.className = 'lbd-w';
       var a = document.createElement('a'); a.className = 'lbd-it cu'; a.href = pg[0]; a.title = pg[2]; a.setAttribute('aria-label', pg[2]); a.textContent = pg[1];
       a.addEventListener('click', function (e) { if (tray.classList.contains('edit')) e.preventDefault(); });
       var x = document.createElement('button'); x.type = 'button'; x.className = 'lbd-x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Remove ' + pg[2]);
-      x.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); st.items = st.items.filter(function (i) { return i !== h; }); save(); build(); });
-      wrap.appendChild(a); wrap.appendChild(x); tray.appendChild(wrap);
+      x.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); st.items = st.items.filter(function (i) { return i !== h; }); save(); build(); tray.classList.add('edit'); });
+      w.appendChild(a); w.appendChild(x);
+      made['p:' + h] = w; keys.push('p:' + h);
     });
+    orderKeys(keys).forEach(function (k) { made[k].setAttribute('data-k', k); tray.appendChild(made[k]); });
     if (st.items.length < MAX_CUSTOM) {
       var add = document.createElement('button'); add.type = 'button'; add.className = 'lbd-it add'; add.title = 'Add a shortcut'; add.setAttribute('aria-label', 'Add a shortcut'); add.textContent = '+';
       add.addEventListener('click', openPicker); tray.appendChild(add);
     }
     var sp2 = document.createElement('div'); sp2.className = 'lbd-sep'; tray.appendChild(sp2);
-    var tools = [
-      ['✎', 'Edit shortcuts', function () { tray.classList.toggle('edit'); }],
-      ['⇄', 'Switch side', function () { st.side = st.side === 'right' ? 'left' : 'right'; save(); applySide(); placeHandle(); }],
-      ['⟲', 'Use the old floating buttons', function () { if (confirm('Go back to the old floating buttons?')) { try { localStorage.setItem('lbDockOff', '1'); } catch (e) {} location.reload(); } }]
-    ];
-    tools.forEach(function (t) {
-      var el = document.createElement('button'); el.type = 'button'; el.className = 'lbd-it tool'; el.title = t[1]; el.setAttribute('aria-label', t[1]); el.textContent = t[0];
-      el.addEventListener('click', t[2]); tray.appendChild(el);
-    });
+    var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'lbd-it tool'; ed.id = 'lbd-edit';
+    function paintEd() { var on = tray.classList.contains('edit'); ed.textContent = on ? '✓' : '✎'; ed.title = on ? 'Done' : 'Rearrange / remove shortcuts'; ed.setAttribute('aria-label', ed.title); }
+    ed.addEventListener('click', function () { tray.classList.toggle('edit'); paintEd(); });
+    paintEd(); tray.appendChild(ed);
     syncBadges(); placeTray();
   }
+
+  // ---------- rearrange: in edit mode (✎) press an icon and drag it up/down ----------
+  (function () {
+    var d = null;
+    tray.addEventListener('pointerdown', function (e) {
+      if (!tray.classList.contains('edit')) return;
+      var w = e.target.closest('.lbd-w'); if (!w || e.target.closest('.lbd-x')) return;
+      var list = Array.prototype.slice.call(tray.querySelectorAll('.lbd-w'));
+      var tops = list.map(function (n) { return n.getBoundingClientRect().top; });
+      d = { w: w, list: list, tops: tops, i: list.indexOf(w), sy: e.clientY, step: list.length > 1 ? Math.abs(tops[1] - tops[0]) || 58 : 58, to: list.indexOf(w) };
+      try { tray.setPointerCapture(e.pointerId); } catch (x) {}
+      w.style.zIndex = '5'; w.style.transition = 'none';
+    });
+    tray.addEventListener('pointermove', function (e) {
+      if (!d) return;
+      var dy = e.clientY - d.sy;
+      d.w.style.transform = 'translateY(' + dy + 'px) scale(1.12)';
+      var to = Math.max(0, Math.min(d.list.length - 1, d.i + Math.round(dy / d.step)));
+      d.to = to;
+      d.list.forEach(function (n, k) {
+        if (n === d.w) return;
+        var sh = 0;
+        if (d.to > d.i && k > d.i && k <= d.to) sh = -d.step;
+        else if (d.to < d.i && k >= d.to && k < d.i) sh = d.step;
+        n.style.transition = 'transform .12s'; n.style.transform = sh ? 'translateY(' + sh + 'px)' : '';
+      });
+    });
+    function end() {
+      if (!d) return;
+      var x = d; d = null;
+      if (x.to !== x.i) {
+        var keys = x.list.map(function (n) { return n.getAttribute('data-k'); });
+        var k = keys.splice(x.i, 1)[0]; keys.splice(x.to, 0, k);
+        st.order = keys; save();
+      }
+      build(); tray.classList.add('edit'); var ed = document.getElementById('lbd-edit'); if (ed) ed.textContent = '✓';
+    }
+    tray.addEventListener('pointerup', end); tray.addEventListener('pointercancel', end);
+  })();
+
   function syncBadges() {
     var total = 0;
     Array.prototype.forEach.call(tray.querySelectorAll('.lbd-b'), function (el) {
