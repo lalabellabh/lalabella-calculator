@@ -17,6 +17,7 @@
   function attach(t) {
     var btn = document.getElementById(t.btn), panel = document.getElementById(t.panel);
     if (!btn || !panel || btn.__lbDrag) return false;
+    if (document.documentElement.classList.contains('lb-dock')) { btn.__lbDrag = true; return true; }   // the side dock handles these buttons now
     btn.__lbDrag = true;
     btn.style.touchAction = 'none';
     btn.style.userSelect = 'none';
