@@ -104,7 +104,7 @@ public class PushWatcher extends NotificationListenerService {
             nm.createNotificationChannel(ch);
         }
 
-        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + path));
+        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(LbWidgetProvider.site(this, path)));
         open.setPackage(getPackageName());
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);

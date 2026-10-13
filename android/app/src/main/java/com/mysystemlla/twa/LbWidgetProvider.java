@@ -243,8 +243,23 @@ public class LbWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    /** Website address with the app version attached (?lbapp=1.2.5) so the site always knows which app build opened it. */
+    static String site(Context ctx, String path) {
+        String u = SITE + path;
+        try {
+            String v = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
+            if (v == null || v.isEmpty()) return u;
+            int h = u.indexOf('#');
+            String frag = h >= 0 ? u.substring(h) : "";
+            String base = h >= 0 ? u.substring(0, h) : u;
+            return base + (base.indexOf('?') >= 0 ? "&" : "?") + "lbapp=" + v + frag;
+        } catch (Exception e) {
+            return u;
+        }
+    }
+
     static PendingIntent openApp(Context ctx, int req, String page) {
-        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(SITE + page));
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(site(ctx, page)));
         i.setPackage(ctx.getPackageName());
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(ctx, req, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
