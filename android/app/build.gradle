@@ -3,7 +3,7 @@ plugins {
 }
 
 // The version people see (menu + update notice). Bump this and versionCode together for every release.
-def appVer = '1.2.4'
+def appVer = '1.2.5'
 
 android {
     namespace 'com.mysystemlla.twa'
@@ -13,7 +13,7 @@ android {
         applicationId 'com.mysystemlla.twa'
         minSdk 21
         targetSdk 34
-        versionCode 13
+        versionCode 14
         versionName appVer
         manifestPlaceholders = [appVer: appVer]
     }

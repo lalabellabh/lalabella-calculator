@@ -86,7 +86,7 @@ public class LbAttendance {
     }
 
     private static PendingIntent showPi(Context ctx) {
-        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(LbWidgetProvider.SITE + "attendance.html"));
+        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(LbWidgetProvider.site(ctx, "attendance.html")));
         open.setPackage(ctx.getPackageName());
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(ctx, 900, open, PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
