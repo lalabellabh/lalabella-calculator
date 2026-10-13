@@ -1164,7 +1164,7 @@ body{background:
     if(typeof LBScan === 'undefined'){ alert('Scanner file missing - upload shared/scanner.js.'); return; }
     modal.classList.add('show');
     try{
-      scanStop = await LBScan.start(video, function(raw){ scanStop = null; handleScanResult(raw); });
+      scanStop = await LBScan.start(video, function(raw){ scanStop = null; handleScanResult(raw); }, function(e){ alert(LBScan.message(e)); stopScanner(); });
     }catch(e){
       alert(LBScan.message(e));
       stopScanner();
