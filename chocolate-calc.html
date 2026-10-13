@@ -620,7 +620,7 @@
   /* Print-only receipt, hidden on screen */
   #receipt{display:none;}
   #receipt .r-bc{ text-align:center; margin:-3px 0 6px; }
-  #receipt .r-bc svg{ max-width:100%; height:26px; }
+  #receipt .r-bc svg{ max-width:100%; }
   #receipt .r-ex{ text-decoration:underline; text-underline-offset:2px; }
   #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
 
@@ -694,7 +694,7 @@
       display:block;
     }
     #receipt .r-bc{ text-align:center; margin:-3px 0 6px; }
-    #receipt .r-bc svg{ max-width:100%; height:26px; }
+    #receipt .r-bc svg{ max-width:100%; }
     #receipt .r-ex{ text-decoration:underline !important; text-underline-offset:2px; }
     #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
     #receipt .r-grand{
@@ -1734,6 +1734,18 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     finally{ clearTimeout(timer); }
     return '';
   }
+
+  // Barcode that prints cleanly: whole-pixel bar widths as wide as the space allows,
+  // plus a proper quiet zone (blank margin) on both sides.
+  function fitBarcode(target, code, maxPx, height){
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    code = String(code);
+    const mods = 11 * (code.length + 2) + 13;          // Code 128 modules (upper bound)
+    let k = Math.floor(maxPx / (mods + 20));
+    if(k < 2) k = Math.max(1, Math.floor(maxPx / (mods + 20) * 2) / 2);
+    k = Math.min(k, 3);
+    JsBarcode(el, code, { format:'CODE128', width:k, margin:Math.round(10 * k), height:height, displayValue:false });
+  }
   async function addListBarcode(){
     const box = document.getElementById('rListBc');
     box.style.display = 'none';
@@ -1741,7 +1753,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     const code = await saveListCode();
     if(!code) return;
     try{
-      JsBarcode(document.getElementById('rListSvg'), code, { format:'CODE128', width:1.6, height:34, displayValue:false, margin:0 });
+      fitBarcode(document.getElementById('rListSvg'), code, 268, 42);
       document.getElementById('rListCode').textContent = code;
       box.style.display = 'block';
     }catch(e){}
