@@ -1194,6 +1194,14 @@ body{background:
     // Arrangement barcodes (from the Chocolate Arrangement Catalog)
     // use an "ARR-" prefix — route those to the recipe-based bulk-add
     // flow instead of the normal single-chocolate lookup below.
+    if(/^DISP-\d+$/i.test(trimmed)){
+      const di = savedDisplays.findIndex(d => String(d['Display Code']).toLowerCase() === trimmed.toLowerCase());
+      if(di < 0){ alert('No saved display/list found for ' + trimmed); return; }
+      document.getElementById('fDisplayPicker').value = String(di);
+      document.getElementById('loadDisplayBtn').disabled = false;
+      document.getElementById('loadDisplayBtn').click();
+      return;
+    }
     if(/^ARR-/i.test(trimmed)){
       addArrangementToCart(trimmed);
       return;
