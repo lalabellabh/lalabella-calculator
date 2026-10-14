@@ -26,6 +26,7 @@ window.LB_CONFIG = Object.freeze({
   // pilot slice #1. Every other Chocolate action still uses CHOCOLATE_API
   // above, unchanged.
   CHOCOLATE_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chocolate-fast',
+  CHOCOLATE_BB_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chocolate-bb',   // best-before date of saved lists/displays
   FLOWER_API:       'https://script.google.com/macros/s/AKfycbzC-h3iV0AJU0A3mKhj_0V5-yOeLoJYlupFlPnKHelbyhcSiqUbK6LTjgo4qZF03Bs/exec',
   // Fast path (Supabase Edge Function) for Flower Dashboard only — pilot
   // slice #1. Every other Flower action still uses FLOWER_API above.
