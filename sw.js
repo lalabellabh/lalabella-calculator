@@ -1,7 +1,7 @@
 /* Lalabella service worker — network-first, so uploads show up right away (no stale pages).
    Cache is only a fallback when offline. Only same-origin GET requests are touched;
    Supabase / API calls always go straight to the network. */
-const CACHE = 'lalabella-v2';
+const CACHE = 'lalabella-v3';   // v3: rebuilt notification Reply
 
 // ---- tiny key/value store for the quick-reply credentials (written by shared/push.js) ----
 function idb() {
@@ -51,12 +51,23 @@ self.addEventListener('push', (e) => {
     badge: '/icons/icon-192.png',
     tag: d.tag || undefined,
     renotify: !!d.tag,
-    data: { url: d.url || 'index.html', reply: d.reply || null }
+    data: { url: d.url || 'index.html', reply: replyTarget(d) }
   };
-  // chat messages get a "Reply" box (type:'text' works on Android Chrome; elsewhere it is just a button that opens the chat)
-  if (d.reply) opts.actions = [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Type a reply…' }];
+  // chat notifications always get a "Reply" box (type:'text' = typed answer on Android Chrome; elsewhere it just opens the chat)
+  if (opts.data.reply) opts.actions = [{ action: 'reply', type: 'text', title: 'Reply', placeholder: 'Type a reply…' }];
   e.waitUntil(self.registration.showNotification(title, opts));
 });
+
+// who a reply goes to: the server's `reply`, or worked out from the chat link (?dm= / ?g= / ?team=1)
+function replyTarget(d) {
+  if (d && d.reply && typeof d.reply === 'object') return d.reply;
+  const u = String((d && d.url) || '');
+  let m;
+  if ((m = u.match(/[?&]dm=(\d+)/))) return { peerId: Number(m[1]) };
+  if ((m = u.match(/[?&]g=(\d+)/))) return { groupId: Number(m[1]) };
+  if (/[?&]team=1/.test(u)) return { team: true };
+  return null;
+}
 
 async function quickReply(n, text) {
   const target = n.data && n.data.reply;
@@ -82,7 +93,8 @@ self.addEventListener('notificationclick', (e) => {
         return self.registration.showNotification('Sent ✓', { body: String(e.reply).slice(0, 100), icon: '/icons/icon-192.png', tag: n.tag || 'lb-reply', renotify: false, silent: true, data: n.data })
           .then(() => setTimeout(() => self.registration.getNotifications({ tag: n.tag || 'lb-reply' }).then((l) => l.forEach((x) => x.close())), 4000));
       }
-      return openTarget(n);
+      // could not send (login expired / offline): say so instead of silently losing the text, tap opens the chat
+      return self.registration.showNotification('Reply not sent ⚠', { body: 'Tap to open the chat: ' + String(e.reply).slice(0, 80), icon: '/icons/icon-192.png', tag: n.tag || 'lb-reply', renotify: true, data: n.data });
     }));
     return;
   }
