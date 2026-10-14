@@ -99,12 +99,25 @@ public class PushWatcher extends NotificationListenerService {
         else if (title.equals("Lalabella")) return; // test notification: leave Chrome's own
         else path = "chatbox.html";
 
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification out = build(this, key, path, chat, title, text, "", peer, grp, team, false);
-        if (chat) shortcutFor(this, key, title, peer, grp, team);   // lets Android show it as a chat bubble
-        nm.notify(key, 1, out);
-        // our pop-up replaces Chrome's copy so there is only one
-        try { cancelNotification(sbn.getKey()); } catch (Exception ignored) { }
+        final Context ctx = getApplicationContext();
+        final String fKey = key, fPath = path, fTitle = title, fText = text, fSbnKey = sbn.getKey();
+        final boolean fChat = chat, fTeam = team;
+        final int fPeer = peer, fGrp = grp;
+        // the sender's picture comes from the network, so build and show our copy on a background thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (fChat) LbAvatar.fetch(ctx, fKey, fPeer, fGrp, fTeam, senderName(fTitle));
+                    NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+                    Notification out = build(ctx, fKey, fPath, fChat, fTitle, fText, "", fPeer, fGrp, fTeam, false);
+                    if (fChat) shortcutFor(ctx, fKey, fTitle, fPeer, fGrp, fTeam);   // lets Android show it as a chat bubble
+                    nm.notify(fKey, 1, out);
+                    // our pop-up replaces Chrome's copy so there is only one
+                    try { cancelNotification(fSbnKey); } catch (Exception ignored) { }
+                } catch (Exception ignored) { /* Chrome's own notification stays if anything goes wrong */ }
+            }
+        }).start();
     }
 
     static String mode(Context ctx) {
@@ -135,14 +148,16 @@ public class PushWatcher extends NotificationListenerService {
         try {
             android.content.pm.ShortcutManager sm = (android.content.pm.ShortcutManager) ctx.getSystemService(Context.SHORTCUT_SERVICE);
             if (sm == null) return;
-            android.app.Person p = new android.app.Person.Builder().setName(senderName(title)).setKey(key).setImportant(true).build();
+            android.graphics.Bitmap av = LbAvatar.cached(ctx, key, senderName(title));
+            android.app.Person p = new android.app.Person.Builder().setName(senderName(title)).setKey(key).setImportant(true)
+                    .setIcon(android.graphics.drawable.Icon.createWithBitmap(av)).build();
             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(LbWidgetProvider.site(ctx, chatPath(peer, grp, team))));
             i.setPackage(ctx.getPackageName());
             android.content.pm.ShortcutInfo si = new android.content.pm.ShortcutInfo.Builder(ctx, key)
                     .setShortLabel(senderName(title).length() == 0 ? "Chat" : senderName(title))
                     .setLongLived(true)
                     .setPerson(p)
-                    .setIcon(android.graphics.drawable.Icon.createWithResource(ctx, R.drawable.lb_bubble_3d))
+                    .setIcon(android.graphics.drawable.Icon.createWithBitmap(av))
                     .setIntent(i)
                     .build();
             sm.pushDynamicShortcut(si);
@@ -192,8 +207,9 @@ public class PushWatcher extends NotificationListenerService {
                 .setCategory(chat ? Notification.CATEGORY_MESSAGE : Notification.CATEGORY_EVENT)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
         if (alertOnce) b.setOnlyAlertOnce(true);
+        android.graphics.Bitmap av = chat ? LbAvatar.cached(ctx, key, senderName(title)) : null;
         try {
-            b.setLargeIcon(BitmapFactory.decodeResource(ctx.getResources(), chat ? R.drawable.lb_bubble_3d : R.drawable.lb_bell_3d));
+            b.setLargeIcon(av != null ? av : BitmapFactory.decodeResource(ctx.getResources(), chat ? R.drawable.lb_bubble_3d : R.drawable.lb_bell_3d));
         } catch (Exception ignored) { }
         if (Build.VERSION.SDK_INT < 26) {
             b.setPriority(quiet ? Notification.PRIORITY_DEFAULT : Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
@@ -205,7 +221,8 @@ public class PushWatcher extends NotificationListenerService {
         if (bubble) {
             try {
                 android.app.Person me = new android.app.Person.Builder().setName("You").build();
-                android.app.Person them = new android.app.Person.Builder().setName(senderName(title).length() == 0 ? "Chat" : senderName(title)).setKey(key).setImportant(true).build();
+                android.app.Person them = new android.app.Person.Builder().setName(senderName(title).length() == 0 ? "Chat" : senderName(title)).setKey(key).setImportant(true)
+                        .setIcon(android.graphics.drawable.Icon.createWithBitmap(av)).build();
                 Notification.MessagingStyle ms = new Notification.MessagingStyle(me);
                 if (team) ms.setConversationTitle(title.contains(" · ") ? title.substring(title.indexOf(" · ") + 3) : title);
                 if (text.length() > 0) ms.addMessage(text, System.currentTimeMillis() - 1000, them);
@@ -216,7 +233,7 @@ public class PushWatcher extends NotificationListenerService {
                 bi.setAction("lb.bubble." + key);
                 PendingIntent bpi = PendingIntent.getActivity(ctx, key.hashCode() + 7, bi, PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0));
                 Notification.BubbleMetadata bm = new Notification.BubbleMetadata.Builder(bpi,
-                        android.graphics.drawable.Icon.createWithResource(ctx, R.drawable.lb_bubble_3d))
+                        android.graphics.drawable.Icon.createWithBitmap(av))
                         .setDesiredHeight(520)
                         .setAutoExpandBubble(false)
                         .setSuppressNotification(false)
