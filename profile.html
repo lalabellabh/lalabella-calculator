@@ -180,6 +180,16 @@ body{padding-bottom:0}
 .px-sheet textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;color:var(--ink);background:#fff}
 .px-counter{font-size:10.5px;color:var(--muted);text-align:right;margin:4px 0 12px}
 .px-actions{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.px-adj{position:relative;width:100%;aspect-ratio:9/12;max-height:50vh;margin:0 auto 10px;border-radius:12px;overflow:hidden;background:#111;touch-action:none;cursor:grab}
+.px-adj img{position:absolute;top:0;left:0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.px-adj.dragging{cursor:grabbing}
+.px-pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,38px);gap:6px;justify-content:center;margin:2px 0 8px}
+.px-pad button,.crop-pad button{border:0;border-radius:10px;background:var(--teal-soft);color:var(--teal-dark);font-size:18px;font-weight:700;cursor:pointer;line-height:1}
+.px-pad .u{grid-column:2;grid-row:1}.px-pad .l{grid-column:1;grid-row:2}.px-pad .d{grid-column:2;grid-row:2}.px-pad .r{grid-column:3;grid-row:2}
+.crop-pad{display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,34px);gap:6px;justify-content:center;margin-top:10px}
+.crop-pad button{background:#edf4f4;color:#2f6570}
+.crop-pad .u{grid-column:2;grid-row:1}.crop-pad .l{grid-column:1;grid-row:2}.crop-pad .d{grid-column:2;grid-row:2}.crop-pad .r{grid-column:3;grid-row:2}
+.px-zoom{display:flex;align-items:center;gap:10px;margin-bottom:8px}.px-zoom input{flex:1;accent-color:var(--teal)}
 .px-btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--teal);color:#fff}
 .px-btn.ghost{background:var(--teal-soft);color:var(--teal-dark)}
 .px-btn.danger{background:#fbeaea;color:#a12b20}
@@ -236,7 +246,7 @@ body{padding-bottom:0}
 <div class="profile-layout"><aside class="profile-sidebar"><div class="photo-hero"><div class="avatar-wrap"><div class="avatar-img" id="avatarImg">—</div><div class="avatar-edit-btn" id="avatarEditBtn">📷</div><input type="file" id="photoInput" accept="image/*"></div><div class="hero-name" id="heroName">—</div><div class="hero-role" id="heroRole">—</div><div class="hero-branch-tag" id="heroBranch">—</div><div class="meta-list"><div><span>Username</span><b id="metaUsername">—</b></div><div><span>Position</span><b id="metaPosition">—</b></div><div><span>Role</span><b id="metaRole">—</b></div><div><span>Branch</span><b id="metaBranch">—</b></div><div><span>Member since</span><b id="metaSince">—</b></div></div></div><button class="logout-btn" id="logoutBtn">🚪 Log Out</button></aside>
 <main class="profile-main">
 <div class="load-error-banner" id="loadErrorBanner"></div>
-<div class="px-toolbar"><div class="desktop-label">Today at Lalabella</div><button type="button" class="acct-btn" id="acctBtn" title="Account settings"><span class="gear">⚙️</span>Account settings</button></div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-hint">Drag the photo to reposition it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
+<div class="px-toolbar"><div class="desktop-label">Today at Lalabella</div><button type="button" class="acct-btn" id="acctBtn" title="Account settings"><span class="gear">⚙️</span>Account settings</button></div><div class="crop-backdrop" id="cropBackdrop"><div class="crop-modal"><div class="crop-title">Adjust your photo</div><div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-circle-mask"></div></div><div class="crop-zoom-row"><span class="crop-zoom-label">🔍</span><input type="range" id="cropZoom" min="100" max="300" value="100"></div><div class="crop-pad" id="cropPad"><button type="button" class="u" data-d="u" aria-label="Up">▲</button><button type="button" class="l" data-d="l" aria-label="Left">◀</button><button type="button" class="d" data-d="d" aria-label="Down">▼</button><button type="button" class="r" data-d="r" aria-label="Right">▶</button></div><div class="crop-hint">Drag the photo or use the arrows to adjust it</div><div class="crop-actions"><button class="crop-cancel-btn" id="cropCancelBtn">Cancel</button><button class="crop-save-btn" id="cropSaveBtn">Use This Photo</button></div></div></div>
 <section class="section-card px-status-card"><div class="card-head"><h3 class="section-title">💬 Team Status</h3><p class="card-sub">Shared with all staff · disappears after 24 hours · 🟢 = active now</p></div><div class="px-strip" id="pxStrip"><div class="px-loading">Loading statuses…</div></div></section>
 <section class="section-card px-gallery-card"><div class="card-head"><h3 class="section-title">🖼️ My Gallery</h3><button type="button" class="px-add-btn" id="pxGalAdd">＋ Add picture</button></div><div class="px-gallery" id="pxGallery"></div></section>
 <div class="acct-modal" id="acctModal" aria-hidden="true"><div class="acct-sheet" role="dialog" aria-modal="true" aria-label="Account settings"><div class="acct-head"><b>⚙️ Account Settings</b><button type="button" class="acct-close" id="acctClose" aria-label="Close">✕</button></div>
@@ -339,6 +349,7 @@ cropStage.addEventListener('pointerdown',e=>{dragging=true;cropStage.classList.a
 cropStage.addEventListener('pointermove',e=>{if(!dragging)return;cropState.offsetX=startOffsetX+(e.clientX-dragStartX);cropState.offsetY=startOffsetY+(e.clientY-dragStartY);clampOffset();applyCropTransform()});
 cropStage.addEventListener('pointerup',()=>{dragging=false;cropStage.classList.remove('dragging')});
 cropStage.addEventListener('pointercancel',()=>{dragging=false;cropStage.classList.remove('dragging')});
+document.getElementById('cropPad').addEventListener('click',e=>{const d=e.target.closest('button');if(!d)return;const k=d.dataset.d,st=12;if(k==='l')cropState.offsetX+=st;if(k==='r')cropState.offsetX-=st;if(k==='u')cropState.offsetY+=st;if(k==='d')cropState.offsetY-=st;clampOffset();applyCropTransform()});
 document.getElementById('cropCancelBtn').addEventListener('click',()=>cropBackdrop.classList.remove('show'));
 
 document.getElementById('cropSaveBtn').addEventListener('click',async()=>{
@@ -510,7 +521,7 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
     });
   }
   function toJpeg(img, maxDim, maxChars, square){
-    let sw = img.naturalWidth || img.videoWidth, sh = img.naturalHeight || img.videoHeight, sx = 0, sy = 0;
+    let sw = img.naturalWidth || img.videoWidth || img.width, sh = img.naturalHeight || img.videoHeight || img.height, sx = 0, sy = 0;
     if(square){ const s = Math.min(sw, sh); sx = (sw - s)/2; sy = (sh - s)/2; sw = sh = s; }
     let scale = Math.min(1, maxDim / Math.max(sw, sh));
     for(let tries = 0; tries < 8; tries++){
@@ -721,6 +732,59 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
     });
   }
 
+  // Lets the person drag / zoom / nudge a picture inside a 3:4 frame; resolves a cropped canvas (or null if cancelled).
+  function adjustImage(img, imgSrc){
+    return new Promise(resolve=>{
+      const m = modal(
+        '<h4>Adjust picture <button type="button" data-close aria-label="Close">✕</button></h4>' +
+        '<div class="px-adj" id="adjStage"><img id="adjImg" alt=""></div>' +
+        '<div class="px-pad" id="adjPad"><button type="button" class="u" data-d="u" aria-label="Up">▲</button><button type="button" class="l" data-d="l" aria-label="Left">◀</button><button type="button" class="d" data-d="d" aria-label="Down">▼</button><button type="button" class="r" data-d="r" aria-label="Right">▶</button></div>' +
+        '<div class="px-zoom"><span>🔍</span><input type="range" id="adjZoom" min="100" max="300" value="100"></div>' +
+        '<div class="px-counter" style="text-align:center">Drag the picture or use the arrows to adjust it</div>' +
+        '<div class="px-actions"><button type="button" class="px-btn ghost" data-close>Cancel</button><button type="button" class="px-btn" id="adjOk">Use picture</button></div>'
+      );
+      let done = false;
+      const finish = v=>{ if(done) return; done = true; resolve(v); };
+      new MutationObserver((_,o)=>{ if(!m.el.isConnected){ o.disconnect(); finish(null); } }).observe(document.body,{childList:true});
+      const stage = m.el.querySelector('#adjStage'), im = m.el.querySelector('#adjImg'), zoom = m.el.querySelector('#adjZoom');
+      const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+      let W = 0, H = 0, base = 1, sc = 1, ox = 0, oy = 0;
+      function clamp(){ const s = base*sc, w = nw*s, h = nh*s; ox = Math.min(0, Math.max(W - w, ox)); oy = Math.min(0, Math.max(H - h, oy)); }
+      function apply(){ clamp(); const s = base*sc; im.style.width = nw*s + 'px'; im.style.height = nh*s + 'px'; im.style.transform = 'translate(' + ox + 'px,' + oy + 'px)'; }
+      function layout(keep){
+        const r = stage.getBoundingClientRect(); if(!r.width) return;
+        const cx = keep ? (W/2 - ox)/(base*sc) : nw/2, cy = keep ? (H/2 - oy)/(base*sc) : nh/2;
+        W = r.width; H = r.height; base = Math.max(W/nw, H/nh);
+        ox = W/2 - cx*base*sc; oy = H/2 - cy*base*sc; apply();
+      }
+      im.onload = ()=>layout(false);
+      im.src = imgSrc;
+      requestAnimationFrame(()=>layout(false));
+      zoom.addEventListener('input', ()=>{
+        const cx = (W/2 - ox)/(base*sc), cy = (H/2 - oy)/(base*sc);
+        sc = Number(zoom.value)/100; ox = W/2 - cx*base*sc; oy = H/2 - cy*base*sc; apply();
+      });
+      let drag = null;
+      stage.addEventListener('pointerdown', e=>{ drag = { x:e.clientX, y:e.clientY, ox, oy }; stage.classList.add('dragging'); stage.setPointerCapture(e.pointerId); });
+      stage.addEventListener('pointermove', e=>{ if(!drag) return; ox = drag.ox + e.clientX - drag.x; oy = drag.oy + e.clientY - drag.y; apply(); });
+      const up = ()=>{ drag = null; stage.classList.remove('dragging'); };
+      stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+      m.el.querySelector('#adjPad').addEventListener('click', e=>{
+        const b = e.target.closest('button'); if(!b) return;
+        const k = b.dataset.d, st = Math.max(8, W*0.04);
+        if(k === 'l') ox += st; if(k === 'r') ox -= st; if(k === 'u') oy += st; if(k === 'd') oy -= st;
+        apply();
+      });
+      m.el.querySelector('#adjOk').addEventListener('click', ()=>{
+        const s = base*sc, OUT_W = 1080, OUT_H = Math.round(OUT_W * H / W), k = OUT_W / W;
+        const c = document.createElement('canvas'); c.width = OUT_W; c.height = OUT_H;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,OUT_W,OUT_H);
+        ctx.drawImage(img, ox*k, oy*k, nw*s*k, nh*s*k);
+        finish(c); m.close();
+      });
+    });
+  }
+
   // ---------- composer ----------
   const BG_COLORS = ['#2f6570','#c9506b','#9e2f4a','#b07d2b','#5f8f63','#3a3530'];
   function openComposer(){
@@ -775,8 +839,11 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
           st.vid = f; st.vidUrl = info.url; st.vidThumb = info.thumb;
         }else{
           const img = await loadImage(f);
-          const dataUrl = toJpeg(img, 1080, 200000);
-          clearMedia(); st.img = img; st.dataUrl = dataUrl;
+          const full = toJpeg(img, 1600, 600000);
+          const cropped = await adjustImage(img, full);
+          if(!cropped){ draw(); return; }
+          const dataUrl = toJpeg(cropped, 1080, 200000);
+          clearMedia(); st.img = cropped; st.dataUrl = dataUrl;
         }
       }catch(err){ $('pxcMsg').textContent = err.message; }
       draw();
