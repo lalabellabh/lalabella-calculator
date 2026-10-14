@@ -17,7 +17,7 @@
 
   function token() { return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
 
-  window.lbChatApi = async function (action, params) {
+  async function rawChatApi(action, params) {
     const res = await fetch(LB_CONFIG.CHAT_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY },
@@ -34,6 +34,38 @@
       }
     } catch (e) {}
     return data;
+  }
+
+  // Double-send guard: the same text/GIF/sticker handed to "send" twice within a blink (two handlers firing for
+  // one tap, or one landing in Team while the other is in the private chat) goes out ONCE - the more specific
+  // target (a person or a group) wins over the Team chat.
+  const pend = {};
+  function coalescable(p) {
+    const k = String((p && p.kind) || 'text');
+    return k === 'text' || k === 'gif' || k === 'sticker';
+  }
+  function sendCoalesced(params) {
+    const k = String(params.kind || 'text');
+    const sig = k + '|' + (k === 'text' ? String(params.text || '').trim() : String(params.url || ''));
+    return new Promise(function (resolve, reject) {
+      const e = pend[sig] || (pend[sig] = { list: [], timer: 0 });
+      e.list.push({ params: params, resolve: resolve, reject: reject });
+      if (e.timer) return;
+      e.timer = setTimeout(async function () {
+        delete pend[sig];
+        const best = e.list.find(function (x) { return x.params.peerId || x.params.groupId; }) || e.list[0];
+        let r, err = null;
+        try { r = await rawChatApi('send', best.params); } catch (x) { err = x; }
+        e.list.forEach(function (x) {
+          if (x === best) { if (err) x.reject(err); else x.resolve(r); }
+          else x.resolve(err ? { success: false, error: 'Could not send. Try again.' } : Object.assign({}, r, { duplicate: true }));
+        });
+      }, 120);
+    });
+  }
+  window.lbChatApi = function (action, params) {
+    if (action === 'send' && coalescable(params)) return sendCoalesced(params || {});
+    return rawChatApi(action, params);
   };
 
   function setStatus(v) { connected = v; statusFns.forEach(f => { try { f(v); } catch (e) {} }); }
