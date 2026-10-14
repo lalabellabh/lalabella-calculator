@@ -188,6 +188,20 @@
     .label-cell .l-name{ font-weight:bold; font-size:8pt; }
     .label-cell .l-price{ font-size:7pt; }
     .label-cell .l-code{ font-size:6pt; }
+    body.lp-on{ background:#fff !important; }
+    body.lp-on > *:not(#lookupPrintArea){ display:none !important; }
+    #lookupPrintArea.printing, #lookupPrintArea.printing *{ visibility:visible; }
+    #lookupPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:80mm; padding:4mm; box-sizing:border-box; color:#000; background:#fff; font-family:Arial,Helvetica,sans-serif; }
+    #lookupPrintArea .lp-h{ text-align:center; font-weight:700; font-size:13pt; letter-spacing:.08em; }
+    #lookupPrintArea .lp-s{ text-align:center; font-size:8pt; margin:1mm 0 2mm; }
+    #lookupPrintArea .lp-m{ font-size:8.5pt; border-top:1px dashed #000; padding-top:2mm; margin-top:1mm; }
+    #lookupPrintArea .lp-r{ display:flex; justify-content:space-between; gap:3mm; font-size:9pt; padding:1mm 0; border-bottom:1px dotted #999; }
+    #lookupPrintArea .lp-r span:last-child{ white-space:nowrap; }
+    #lookupPrintArea .lp-t{ display:flex; justify-content:space-between; font-weight:700; font-size:11pt; border-top:1.5px solid #000; margin-top:2mm; padding-top:2mm; }
+    #lookupPrintArea .lp-sum{ text-align:right; font-size:8.5pt; margin-top:1mm; }
+    #lookupPrintArea .lp-bc{ text-align:center; margin-top:3mm; }
+    #lookupPrintArea .lp-bc svg{ max-width:100%; height:auto; }
+    #lookupPrintArea .lp-code{ text-align:center; font-size:8.5pt; letter-spacing:.05em; }
   }
 
 /* ===== DESKTOP: design on the left, forms on the right =====
@@ -589,6 +603,7 @@
   <button class="close-scan" id="closeScanBtn">Cancel</button>
 </div>
 
+<div id="lookupPrintArea"></div>
 <div id="labelPrintArea">
   <div class="label-grid" id="labelGrid"></div>
 </div>
@@ -967,6 +982,11 @@
       return `<div class="lookup-row"><span>${it.name} (${qty} ${u})</span><span>${fmtBD(line)}</span></div>`;
     }).join('');
     const sum = (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs';
+    lastLookup = { code: code, meta: [d['Display Name'] || '', fmtDate(d['Date']), d['Created By'] ? 'by ' + d['Created By'] : ''].filter(Boolean).join(' · '),
+      lines: (d['Items'] || []).map(it=>{ const qty = Number(it.qty) || 0, price = Number(it.price) || 0;
+        const u = it.unit === 'g' ? 'g' : (it.unit === 'kg' ? 'kg' : 'pcs');
+        return [it.extra ? it.name + ' · Extra' : it.name + ' (' + qty + ' ' + u + ')', fmtBD(qty * price)]; }),
+      total: fmtBD(total), sum: sum };
     el.innerHTML = `
       <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
         ${code} · ${d['Display Name'] || ''} · ${fmtDate(d['Date'])}${d['Created By'] ? ' · by ' + d['Created By'] : ''}
@@ -974,6 +994,7 @@
       ${rows}
       <div class="lookup-total"><span>Total</span><span>${fmtBD(total)}</span></div>
       <div style="font-size:12px; color:var(--ink-dim); text-align:right; margin-top:4px;">${sum}</div>
+      ${PRINT_BTN}
     `;
   }
 
@@ -1000,15 +1021,48 @@
     const branch = items[0] ? items[0]['Branch'] : '';
     const date = items[0] ? items[0]['Realese Date'] : '';
     const type = items[0] ? items[0]['Transaction Type'] : '';
-
+    lastLookup = { code: releaseNo, meta: [branch || '', fmtDate(date), type || ''].filter(Boolean).join(' · '),
+      lines: items.map(it=>[it['Chocolate Name'] + ' (' + it['Qty Release'] + ' ' + it['Unit'] + ')' + (it['ExpiryDate'] ? ' · Exp: ' + fmtDate(it['ExpiryDate']) : ''), fmtBD(it['Total'])])
+        .concat(extras.map(ex=>[ex['Description'], fmtBD(ex['Amount'])])),
+      total: fmtBD(total), sum: '' };
     el.innerHTML = `
       <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
         ${releaseNo} · ${branch || '—'} · ${fmtDate(date)} · ${type || '—'}
       </div>
       ${rowsHtml}
       <div class="lookup-total"><span>Total</span><span>${fmtBD(total)}</span></div>
+      ${PRINT_BTN}
     `;
   }
+
+  /* ---------- Print the looked-up release / list (80mm receipt, with its barcode) ---------- */
+  let lastLookup = null;
+  const PRINT_BTN = '<button type="button" class="submit-btn" id="lookupPrintBtn" style="margin-top:14px">🖨 Print</button>';
+  document.getElementById('lookupResult').addEventListener('click', e=>{
+    if(!e.target.closest('#lookupPrintBtn') || !lastLookup) return;
+    const L = lastLookup, esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const area = document.getElementById('lookupPrintArea');
+    area.innerHTML = '<div class="lp-h">LALABELLA</div><div class="lp-s">Chocolate</div>' +
+      '<div class="lp-m"><b>' + esc(L.code) + '</b><br>' + esc(L.meta) + '</div>' +
+      L.lines.map(r => '<div class="lp-r"><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>').join('') +
+      '<div class="lp-t"><span>Total</span><span>' + esc(L.total) + '</span></div>' +
+      (L.sum ? '<div class="lp-sum">' + esc(L.sum) + '</div>' : '') +
+      '<div class="lp-bc"><svg id="lpBarcode"></svg></div><div class="lp-code">' + esc(L.code) + '</div>';
+    try{ fitBarcode('#lpBarcode', L.code, 280, 42); }catch(x){}
+    // paper = 80mm wide, as long as the receipt is
+    let mm = 100;
+    try{      // measure the receipt off-screen (it is hidden until printing)
+      area.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;width:80mm;padding:4mm;box-sizing:border-box;visibility:hidden';
+      mm = Math.max(60, Math.ceil(area.getBoundingClientRect().height * 25.4 / 96) + 8);
+      area.removeAttribute('style');
+    }catch(x){ area.removeAttribute('style'); }
+    area.classList.add('printing'); document.body.classList.add('lp-on');
+    let st = document.getElementById('lbPageSize');
+    if(!st){ st = document.createElement('style'); st.id = 'lbPageSize'; document.head.appendChild(st); }
+    st.textContent = '@page{ size:80mm ' + mm + 'mm; margin:0; }';
+    window.print();
+    setTimeout(()=>{ area.classList.remove('printing'); document.body.classList.remove('lp-on'); st.textContent = ''; }, 800);
+  });
 
   /* ---------- Barcode scanning (native BarcodeDetector, camera-based) ---------- */
   let scanStop = null;
