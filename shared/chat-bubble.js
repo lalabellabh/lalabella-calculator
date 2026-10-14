@@ -19,7 +19,7 @@
   const HIDE_ON = ['index', 'flower-tools', 'item-inventory'];
   const page = (location.pathname.split('/').pop() || 'index').replace(/\.html?$/i, '') || 'index';
   // (with the side dock on, the bubble is created everywhere — the dock presses it — so those pages get Chat in the dock too)
-  if (HIDE_ON.indexOf(page.toLowerCase()) !== -1 && !document.documentElement.classList.contains('lb-dock')) return;
+  if (HIDE_ON.indexOf(page.toLowerCase()) !== -1 && (!document.documentElement.classList.contains('lb-dock') || document.documentElement.classList.contains('lb-dock-off'))) return;
 
   function loadScriptOnce(src){
     return new Promise(function(resolve){
@@ -47,11 +47,13 @@
     loadScriptOnce('shared/chat-avatar.js'),
     loadScriptOnce('shared/chat-media.js'),
     loadScriptOnce('shared/chat-react.js'),
-    loadScriptOnce('shared/chat-status.js')
+    loadScriptOnce('shared/chat-status.js'),
+    loadScriptOnce('shared/chat-team.js')
   ]).then(init);
 
   function init(){
     if (!window.lbChatApi) return; // dependency failed to load — fail quietly, don't break the page
+    if (window.lbChatTeam) lbChatTeam.load(function(){ try { if (opened && conv === null) renderList(); } catch (e) {} });
 
     // ---------- styles ----------
     const style = document.createElement('style');
@@ -275,8 +277,10 @@
       const q = searchInput.value.trim().toLowerCase();
       listEl.innerHTML = '';
       const g = document.createElement('div'); g.className = 'lbcb-conv';
-      g.innerHTML = '<div class="lbcb-av" style="background:linear-gradient(135deg,#f1d38c,#c79a4d);">🌹</div>' +
-        '<div class="txt"><div class="cname">Lalabella Team</div><div class="csub">Group chat</div></div>';
+      const TI = window.lbChatTeam ? lbChatTeam.info : { name: 'Lalabella Team', photo: '' };
+      g.innerHTML = '<div class="lbcb-av" style="background:linear-gradient(135deg,#f1d38c,#c79a4d);' + (window.lbChatTeam ? lbChatTeam.iconStyle() : '') + '">' + (TI.photo ? '' : '🌹') + '</div>' +
+        '<div class="txt"><div class="cname"></div><div class="csub">Group chat</div></div>';
+      g.querySelector('.cname').textContent = TI.name || 'Lalabella Team';
       const gb = document.createElement('span'); gb.className = 'lbcb-ubadge' + (unreadState.group ? ' show' : ''); gb.textContent = unreadState.group > 99 ? '99+' : unreadState.group;
       g.appendChild(gb);
       g.addEventListener('click', function(){ openConv(null); });
@@ -362,7 +366,7 @@
         headSub.textContent = p.online ? 'Active now' : lastSeenText(p.lastSeen);
         inputEl.placeholder = 'Message ' + p.name.split(' ')[0] + '…';
       } else {
-        headName.textContent = 'Lalabella Team';
+        headName.textContent = (window.lbChatTeam && lbChatTeam.info.name) || 'Lalabella Team';
         headSub.textContent = 'Group chat';
         inputEl.placeholder = 'Message the team…';
       }
