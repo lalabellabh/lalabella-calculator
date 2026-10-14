@@ -217,6 +217,7 @@
 <script src="shared/chat-media.js"></script>
 <script src="shared/chat-react.js"></script>
 <script src="shared/chat-status.js"></script>
+<script src="shared/chat-team.js"></script>
 
 <div class="page">
   <div class="topline">
@@ -289,7 +290,7 @@
           <div class="chat-sub" id="headSub">Everyone</div>
         </div>
         <span class="private-tag" id="privateTag" hidden>🔒 Only you two can see this</span>
-        <div class="head-acts" id="grpActs" hidden><button type="button" id="grpAddBtn">➕ Add</button><button type="button" class="danger" id="grpLeaveBtn">🚪 Leave</button><button type="button" class="danger" id="convDelBtn" hidden>🗑 Delete conversation</button></div>
+        <div class="head-acts" id="grpActs" hidden><button type="button" id="teamEditBtn" hidden>✏️ Edit group</button><button type="button" id="grpAddBtn">➕ Add</button><button type="button" class="danger" id="grpLeaveBtn">🚪 Leave</button><button type="button" class="danger" id="convDelBtn" hidden>🗑 Delete conversation</button></div>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <form class="composer" id="chatForm">
@@ -388,7 +389,9 @@
     const list = $('convList'); list.innerHTML = '';
     // Group
     const g = document.createElement('div'); g.className = 'conv' + (!conv.peerId && !conv.groupId ? ' active' : '');
-    g.innerHTML = '<div class="group-icon">🌹</div><div class="txt"><div class="cname">Lalabella Team</div><div class="csub">Group chat · everyone</div></div>';
+    const TI = window.lbChatTeam ? lbChatTeam.info : { name:'Lalabella Team' };
+    g.innerHTML = '<div class="group-icon" style="' + (window.lbChatTeam ? lbChatTeam.iconStyle() : '') + '">' + (TI.photo ? '' : '🌹') + '</div><div class="txt"><div class="cname"></div><div class="csub">Group chat · everyone</div></div>';
+    g.querySelector('.cname').textContent = TI.name || 'Lalabella Team';
     const gb = document.createElement('span'); gb.className = 'ubadge' + (unread.group ? ' show' : ''); gb.textContent = unread.group > 99 ? '99+' : unread.group;
     g.appendChild(gb); g.addEventListener('click', () => openConv(null)); list.appendChild(g);
 
@@ -452,7 +455,8 @@
     const ha = $('headAvatar'); ha.innerHTML = '';
     const grp = conv.groupId ? groupsById[conv.groupId] : null;
     const isDm = !!conv.peerId && !grp;
-    $('grpActs').hidden = !grp && !isDm;
+    $('grpActs').hidden = !grp && !isDm && !(isAdmin && !conv.peerId);
+    $('teamEditBtn').hidden = true;
     $('grpAddBtn').hidden = !grp; $('grpLeaveBtn').hidden = !grp; $('convDelBtn').hidden = !isDm;
     if(grp){
       ha.innerHTML = '<div class="group-icon g2">👥</div>';
@@ -465,8 +469,10 @@
       return;
     }
     if(!conv.peerId){
-      ha.innerHTML = '<div class="group-icon">🌹</div>';
-      $('headName').textContent = 'Lalabella Team';
+      const TI = window.lbChatTeam ? lbChatTeam.info : { name:'Lalabella Team' };
+      ha.innerHTML = '<div class="group-icon" style="' + (window.lbChatTeam ? lbChatTeam.iconStyle() : '') + '">' + (TI.photo ? '' : '🌹') + '</div>';
+      $('headName').textContent = TI.name || 'Lalabella Team';
+      $('teamEditBtn').hidden = !isAdmin;
       const on = people.filter(p => p.online).length;
       $('headSub').textContent = (liveOn ? '● Live · ' : '') + people.length + ' members · ' + on + ' online';
       $('privateTag').hidden = true;
@@ -841,6 +847,8 @@
   });
 
   // ---------- start ----------
+  $('teamEditBtn').addEventListener('click', () => { if(window.lbChatTeam) lbChatTeam.edit(() => { renderConvs(); renderHead(); }); });
+  if(window.lbChatTeam) lbChatTeam.load(() => { renderConvs(); renderHead(); });
   lbChatLive.onPing(() => { poll(); if(Date.now() - groupsAt > 5000) loadGroups(); });
   lbChatLive.onStatus(on => { liveOn = on; renderHead(); });
   setInterval(() => { if(!document.hidden) poll(); }, FALLBACK_MS);
