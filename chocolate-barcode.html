@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/best-before.js"></script>
 <script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
@@ -583,7 +584,8 @@
       <div class="lookup-result" id="displayTotalRow" style="display:none; font-weight:800; text-align:right;"></div>
 
       <label style="margin-top:16px;">Best before <span style="font-weight:400;color:var(--ink-dim);">(optional)</span></label>
-      <input type="month" id="displayBestBefore" />
+      <div style="display:flex;align-items:center;gap:8px;"><input type="month" id="displayBestBefore" style="flex:1;" /><button type="button" id="displayBBClr" aria-label="Auto" title="Back to automatic" style="border:0;background:none;color:#999;cursor:pointer;font-size:16px;">✕</button></div>
+      <div id="displayBBNote" style="font-size:11px;color:var(--ink-dim);margin-top:4px;"></div>
 
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
@@ -1262,8 +1264,9 @@ function displayQtyText(c){
   return c.qty + ' ' + DISPLAY_UNIT_SHORT[u];
 }
 
-function renderDisplayCart(){
+function renderDisplayCart(skipAuto){
   const el = document.getElementById('displayCartList');
+  if(skipAuto !== true && typeof autoDisplayBB === 'function') autoDisplayBB();
   if(displayCart.length === 0){
     el.innerHTML = '<div style="color:var(--ink-dim); font-size:12.5px; text-align:center; padding:10px 0;">Nothing added yet.</div>';
     document.getElementById('displayTotalRow').style.display = 'none';
@@ -1301,7 +1304,18 @@ function displayBestBeforeText(){
   const m = (document.getElementById('displayBestBefore').value || '').match(/^(\d{4})-(\d{2})$/);
   return m ? ' best before ' + m[2] + '/' + m[1].slice(2) : '';
 }
-document.getElementById('displayBestBefore').addEventListener('input', renderDisplayCart);
+let dispBBManual = false;
+async function autoDisplayBB(){
+  if(dispBBManual) return;
+  const names = displayCart.filter(c => !c.extra).map(c => c.name);
+  const hit = names.length ? await lbBB.auto(names) : null;
+  if(dispBBManual) return;
+  document.getElementById('displayBestBefore').value = hit ? hit.value : '';
+  document.getElementById('displayBBNote').textContent = hit ? 'Auto: nearest expiry — ' + hit.name + ' (' + hit.date + ')' : '';
+  renderDisplayCart(true);
+}
+document.getElementById('displayBestBefore').addEventListener('input', ()=>{ dispBBManual = true; document.getElementById('displayBBNote').textContent = 'Set manually'; renderDisplayCart(true); });
+document.getElementById('displayBBClr').addEventListener('click', ()=>{ dispBBManual = false; document.getElementById('displayBestBefore').value = ''; autoDisplayBB(); });
 
 
 document.getElementById('displayCartList').addEventListener('click', e=>{
@@ -1359,7 +1373,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       try{ localStorage.setItem('lbDisplayDoneBy', doneBy); }catch(e){}
       alert('Saved! Display Code: ' + data.displayCode);
 
-      displayCart = [];
+      displayCart = []; dispBBManual = false; document.getElementById('displayBestBefore').value = ''; document.getElementById('displayBBNote').textContent = '';
       document.getElementById('displayName').value = '';
       renderDisplayCart();
       await loadData();
