@@ -64,7 +64,7 @@ async function quickReply(n, text) {
   const msg = String(text || '').trim().slice(0, 1000);
   if (!target || !creds || !creds.token || !creds.chatApi || !msg) return false;
   const body = { action: 'send', token: creds.token, text: msg };
-  if (target.peerId) body.peerId = target.peerId; else if (target.groupId) body.groupId = target.groupId;
+  if (target.peerId) body.peerId = target.peerId; else if (target.groupId) body.groupId = target.groupId; else if (!target.team) return false;   // never guess: only a Team notification may reply to Team
   try {
     const r = await fetch(creds.chatApi, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: creds.apikey || '' }, body: JSON.stringify(body) });
     const j = await r.json();
