@@ -7,7 +7,7 @@
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/sw.js').catch(function () {});
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (r) { try { r.update(); } catch (x) {} }).catch(function () {});
     });
   }
 
