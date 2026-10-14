@@ -609,7 +609,11 @@
   }
   $('locBtn').addEventListener('click', locate);
   document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.me) load(true); });
-  staticIcons(); loadFace(); detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate(); });
+  staticIcons(); loadFace(); detectFp().then(function(){ return load(); }).then(function(){ renderFp(); locate();
+    // opened from the Android home-screen widget (?act=in|break_out|break_in|out): start that punch (fingerprint + location rules still apply)
+    try { var q = new URLSearchParams(location.search), a = q.get('act'); q.delete('act'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+      if (a && S.me && (S.me.next || []).indexOf(a) >= 0) setTimeout(function(){ punch(a); }, 400); } catch (e) {}
+  });
 })();
 </script>
 </body>
