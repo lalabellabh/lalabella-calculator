@@ -718,6 +718,8 @@
     setCleared(conv.peerId, new Date(Math.max(Date.now(), newest) + 1000).toISOString());
     nodes && Object.keys(nodes).forEach(k => delete nodes[k]);
     lastMsg = null;
+    // Android app: tell the native bubble to hide everything up to the newest message too
+    try{ if(/Android/i.test(navigator.userAgent) && lastId) location.href = 'intent://chatclear?p=' + conv.peerId + '&id=' + lastId + '#Intent;scheme=lalabella;package=com.mysystemlla.twa;end'; }catch(e){}
     box.innerHTML = '<div class="empty-chat">🔒 This is a private chat. Say hi 👋</div>';
     if(lastId) markSeen(lastId);
   });
