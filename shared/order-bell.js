@@ -25,6 +25,7 @@
     '#lbob-badge.show{display:flex}' +
     '#lbob-btn.ring{animation:lbobRing .5s ease 2}@keyframes lbobRing{0%,100%{transform:rotate(0)}25%{transform:rotate(-15deg)}75%{transform:rotate(15deg)}}' +
     '#lbob-panel{position:fixed;z-index:9301;width:280px;max-width:calc(100vw - 16px);max-height:70vh;overflow:auto;background:#fff;border:1px solid #f0d9d9;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.2);padding:14px;display:none;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024}' +
+    '#lbob-panel .xb{position:absolute;top:8px;right:8px;width:28px;height:28px;border:0;border-radius:50%;background:#f6ecec;color:#8a7078;font-size:14px;cursor:pointer;line-height:1}#lbob-panel .xb:hover{background:#f0d9d9;color:#9e2f4a}' +
     '#lbob-panel.show{display:block}#lbob-panel h4{margin:0 0 8px;font-size:13px;color:#9e2f4a}' +
     '#lbob-panel .o{font-size:12.5px;padding:6px 0;border-bottom:1px solid #f6e0da}' +
     '#lbob-panel .e{font-size:12px;color:#8a7078;text-align:center;padding:10px 0}' +
@@ -40,7 +41,7 @@
   btn.innerHTML = '🔔<span id="lbob-badge">0</span>';
   var panel = document.createElement('div');
   panel.id = 'lbob-panel';
-  panel.innerHTML = '<h4>📦 Unassigned Orders</h4><div id="lbob-list"></div><a href="https://lalabella.web.app/" target="_blank" rel="noopener">Open lalabella.web.app →</a>';
+  panel.innerHTML = '<button type="button" class="xb" aria-label="Close" onclick="this.parentNode.classList.remove(\'show\')">✕</button><h4>📦 Unassigned Orders</h4><div id="lbob-list"></div><a href="https://lalabella.web.app/" target="_blank" rel="noopener">Open lalabella.web.app →</a>';
   document.body.appendChild(btn); document.body.appendChild(panel);
   var badge = btn.querySelector('#lbob-badge'), list = panel.querySelector('#lbob-list');
 
