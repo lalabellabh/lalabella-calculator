@@ -1,5 +1,5 @@
 /* Best-before helper: the earliest expiry among the in-stock batches of the chocolates in a list.
-   lbBB.auto(['Name', ...]) -> Promise<{ value:'YYYY-MM', name:'Chocolate', date:'YYYY-MM-DD' } | null> */
+   lbBB.auto(['Name', ...], 'Branch')  (branch optional) -> Promise<{ value:'YYYY-MM', name:'Chocolate', date:'YYYY-MM-DD' } | null> */
 (function(){
   var cache = null;
   function rows(){
@@ -14,7 +14,7 @@
   function day(v){ var m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
   window.lbBB = {
     refresh: function(){ cache = null; },
-    auto: function(names){
+    auto: function(names, branch){
       var want = {}; (names || []).forEach(function(n){ want[String(n).trim().toLowerCase()] = 1; });
       if(!Object.keys(want).length) return Promise.resolve(null);
       return rows().then(function(list){
@@ -22,6 +22,7 @@
         list.forEach(function(r){
           var n = String(r['Chocolate Name'] || '').trim().toLowerCase();
           if(!want[n] || !(Number(r['Current Stock']) > 0)) return;
+          if(branch && String(r['Branch'] || '').trim() !== branch) return;
           var d = day(r['Expiry Date']); if(!d) return;
           var hit = { value: d.slice(0, 7), name: r['Chocolate Name'], date: d };
           if(d >= today){ if(!best || d < best.date) best = hit; }
