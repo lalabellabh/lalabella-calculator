@@ -28,6 +28,10 @@
     '#lbob-panel.show{display:block}#lbob-panel h4{margin:0 0 8px;font-size:13px;color:#9e2f4a}' +
     '#lbob-panel .o{font-size:12.5px;padding:6px 0;border-bottom:1px solid #f6e0da}' +
     '#lbob-panel .e{font-size:12px;color:#8a7078;text-align:center;padding:10px 0}' +
+    '#lbob-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9302;width:min(360px,calc(100vw - 20px));display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f0d9d9;border-left:5px solid #c9506b;border-radius:14px;box-shadow:0 14px 36px rgba(60,20,35,.3);padding:11px 12px;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024;cursor:pointer;transition:transform .3s ease;}' +
+    '#lbob-toast.show{transform:translate(-50%,0)}#lbob-toast .tt{flex:1;min-width:0;font-size:12.5px;line-height:1.4}#lbob-toast .tt b{display:block;font-size:13px;color:#9e2f4a;margin-bottom:2px}' +
+    '@media(max-width:600px){#lbob-toast{top:calc(max(12px,env(safe-area-inset-top)) + 56px)}}' +
+    '#lbob-toast .x{border:0;background:none;color:#8a7078;font-size:17px;cursor:pointer;padding:0 2px;line-height:1}' +
     '#lbob-panel a{display:block;text-align:center;margin-top:10px;padding:9px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12.5px;font-weight:700}';
   document.head.appendChild(css);
 
@@ -39,6 +43,31 @@
   panel.innerHTML = '<h4>📦 Unassigned Orders</h4><div id="lbob-list"></div><a href="https://lalabella.web.app/" target="_blank" rel="noopener">Open lalabella.web.app →</a>';
   document.body.appendChild(btn); document.body.appendChild(panel);
   var badge = btn.querySelector('#lbob-badge'), list = panel.querySelector('#lbob-list');
+
+  // ---- pop-up alert: shows on whatever page you are on when a NEW unassigned order arrives ----
+  var toast = document.createElement('div');
+  toast.id = 'lbob-toast'; toast.setAttribute('role', 'status');
+  toast.innerHTML = '<span style="font-size:20px">📦</span><div class="tt"></div><button class="x" type="button" aria-label="Close">✕</button>';
+  document.body.appendChild(toast);
+  var toastTimer = 0;
+  function hideToast() { toast.classList.remove('show'); clearTimeout(toastTimer); }
+  function showToast(rows) {
+    var one = rows.slice(0, 2).map(function (o) {
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.orderNo) + '</b> · ' +
+        (o.branch ? '<span style="color:#2f7a4f;font-weight:700">➜ ' + esc(o.branch) + '</span>' : '<span style="color:#b2402e;font-weight:700">⚠ manual assign</span>') + '</div>';
+    }).join('');
+    var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
+    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New order to assign' : rows.length + ' new orders to assign') + '</b>' + one + more;
+    toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 14000);
+  }
+  toast.addEventListener('click', function (e) {
+    if (e.target.closest('.x')) { hideToast(); return; }
+    hideToast(); panel.classList.add('show'); layoutPanel(); refresh();
+  });
+  var SEEN_KEY = 'lbobSeen';
+  function seenSet() { try { var a = JSON.parse(sessionStorage.getItem(SEEN_KEY) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
+  function saveSeen(rows) { try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(rows.map(function (o) { return String(o.orderNo); }))); } catch (e) {} }
 
   // ---- position (draggable, remembered) ----
   function clamp(x, y) {
@@ -91,7 +120,7 @@
     if (panel.classList.contains('show')) { layoutPanel(); refresh(); }
   });
   document.addEventListener('click', function (e) {
-    if (panel.classList.contains('show') && !panel.contains(e.target) && !btn.contains(e.target) && !(e.target.closest && e.target.closest('#lbdock-tray'))) panel.classList.remove('show'); // a tap on the side-dock's bell presses this button for you; do not close it again
+    if (panel.classList.contains('show') && !panel.contains(e.target) && !btn.contains(e.target) && !(e.target.closest && (e.target.closest('#lbdock-tray') || e.target.closest('#lbob-toast')))) panel.classList.remove('show'); // a tap on the side-dock's bell presses this button for you; do not close it again
   });
 
   // ---- data ----
@@ -126,6 +155,12 @@
         if (n > 0) { badge.textContent = String(n); badge.classList.add('show'); } else badge.classList.remove('show');
         if (lastCount !== null && n > lastCount) { alarm(); btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
         lastCount = n;
+        var prev = seenSet();
+        if (prev && rows.length) {
+          var fresh = rows.filter(function (o) { return prev.indexOf(String(o.orderNo)) === -1; });
+          if (fresh.length) showToast(fresh);
+        }
+        saveSeen(rows);
         list.innerHTML = rows.length ? rows.map(orderHtml).join('') : '<div class="e">No unassigned orders right now.</div>';
       })
       .catch(function () {});
