@@ -555,11 +555,19 @@
     const dockOn = !dockOff_();
     h += '<h4>Side Dock</h4><div class="lbset-seg lbset-seg2">' +
       '<button type="button" data-dock="on" class="' + (dockOn ? 'on' : '') + '">🧲 On</button>' +
-      '<button type="button" data-dock="off" class="' + (dockOn ? '' : 'on') + '">Floating buttons</button></div>' +
-      '<div class="lbset-note">On = one slim glass handle on the screen edge that slides out Chat, Nova, the orders bell and your own shortcuts. Off = the separate floating buttons.</div>';
+      '<button type="button" data-dock="off" class="' + (dockOn ? '' : 'on') + '">Off</button></div>' +
+      '<div class="lbset-note">On = one slim glass handle on the screen edge that slides out Chat, Nova, the orders bell and your own shortcuts. Off = nothing floats on the screen (open Chat and Nova from the list below).</div>';
+    // Chat alerts (Android app only): how a new message shows up on the phone
+    if (/Android/i.test(navigator.userAgent || '')) {
+      let cm = 'bubble'; try { cm = localStorage.getItem('lbChatMode') || 'bubble'; } catch (e) {}
+      const cms = [['bubble', '💬 Bubble'], ['popup', '🔔 Pop-up'], ['quiet', '🔕 Notification only']];
+      h += '<h4>Chat alerts (Android app)</h4><div class="lbset-seg">' +
+        cms.map(m => '<button type="button" data-chatmode="' + m[0] + '" class="' + (cm === m[0] ? 'on' : '') + '">' + m[1] + '</button>').join('') + '</div>' +
+        '<div class="lbset-note">Bubble = floating chat head like Messenger (Android 11+; allow bubbles for Lalabella in phone settings). Pop-up = banner on top of the screen. Notification only = quiet entry in the notification list with a Reply box, no pop-up. Needs the latest app and the home-screen widget linked once.</div>';
+    }
 
     // System & admin pages
-    const sys = SYS.map(h2 => REG[h2] && REG[h2].item).filter(i => i && itemAllowed(i));
+    const sys = [['chatbox.html', '💬', 'Staff Chat']].concat(SYS.map(h2 => REG[h2] && REG[h2].item).filter(i => i && itemAllowed(i)));
     if (sys.length) h += '<h4>System &amp; Admin</h4><div class="lbset-list">' + sys.map(i =>
       '<a class="lbset-link" href="' + esc(FROM_AWARE.indexOf(i[0]) !== -1 ? i[0] + '?from=' + encodeURIComponent(stem) : i[0]) + '"><span>' + i[1] + '</span><span class="lbset-lbl">' + esc(i[2]) + '</span><span aria-hidden="true">›</span></a>').join('') + '</div>';
 
@@ -603,6 +611,12 @@
     const t = e.target.closest('button,input');
     if (!t) return;
     if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
+    if (t.dataset.chatmode) {
+      const m = t.dataset.chatmode;
+      try { localStorage.setItem('lbChatMode', m); } catch (x) {}
+      location.href = 'intent://chatmode?m=' + m + '#Intent;scheme=lalabella;package=com.mysystemlla.twa;end';
+      drawSettings(); return;
+    }
     if (t.dataset.mode) { if (window.LBTheme) window.LBTheme.set(t.dataset.mode); drawSettings(); return; }
     if (t.dataset.tab) { setTab = t.dataset.tab; drawSettings(); return; }
     if (t.dataset.show) {
@@ -749,8 +763,10 @@
   // Side dock: one slim glass handle on the screen edge that slides out the chat, Nova, the orders bell and your own
   // shortcuts (replaces the separate floating buttons). "⟲" in its tray switches back. See shared/side-dock.js.
   try { if (/[?&]dock=on\b/.test(location.search)) localStorage.removeItem('lbDockOff'); } catch (e) {}
-  try { if (localStorage.getItem('lbDockOff') !== '1') document.documentElement.classList.add('lb-dock'); } catch (e) {}
-  if (document.documentElement.classList.contains('lb-dock') && !window.LBSideDock && !document.querySelector('script[src="shared/side-dock.js"]')) {
+  // 'lb-dock' is always on: the old floating buttons are retired for good. 'lb-dock-off' = the user switched the dock itself off in Settings (nothing floats).
+  document.documentElement.classList.add('lb-dock');
+  try { if (localStorage.getItem('lbDockOff') === '1') document.documentElement.classList.add('lb-dock-off'); } catch (e) {}
+  if (!window.LBSideDock && !document.querySelector('script[src="shared/side-dock.js"]')) {
     const sd = document.createElement('script');
     sd.src = 'shared/side-dock.js';
     document.body.appendChild(sd);
