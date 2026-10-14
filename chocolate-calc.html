@@ -1166,6 +1166,10 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div id="extraItems"></div>
       </div>
 
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px;">
+        <label for="listBranch" style="font-weight:700;">Branch</label>
+        <select id="listBranch" style="flex:1;min-width:0;"><option value="">— choose branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+      </div>
       <div id="bbRow" style="display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13px;">
         <label for="bestBefore" style="font-weight:700;">Best before</label>
         <input id="bestBefore" type="month" style="flex:1;min-width:0;" />
@@ -1228,6 +1232,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   <div id="receipt">
     <h1>Lalabella</h1>
     <div class="r-sub" id="rDate"></div>
+    <div class="r-sub" id="rBranch" style="font-weight:700;"></div>
     <div class="r-line"></div>
     <div id="rItems"></div>
     <div class="r-line"></div>
@@ -1296,22 +1301,25 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   const listItemsEl = document.getElementById('listItems');
   const clearListBtn = document.getElementById('clearListBtn');
   const grandCountEl = document.getElementById('grandCount');
-  // Best before: filled in automatically from the nearest expiry of the chocolates in the list; typing a date overrides it.
+  // Best before: filled in from the nearest expiry in the chosen branch's stock; typing a date overrides it.
   let bbManual = false;
   const bbEl = document.getElementById('bestBefore');
   function bbRefreshCount(){ const n = cart.length; if(n) grandCountEl.textContent = n + (n === 1 ? ' item' : ' items') + ' · ' + listSummary(); }
   async function autoBestBefore(){
     if(bbManual) return;
-    const names = cart.map(c => c.name);
-    const hit = names.length ? await lbBB.auto(names) : null;
+    const br = (document.getElementById('listBranch') || {}).value || '';
+    const hit = (cart.length && br) ? await lbBB.auto(cart.map(c => c.name), br) : null;
     if(bbManual) return;
     bbEl.value = hit ? hit.value : '';
-    bbEl.title = hit ? 'Auto: nearest expiry — ' + hit.name + ' (' + hit.date + ')' : '';
-    document.getElementById('bbAutoNote').textContent = hit ? 'auto · ' + hit.name : '';
+    document.getElementById('bbAutoNote').textContent = hit ? 'auto · ' + hit.name : (br ? '' : 'pick a branch for auto');
     bbRefreshCount();
   }
   bbEl.addEventListener('input', ()=>{ bbManual = true; document.getElementById('bbAutoNote').textContent = 'manual'; bbRefreshCount(); });
   document.getElementById('bestBeforeClr').addEventListener('click', ()=>{ bbManual = false; bbEl.value = ''; autoBestBefore(); });
+  // Branch the quotation is for (shown on the receipt, saved in the list name).
+  const branchEl = document.getElementById('listBranch');
+  try{ branchEl.value = localStorage.getItem('lbCalcBranch') || ''; }catch(e){}
+  branchEl.addEventListener('change', ()=>{ try{ localStorage.setItem('lbCalcBranch', branchEl.value); }catch(e){} autoBestBefore(); });
   const grandTotalEl = document.getElementById('grandTotal');
   const printBtn = document.getElementById('printBtn');
   const shareBtn = document.getElementById('shareBtn');
@@ -1766,7 +1774,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     const ctrl = new AbortController(), timer = setTimeout(()=> ctrl.abort(), 9000);
     try{
       const d = new Date();
-      const name = 'Calc · ' + d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const name = 'Calc · ' + (branchEl.value ? branchEl.value + ' · ' : '') + d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
       const params = new URLSearchParams({ action:'saveDisplay', displayName:name, createdBy:userName(), items:sig });
       const data = await (await fetch(API_URL + '?' + params.toString(), { signal: ctrl.signal })).json();
       if(data && data.displayCode){ lastListSave = { sig, code: data.displayCode, bb: bbVal }; if(bbVal) await saveBestBefore(data.displayCode, bbVal); return data.displayCode; }
@@ -1830,6 +1838,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
     });
 
+    document.getElementById('rBranch').textContent = branchEl.value ? 'Branch: ' + branchEl.value : '';
     rItemsEl.innerHTML = '';
     let grandTotal = 0;
 
@@ -1873,6 +1882,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
     });
 
+    document.getElementById('rBranch').textContent = branchEl.value ? 'Branch: ' + branchEl.value : '';
     rItemsEl.innerHTML = '';
     let grandTotal = 0;
 
