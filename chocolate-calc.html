@@ -1165,6 +1165,12 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div id="extraItems"></div>
       </div>
 
+      <div id="bbRow" style="display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13px;">
+        <label for="bestBefore" style="font-weight:700;">Best before</label>
+        <input id="bestBefore" type="month" style="flex:1;min-width:0;" />
+        <button type="button" id="bestBeforeClr" style="border:0;background:none;color:#999;cursor:pointer;font-size:16px;" aria-label="Clear">✕</button>
+      </div>
+
       <div class="grand-total-box">
         <div>
           <div class="grand-total-label">Grand Total</div>
@@ -1288,6 +1294,14 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   const listItemsEl = document.getElementById('listItems');
   const clearListBtn = document.getElementById('clearListBtn');
   const grandCountEl = document.getElementById('grandCount');
+  (function(){
+    const bb = document.getElementById('bestBefore'), clr = document.getElementById('bestBeforeClr');
+    try{ bb.value = localStorage.getItem('lbBestBefore') || ''; }catch(e){}
+    const upd = ()=>{ try{ localStorage.setItem('lbBestBefore', bb.value); }catch(e){}
+      const n = cart.length; if(n) grandCountEl.textContent = n + (n === 1 ? ' item' : ' items') + ' · ' + listSummary(); };
+    bb.addEventListener('input', upd); bb.addEventListener('change', upd);
+    clr.addEventListener('click', ()=>{ bb.value = ''; upd(); });
+  })();
   const grandTotalEl = document.getElementById('grandTotal');
   const printBtn = document.getElementById('printBtn');
   const shareBtn = document.getElementById('shareBtn');
@@ -1690,7 +1704,13 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   function listSummary(){
     let pcs = 0, kg = 0;
     cart.forEach(c=>{ if(c.mode === 'pieces') pcs += Number(c.amount) || 0; kg += Number(c.kg) || 0; });
-    return (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs';
+    return (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs' + bestBeforeText();
+  }
+  // "best before 07/27" (month/year) - only when a date is picked.
+  function bestBeforeText(){
+    const v = (document.getElementById('bestBefore') || {}).value || '';
+    const m = v.match(/^(\d{4})-(\d{2})$/);
+    return m ? ' best before ' + m[2] + '/' + m[1].slice(2) : '';
   }
   function fitThermalPage(){
     try{
@@ -1719,17 +1739,26 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     extras.forEach(e => rows.push({ name: e.description, qty: 1, unit: 'piece', price: e.amount, extra: true }));
     return rows;
   }
+  // Best-before of a saved list lives in its own small endpoint (best effort - never blocks printing).
+  async function saveBestBefore(code, value){
+    try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code, value }).toString()); }
+    catch(e){ console.error('[Lalabella] best before not saved:', e && e.message); }
+  }
   async function saveListCode(){
     const items = listAsDisplayItems();
     const sig = JSON.stringify(items);
-    if(lastListSave && lastListSave.sig === sig) return lastListSave.code;     // same list printed again: same code
+    const bbVal = (document.getElementById('bestBefore') || {}).value || '';
+    if(lastListSave && lastListSave.sig === sig){                              // same list printed again: same code
+      if(lastListSave.bb !== bbVal){ await saveBestBefore(lastListSave.code, bbVal); lastListSave.bb = bbVal; }
+      return lastListSave.code;
+    }
     const ctrl = new AbortController(), timer = setTimeout(()=> ctrl.abort(), 9000);
     try{
       const d = new Date();
       const name = 'Calc · ' + d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
       const params = new URLSearchParams({ action:'saveDisplay', displayName:name, createdBy:userName(), items:sig });
       const data = await (await fetch(API_URL + '?' + params.toString(), { signal: ctrl.signal })).json();
-      if(data && data.displayCode){ lastListSave = { sig, code: data.displayCode }; return data.displayCode; }
+      if(data && data.displayCode){ lastListSave = { sig, code: data.displayCode, bb: bbVal }; if(bbVal) await saveBestBefore(data.displayCode, bbVal); return data.displayCode; }
     }catch(e){ console.error('[Lalabella] saving the list failed:', e && e.message); }
     finally{ clearTimeout(timer); }
     return '';
@@ -1765,6 +1794,11 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const rows = await (await fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now())).json();
       const hit = (Array.isArray(rows) ? rows : []).find(r => String(r['Display Code']).toLowerCase() === String(code).trim().toLowerCase());
       if(!hit){ alert('No saved list found for ' + code); return; }
+      try{
+        const bbm = await (await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?action=getBestBefore&_ts=' + Date.now())).json();
+        const bbEl = document.getElementById('bestBefore'), v = bbm && bbm[hit['Display Code']];
+        if(bbEl && v){ bbEl.value = v; bbEl.dispatchEvent(new Event('input')); }
+      }catch(e){}
       (hit['Items'] || []).forEach(it=>{
         if(it.extra){ extras.push({ description: it.name, amount: (Number(it.qty) || 1) * (Number(it.price) || 0) }); return; }
         const mode = it.unit === 'g' ? 'grams' : (it.unit === 'kg' ? 'kg' : 'pieces');
