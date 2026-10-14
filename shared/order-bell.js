@@ -91,7 +91,7 @@
     if (panel.classList.contains('show')) { layoutPanel(); refresh(); }
   });
   document.addEventListener('click', function (e) {
-    if (panel.classList.contains('show') && !panel.contains(e.target) && !btn.contains(e.target)) panel.classList.remove('show');
+    if (panel.classList.contains('show') && !panel.contains(e.target) && !btn.contains(e.target) && !(e.target.closest && e.target.closest('#lbdock-tray'))) panel.classList.remove('show'); // a tap on the side-dock's bell presses this button for you; do not close it again
   });
 
   // ---- data ----
