@@ -582,6 +582,9 @@
       <div id="displayCartList" style="margin-top:16px;"></div>
       <div class="lookup-result" id="displayTotalRow" style="display:none; font-weight:800; text-align:right;"></div>
 
+      <label style="margin-top:16px;">Best before <span style="font-weight:400;color:var(--ink-dim);">(optional)</span></label>
+      <input type="month" id="displayBestBefore" />
+
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
 
@@ -664,6 +667,10 @@
     const t = Date.now();
     try{ items = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getItems&_ts=' + t)).json()); }catch(e){ console.error('[Lalabella] loadData getItems failed:', e.message); }
     try{ savedDisplays = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getDisplayList&_ts=' + t)).json()); }catch(e){ console.error('[Lalabella] loadData getDisplayList failed:', e.message); }
+    try{
+      const bbm = await (await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?action=getBestBefore&_ts=' + t)).json();
+      (savedDisplays || []).forEach(d => { if(bbm && bbm[d['Display Code']]) d['Best Before'] = bbm[d['Display Code']]; });
+    }catch(e){ console.error('[Lalabella] best before list failed:', e && e.message); }
     populateItemList(null);
     renderCategoryPills();
     populateDisplayItemList();
@@ -969,6 +976,10 @@
       try{
         const rows = lalabellaCheckResponse(await (await fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now())).json());
         const hit = (Array.isArray(rows) ? rows : []).find(r => String(r['Display Code']).toLowerCase() === releaseNo.toLowerCase());
+        try{
+          const bbm = await (await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?action=getBestBefore&_ts=' + Date.now())).json();
+          if(hit && bbm && bbm[hit['Display Code']]) hit['Best Before'] = bbm[hit['Display Code']];
+        }catch(e){}
         renderDisplayLookup(releaseNo, hit);
       }catch(e){
         el.innerHTML = '<div class="empty-note">Could not look up this list.</div>';
@@ -998,7 +1009,8 @@
       if(u === 'pcs'){ pcs += qty; kg += qty * gpp / 1000; } else { kg += u === 'g' ? qty / 1000 : qty; }
       return `<div class="lookup-row"><span>${it.name} (${qty} ${u})</span><span>${fmtBD(line)}</span></div>`;
     }).join('');
-    const sum = (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs';
+    const bbTxt = bbShort(d['Best Before']);
+    const sum = (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs' + (bbTxt ? ' best before ' + bbTxt : '');
     lastLookup = { code: code, meta: [d['Display Name'] || '', fmtDate(d['Date']), d['Created By'] ? 'by ' + d['Created By'] : ''].filter(Boolean).join(' · '),
       lines: (d['Items'] || []).map(it=>{ const qty = Number(it.qty) || 0, price = Number(it.price) || 0;
         const u = it.unit === 'g' ? 'g' : (it.unit === 'kg' ? 'kg' : 'pcs');
@@ -1269,8 +1281,28 @@ function renderDisplayCart(){
   const total = displayCart.reduce((s, c) => s + c.qty * c.price, 0);
   const totalRow = document.getElementById('displayTotalRow');
   totalRow.style.display = 'block';
-  totalRow.textContent = 'Total: ' + fmtBD(total);
+  totalRow.textContent = 'Total: ' + fmtBD(total) + '  ·  ' + displaySummary();
 }
+
+// "92pcs / 1.680kgs best before 07/27 vat inclusive" for the display being built
+function displaySummary(){
+  let pcs = 0, kg = 0;
+  displayCart.forEach(c=>{
+    if(c.extra) return;
+    const u = c.unit === 'g' ? 'g' : (c.unit === 'kg' ? 'kg' : 'pcs'), qty = Number(c.qty) || 0;
+    const cat = (items || []).find(x => String(x['Chocolate Name']||'').trim().toLowerCase() === String(c.name).trim().toLowerCase());
+    const gpp = cat ? Number(cat['Grams']) || 0 : 0;
+    if(u === 'pcs'){ pcs += qty; kg += qty * gpp / 1000; } else { kg += u === 'g' ? qty / 1000 : qty; }
+  });
+  return (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs' + displayBestBeforeText() + ' vat inclusive';
+}
+function bbShort(v){ const m = String(v || '').match(/^(\d{4})-(\d{2})$/); return m ? m[2] + '/' + m[1].slice(2) : ''; }
+function displayBestBeforeText(){
+  const m = (document.getElementById('displayBestBefore').value || '').match(/^(\d{4})-(\d{2})$/);
+  return m ? ' best before ' + m[2] + '/' + m[1].slice(2) : '';
+}
+document.getElementById('displayBestBefore').addEventListener('input', renderDisplayCart);
+
 
 document.getElementById('displayCartList').addEventListener('click', e=>{
   const btn = e.target.closest('.remove-display-item');
@@ -1312,7 +1344,9 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
     if(data.error){
       alert(data.error);
     } else {
-      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice };
+      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary() };
+      const bbVal = document.getElementById('displayBestBefore').value || '';
+      if(bbVal){ try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code:data.displayCode, value:bbVal }).toString()); }catch(e){ console.error('[Lalabella] best before not saved'); } }
       document.getElementById('dpName').textContent = displayName;
       document.getElementById('dpPrice').textContent = fmtBD(data.totalPrice);
       document.getElementById('dpCode').textContent = data.displayCode;
@@ -1342,6 +1376,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
     <div class="label-cell">
       <div class="l-name">${lastSavedDisplay.name}</div>
       <div class="l-price">${fmtBD(lastSavedDisplay.total)}</div>
+      ${lastSavedDisplay.sum ? `<div class="l-price">${lastSavedDisplay.sum}</div>` : ''}
       <svg id="printDpBarcode"></svg>
       <div class="l-code">${lastSavedDisplay.code}</div>
     </div>
@@ -1424,7 +1459,8 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
   // record (not just scanning) reveals the breakdown.
   const displayRows = savedDisplays.map(d => {
     const contents = (d['Items'] || []).map(it => it.extra ? it.name : (!it.unit || it.unit === 'piece') ? (it.qty + 'x ' + it.name) : (it.qty + (it.unit === 'kg' ? 'kg ' : 'g ') + it.name)).join(', ');
-    return [d['Display Name'], d['Display Code'], Number(d['Total Price']).toFixed(3), contents];
+    const bbTxt = bbShort(d['Best Before']);
+    return [d['Display Name'], d['Display Code'], Number(d['Total Price']).toFixed(3), contents + (bbTxt ? ' | best before ' + bbTxt : '')];
   });
 
   const csv = [header, ...itemRows, ...displayRows].map(r => r.map(csvEscapeChoc).join(',')).join('\r\n');
