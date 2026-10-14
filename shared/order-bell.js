@@ -29,8 +29,8 @@
     '#lbob-panel.show{display:block}#lbob-panel h4{margin:0 0 8px;font-size:13px;color:#9e2f4a}' +
     '#lbob-panel .o{font-size:12.5px;padding:6px 0;border-bottom:1px solid #f6e0da}' +
     '#lbob-panel .e{font-size:12px;color:#8a7078;text-align:center;padding:10px 0}' +
-    '#lbob-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9302;width:min(360px,calc(100vw - 20px));display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f0d9d9;border-left:5px solid #c9506b;border-radius:14px;box-shadow:0 14px 36px rgba(60,20,35,.3);padding:11px 12px;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024;cursor:pointer;transition:transform .3s ease;}' +
-    '#lbob-toast.show{transform:translate(-50%,0)}#lbob-toast .tt{flex:1;min-width:0;font-size:12.5px;line-height:1.4}#lbob-toast .tt b{display:block;font-size:13px;color:#9e2f4a;margin-bottom:2px}' +
+    '#lbob-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9302;width:min(360px,calc(100vw - 20px));display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f0d9d9;border-left:5px solid #c9506b;border-radius:14px;box-shadow:0 14px 36px rgba(60,20,35,.3);padding:11px 12px;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024;cursor:pointer;transition:transform .3s ease,opacity .3s ease;opacity:0;visibility:hidden;pointer-events:none;}' +
+    '#lbob-toast.show{transform:translate(-50%,0);opacity:1;visibility:visible;pointer-events:auto}#lbob-toast .tt{flex:1;min-width:0;font-size:12.5px;line-height:1.4}#lbob-toast .tt b{display:block;font-size:13px;color:#9e2f4a;margin-bottom:2px}' +
     '@media(max-width:600px){#lbob-toast{top:calc(max(12px,env(safe-area-inset-top)) + 56px)}}' +
     '#lbob-toast .x{border:0;background:none;color:#8a7078;font-size:17px;cursor:pointer;padding:0 2px;line-height:1}' +
     '#lbob-panel a{display:block;text-align:center;margin-top:10px;padding:9px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12.5px;font-weight:700}';
