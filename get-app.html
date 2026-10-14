@@ -89,6 +89,12 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 .inapp b{font-family:'Cormorant Garamond',serif;font-size:28px;display:block;margin-bottom:6px}
 .is-app .seg,.is-app .panel{display:none}
 .is-app .inapp{display:block}
+.upd{display:none;text-align:center;margin-top:14px;padding:16px 14px;border:1px solid var(--line);border-radius:20px;background:rgba(230,196,122,.08)}
+.is-app .upd{display:block}
+.upd .ver{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;display:block;margin-bottom:4px}
+.upd .sub{color:var(--muted);font-size:14px;line-height:1.45;margin:0 0 12px}
+.upd .act{justify-content:center;margin:0}
+.upd.new{border-color:var(--gold)}
 .is-app .scan{display:none}
 
 /* phones: no QR (you are already on the phone), compact type so everything stays on one screen */
@@ -203,6 +209,11 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
     <section class="card" aria-label="Install steps">
       <div class="inapp"><b>You already have the app</b>Nothing else to install.</div>
+      <div class="upd" id="upd" aria-live="polite">
+        <span class="ver" id="updVer">Checking for updates…</span>
+        <p class="sub" id="updSub"></p>
+        <div class="act"><a class="btn" id="updBtn" href="downloads/Lalabella.apk" download="Lalabella.apk" hidden>Download the latest app</a></div>
+      </div>
 
       <div class="seg" role="tablist" aria-label="Phone type">
         <button role="tab" id="tabA" aria-controls="pA" aria-selected="true">Android</button>
@@ -255,7 +266,29 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
     });
   });
 
-  if (standalone) { document.body.classList.add('is-app'); return; }
+  if (standalone) {
+    document.body.classList.add('is-app');
+    // Inside the app: show the newest version and a direct download (the in-app "tap to update" opens this page)
+    var have = ''; try { have = localStorage.getItem('lbAppVer') || ''; } catch (e) {}
+    var cmpV = function(a, b){ var x = String(a).split('.'), y = String(b).split('.'); for (var i = 0; i < Math.max(x.length, y.length); i++){ var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d < 0 ? -1 : 1; } return 0; };
+    fetch('downloads/app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+      var nv = j && j.versionName, btn = $('updBtn');
+      if (!nv) throw new Error('no version');
+      btn.href = 'downloads/Lalabella.apk?v=' + encodeURIComponent(j.versionCode || nv);
+      var newer = !have || cmpV(have, nv) < 0;
+      $('updVer').textContent = newer ? 'New version ' + nv + ' is ready' : 'You have the latest (v' + nv + ')';
+      $('updSub').textContent = newer ? (have ? 'You have v' + have + '. Tap Download, then open the file to update. Your login and data stay.' : 'Tap Download, then open the file to update. Your login and data stay.') : 'Nothing to update. You can still download the file again if the app acts up.';
+      if (newer) $('upd').classList.add('new'); else btn.classList.add('ghost');
+      btn.textContent = newer ? 'Download v' + nv : 'Download again';
+      btn.hidden = false;
+      if (newer && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { btn.click(); } catch (e) {} }, 700);
+    }).catch(function(){
+      $('updVer').textContent = 'Latest app';
+      $('updSub').textContent = 'Could not check the version. You can still download the newest file.';
+      $('updBtn').hidden = false;
+    });
+    return;
+  }
   if (isIOS) pick(1);
 
   $('copyBtn').addEventListener('click', function(){
