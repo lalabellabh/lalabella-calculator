@@ -86,6 +86,9 @@
       }
       #lbcb-back{ display:none; background:none; border:none; color:#fff; font-size:20px; cursor:pointer; padding:0 2px; opacity:.9; }
       #lbcb-back.show{ display:block; }
+      #lbcb-head-av{ flex-shrink:0; margin-right:8px; }
+      #lbcb-head-av .lbcb-av{ width:34px; height:34px; }
+      #lbcb-head-av .lbcb-av img{ width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
       #lbcb-head-title{ flex:1; min-width:0; }
       #lbcb-head-title b{ font-size:13.5px; display:block; }
       #lbcb-head-sub{ font-size:10.5px; opacity:.75; }
@@ -183,6 +186,7 @@
     panel.innerHTML = `
       <div id="lbcb-head">
         <button id="lbcb-back" aria-label="Back">‹</button>
+        <div id="lbcb-head-av" style="display:none"></div>
         <div id="lbcb-head-title"><b id="lbcb-head-name">Chats</b><div id="lbcb-head-sub"></div></div>
         <button id="lbcb-avatar" aria-label="My avatar" title="Make my avatar" hidden>🎨</button>
         <a id="lbcb-openfull" href="chatbox.html" title="Open full chat">⤢</a>
@@ -319,7 +323,7 @@
       if (picker) picker.close();
       listEl.style.display = ''; searchInput.parentElement.style.display = ''; teamEl.style.display = '';
       msgsEl.classList.remove('show'); inputRow.classList.remove('show'); backBtn.classList.remove('show');
-      headName.textContent = 'Chats'; headSub.textContent = '';
+      headName.textContent = 'Chats'; headSub.textContent = ''; setHeadAv(null);
       renderList();
       refreshUnread();
     }
@@ -335,6 +339,8 @@
     function addMsg(v){
       if (!v || !v.text || v.id <= lastId) return;
       lastId = v.id;
+      // "Delete conversation" in the main chat (this device): keep those messages hidden here too
+      if (conv && conv.peerId) { try { const c = (JSON.parse(localStorage.getItem('lbChatCleared') || '{}') || {})[meId + ':' + conv.peerId]; if (c && new Date(v.time) <= new Date(c)) return; } catch (e) {} }
       const empty = msgsEl.querySelector('.lbcb-empty-chat'); if (empty) empty.remove();
       const t = new Date(v.time), mine = v.userId === meId;
       if (!lastMsg || new Date(lastMsg.time).toDateString() !== t.toDateString()) {
@@ -354,6 +360,8 @@
       if (!mine && !firstLoad && window.lbChatSound) lbChatSound.play('receive');
     }
 
+    function setHeadAv(el){ const h = document.getElementById('lbcb-head-av'); if (!h) return; h.innerHTML = ''; if (el) { h.appendChild(el); h.style.display = ''; } else h.style.display = 'none'; }
+
     function openConv(peerId){
       conv = { peerId: peerId || null };
       lastId = 0; delSince = ''; lastMsg = null; firstLoad = true;
@@ -363,10 +371,15 @@
       if (peerId) {
         const p = peopleById[peerId] || { name: '…' };
         headName.textContent = p.name;
+        setHeadAv(avatarEl(p, false));
         headSub.textContent = p.online ? 'Active now' : lastSeenText(p.lastSeen);
         inputEl.placeholder = 'Message ' + p.name.split(' ')[0] + '…';
       } else {
         headName.textContent = (window.lbChatTeam && lbChatTeam.info.name) || 'Lalabella Team';
+        const ta = document.createElement('div'); ta.className = 'lbcb-av';
+        ta.style.cssText = 'background:linear-gradient(135deg,#f1d38c,#c79a4d);' + (window.lbChatTeam ? lbChatTeam.iconStyle() : '');
+        if (!(window.lbChatTeam && lbChatTeam.info.photo)) ta.textContent = '🌹';
+        setHeadAv(ta);
         headSub.textContent = 'Group chat';
         inputEl.placeholder = 'Message the team…';
       }
