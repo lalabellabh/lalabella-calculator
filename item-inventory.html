@@ -2539,7 +2539,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     if(panel.classList.contains('show')) refresh();
   });
   document.addEventListener('click', function(e){
-    if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== btn){
+    if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== btn && !(e.target.closest && e.target.closest('#lbdock-tray')) ){
       panel.classList.remove('show');
     }
   });
