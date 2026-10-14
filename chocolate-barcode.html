@@ -497,6 +497,23 @@
       <button class="print-page-btn show" id="addAllBtn" style="margin-top:10px;">🍫 Add Every Chocolate to Print List</button>
     </div>
 
+    <div class="card" id="manualBcCard">
+      <div class="card-title">✍️ Manual Barcode</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.5;margin-bottom:10px;">I-type ang code (e.g. DISP-00006, REL-000001) para makapag-print ng sticker na pwedeng i-scan sa Look Up.</div>
+      <input type="text" id="mbCode" placeholder="DISP-00006" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;" />
+      <input type="text" id="mbCaption" placeholder="Caption (optional) e.g. Valentine Box A" autocomplete="off" style="margin-top:8px;" />
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <input type="number" id="mbCopies" min="1" max="100" value="1" style="width:90px;" />
+        <span style="font-size:12.5px;color:var(--ink-dim);">copies</span>
+      </div>
+      <div class="preview-label" id="mbPreview" style="display:none;margin-top:12px;">
+        <div class="p-name" id="mbPName"></div>
+        <svg id="mbPSvg"></svg>
+        <div class="p-code" id="mbPCode"></div>
+      </div>
+      <button class="submit-btn" id="mbPrintBtn" style="margin-top:12px;">🖨️ Print Barcode</button>
+    </div>
+
     <div class="card" id="labelCartCard" style="display:none;">
       <div class="card-title">Print List <span id="cartLabelCount" style="color:var(--ink-dim); font-family:'Space Mono',monospace;"></span></div>
       <div id="labelCartList"></div>
@@ -1336,6 +1353,38 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
   window.print();
   setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
 });
+
+
+// ==================== Manual barcode ====================
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function clean(){ return $('mbCode').value.trim().toUpperCase().replace(/[^\x20-\x7E]/g,''); }
+  function preview(){
+    const c=clean();
+    $('mbPreview').style.display=c?'block':'none';
+    if(!c) return;
+    $('mbPName').textContent=$('mbCaption').value.trim();
+    $('mbPCode').textContent=c;
+    try{ fitBarcode('#mbPSvg',c,300,42); }catch(e){}
+  }
+  $('mbCode').addEventListener('input',preview);
+  $('mbCaption').addEventListener('input',preview);
+  $('mbPrintBtn').addEventListener('click',()=>{
+    const c=clean();
+    if(!c){ alert('Type a code first.'); $('mbCode').focus(); return; }
+    const n=Math.max(1,Math.min(100,parseInt($('mbCopies').value)||1));
+    const cap=$('mbCaption').value.trim();
+    let h='';
+    for(let i=0;i<n;i++) h+=`<div class="label-cell">${cap?`<div class="l-name">${esc(cap)}</div>`:''}<svg class="mbSvg"></svg><div class="l-code">${esc(c)}</div></div>`;
+    $('labelGrid').innerHTML=h;
+    document.querySelectorAll('#labelGrid .mbSvg').forEach(el=>{ try{ fitBarcode(el,c,330,42); }catch(e){} });
+    const pa=$('labelPrintArea');
+    pa.classList.add('printing');
+    window.print();
+    setTimeout(()=>pa.classList.remove('printing'),500);
+  });
+})();
 
 // ==================== Export for Odoo ====================
 function csvEscapeChoc(val){
