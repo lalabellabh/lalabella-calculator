@@ -4,8 +4,10 @@
    Shows each unassigned order, the branch the assistant picked, or "For manual assign" when it could not decide. */
 (function () {
   'use strict';
-  if (window.LBOrderBell || document.getElementById('lalaBellBtn') || document.getElementById('lbob-btn')) return;
+  if (window.LBOrderBell || document.getElementById('lbob-btn')) return;
   window.LBOrderBell = true;
+  // Pages with their own bell (home, Flower Tools, Item Inventory): keep their bell, but still show the new-order pop-up.
+  var own = document.getElementById('lalaBellBtn');
   var CFG = window.LB_CONFIG || {};
   var API = CFG.ORDER_ASSIGN_FAST_API;
   if (!API) return;
@@ -42,7 +44,7 @@
   var panel = document.createElement('div');
   panel.id = 'lbob-panel';
   panel.innerHTML = '<button type="button" class="xb" aria-label="Close" onclick="this.parentNode.classList.remove(\'show\')">✕</button><h4>📦 Unassigned Orders</h4><div id="lbob-list"></div><a href="https://lalabella.web.app/" target="_blank" rel="noopener">Open lalabella.web.app →</a>';
-  document.body.appendChild(btn); document.body.appendChild(panel);
+  if (!own) { document.body.appendChild(btn); document.body.appendChild(panel); }
   var badge = btn.querySelector('#lbob-badge'), list = panel.querySelector('#lbob-list');
 
   // ---- pop-up alert: shows on whatever page you are on when a NEW unassigned order arrives ----
@@ -64,7 +66,9 @@
   }
   toast.addEventListener('click', function (e) {
     if (e.target.closest('.x')) { hideToast(); return; }
-    hideToast(); panel.classList.add('show'); layoutPanel(); refresh();
+    hideToast();
+    if (own) { var op = document.getElementById('lalaBellPanel'); if (!op || !op.classList.contains('show')) own.click(); return; }
+    panel.classList.add('show'); layoutPanel(); refresh();
   });
   var SEEN_KEY = 'lbobSeen';
   function seenSet() { try { var a = JSON.parse(sessionStorage.getItem(SEEN_KEY) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
@@ -154,7 +158,7 @@
         if (d && d.success === false) return;
         var n = Number(d.count) || 0, rows = Array.isArray(d.ordersDetail) ? d.ordersDetail : [];
         if (n > 0) { badge.textContent = String(n); badge.classList.add('show'); } else badge.classList.remove('show');
-        if (lastCount !== null && n > lastCount) { alarm(); btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
+        if (lastCount !== null && n > lastCount && !own) { alarm(); btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
         lastCount = n;
         var prev = seenSet();
         if (prev && rows.length) {
