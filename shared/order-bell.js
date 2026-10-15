@@ -72,7 +72,15 @@
   });
   var SEEN_KEY = 'lbobSeen';
   function seenSet() { try { var a = JSON.parse(sessionStorage.getItem(SEEN_KEY) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
-  function saveSeen(rows) { try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(rows.map(function (o) { return String(o.orderNo); }))); } catch (e) {} }
+  // Remember every order already announced (not only the ones in the last list), so a list that briefly flips
+  // empty and back never pops the same order up again.
+  function saveSeen(rows) {
+    try {
+      var all = (seenSet() || []).concat(rows.map(function (o) { return String(o.orderNo); }));
+      var uniq = all.filter(function (v, i) { return all.indexOf(v) === i; });
+      sessionStorage.setItem(SEEN_KEY, JSON.stringify(uniq.slice(-200)));
+    } catch (e) {}
+  }
 
   // ---- position (draggable, remembered) ----
   function clamp(x, y) {
