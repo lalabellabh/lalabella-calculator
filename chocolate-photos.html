@@ -40,6 +40,7 @@
   .st.ok{ color:var(--ok); } .st.bad{ color:var(--bad); }
   .acts{ display:flex; flex-direction:column; gap:6px; }
   .btn{ padding:8px 12px; border:none; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(135deg,var(--choc),var(--choc-deep)); color:#fff; white-space:nowrap; font-family:inherit; }
+  .btn.alt{ background:#fff; color:var(--choc-deep); border:1px solid var(--line); }
   .btn.ghost{ background:#fff; color:var(--bad); border:1px solid var(--line); }
   .btn[disabled]{ opacity:.5; cursor:default; }
   .empty{ text-align:center; color:var(--ink-dim); padding:30px 0; font-size:13px; }
@@ -91,7 +92,8 @@
       return '<div class="row" data-id="' + it.id + '">' +
         '<div class="pic">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" loading="lazy">' : 'No photo') + '</div>' +
         '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + esc(it.category) + '</div><div class="st"></div></div>' +
-        '<div class="acts"><button class="btn" data-a="up">📷 ' + (it.photo ? 'Change' : 'Upload') + '</button>' +
+        '<div class="acts"><button class="btn" data-a="cam">📷 Camera</button>' +
+        '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' +
         (it.photo ? '<button class="btn ghost" data-a="rm">Remove</button>' : '') + '</div></div>';
     }).join('');
   }
@@ -135,10 +137,12 @@
   var pickId = null;
   var fileInput = document.createElement('input');
   fileInput.type = 'file'; fileInput.accept = 'image/*';
-  document.body.appendChild(fileInput);
-  fileInput.addEventListener('change', function () {
-    var file = fileInput.files && fileInput.files[0]; var id = pickId;
-    fileInput.value = '';
+  var camInput = document.createElement('input');
+  camInput.type = 'file'; camInput.accept = 'image/*'; camInput.setAttribute('capture', 'environment');
+  document.body.appendChild(fileInput); document.body.appendChild(camInput);
+  function onPicked(inp) {
+    var file = inp.files && inp.files[0]; var id = pickId;
+    inp.value = '';
     if (!file || !id) return;
     busy(id, true); status(id, 'Uploading…');
     shrink(file).then(function (data) {
@@ -149,12 +153,15 @@
       items.forEach(function (it) { if (it.id === id) it.photo = d.photo; });
       render(); status(id, 'Saved ✓', 'ok');
     }).catch(function () { busy(id, false); status(id, 'Failed. Try another photo.', 'bad'); });
-  });
+  }
+  fileInput.addEventListener('change', function () { onPicked(fileInput); });
+  camInput.addEventListener('change', function () { onPicked(camInput); });
 
   document.getElementById('list').addEventListener('click', function (e) {
     var b = e.target.closest('.btn'); if (!b) return;
     var row = b.closest('.row'); var id = Number(row.getAttribute('data-id'));
     if (b.getAttribute('data-a') === 'up') { pickId = id; fileInput.click(); }
+    else if (b.getAttribute('data-a') === 'cam') { pickId = id; camInput.click(); }
     else if (b.getAttribute('data-a') === 'rm') {
       if (!confirm('Remove the picture?')) return;
       busy(id, true); status(id, 'Removing…');
