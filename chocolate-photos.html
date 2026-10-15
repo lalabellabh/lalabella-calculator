@@ -43,6 +43,11 @@
   .nm{ font-weight:700; font-size:13px; word-break:break-word; line-height:1.25; }
   .ct{ font-size:11px; color:var(--ink-dim); }
   .cd{ font-size:11px; color:var(--choc); font-weight:700; font-family:'Space Mono',monospace; margin-top:1px; }
+  .bc{ display:block; height:24px; max-width:100%; margin-top:3px; cursor:zoom-in; }
+  .bigbc{ background:#fff; border-radius:14px; padding:16px 14px 12px; text-align:center; max-width:min(94vw,640px); cursor:default; }
+  .bigbc svg{ display:block; width:100%; height:auto; }
+  .bigbc .c{ font-family:'Space Mono',monospace; font-weight:700; font-size:18px; color:#000; margin-top:6px; letter-spacing:.04em; }
+  .bigbc .n{ font-size:13px; color:#555; margin-top:2px; }
   .fv{ font-size:12px; color:var(--ink); margin-top:4px; line-height:1.3; cursor:pointer; word-break:break-word; }
   .fv.none{ color:var(--ink-dim); font-size:11px; font-style:italic; }
   .st{ font-size:11px; margin-top:2px; min-height:14px; }
@@ -121,11 +126,26 @@
     el.innerHTML = rows.map(function (it) {
       return '<div class="row" data-id="' + it.id + '">' +
         '<div class="pic">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" loading="lazy"><button type="button" class="xrm" data-a="rm" aria-label="Remove picture">✕</button>' : 'No photo') + '</div>' +
-        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + esc(it.category) + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div>' : '') + '<div class="fv' + (it.flavor ? '' : ' none') + '" data-a="edit">' + (it.flavor ? esc(it.flavor) : '＋ Add flavor / description') + '</div><div class="st"></div></div>' +
+        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + esc(it.category) + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div><svg class="bc" data-code="' + esc(it.code) + '" aria-label="Barcode - tap to enlarge"></svg>' : '') + '<div class="fv' + (it.flavor ? '' : ' none') + '" data-a="edit">' + (it.flavor ? esc(it.flavor) : '＋ Add flavor / description') + '</div><div class="st"></div></div>' +
         '<div class="acts"><button class="btn" data-a="cam">📷 Camera</button>' +
         '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' +
         '<button class="btn alt" data-a="edit">✏️ Edit</button>' + '</div></div>';
     }).join('');
+    drawBarcodes();
+  }
+
+  function fitSvg(svg) {
+    if (!svg.getAttribute('viewBox')) {
+      var w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+      if (w && h) svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    }
+  }
+  function drawBarcodes() {
+    if (!window.JsBarcode) return;
+    Array.prototype.forEach.call(document.querySelectorAll('#list svg.bc'), function (svg) {
+      try { JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 1, height: 24, margin: 0, displayValue: false }); fitSvg(svg); svg.setAttribute('preserveAspectRatio', 'xMinYMid meet'); }
+      catch (e) { svg.remove(); }
+    });
   }
 
   function load() {
@@ -265,6 +285,22 @@
   }
 
   document.getElementById('list').addEventListener('click', function (e) {
+    var bc = e.target.closest('svg.bc');
+    if (bc) {
+      var rw = bc.closest('.row'), nm0 = rw && rw.querySelector('.nm');
+      var ov = document.createElement('div'); ov.className = 'lb';
+      var card = document.createElement('div'); card.className = 'bigbc';
+      var sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      card.appendChild(sv);
+      try { JsBarcode(sv, bc.getAttribute('data-code'), { format: 'CODE128', width: 3, height: 130, margin: 10, displayValue: false }); fitSvg(sv); sv.removeAttribute('width'); sv.removeAttribute('height'); } catch (x) { return; }
+      var c = document.createElement('div'); c.className = 'c'; c.textContent = bc.getAttribute('data-code');
+      var n = document.createElement('div'); n.className = 'n'; n.textContent = nm0 ? nm0.textContent : '';
+      card.appendChild(c); card.appendChild(n); ov.appendChild(card);
+      var closeBc = function () { ov.remove(); document.removeEventListener('keydown', kb); };
+      var kb = function (ev) { if (ev.key === 'Escape') closeBc(); };
+      ov.addEventListener('click', closeBc); document.addEventListener('keydown', kb);
+      document.body.appendChild(ov); return;
+    }
     var fv = e.target.closest('.fv'); if (fv) { openEdit(Number(fv.closest('.row').getAttribute('data-id'))); return; }
     var b = e.target.closest('.btn, .xrm'); if (!b) return;
     var row = b.closest('.row'); var id = Number(row.getAttribute('data-id'));
@@ -301,6 +337,7 @@
   load();
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="shared/nav.js" data-standalone></script>
 </body>
 </html>
