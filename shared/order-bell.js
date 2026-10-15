@@ -171,5 +171,6 @@
       .catch(function () {});
   }
   refresh();
-  setInterval(function () { if (!document.hidden) refresh(); }, 7000);
+  // Pages with their own bell already poll every 7 s; this one only adds the pop-up, so it checks less often (less load).
+  setInterval(function () { if (!document.hidden) refresh(); }, own ? 20000 : 7000);
 })();
