@@ -21,29 +21,33 @@
   }
   *{box-sizing:border-box;}
   body{ margin:0; background:linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%); color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh; }
-  .wrap{ max-width:720px; margin:0 auto; padding:26px 18px 80px; }
-  header{ text-align:center; margin-bottom:18px; padding:22px 18px; background:linear-gradient(135deg,#fff 0%,var(--blush) 60%,var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); }
-  .eyebrow{ font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
-  h1{ font-family:'Great Vibes',cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
-  .sub{ font-size:12px; color:var(--ink-dim); margin-top:8px; }
-  .bar{ display:flex; gap:8px; margin-bottom:12px; }
+  html,body{ height:100%; }
+  body{ overflow:hidden; }
+  .wrap{ max-width:1280px; margin:0 auto; padding:14px 18px 10px; height:100vh; height:100dvh; display:flex; flex-direction:column; }
+  header{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:10px; padding:10px 16px; background:linear-gradient(135deg,#fff 0%,var(--blush) 60%,var(--blush-2) 100%); border-radius:16px; border:1px solid var(--line); flex:none; }
+  .eyebrow{ font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+  h1{ font-family:'Great Vibes',cursive; font-weight:400; color:var(--rose-deep); font-size:2rem; margin:0; line-height:1; }
+  .sub{ font-size:12px; color:var(--ink-dim); flex:1; min-width:180px; }
+  .bar{ display:flex; gap:8px; margin-bottom:8px; flex:none; align-items:center; }
   .bar input{ flex:1; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; outline:none; background:#fff; }
   .bar select{ border:1px solid var(--line); border-radius:10px; padding:10px; font-size:13px; font-family:inherit; background:#fff; }
-  .count{ font-size:12px; color:var(--ink-dim); margin:0 2px 10px; }
-  .row{ display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
-  .pic{ width:64px; height:64px; border-radius:10px; background:var(--blush); border:1px dashed var(--line); flex:none; display:flex; align-items:center; justify-content:center; color:var(--ink-dim); font-size:11px; overflow:hidden; }
+  .count{ font-size:12px; color:var(--ink-dim); white-space:nowrap; }
+  #list{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; align-content:start; padding:2px 2px 14px; }
+  .row{ display:flex; flex-direction:column; align-items:stretch; gap:8px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:10px; }
+  .pic{ width:100%; aspect-ratio:1/1; border-radius:10px; background:var(--blush); border:1px dashed var(--line); display:flex; align-items:center; justify-content:center; color:var(--ink-dim); font-size:12px; overflow:hidden; }
   .pic img{ width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
-  .meta{ flex:1; min-width:0; }
-  .nm{ font-weight:700; font-size:14px; word-break:break-word; }
+  .meta{ min-width:0; }
+  .nm{ font-weight:700; font-size:13px; word-break:break-word; line-height:1.25; }
   .ct{ font-size:11px; color:var(--ink-dim); }
   .st{ font-size:11px; margin-top:2px; min-height:14px; }
   .st.ok{ color:var(--ok); } .st.bad{ color:var(--bad); }
-  .acts{ display:flex; flex-direction:column; gap:6px; }
-  .btn{ padding:8px 12px; border:none; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(135deg,var(--choc),var(--choc-deep)); color:#fff; white-space:nowrap; font-family:inherit; }
+  .acts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:auto; }
+  .acts .btn{ flex:1; }
+  .btn{ padding:8px 10px; border:none; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(135deg,var(--choc),var(--choc-deep)); color:#fff; white-space:nowrap; font-family:inherit; }
   .btn.alt{ background:#fff; color:var(--choc-deep); border:1px solid var(--line); }
   .btn.ghost{ background:#fff; color:var(--bad); border:1px solid var(--line); }
   .btn[disabled]{ opacity:.5; cursor:default; }
-  .empty{ text-align:center; color:var(--ink-dim); padding:30px 0; font-size:13px; }
+  .empty{ grid-column:1/-1; text-align:center; color:var(--ink-dim); padding:30px 0; font-size:13px; }
   input[type=file]{ display:none; }
 </style>
 </head>
@@ -57,8 +61,8 @@
   <div class="bar">
     <input id="q" type="search" placeholder="Search chocolate…" autocomplete="off">
     <select id="flt"><option value="all">Lahat</option><option value="none">Walang picture</option><option value="has">May picture</option></select>
+    <div class="count" id="count">Loading…</div>
   </div>
-  <div class="count" id="count">Loading…</div>
   <div id="list"></div>
 </div>
 <script>
