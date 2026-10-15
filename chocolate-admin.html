@@ -251,6 +251,7 @@
         </div>
       </div>
       <button class="btn chocolate" id="saveEditItemBtn">Save Changes</button>
+      <button class="btn" id="deleteEditItemBtn" style="background:#fff;color:#c0392b;border:1.5px solid #e8b4ae;margin-top:10px;">🗑️ Delete this chocolate</button>
       <div class="result" id="editItemResult"></div>
     </div>
   </div>
@@ -492,6 +493,39 @@ document.getElementById('saveEditItemBtn').addEventListener('click', ()=>{
       resultBox.className = 'result err';
       resultBox.textContent = 'Could not reach the server. Check your connection.';
     });
+});
+
+document.getElementById('deleteEditItemBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('deleteEditItemBtn');
+  const resultBox = document.getElementById('editItemResult');
+  const name = document.getElementById('editItemName').value.trim();
+  const known = editableItems.some(it => String(it['Chocolate Name']||'').trim().toLowerCase() === name.toLowerCase());
+  if(!name || !known){
+    resultBox.className = 'result err';
+    resultBox.textContent = 'Pick the chocolate from the list first.';
+    return;
+  }
+  if(!confirm('Delete "' + name + '" from the catalog?\n\nThis only works if it was never used in receiving, release, arrangements or stock counts. This cannot be undone.')) return;
+  btn.disabled = true; const old = btn.textContent; btn.textContent = 'Deleting…';
+  resultBox.className = 'result'; resultBox.textContent = '';
+  try{
+    const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+    const res = await (await fetch(LB_CONFIG.CHOC_PHOTO_FAST_API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'deleteItem', token, name }) })).json();
+    if(!res.success){
+      resultBox.className = 'result err';
+      resultBox.textContent = res.error || 'Could not delete.';
+    } else {
+      resultBox.className = 'result ok';
+      resultBox.textContent = '✓ Deleted — ' + name + ' removed from the catalog.';
+      ['editItemName','editItemNewName','editItemBrand','editItemGrams','editItemPrice','editItemMinStock','editItemCode'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+      try{ localStorage.removeItem('lbChocPhotosV1'); }catch(e){}
+      loadEditableItems();
+    }
+  }catch(e){
+    resultBox.className = 'result err';
+    resultBox.textContent = 'Could not reach the server. Check your connection.';
+  }
+  btn.disabled = false; btn.textContent = old;
 });
 </script>
 <script>
