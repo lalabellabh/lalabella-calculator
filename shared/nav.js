@@ -779,8 +779,8 @@
     document.body.appendChild(df);
   }
 
-  // Floating unassigned-orders bell (draggable). Steps aside on pages that have their own #lalaBellBtn. See shared/order-bell.js.
-  if (!window.LBOrderBell && !document.getElementById('lalaBellBtn') && !document.querySelector('script[src="shared/order-bell.js"]')) {
+  // Floating unassigned-orders bell (draggable). On pages that have their own #lalaBellBtn it only adds the new-order pop-up. See shared/order-bell.js.
+  if (!window.LBOrderBell && !document.querySelector('script[src="shared/order-bell.js"]')) {
     const ob = document.createElement('script');
     ob.src = 'shared/order-bell.js';
     document.body.appendChild(ob);
