@@ -442,6 +442,9 @@
 
 <style>
   @media print{ #printArea{ display:block !important; } }
+  /* Staff (non-Admin): hide delete buttons and "Set target amount". Server also blocks them. */
+  html.not-admin .delete-btn{ display:none !important; }
+  html.not-admin #toggleTargetLink, html.not-admin #pcTargetCard{ display:none !important; }
 </style>
 
 <script>
@@ -450,6 +453,18 @@ const PETTYCASH_API_URL = LB_CONFIG.PETTY_CASH_FAST_API;
 function getToken(){
   return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
 }
+function isAdminUser(){
+  try{
+    let u = window.LALABELLA_USER;
+    if(!u){ const s = sessionStorage.getItem('lalabellaUser'); if(s) u = JSON.parse(s); }
+    return !!u && String(u.role || '').toLowerCase() === 'admin';
+  }catch(e){ return false; }
+}
+function applyRoleView(){
+  document.documentElement.classList.toggle('not-admin', !isAdminUser());
+}
+applyRoleView();
+window.addEventListener('lb:user-changed', applyRoleView);
 function fmtBD(n){ return Number(n).toFixed(3) + ' BD'; }
 function fmtDate(d){ return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 
