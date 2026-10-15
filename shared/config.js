@@ -47,6 +47,7 @@ window.LB_CONFIG = Object.freeze({
   SUPPLY_LOG_API:   'https://script.google.com/macros/s/AKfycbyvQl0VEx-SObaV5CMeKK-sDEopFH0X-rauQkElWPW7N_Hraxsuth-odm_rW-SVMzk/exec',
   PETTY_CASH_API:   'https://script.google.com/macros/s/AKfycbxz53pJEQIEOgvfUIxwhcOcdZtu7An4qXwShP7a58bVjvJSPm8ORs4eP6lv-kdKJBdT/exec',
   PETTY_CASH_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/pettycash-fast',
+  CHOC_PHOTO_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chocphoto-fast',
   NOVA_API:         'https://script.google.com/macros/s/AKfycbxuH9jp_GYVK2VyEEvQiEiXVH58U3RBWV8p7i5Pu7plE1O2cDsFBgdVgEwLiV-On9w/exec',
   NOVA_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/nova-fast',
   // System "brain": reminders + smart alerts (shared/brain.js, User Management → Reminders).
