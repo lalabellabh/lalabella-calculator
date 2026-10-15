@@ -39,6 +39,7 @@
   .meta{ min-width:0; }
   .nm{ font-weight:700; font-size:13px; word-break:break-word; line-height:1.25; }
   .ct{ font-size:11px; color:var(--ink-dim); }
+  .cd{ font-size:11px; color:var(--choc); font-weight:700; font-family:'Space Mono',monospace; margin-top:1px; }
   .st{ font-size:11px; margin-top:2px; min-height:14px; }
   .st.ok{ color:var(--ok); } .st.bad{ color:var(--bad); }
   .acts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:auto; }
@@ -59,7 +60,7 @@
     <div class="sub">I-upload ang litrato ng bawat chocolate. Lalabas ito sa lahat ng chocolate pages.</div>
   </header>
   <div class="bar">
-    <input id="q" type="search" placeholder="Search chocolate…" autocomplete="off">
+    <input id="q" type="search" placeholder="Search name, category or code…" autocomplete="off">
     <select id="flt"><option value="all">Lahat</option><option value="none">Walang picture</option><option value="has">May picture</option></select>
     <div class="count" id="count">Loading…</div>
   </div>
@@ -83,7 +84,7 @@
     var q = document.getElementById('q').value.trim().toLowerCase();
     var f = document.getElementById('flt').value;
     var rows = items.filter(function (it) {
-      if (q && (it.name + ' ' + it.category).toLowerCase().indexOf(q) === -1) return false;
+      if (q && (it.name + ' ' + it.category + ' ' + (it.code || '')).toLowerCase().indexOf(q) === -1) return false;
       if (f === 'none' && it.photo) return false;
       if (f === 'has' && !it.photo) return false;
       return true;
@@ -95,7 +96,7 @@
     el.innerHTML = rows.map(function (it) {
       return '<div class="row" data-id="' + it.id + '">' +
         '<div class="pic">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" loading="lazy">' : 'No photo') + '</div>' +
-        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + esc(it.category) + '</div><div class="st"></div></div>' +
+        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + esc(it.category) + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div>' : '') + '<div class="st"></div></div>' +
         '<div class="acts"><button class="btn" data-a="cam">📷 Camera</button>' +
         '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' +
         (it.photo ? '<button class="btn ghost" data-a="rm">Remove</button>' : '') + '</div></div>';
