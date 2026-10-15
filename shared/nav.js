@@ -41,6 +41,7 @@
       ['chocolate-barcode.html', '🏷️', 'Barcode'],
       ['chocolate-calc.html', '🍫', 'Chocolate Calculator'],
       ['chocolate-admin.html', '🔐', 'Chocolate Admin', 'admin'],
+      ['chocolate-photos.html', '🖼️', 'Chocolate Photos', 'admin'],
       ['chocolate-odoo-import.html', '📥', 'Odoo Price Import'],
       ['chocolate-guide.html', '📖', 'Chocolate Guide']
     ]},
@@ -784,6 +785,13 @@
     const ob = document.createElement('script');
     ob.src = 'shared/order-bell.js';
     document.body.appendChild(ob);
+  }
+
+  // Chocolate pictures (thumbnail in pick lists, tap for big picture) on chocolate pages. See shared/choc-photos.js.
+  if (moduleOf(page) === 'chocolate' && !window.LBChocPhotos && !document.querySelector('script[src="shared/choc-photos.js"]')) {
+    const cp = document.createElement('script');
+    cp.src = 'shared/choc-photos.js';
+    document.body.appendChild(cp);
   }
 
   // System "brain" (reminders + smart alerts) — loaded here once, same
