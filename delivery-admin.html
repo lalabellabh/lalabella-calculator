@@ -107,6 +107,18 @@
   function fmtT(iso){ return iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour:'numeric', minute:'2-digit' }) : ''; }
   function fmtDT(iso){ return iso ? new Date(iso).toLocaleString('en-GB', { timeZone: TZ, day:'2-digit', month:'short', hour:'numeric', minute:'2-digit' }) : ''; }
   function nowMs(){ return Date.now() + serverSkew; }
+  function dist(a, b){
+    var r = Math.PI / 180, R = 6371000, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function trackMeters(){
+    if (!track || !track.points || track.points.length < 2) return 0;
+    var t = 0, last = track.points[0];
+    for (var i = 1; i < track.points.length; i++){ var d = dist(last, track.points[i]); if (d >= 8){ t += d; last = track.points[i]; } }
+    return t;
+  }
+  function fmtDist(m){ return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m'; }
   function ago(iso){
     if (!iso) return null;
     var s = Math.max(0, Math.round((nowMs() - new Date(iso).getTime()) / 1000));
@@ -148,6 +160,8 @@
       if (r.id === sel || sel == null) fitPts.push([r.lastLat, r.lastLng]);
       pts.push([r.lastLat, r.lastLng]);
     });
+    // Keep following the car: if the followed delivery drives out of view, pan to it.
+    if (focus && focus.status === 'On the way' && focus.lastLat != null && map.getBounds && !map.getBounds().contains([focus.lastLat, focus.lastLng])) map.panTo([focus.lastLat, focus.lastLng]);
     var key = String(sel);
     var use = fitPts.length ? fitPts : pts;
     if (fitFor !== key && use.length){
@@ -191,6 +205,7 @@
       if (r.lastAt == null) h += '<br><span class="stale">No GPS received yet.</span>';
       else h += '<br><b>Last GPS:</b> ' + esc(ago(r.lastAt)) + (r.lastAcc != null ? ' (±' + r.lastAcc + ' m)' : '') + (s > STALE_S ? ' <span class="stale">⚠️ No update. The driver’s app may be closed or the phone locked.</span>' : '');
     }
+    if (track && track.delivery && track.delivery.id === r.id && track.points.length) h += '<br><b>Moved:</b> ' + esc(fmtDist(trackMeters())) + ' · ' + track.points.length + ' GPS points';
     if (r.status !== 'On the way' && r.status !== 'Delivered' && r.lastAt) h += '<br><b>Last GPS:</b> ' + esc(fmtDT(r.lastAt));
     d.innerHTML = h;
   }
