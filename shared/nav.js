@@ -42,7 +42,7 @@
       ['chocolate-calc.html', '🍫', 'Chocolate Calculator'],
       ['chocolate-admin.html', '🔐', 'Chocolate Admin', 'admin'],
       ['chocolate-photos.html', '🖼️', 'Chocolate Photos', 'admin'],
-      ['chocolate-odoo-import.html', '📥', 'Odoo Price Import'],
+      ['chocolate-odoo-import.html', '📥', 'Odoo Price Import', 'admin'],
       ['chocolate-guide.html', '📖', 'Chocolate Guide']
     ]},
     flower: { title: 'Flower Tools', home: 'flower-tools.html', homeLabel: 'Flower Tools', items: [
@@ -56,14 +56,14 @@
       ['flower-barcode.html', '🏷️', 'Barcode'],
       ['flower-calc.html', '🧮', 'Flower Calculator'],
       ['flower-admin.html', '🔐', 'Flower Admin', 'admin'],
-      ['flower-odoo-import.html', '📥', 'Odoo Price Import'],
+      ['flower-odoo-import.html', '📥', 'Odoo Price Import', 'admin'],
       ['flower-guide.html', '📖', 'Flower Guide']
     ]},
     item: { title: 'Item Inventory', home: 'item-inventory.html', homeLabel: 'Item Inventory', items: [
       ['item-inventory.html', '📦', 'Item Inventory'],
       ['item-dashboard.html', '📊', 'Item Dashboard'],
       ['item-admin.html', '🔐', 'Item Admin', 'admin'],
-      ['item-odoo-import.html', '📥', 'Odoo Price Import']
+      ['item-odoo-import.html', '📥', 'Odoo Price Import', 'admin']
     ]}
   };
 
