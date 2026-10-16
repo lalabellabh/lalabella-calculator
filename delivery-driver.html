@@ -59,7 +59,7 @@
   'use strict';
   var API = (window.LB_CONFIG && LB_CONFIG.DELIVERY_API) || (LB_CONFIG.SUPABASE_URL + '/functions/v1/delivery-fast');
   var SEND_EVERY_MS = 8000, TZ = 'Asia/Bahrain';
-  var rows = [], fix = null, fixSentAt = 0, watchId = null, timer = null, wakeLock = null, sentAt = 0, sending = false, geoErr = '';
+  var moved = 0, lastStep = null, rows = [], fix = null, fixSentAt = 0, watchId = null, timer = null, wakeLock = null, sentAt = 0, sending = false, geoErr = '';
   var confirmId = null, busy = {}, errs = {};
 
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
@@ -86,8 +86,18 @@
       navigator.geolocation.getCurrentPosition(function(p){ res(p); }, rej, { enableHighAccuracy:true, timeout:ms || 15000, maximumAge:0 });
     });
   }
+  function meters(a, b){
+    var r = Math.PI / 180, R = 6371000, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
   function onFix(p){
     fix = { lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy || 0, t:Date.now() };
+    // Distance moved: only count a step when it is clearly bigger than the GPS wobble, so standing still stays at 0.
+    if (fix.acc <= 50){
+      if (!lastStep) lastStep = { lat:fix.lat, lng:fix.lng };
+      else { var d = meters(lastStep, fix); if (d >= Math.max(8, fix.acc * 0.8)){ moved += d; lastStep = { lat:fix.lat, lng:fix.lng }; } }
+    }
     geoErr = '';
     renderGps();
   }
@@ -104,7 +114,7 @@
     if (watchId != null){ try { navigator.geolocation.clearWatch(watchId); } catch(e){} watchId = null; }
     if (timer){ clearInterval(timer); timer = null; }
     releaseWake();
-    fix = null; fixSentAt = 0;
+    fix = null; fixSentAt = 0; lastStep = null; moved = 0;
     document.getElementById('keep').hidden = true;
   }
   function getWake(){
@@ -140,7 +150,7 @@
     else {
       var a = Math.round(fix.acc), ago = sentAt ? Math.max(0, Math.round((Date.now() - sentAt) / 1000)) : null;
       cls += a > 100 ? ' weak' : ' good';
-      txt = '📍 GPS on · ±' + a + ' m · ' + (ago == null ? 'sending…' : 'sent ' + ago + ' s ago');
+      txt = '📍 GPS on · ±' + a + ' m · ' + (ago == null ? 'sending…' : 'sent ' + ago + ' s ago') + ' · moved ' + (moved >= 1000 ? (moved / 1000).toFixed(2) + ' km' : Math.round(moved) + ' m');
     }
     el.className = cls; el.textContent = txt;
   }
