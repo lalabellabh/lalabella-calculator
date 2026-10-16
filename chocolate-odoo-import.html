@@ -103,7 +103,7 @@
     <div class="summary-line" id="summaryLine"></div>
     <table>
       <thead>
-        <tr><th></th><th>Item Code</th><th>Chocolate</th><th>Current Rate</th><th>New Rate (Odoo)</th></tr>
+        <tr><th></th><th>Item Code</th><th>Chocolate</th><th>Current (as in Odoo)</th><th>New Price (Odoo)</th></tr>
       </thead>
       <tbody id="compareBody"></tbody>
     </table>
@@ -230,15 +230,29 @@ function buildComparison(){
   comparisonRows = chocolateItems
     .map(item => {
       const code = String(item['Product Code'] || '').trim();
-      const currentRate = Number(item['Standard Price / Kg']) || 0;
+      // The Export for Odoo (chocolate-barcode.html) sends Odoo the price PER PIECE
+      // for loose Piece items (price per kg x grams / 1000). So an Odoo price must be
+      // converted back to price per kg before it is compared or saved, otherwise a
+      // per-piece price would be written into the per-kg field. Box/Can items, and
+      // Piece items with no grams, are exported (and saved) as they are.
+      const priceKg = Number(String(item['Standard Price / Kg'] == null ? '' : item['Standard Price / Kg']).replace(/[^0-9.]/g,'')) || 0;
+      const grams = Number(item['Grams']) || 0;
+      const isWhole = String(item['Packaging Type'] || 'Piece').trim().toLowerCase() !== 'piece';
+      const perPiece = !isWhole && grams > 0;
+      const currentOdoo = perPiece ? (priceKg * grams / 1000) : priceKg;
       const odooRate = odooByCode.hasOwnProperty(code) ? odooByCode[code] : null;
+      const newPerKg = odooRate === null ? null : (perPiece ? Math.round(odooRate * 1000 / grams * 1000) / 1000 : odooRate);
       return {
         itemCode: code,
         flowerName: item['Chocolate Name'] || '',
-        currentRate,
+        soldAs: perPiece ? 'per piece' : (isWhole ? 'per ' + String(item['Packaging Type']).trim().toLowerCase() : 'per kg'),
+        currentRate: priceKg,
+        currentOdoo,
         odooRate,
+        newPerKg,
         hasMatch: odooRate !== null,
-        isDifferent: odooRate !== null && Math.abs(odooRate - currentRate) > 0.0001
+        // Odoo prices are rounded to 3 decimals by the export, so allow that much rounding.
+        isDifferent: odooRate !== null && Math.abs(odooRate - currentOdoo) > 0.0006
       };
     })
     .filter(r => r.hasMatch); // only show items Odoo actually has a price for
@@ -257,9 +271,9 @@ function renderComparison(){
     <tr class="${r.isDifferent ? 'diff' : ''}">
       <td>${r.isDifferent ? `<input type="checkbox" class="row-select" data-idx="${i}">` : ''}</td>
       <td>${r.itemCode}</td>
-      <td>${r.flowerName}</td>
-      <td class="${r.isDifferent ? 'old-rate' : ''}">${r.currentRate.toFixed(3)}</td>
-      <td class="${r.isDifferent ? 'new-rate' : ''}">${r.isDifferent ? r.odooRate.toFixed(3) : '(same)'}</td>
+      <td>${r.flowerName}<div style="font-size:11px;color:var(--ink-dim);">Odoo price is ${r.soldAs}</div></td>
+      <td class="${r.isDifferent ? 'old-rate' : ''}">${r.currentOdoo.toFixed(3)}</td>
+      <td class="${r.isDifferent ? 'new-rate' : ''}">${r.isDifferent ? r.odooRate.toFixed(3) + (r.soldAs === 'per piece' ? '<div style="font-size:11px;font-weight:400;">saves ' + r.newPerKg.toFixed(3) + ' / kg</div>' : '') : '(same)'}</td>
     </tr>
   `).join('');
 }
@@ -274,10 +288,10 @@ document.getElementById('applyBtn').addEventListener('click', ()=>{
 
   const updates = checked.map(cb => {
     const row = comparisonRows[Number(cb.dataset.idx)];
-    return { itemCode: row.itemCode, newRate: row.odooRate };
+    return { itemCode: row.itemCode, newRate: row.newPerKg };
   });
 
-  const preview = updates.map(u => u.itemCode + ' → ' + u.newRate.toFixed(3)).join('\n');
+  const preview = updates.map(u => u.itemCode + ' → ' + u.newRate.toFixed(3) + ' per kg / unit price').join('\n');
   if(!confirm(`Apply ${updates.length} new price(s):\n\n${preview}\n\nAre you sure?`)) return;
 
   const btn = document.getElementById('applyBtn');
