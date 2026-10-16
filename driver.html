@@ -43,6 +43,21 @@
   button.sure{background:var(--bad);border-color:transparent;color:#fff}
   button.link{width:auto;padding:8px 14px;font-size:12.5px;color:var(--muted)}
   button:disabled{opacity:.55}
+  .hero{text-align:center;margin:18px 0 22px}
+  .hero .badge{width:76px;height:76px;margin:0 auto 14px;border-radius:24px;background:linear-gradient(135deg,#f6dc9c,var(--gold));display:grid;place-items:center;font-size:38px;box-shadow:0 14px 30px rgba(217,164,65,.45),inset 0 -4px 8px rgba(0,0,0,.08);transform:rotate(-6deg)}
+  .hero h1{font-family:'Fraunces',serif;font-size:40px;line-height:1;margin:0;letter-spacing:-.5px}
+  .hero h1 em{font-style:normal;color:var(--rose)}
+  .hero p{margin:10px 0 0;color:var(--muted);font-size:14px}
+  .card.auth{padding:22px;border-radius:24px;box-shadow:0 20px 50px rgba(158,47,74,.14);border:1px solid #fff;background:rgba(255,255,255,.92)}
+  .card.auth h2{font-size:22px}
+  .field{position:relative}
+  .field input{padding-left:44px;padding-right:46px;height:50px}
+  .field .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.75;pointer-events:none}
+  .field .eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:42px;height:42px;padding:0;border:0;background:none;color:var(--muted);display:grid;place-items:center;border-radius:10px}
+  .field .eye.on{color:var(--rose)}
+  label.chk{display:flex;align-items:center;gap:9px;margin:14px 0 0;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink);font-weight:500;cursor:pointer}
+  label.chk input{width:18px;height:18px;padding:0;accent-color:var(--rose)}
+  button.go{box-shadow:0 8px 20px rgba(158,47,74,.3)}
   a.maps{display:block;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:11px;border-radius:12px;border:1px solid var(--line);color:var(--rose-dark);background:#fff8f7;margin:0 0 10px}
   .gps{font-size:12.5px;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:#f6f2ef;color:var(--ink)}
   .gps.good{background:#e3f4ea} .gps.weak{background:#fdf0d8} .gps.off{background:#fbe3e0}
@@ -60,20 +75,31 @@
   </div>
 
   <div id="loginView" hidden>
-    <div class="card">
-      <h2>Log in</h2>
-      <label for="u">Username</label><input id="u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
-      <label for="p">Password</label><input id="p" type="password" autocomplete="current-password">
-      <button class="go" id="inBtn" style="margin-top:16px">Log in</button>
-      <div class="msg" id="loginMsg"></div>
-      <button class="link" id="toSign" style="width:100%;margin-top:10px">No account? Sign up</button>
+    <div class="hero">
+      <div class="badge">🚚</div>
+      <h1>Lalabella<br><em>Driver</em></h1>
+      <p>Deliver with care. Every order, on the map.</p>
     </div>
-    <div class="card" id="signCard" hidden>
-      <h2>Sign up</h2>
+    <div class="card auth" id="loginCard">
+      <h2>Welcome back</h2>
+      <label for="u">Username</label>
+      <div class="field"><span class="ico">👤</span><input id="u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+      <label for="p">Password</label>
+      <div class="field"><span class="ico">🔒</span><input id="p" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye="p" aria-label="Show password"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <label class="chk"><input type="checkbox" id="rem" checked> <span>Remember me on this phone</span></label>
+      <button class="go" id="inBtn" style="margin-top:14px">Log in</button>
+      <div class="msg" id="loginMsg"></div>
+      <button class="link" id="toSign" style="width:100%;margin-top:6px">No account? <b>Sign up</b></button>
+    </div>
+    <div class="card auth" id="signCard" hidden>
+      <h2>Create account</h2>
       <p class="small" style="margin:0 0 4px">The admin must approve your account before you can log in.</p>
-      <label for="sN">Full name</label><input id="sN" autocomplete="name" maxlength="60">
-      <label for="sU">Username</label><input id="sU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="30" placeholder="letters and numbers, no spaces">
-      <label for="sP">Password (min 6)</label><input id="sP" type="password" autocomplete="new-password" maxlength="100">
+      <label for="sN">Full name</label>
+      <div class="field"><span class="ico">🪪</span><input id="sN" autocomplete="name" maxlength="60"></div>
+      <label for="sU">Username</label>
+      <div class="field"><span class="ico">👤</span><input id="sU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="30" placeholder="letters and numbers, no spaces"></div>
+      <label for="sP">Password (min 6)</label>
+      <div class="field"><span class="ico">🔒</span><input id="sP" type="password" autocomplete="new-password" maxlength="100"><button type="button" class="eye" data-eye="sP" aria-label="Show password"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
       <button class="go" id="sBtn" style="margin-top:16px">Send sign-up</button>
       <div class="msg" id="signMsg"></div>
       <button class="link" id="toLogin" style="width:100%;margin-top:6px">Back to log in</button>
@@ -98,8 +124,16 @@
   var confirmId = null, busy = {}, errs = {};
 
   function $(id){ return document.getElementById(id); }
-  function store(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} }
-  function read(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } }
+  function store(k, v, sess){
+    try { localStorage.removeItem(k); } catch(e){}
+    try { sessionStorage.removeItem(k); } catch(e){}
+    if (v == null) return;
+    try { (sess ? sessionStorage : localStorage).setItem(k, v); } catch(e){}
+  }
+  function read(k){
+    try { var a = localStorage.getItem(k); if (a) return a; } catch(e){}
+    try { return sessionStorage.getItem(k) || ''; } catch(e){ return ''; }
+  }
   function token(){ return read(TK); }
   function api(body){
     return fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: KEY }, body: JSON.stringify(Object.assign({ token: token() }, body)) })
@@ -113,10 +147,17 @@
   // ---------- login ----------
   function showLogin(msg){
     stopAll();
+    document.querySelector('.topbar').style.display = 'none';
     $('loginView').hidden = false; $('mainView').hidden = true; $('outBtn').hidden = true; $('who').textContent = '';
     $('loginMsg').style.color = ''; $('loginMsg').textContent = msg || '';
+    try { var ru = localStorage.getItem('lbDriverUser'); if (ru && !$('u').value) $('u').value = ru; } catch(e){}
+  }
+  function setEye(id, on){
+    var i = $(id); i.type = on ? 'text' : 'password';
+    var b = document.querySelector('[data-eye="' + id + '"]'); if (b){ b.classList.toggle('on', on); b.setAttribute('aria-label', on ? 'Hide password' : 'Show password'); }
   }
   function showMain(){
+    document.querySelector('.topbar').style.display = '';
     $('loginView').hidden = true; $('mainView').hidden = false; $('outBtn').hidden = false;
     $('who').textContent = read(NK);
   }
@@ -130,11 +171,11 @@
       .then(function(r){
         $('inBtn').disabled = false;
         if (!r.success){ m.textContent = r.error || 'Could not log in.'; return; }
-        store(TK, r.token); store(NK, r.name || u); $('p').value = '';
+        var keep = $('rem').checked; store(TK, r.token, !keep); store(NK, r.name || u, !keep); try { if (keep) localStorage.setItem('lbDriverUser', u); else localStorage.removeItem('lbDriverUser'); } catch(e){} $('p').value = ''; setEye('p', false);
         showMain(); $('list').innerHTML = '<div class="empty">Loading…</div>'; load();
       }).catch(function(){ $('inBtn').disabled = false; m.textContent = 'No internet. Try again.'; });
   }
-  function showSign(on){ $('signCard').hidden = !on; document.querySelector('#loginView > .card').hidden = on; $('signMsg').textContent = ''; $('signMsg').style.color = ''; }
+  function showSign(on){ $('signCard').hidden = !on; $('loginCard').hidden = on; $('signMsg').textContent = ''; $('signMsg').style.color = ''; }
   function doSign(){
     var n = $('sN').value.trim(), u = $('sU').value.trim().toLowerCase(), p = $('sP').value, m = $('signMsg');
     m.style.color = ''; m.textContent = '';
@@ -382,6 +423,7 @@
   $('p').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
   $('u').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('p').focus(); });
   $('outBtn').addEventListener('click', doLogout);
+  document.querySelectorAll('[data-eye]').forEach(function(b){ b.addEventListener('click', function(){ var id = b.getAttribute('data-eye'); setEye(id, $(id).type === 'password'); }); });
   $('toSign').addEventListener('click', function(){ showSign(true); });
   $('toLogin').addEventListener('click', function(){ showSign(false); });
   $('sBtn').addEventListener('click', doSign);
