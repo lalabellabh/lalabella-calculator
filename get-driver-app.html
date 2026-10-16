@@ -209,7 +209,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
       <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span></button>
       <nav class="menu" id="menu" hidden>
         <a href="driver.html">🏠 Home (My deliveries)</a>
-        <a href="get-driver-app.html">📲 Get / update app</a>
+        <a href="get-driver-app.html" id="updLink">📲 Get / update app</a>
         <hr>
         <a href="get-app.html">🌸 Lalabella staff app</a>
       </nav>
@@ -318,6 +318,20 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
   // ?dl=1 starts the Android download straight away (the button stays if the browser blocks it)
   if (isAndroid && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { $('apkBtn').click(); } catch(e){} }, 600);
+})();
+</script>
+<script>
+(function(){
+  var a = document.getElementById('updLink'); if (!a) return;
+  var app = window.LBDriverApp, have = null;
+  try { if (app && app.versionCode) have = Number(app.versionCode()) || 0; } catch(e){}
+  fetch('downloads/driver-app-version.json?t=' + Date.now(), { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    var nc = Number(j && j.versionCode) || 0, nv = (j && j.versionName) ? 'v' + j.versionName : '';
+    if (!nc) return;
+    if (have === null){ a.textContent = '📲 Get app' + (nv ? ' (latest ' + nv + ')' : ''); }
+    else if (nc > have){ a.textContent = '⬇️ New update ' + nv + ' – tap to install'; a.href = 'get-driver-app.html?dl=1'; a.style.background = 'rgba(201,80,107,.14)'; a.style.color = '#8f2a45'; }
+    else { a.textContent = '✅ Driver app ' + nv + ' (latest)'; }
+  }).catch(function(){});
 })();
 </script>
 </body>
