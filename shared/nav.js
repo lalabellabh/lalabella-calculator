@@ -72,6 +72,8 @@
     ['nova-command-center.html', '🎙️', 'NOVA'],
     ['schedule.html', '📆', 'Duty Schedule'],
     ['attendance.html', '🕒', 'Attendance'],
+    ['delivery-driver.html', '🚚', 'My Deliveries'],
+    ['delivery-admin.html', '🗺️', 'Delivery Map', 'admin'],
     ['profile.html', '👤', 'My Profile'],
     ['petty-cash.html', '💰', 'Petty Cash & Cash'],
     ['notes.html', '📝', 'Notes'],
