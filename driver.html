@@ -108,7 +108,7 @@ html,body{overscroll-behavior-y:contain}
       <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span></button>
       <nav class="menu" id="menu" hidden>
         <a href="driver.html">🏠 Home (My deliveries)</a>
-        <a href="get-driver-app.html">📲 Get / update app</a>
+        <a href="get-driver-app.html" id="updLink">📲 Get / update app</a>
         <hr>
         <button id="outBtn" hidden>🚪 Log out</button>
       </nav>
@@ -519,6 +519,20 @@ html,body{overscroll-behavior-y:contain}
     document.addEventListener('touchcancel', function(){ y0 = null; reset(); });
   })();
   if (token()){ showMain(); load(); } else showLogin('');
+})();
+</script>
+<script>
+(function(){
+  var a = document.getElementById('updLink'); if (!a) return;
+  var app = window.LBDriverApp, have = null;
+  try { if (app && app.versionCode) have = Number(app.versionCode()) || 0; } catch(e){}
+  fetch('downloads/driver-app-version.json?t=' + Date.now(), { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    var nc = Number(j && j.versionCode) || 0, nv = (j && j.versionName) ? 'v' + j.versionName : '';
+    if (!nc) return;
+    if (have === null){ a.textContent = '📲 Get app' + (nv ? ' (latest ' + nv + ')' : ''); }
+    else if (nc > have){ a.textContent = '⬇️ New update ' + nv + ' – tap to install'; a.href = 'get-driver-app.html?dl=1'; a.style.background = 'rgba(201,80,107,.14)'; a.style.color = '#8f2a45'; }
+    else { a.textContent = '✅ Driver app ' + nv + ' (latest)'; }
+  }).catch(function(){});
 })();
 </script>
 </body>
