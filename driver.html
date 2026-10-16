@@ -44,6 +44,19 @@
   button.link{width:auto;padding:8px 14px;font-size:12.5px;color:var(--muted)}
   button:disabled{opacity:.55}
   .hero{text-align:center;margin:18px 0 22px}
+  .scene{position:relative;width:100%;max-width:340px;height:120px;margin:0 auto 14px;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,#fde6dd 0%,#fbd3cf 100%);box-shadow:0 14px 30px rgba(158,47,74,.18),inset 0 0 0 2px #fff}
+  .scene .sun{position:absolute;right:34px;top:14px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#fff1c2,var(--gold));box-shadow:0 0 22px rgba(217,164,65,.7)}
+  .scene .hills{position:absolute;left:-10%;right:-10%;bottom:30px;height:44px;background:radial-gradient(60px 40px at 20% 100%,#efb7bd 98%,transparent 100%),radial-gradient(80px 50px at 55% 100%,#e8a3ad 98%,transparent 100%),radial-gradient(55px 36px at 85% 100%,#efb7bd 98%,transparent 100%)}
+  .scene .road{position:absolute;left:0;right:0;bottom:0;height:34px;background:#4a2f37}
+  .scene .road i{position:absolute;left:0;right:0;top:15px;height:3px;background:repeating-linear-gradient(90deg,#f6dc9c 0 18px,transparent 18px 36px);animation:dash 0.7s linear infinite}
+  .scene .pin{position:absolute;right:16px;bottom:30px;font-size:24px;animation:bob 1.2s ease-in-out infinite;z-index:2}
+  .scene .truck{position:absolute;bottom:24px;left:0;font-size:38px;line-height:1;animation:drive 6s linear infinite;z-index:3}
+  .scene .truck span{display:inline-block;transform:scaleX(-1);animation:bump .35s ease-in-out infinite}
+  @keyframes drive{0%{transform:translateX(-60px)}100%{transform:translateX(380px)}}
+  @keyframes dash{to{background-position:-36px 0}}
+  @keyframes bump{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-2px)}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @media (prefers-reduced-motion:reduce){.scene .truck,.scene .road i,.scene .truck span,.scene .pin{animation:none}.scene .truck{left:40%}}
   .hero .badge{width:76px;height:76px;margin:0 auto 14px;border-radius:24px;background:linear-gradient(135deg,#f6dc9c,var(--gold));display:grid;place-items:center;font-size:38px;box-shadow:0 14px 30px rgba(217,164,65,.45),inset 0 -4px 8px rgba(0,0,0,.08);transform:rotate(-6deg)}
   .hero h1{font-family:'Fraunces',serif;font-size:40px;line-height:1;margin:0;letter-spacing:-.5px}
   .hero h1 em{font-style:normal;color:var(--rose)}
@@ -76,18 +89,26 @@
 
   <div id="loginView" hidden>
     <div class="hero">
-      <div class="badge">🚚</div>
+      <div class="scene" aria-hidden="true">
+        <div class="sun"></div>
+        <div class="hills"></div>
+        <div class="pin">📍</div>
+        <div class="truck"><span>🚚</span></div>
+        <div class="road"><i></i></div>
+      </div>
       <h1>Lalabella<br><em>Driver</em></h1>
       <p>Deliver with care. Every order, on the map.</p>
     </div>
     <div class="card auth" id="loginCard">
       <h2>Welcome back</h2>
+      <form id="loginForm" action="#" method="post" autocomplete="on" novalidate>
       <label for="u">Username</label>
-      <div class="field"><span class="ico">👤</span><input id="u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+      <div class="field"><span class="ico">👤</span><input id="u" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
       <label for="p">Password</label>
-      <div class="field"><span class="ico">🔒</span><input id="p" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye="p" aria-label="Show password"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <div class="field"><span class="ico">🔒</span><input id="p" name="password" type="password" autocomplete="current-password"><button type="button" class="eye" data-eye="p" aria-label="Show password"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
       <label class="chk"><input type="checkbox" id="rem" checked> <span>Remember me on this phone</span></label>
-      <button class="go" id="inBtn" style="margin-top:14px">Log in</button>
+      <button class="go" id="inBtn" type="submit" style="margin-top:14px">Log in</button>
+      </form>
       <div class="msg" id="loginMsg"></div>
       <button class="link" id="toSign" style="width:100%;margin-top:6px">No account? <b>Sign up</b></button>
     </div>
@@ -151,6 +172,7 @@
     $('loginView').hidden = false; $('mainView').hidden = true; $('outBtn').hidden = true; $('who').textContent = '';
     $('loginMsg').style.color = ''; $('loginMsg').textContent = msg || '';
     try { var ru = localStorage.getItem('lbDriverUser'); if (ru && !$('u').value) $('u').value = ru; } catch(e){}
+    try { if (navigator.credentials && window.PasswordCredential && !$('p').value) navigator.credentials.get({ password:true, mediation:'optional' }).then(function(c){ if (c && c.password && !$('p').value){ $('u').value = c.id; $('p').value = c.password; } }).catch(function(){}); } catch(e){}
   }
   function setEye(id, on){
     var i = $(id); i.type = on ? 'text' : 'password';
@@ -171,7 +193,7 @@
       .then(function(r){
         $('inBtn').disabled = false;
         if (!r.success){ m.textContent = r.error || 'Could not log in.'; return; }
-        var keep = $('rem').checked; store(TK, r.token, !keep); store(NK, r.name || u, !keep); try { if (keep) localStorage.setItem('lbDriverUser', u); else localStorage.removeItem('lbDriverUser'); } catch(e){} $('p').value = ''; setEye('p', false);
+        var keep = $('rem').checked; store(TK, r.token, !keep); store(NK, r.name || u, !keep); try { if (keep) localStorage.setItem('lbDriverUser', u); else localStorage.removeItem('lbDriverUser'); } catch(e){} try { if (keep && window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id:u, password:p, name:r.name || u })); } catch(e){} $('p').value = ''; setEye('p', false);
         showMain(); $('list').innerHTML = '<div class="empty">Loading…</div>'; load();
       }).catch(function(){ $('inBtn').disabled = false; m.textContent = 'No internet. Try again.'; });
   }
@@ -419,9 +441,7 @@
     }
   });
 
-  $('inBtn').addEventListener('click', doLogin);
-  $('p').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
-  $('u').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('p').focus(); });
+  $('loginForm').addEventListener('submit', function(e){ e.preventDefault(); doLogin(); });
   $('outBtn').addEventListener('click', doLogout);
   document.querySelectorAll('[data-eye]').forEach(function(b){ b.addEventListener('click', function(){ var id = b.getAttribute('data-eye'); setEye(id, $(id).type === 'password'); }); });
   $('toSign').addEventListener('click', function(){ showSign(true); });
