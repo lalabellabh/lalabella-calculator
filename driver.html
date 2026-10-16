@@ -66,6 +66,17 @@
       <label for="p">Password</label><input id="p" type="password" autocomplete="current-password">
       <button class="go" id="inBtn" style="margin-top:16px">Log in</button>
       <div class="msg" id="loginMsg"></div>
+      <button class="link" id="toSign" style="width:100%;margin-top:10px">No account? Sign up</button>
+    </div>
+    <div class="card" id="signCard" hidden>
+      <h2>Sign up</h2>
+      <p class="small" style="margin:0 0 4px">The admin must approve your account before you can log in.</p>
+      <label for="sN">Full name</label><input id="sN" autocomplete="name" maxlength="60">
+      <label for="sU">Username</label><input id="sU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="30" placeholder="letters and numbers, no spaces">
+      <label for="sP">Password (min 6)</label><input id="sP" type="password" autocomplete="new-password" maxlength="100">
+      <button class="go" id="sBtn" style="margin-top:16px">Send sign-up</button>
+      <div class="msg" id="signMsg"></div>
+      <button class="link" id="toLogin" style="width:100%;margin-top:6px">Back to log in</button>
     </div>
   </div>
 
@@ -103,7 +114,7 @@
   function showLogin(msg){
     stopAll();
     $('loginView').hidden = false; $('mainView').hidden = true; $('outBtn').hidden = true; $('who').textContent = '';
-    $('loginMsg').textContent = msg || '';
+    $('loginMsg').style.color = ''; $('loginMsg').textContent = msg || '';
   }
   function showMain(){
     $('loginView').hidden = true; $('mainView').hidden = false; $('outBtn').hidden = false;
@@ -122,6 +133,24 @@
         store(TK, r.token); store(NK, r.name || u); $('p').value = '';
         showMain(); $('list').innerHTML = '<div class="empty">Loading…</div>'; load();
       }).catch(function(){ $('inBtn').disabled = false; m.textContent = 'No internet. Try again.'; });
+  }
+  function showSign(on){ $('signCard').hidden = !on; document.querySelector('#loginView > .card').hidden = on; $('signMsg').textContent = ''; $('signMsg').style.color = ''; }
+  function doSign(){
+    var n = $('sN').value.trim(), u = $('sU').value.trim().toLowerCase(), p = $('sP').value, m = $('signMsg');
+    m.style.color = ''; m.textContent = '';
+    if (n.length < 2){ m.textContent = 'Write your name.'; return; }
+    if (!/^[a-z0-9._-]{3,30}$/.test(u)){ m.textContent = 'Username: 3-30 letters, numbers, . _ - (no spaces).'; return; }
+    if (p.length < 6){ m.textContent = 'Password must be at least 6 characters.'; return; }
+    $('sBtn').disabled = true;
+    fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: KEY }, body: JSON.stringify({ action:'signup', fullName:n, username:u, password:p }) })
+      .then(function(r){ return r.json(); })
+      .then(function(r){
+        $('sBtn').disabled = false;
+        if (!r.success){ m.textContent = r.error || 'Could not sign up.'; return; }
+        $('sN').value = ''; $('sU').value = ''; $('sP').value = '';
+        showSign(false);
+        $('loginMsg').style.color = 'var(--ok)'; $('loginMsg').textContent = 'Sign-up sent. Wait for the admin to approve, then log in.';
+      }).catch(function(){ $('sBtn').disabled = false; m.textContent = 'No internet. Try again.'; });
   }
   function doLogout(){
     var t = token();
@@ -353,6 +382,9 @@
   $('p').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
   $('u').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('p').focus(); });
   $('outBtn').addEventListener('click', doLogout);
+  $('toSign').addEventListener('click', function(){ showSign(true); });
+  $('toLogin').addEventListener('click', function(){ showSign(false); });
+  $('sBtn').addEventListener('click', doSign);
 
   setInterval(renderGps, 1000);
   setInterval(function(){ if (token() && !document.hidden && !$('mainView').hidden && (NATIVE || watchId == null)) load(); }, 30000);
