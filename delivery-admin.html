@@ -250,16 +250,17 @@
   var drivers = [], dSure = null, dTimer = null;
   function renderDrivers(){
     var s = $('fDriver'), cur = s.value;
-    var act = drivers.filter(function(u){ return u.active; });
+    var act = drivers.filter(function(u){ return u.active && !u.pending; });
     s.innerHTML = '<option value="">' + (act.length ? 'Pick a driver…' : 'Add a driver first') + '</option>' + act.map(function(u){
       return '<option value="' + u.id + '">' + esc(u.name) + '</option>';
     }).join('');
     if (cur) s.value = cur;
-    $('drvList').innerHTML = drivers.length ? drivers.map(function(u){
+    var ordered = drivers.slice().sort(function(a, b){ return (b.pending ? 1 : 0) - (a.pending ? 1 : 0); });
+    $('drvList').innerHTML = drivers.length ? ordered.map(function(u){
       return '<div class="item" style="cursor:default;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><b>' + esc(u.name) + '</b> <span class="lab">@' + esc(u.username) + '</span>' +
-        '<div class="lab">' + (u.active ? 'Active' : 'Deactivated') + (u.lastLogin ? ' · last login ' + esc(new Date(u.lastLogin).toLocaleDateString('en-GB', { timeZone: TZ, day:'numeric', month:'short' })) : ' · never logged in') + '</div></div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sm" data-dpw="' + u.id + '">Password</button>' +
-        '<button class="sm danger" data-dtog="' + u.id + '">' + (dSure === u.id ? 'Tap again' : (u.active ? 'Deactivate' : 'Activate')) + '</button></div></div>';
+        '<div class="lab">' + (u.pending ? 'Waiting for approval' : u.active ? 'Active' : 'Deactivated') + (u.lastLogin ? ' · last login ' + esc(new Date(u.lastLogin).toLocaleDateString('en-GB', { timeZone: TZ, day:'numeric', month:'short' })) : ' · never logged in') + '</div></div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sm" data-dedit="' + u.id + '">Edit</button><button class="sm" data-dpw="' + u.id + '">Password</button>' +
+        '<button class="sm danger" data-dtog="' + u.id + '">' + (dSure === u.id ? 'Tap again' : (u.pending ? 'Approve' : u.active ? 'Deactivate' : 'Activate')) + '</button></div></div>';
     }).join('') : '<div class="empty">No drivers yet.</div>';
   }
   function loadDrivers(){
@@ -271,7 +272,20 @@
   $('drvList').addEventListener('click', function(ev){
     var t = ev.target.closest('button'); if (!t || t.disabled) return;
     var m = $('dMsg'); m.className = 'msg'; m.textContent = '';
-    if (t.hasAttribute('data-dpw')){
+    if (t.hasAttribute('data-dedit')){
+      var eid = Number(t.getAttribute('data-dedit')), eu = drivers.filter(function(x){ return x.id === eid; })[0]; if (!eu) return;
+      var nn = prompt('Driver name:', eu.name); if (nn == null) return;
+      var nu = prompt('Username (letters, numbers, . _ -):', eu.username); if (nu == null) return;
+      nn = nn.trim(); nu = nu.trim().toLowerCase();
+      if (nn.length < 2){ m.className = 'msg bad'; m.textContent = 'Write the driver name.'; return; }
+      if (!/^[a-z0-9._-]{3,30}$/.test(nu)){ m.className = 'msg bad'; m.textContent = 'Username: 3-30 letters, numbers, . _ -'; return; }
+      var body = { action:'driverEdit', id:eid }; if (nn !== eu.name) body.fullName = nn; if (nu !== eu.username) body.username = nu;
+      if (!body.fullName && !body.username) return;
+      api(body).then(function(r){
+        if (!r.success){ m.className = 'msg bad'; m.textContent = r.error || 'Could not change.'; return; }
+        m.className = 'msg ok'; m.textContent = 'Saved.'; loadDrivers();
+      }).catch(function(){ m.className = 'msg bad'; m.textContent = 'No internet.'; });
+    } else if (t.hasAttribute('data-dpw')){
       var id = Number(t.getAttribute('data-dpw')), pw = prompt('New password for this driver (min 6 characters):');
       if (pw == null) return;
       if (pw.length < 6){ m.className = 'msg bad'; m.textContent = 'Password must be at least 6 characters.'; return; }
