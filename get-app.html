@@ -87,15 +87,12 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 .k{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12.5px;background:rgba(143,42,69,.06)}
 .inapp{display:none;text-align:center;padding:12px 4px}
 .inapp b{font-family:'Cormorant Garamond',serif;font-size:28px;display:block;margin-bottom:6px}
-.is-app .seg,.is-app .panel{display:none}
-.is-app .inapp{display:block}
 .upd{display:none;text-align:center;margin-top:14px;padding:16px 14px;border:1px solid var(--line);border-radius:20px;background:rgba(230,196,122,.08)}
-.is-app .upd{display:block}
+.upd.show{display:block}
 .upd .ver{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;display:block;margin-bottom:4px}
 .upd .sub{color:var(--muted);font-size:14px;line-height:1.45;margin:0 0 12px}
 .upd .act{justify-content:center;margin:0}
 .upd.new{border-color:var(--gold)}
-.is-app .scan{display:none}
 
 /* phones: no QR (you are already on the phone), compact type so everything stays on one screen */
 @media (max-width:860px){
@@ -268,6 +265,13 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
     });
   });
 
+  $('copyBtn').addEventListener('click', function(){
+    var b = this, url = 'https://mysystemlla.com';
+    function done(){ b.textContent = 'Link copied'; setTimeout(function(){ b.textContent = 'Copy link for Safari'; }, 2200); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function(){ window.prompt('Copy this link:', url); });
+    else window.prompt('Copy this link:', url);
+  });
+
   if (standalone) {
     document.body.classList.add('is-app');
     // Inside the app: show the newest version and a direct download (the in-app "tap to update" opens this page)
@@ -280,25 +284,16 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
       var newer = !have || cmpV(have, nv) < 0;
       $('updVer').textContent = newer ? 'New version ' + nv + ' is ready' : 'You have the latest (v' + nv + ')';
       $('updSub').textContent = newer ? (have ? 'You have v' + have + '. Tap Download, then open the file to update. Your login and data stay.' : 'Tap Download, then open the file to update. Your login and data stay.') : 'Nothing to update. You can still download the file again if the app acts up.';
-      if (newer) $('upd').classList.add('new'); else btn.classList.add('ghost');
+      if (newer){ $('upd').classList.add('new'); $('upd').classList.add('show'); } else btn.classList.add('ghost');
       btn.textContent = newer ? 'Download v' + nv : 'Download again';
       btn.hidden = false;
       if (newer && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { btn.click(); } catch (e) {} }, 700);
     }).catch(function(){
-      $('updVer').textContent = 'Latest app';
-      $('updSub').textContent = 'Could not check the version. You can still download the newest file.';
-      $('updBtn').hidden = false;
+      /* could not check: keep the update box hidden */
     });
     return;
   }
   if (isIOS) pick(1);
-
-  $('copyBtn').addEventListener('click', function(){
-    var b = this, url = 'https://mysystemlla.com';
-    function done(){ b.textContent = 'Link copied'; setTimeout(function(){ b.textContent = 'Copy link for Safari'; }, 2200); }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function(){ window.prompt('Copy this link:', url); });
-    else window.prompt('Copy this link:', url);
-  });
 
   // ?dl=1 starts the Android download straight away (the button stays if the browser blocks it)
   if (isAndroid && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { $('apkBtn').click(); } catch(e){} }, 600);
