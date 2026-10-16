@@ -57,6 +57,8 @@ window.LB_CONFIG = Object.freeze({
   BACKUP_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/backup-fast',
   // Attendance (time in / break / time out with GPS + fingerprint).
   ATTENDANCE_API:   'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/attendance-fast',
+  // Delivery tracking (admin assigns an order to a driver, driver's phone sends GPS, admin sees the map).
+  DELIVERY_API:     'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/delivery-fast',
 
   // Supabase (fast path). The publishable key is MEANT to be public: the
   // browser still cannot read or write any table (no grants + RLS) — it is
