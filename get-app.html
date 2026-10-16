@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#f7dcd9">
-<title>Get the Lalabella App</title>
+<title>Get the Lalabella Driver App</title>
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -100,12 +99,16 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   .intro{align-items:center;text-align:center}
   h1{font-size:clamp(34px,10vw,46px)}
   .lead{max-width:30ch;font-size:15px}
-  .scan{display:none}
+  .scan{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+  .scan .arch{width:clamp(130px,34vw,170px)}
+  .scan p{max-width:26ch}
   .card{border-radius:22px}
+  html,body{height:auto;overflow:auto}
+  .page{height:auto;min-height:100dvh}
+  .main{align-content:start}
   .btn{flex:1 1 100%}
 }
 @media (max-width:860px) and (max-height:700px){
-  .lead{display:none}
   .brand span{font-size:21px}
   .steps li{font-size:13.5px}
   .btn{padding:12px 18px}
@@ -115,6 +118,17 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   .lead{font-size:15px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+
+/* hamburger */
+.menuwrap{position:relative}
+.burger{width:44px;height:44px;border-radius:14px;border:1px solid var(--line,rgba(143,42,69,.18));background:rgba(255,255,255,.85);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(143,42,69,.12)}
+.burger span,.burger span::before,.burger span::after{display:block;width:20px;height:2.5px;border-radius:2px;background:#8f2a45;content:"";position:relative}
+.burger span::before{position:absolute;top:-6px}.burger span::after{position:absolute;top:6px}
+.menu{position:absolute;right:0;top:52px;min-width:220px;background:#fff;border:1px solid rgba(143,42,69,.18);border-radius:16px;box-shadow:0 18px 40px rgba(143,42,69,.22);padding:8px;z-index:50}
+.menu[hidden]{display:none !important}
+.menu a,.menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;text-decoration:none;color:#3a1624;background:none;border:0;border-radius:10px;padding:12px 12px;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer}
+.menu a:hover,.menu button:hover{background:rgba(201,80,107,.1)}
+.menu hr{border:0;border-top:1px solid rgba(143,42,69,.12);margin:6px 4px}
 </style>
 </head>
 <body>
@@ -190,26 +204,33 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
 <div class="page" id="page">
   <header class="top">
-    <a class="brand" href="index.html" aria-label="Lalabella home"><img src="/icons/icon-192.png" alt=""><span>Lalabella</span></a>
-    <a class="back" href="index.html">Back to home</a>
+    <a class="brand" href="driver.html" aria-label="Driver login"><img src="/icons/icon-192.png" alt=""><span>Lalabella</span></a>
+    <div class="menuwrap">
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span></button>
+      <nav class="menu" id="menu" hidden>
+        <a href="driver.html">🚚 My deliveries</a>
+        <a href="get-driver-app.html">📲 Get / update app</a>
+        <hr>
+        <a href="get-app.html">🌸 Lalabella staff app</a>
+      </nav>
+    </div>
   </header>
 
   <main class="main">
     <section class="intro">
-      <h1>Lalabella,<br>on your phone</h1>
-      <p class="lead">The same system you use here, one tap from your home screen, with alerts for new messages and orders.</p>
+      <h1>Lalabella,<br>Driver app</h1>
+      <p class="lead">For delivery drivers. Your location is shared with the shop only while a delivery is <b>On the way</b>, and stops when you tap Delivered.</p>
       <div class="scan">
-        <div class="arch"><div><img src="icons/qr-get-app.png" alt="QR code for mysystemlla.com/get-app.html"></div></div>
+        <div class="arch"><div><img src="icons/qr-get-driver-app.png" alt="QR code for mysystemlla.com/get-driver-app.html" style="image-rendering:pixelated"></div></div>
         <p><b>Scan to start</b>Open your phone camera and point it at the code.</p>
       </div>
     </section>
 
     <section class="card" aria-label="Install steps">
-      <div class="inapp"><b>You already have the app</b>Nothing else to install.</div>
       <div class="upd" id="upd" aria-live="polite">
         <span class="ver" id="updVer">Checking for updates…</span>
         <p class="sub" id="updSub"></p>
-        <div class="act"><a class="btn" id="updBtn" href="downloads/Lalabella.apk" download="Lalabella.apk" hidden>Download the latest app</a></div>
+        <div class="act"><a class="btn" id="updBtn" href="downloads/LalabellaDriver.apk" download="LalabellaDriver.apk" hidden>Download the latest Driver app</a></div>
       </div>
 
       <div class="seg" role="tablist" aria-label="Phone type">
@@ -218,28 +239,28 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
       </div>
 
       <div class="panel" id="pA" role="tabpanel" aria-labelledby="tabA">
-        <div class="act"><a class="btn" id="apkBtn" href="downloads/Lalabella.apk" download="Lalabella.apk">Download the app</a></div>
+        <div class="act"><a class="btn" id="apkBtn" href="downloads/LalabellaDriver.apk" download="LalabellaDriver.apk">Download the Driver app</a></div>
         <ol class="steps">
-          <li><span>Tap <b>Download</b>, then open <span class="k">Lalabella.apk</span> from your notifications or Downloads.</span></li>
-          <li><span>If asked, allow installs from this browser.</span></li>
-          <li><span>On the Play Protect warning, choose <b>Install anyway</b>.</span></li>
-          <li><span>Open Lalabella, log in, and tap <b>Turn on</b> for alerts.</span></li>
+          <li><span>Tap <b>Download</b>, then open <span class="k">LalabellaDriver.apk</span> from your notifications or Downloads.</span></li>
+          <li><span>If asked, allow installs from this browser. On the Play Protect warning, choose <b>Install anyway</b>.</span></li>
+          <li><span>Open <b>Lalabella Driver</b>. Log in, or tap <b>Sign up</b> and wait for the shop to approve you.</span></li>
+          <li><span>Allow <b>Location</b> (<b>While using the app</b>) and <b>Notifications</b>.</span></li>
+          <li><span>Open an order, tap <b>Start Delivery</b>, then <b>Open in Google Maps</b>. Tracking keeps working with the screen locked.</span></li>
+          <li><span>At the customer, tap <b>Delivered</b> twice to confirm. Tracking stops.</span></li>
         </ol>
-        <p class="note"><a href="get-driver-app.html" style="color:var(--rose)"><b>Delivery driver?</b> Get the separate Driver app</a></p>
-        <p class="note">About 2 MB. It is not from the Play Store, so Android shows a warning. Prefer no file? In Chrome, tap <span class="k">⋮</span> then <b>Install app</b>.</p>
+        <p class="note"><b>Important:</b> Settings → Apps → Lalabella Driver → Battery → <b>Unrestricted</b> (Xiaomi, Oppo, Vivo, Samsung may stop the app otherwise). Don't swipe the app away while delivering. Keep phone Location on.</p>
+        <p class="note">Small file, under 1 MB. Not from the Play Store, so Android shows a warning. The app tells you when a new version is ready.</p>
       </div>
 
       <div class="panel" id="pI" role="tabpanel" aria-labelledby="tabI" hidden>
         <div class="act"><button class="btn ghost" id="copyBtn" type="button">Copy link for Safari</button></div>
         <ol class="steps">
-          <li><span>Open <b>mysystemlla.com</b> in <b>Safari</b>.</span></li>
-          <li><span>Tap <b>Share</b> <span class="k">⬆︎</span> at the bottom of the screen.</span></li>
-          <li><span>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
-          <li><span>Open Lalabella from the new icon and log in.</span></li>
-          <li><span>Tap <b>Turn on</b> for alerts. Needs iOS 16.4 or newer.</span></li>
+          <li><span>Open <b>mysystemlla.com/driver.html</b> in <b>Safari</b>.</span></li>
+          <li><span>Tap <b>Share</b> <span class="k">⬆︎</span>, then <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
+          <li><span>Open it from the new icon. Log in or sign up, and allow Location.</span></li>
         </ol>
-        <p class="note">Apple only allows app files through the App Store, so iPhone uses the home screen version. It looks and works the same. No in-notification reply, chat bubbles or widgets on iPhone (Apple's limit).</p>
-        <p class="note"><a href="iphone.html" style="color:var(--rose)"><b>Full iPhone guide + shortcut icons</b> (Attendance, Schedule, Chat, Calculators)</a></p>
+        <p class="note">On iPhone the screen must stay <b>on</b> and the page open while delivering. Locking the screen or switching apps pauses tracking (Apple's limit).</p>
+        <p class="note"><a href="get-app.html" style="color:var(--rose)"><b>Staff?</b> Get the main Lalabella app</a></p>
       </div>
     </section>
   </main>
@@ -247,6 +268,9 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
 <script>
 (function(){
+  var bu = document.getElementById('burger'), mn = document.getElementById('menu');
+  bu.addEventListener('click', function(e){ e.stopPropagation(); mn.hidden = !mn.hidden; bu.setAttribute('aria-expanded', String(!mn.hidden)); });
+  document.addEventListener('click', function(){ mn.hidden = true; bu.setAttribute('aria-expanded', 'false'); });
   var ua = navigator.userAgent || '';
   var isAndroid = /android/i.test(ua);
   var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -272,25 +296,22 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
     else window.prompt('Copy this link:', url);
   });
 
-  if (standalone) {
-    document.body.classList.add('is-app');
-    // Inside the app: show the newest version and a direct download (the in-app "tap to update" opens this page)
-    var have = ''; try { have = localStorage.getItem('lbAppVer') || ''; } catch (e) {}
-    var cmpV = function(a, b){ var x = String(a).split('.'), y = String(b).split('.'); for (var i = 0; i < Math.max(x.length, y.length); i++){ var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d < 0 ? -1 : 1; } return 0; };
-    fetch('downloads/app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-      var nv = j && j.versionName, btn = $('updBtn');
-      if (!nv) throw new Error('no version');
-      btn.href = 'downloads/Lalabella.apk?v=' + encodeURIComponent(j.versionCode || nv);
-      var newer = !have || cmpV(have, nv) < 0;
-      $('updVer').textContent = newer ? 'New version ' + nv + ' is ready' : 'You have the latest (v' + nv + ')';
-      $('updSub').textContent = newer ? (have ? 'You have v' + have + '. Tap Download, then open the file to update. Your login and data stay.' : 'Tap Download, then open the file to update. Your login and data stay.') : 'Nothing to update. You can still download the file again if the app acts up.';
-      if (newer){ $('upd').classList.add('new'); $('upd').classList.add('show'); } else btn.classList.add('ghost');
-      btn.textContent = newer ? 'Download v' + nv : 'Download again';
-      btn.hidden = false;
-      if (newer && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { btn.click(); } catch (e) {} }, 700);
-    }).catch(function(){
-      /* could not check: keep the update box hidden */
-    });
+  // Inside the Driver app: show the update box only when a newer version exists.
+  var app = window.LBDriverApp;
+  if (app && app.versionCode) {
+    var haveCode = 0; try { haveCode = Number(app.versionCode()) || 0; } catch (e) {}
+    fetch('downloads/driver-app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+      var nc = Number(j && j.versionCode) || 0, nv = j && j.versionName;
+      if (nc > haveCode) {
+        var btn = $('updBtn');
+        btn.href = 'downloads/LalabellaDriver.apk?v=' + nc;
+        $('updVer').textContent = 'New version ' + nv + ' is ready';
+        $('updSub').textContent = 'Tap Download, then open the file to update. Your login stays.';
+        btn.textContent = 'Download v' + nv; btn.hidden = false;
+        $('upd').classList.add('new'); $('upd').classList.add('show');
+        if (/[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { btn.click(); } catch (e) {} }, 700);
+      }
+    }).catch(function(){});
     return;
   }
   if (isIOS) pick(1);
