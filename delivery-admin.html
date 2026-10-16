@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Delivery Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{--rose:#c9506b;--rose-dark:#9e2f4a;--gold:#d9a441;--ink:#2f2024;--muted:#8a7078;--line:#f0dede;--ok:#2e8b57;--warn:#b9770e;--bad:#c0392b;}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink)}
+  body{padding:22px 16px 70px}
+  .wrap{max-width:1100px;margin:0 auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f1d38c,var(--gold));display:grid;place-items:center;font-size:18px}
+  .brand b{font-family:'Fraunces',serif;font-size:17px}
+  .backlink{font-size:12.5px;color:var(--muted);text-decoration:none;font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(158,47,74,.07);min-width:0}
+  .card h2{font-family:'Fraunces',serif;font-size:16px;margin:0 0 10px}
+  #map{height:440px;border-radius:12px;border:1px solid var(--line);background:#e8e4df}
+  @media(max-width:820px){#map{height:340px}}
+  .mapbar{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin:10px 0 3px;text-transform:uppercase;letter-spacing:.05em}
+  input,select,textarea{font:inherit;font-size:14px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fffdfc;color:var(--ink);width:100%;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--rose)}
+  textarea{resize:vertical;min-height:58px}
+  button{font:inherit;font-weight:700;font-size:13.5px;border-radius:10px;padding:10px 14px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  button.go{background:linear-gradient(135deg,#c9506b,#9e2f4a);border-color:transparent;color:#fff;width:100%;margin-top:12px;padding:12px}
+  button.sm{padding:6px 10px;font-size:12px}
+  button.danger{color:var(--bad)}
+  button:disabled{opacity:.55}
+  .msg{font-size:13px;margin:8px 0 0;min-height:1em}
+  .msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
+  .chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#f1ecea;color:var(--muted);white-space:nowrap}
+  .chip.ok{background:#e3f4ea;color:var(--ok)} .chip.warn{background:#fdf0d8;color:var(--warn)} .chip.bad{background:#fbe3e0;color:var(--bad)}
+  .item{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:8px;cursor:pointer;background:#fffdfc}
+  .item.sel{border-color:var(--rose);box-shadow:0 0 0 2px rgba(201,80,107,.18)}
+  .item .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .item .o{font-family:'Fraunces',serif;font-weight:700;font-size:17px}
+  .item .s{font-size:12.5px;color:var(--muted);margin-top:3px;word-break:break-word}
+  .item .row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12px}
+  .empty{color:var(--muted);font-size:13.5px;padding:10px 2px}
+  .detail{font-size:13.5px;line-height:1.5;word-break:break-word}
+  .stale{color:var(--bad);font-weight:700}
+  .car{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+  .flag{font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><div class="logo">🗺️</div><b>Delivery Map</b></div>
+    <a class="backlink" href="index.html">← Back to Lalabella</a>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="mapbar"><div class="lab" id="mapTitle">All deliveries on the way</div><div class="lab" id="upd"></div></div>
+        <div id="map" data-lb-theme-skip></div>
+        <div class="detail" id="detail" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>New delivery</h2>
+        <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
+        <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
+        <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
+        <label for="fNote">Note (optional)</label><input id="fNote" maxlength="300" autocomplete="off">
+        <button class="go" id="addBtn">Assign delivery</button>
+        <div class="msg" id="addMsg"></div>
+      </div>
+      <div class="card">
+        <h2>Deliveries</h2>
+        <div id="list"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var API = (window.LB_CONFIG && LB_CONFIG.DELIVERY_API) || (LB_CONFIG.SUPABASE_URL + '/functions/v1/delivery-fast');
+  var TZ = 'Asia/Bahrain', STALE_S = 60, REFRESH_MS = 6000;
+  var sureId = null, sureTimer = null, rows = [], sel = null, track = null, serverSkew = 0, map = null, layer = null, fitFor = null, busyAdd = false;
+
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function api(body){
+    return fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify(Object.assign({ token: token() }, body)) })
+      .then(function(r){ return r.json(); });
+  }
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function fmtT(iso){ return iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour:'numeric', minute:'2-digit' }) : ''; }
+  function fmtDT(iso){ return iso ? new Date(iso).toLocaleString('en-GB', { timeZone: TZ, day:'2-digit', month:'short', hour:'numeric', minute:'2-digit' }) : ''; }
+  function nowMs(){ return Date.now() + serverSkew; }
+  function ago(iso){
+    if (!iso) return null;
+    var s = Math.max(0, Math.round((nowMs() - new Date(iso).getTime()) / 1000));
+    if (s < 60) return s + ' s ago';
+    if (s < 3600) return Math.round(s / 60) + ' min ago';
+    return Math.round(s / 3600) + ' h ago';
+  }
+  function ageS(iso){ return iso ? Math.round((nowMs() - new Date(iso).getTime()) / 1000) : null; }
+  function chip(s){ return '<span class="chip ' + (s === 'On the way' ? 'warn' : s === 'Delivered' ? 'ok' : s === 'Cancelled' ? 'bad' : '') + '">' + esc(s) + '</span>'; }
+  function byId(id){ for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return rows[i]; return null; }
+
+  // ---------- map ----------
+  function initMap(){
+    if (!window.L){ $('map').innerHTML = '<div class="empty" style="padding:20px">The map could not load. Check the internet and refresh.</div>'; return; }
+    map = L.map('map', { zoomControl:true }).setView([26.2235, 50.5876], 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+  }
+  function icon(kind){
+    return L.divIcon({ className:'', html:'<div class="' + (kind === 'car' ? 'car' : 'flag') + '">' + (kind === 'car' ? '🚗' : '🏁') + '</div>', iconSize:[28,28], iconAnchor:[14,14] });
+  }
+  function drawMap(){
+    if (!map) return;
+    layer.clearLayers();
+    var pts = [], fitPts = [];
+    var focus = sel != null ? byId(sel) : null;
+    if (focus && track && track.delivery.id === focus.id && track.points.length){
+      var ll = track.points.map(function(p){ return [p.lat, p.lng]; });
+      L.polyline(ll, { color:'#c9506b', weight:5, opacity:.85 }).addTo(layer);
+      fitPts = fitPts.concat(ll);
+    }
+    rows.forEach(function(r){
+      if (r.lastLat == null || r.lastLng == null) return;
+      var show = r.status === 'On the way' || r.id === sel;
+      if (!show) return;
+      var m = L.marker([r.lastLat, r.lastLng], { icon: icon(r.status === 'On the way' ? 'car' : 'flag'), title:'#' + r.orderNo }).addTo(layer);
+      m.bindTooltip('#' + r.orderNo + ' · ' + r.driverName, { direction:'top', offset:[0,-12] });
+      (function(id){ m.on('click', function(){ if (sel !== id) select(id); }); })(r.id);
+      if (r.id === sel || sel == null) fitPts.push([r.lastLat, r.lastLng]);
+      pts.push([r.lastLat, r.lastLng]);
+    });
+    var key = String(sel);
+    var use = fitPts.length ? fitPts : pts;
+    if (fitFor !== key && use.length){
+      fitFor = key;
+      if (use.length === 1) map.setView(use[0], 16);
+      else map.fitBounds(L.latLngBounds(use), { padding:[40,40], maxZoom:17 });
+    }
+  }
+
+  // ---------- panels ----------
+  function renderList(){
+    var el = $('list');
+    if (!rows.length){ el.innerHTML = '<div class="empty">No deliveries yet. Add the first one above.</div>'; return; }
+    el.innerHTML = rows.map(function(r){
+      var a = r.status === 'On the way' ? ago(r.lastAt) : null;
+      var late = r.status === 'On the way' && (r.lastAt == null || ageS(r.lastAt) > STALE_S);
+      var info = r.status === 'On the way' ? (r.lastAt ? 'GPS ' + a : 'Waiting for first GPS') : r.status === 'Delivered' ? 'Delivered ' + fmtDT(r.deliveredAt) : r.status === 'Assigned' ? 'Not started' : '';
+      return '<div class="item' + (r.id === sel ? ' sel' : '') + '" data-id="' + r.id + '">' +
+        '<div class="t"><span class="o">#' + esc(r.orderNo) + '</span>' + chip(r.status) + '</div>' +
+        '<div class="s">' + esc(r.driverName) + ' · ' + esc(r.address) + '</div>' +
+        '<div class="row2"><span class="' + (late ? 'stale' : '') + '">' + esc(info) + (late && r.lastAt ? ' ⚠️' : '') + '</span>' +
+        (r.status === 'Assigned' || r.status === 'On the way' ? '<button class="sm danger" data-cancel="' + r.id + '">' + (sureId === r.id ? 'Tap again to cancel' : 'Cancel') + '</button>' : '') + '</div></div>';
+    }).join('');
+  }
+  function renderDetail(){
+    var r = sel != null ? byId(sel) : null;
+    $('mapTitle').textContent = r ? 'Order #' + r.orderNo : 'All deliveries on the way';
+    var d = $('detail');
+    if (!r){
+      var n = rows.filter(function(x){ return x.status === 'On the way'; }).length;
+      d.innerHTML = '<span class="empty">' + (n ? n + ' on the way. Tap a delivery to follow it.' : 'No delivery is on the way right now.') + '</span>';
+      return;
+    }
+    var h = '<b>Driver:</b> ' + esc(r.driverName) + '<br><b>Address:</b> ' + esc(r.address);
+    if (r.note) h += '<br><b>Note:</b> ' + esc(r.note);
+    h += '<br><b>Status:</b> ' + chip(r.status);
+    if (r.startedAt) h += ' &nbsp;Started ' + esc(fmtT(r.startedAt));
+    if (r.status === 'Delivered') h += ' &nbsp;Delivered ' + esc(fmtDT(r.deliveredAt)) + (r.lastLat != null ? ' (last spot shown with 🏁)' : '');
+    if (r.status === 'On the way'){
+      var s = ageS(r.lastAt);
+      if (r.lastAt == null) h += '<br><span class="stale">No GPS received yet.</span>';
+      else h += '<br><b>Last GPS:</b> ' + esc(ago(r.lastAt)) + (r.lastAcc != null ? ' (±' + r.lastAcc + ' m)' : '') + (s > STALE_S ? ' <span class="stale">⚠️ No update. The driver’s app may be closed or the phone locked.</span>' : '');
+    }
+    if (r.status !== 'On the way' && r.status !== 'Delivered' && r.lastAt) h += '<br><b>Last GPS:</b> ' + esc(fmtDT(r.lastAt));
+    d.innerHTML = h;
+  }
+  function renderAll(){ renderList(); renderDetail(); drawMap(); $('upd').textContent = 'Updated ' + fmtT(new Date(nowMs()).toISOString()); }
+
+  function select(id){
+    sel = (sel === id) ? null : id;
+    track = null; fitFor = null;
+    renderAll();
+    if (sel != null) loadTrack();
+  }
+  function loadTrack(){
+    if (sel == null) return Promise.resolve();
+    var want = sel;
+    return api({ action:'track', id:want }).then(function(r){
+      if (!r.success || sel !== want) return;
+      track = r; renderAll();
+    }).catch(function(){});
+  }
+  function loadList(){
+    return api({ action:'list' }).then(function(r){
+      if (!r.success){
+        $('list').innerHTML = '<div class="empty">' + esc(r.error || 'Could not load.') + '</div>';
+        return;
+      }
+      serverSkew = new Date(r.now).getTime() - Date.now();
+      rows = r.rows || [];
+      renderAll();
+      if (sel != null && byId(sel) && byId(sel).status === 'On the way') return loadTrack();
+    }).catch(function(){});
+  }
+  function loadDrivers(){
+    return api({ action:'drivers' }).then(function(r){
+      var s = $('fDriver');
+      if (!r.success){ s.innerHTML = '<option value="">' + esc(r.error || 'Could not load drivers') + '</option>'; return; }
+      s.innerHTML = '<option value="">Pick a driver…</option>' + r.drivers.map(function(u){
+        return '<option value="' + u.id + '">' + esc(u.name) + (u.branch ? ' · ' + esc(u.branch) : '') + '</option>';
+      }).join('');
+    }).catch(function(){ $('fDriver').innerHTML = '<option value="">No internet</option>'; });
+  }
+
+  $('list').addEventListener('click', function(ev){
+    var c = ev.target.closest('[data-cancel]');
+    if (c){
+      ev.stopPropagation();
+      var id = Number(c.getAttribute('data-cancel'));
+      if (sureId !== id){ sureId = id; clearTimeout(sureTimer); sureTimer = setTimeout(function(){ sureId = null; renderList(); }, 4000); renderList(); return; }
+      sureId = null; clearTimeout(sureTimer); c.disabled = true;
+      api({ action:'cancel', id:id }).then(function(r){ if (!r.success) alert(r.error || 'Could not cancel.'); loadList(); }).catch(function(){ loadList(); });
+      return;
+    }
+    var it = ev.target.closest('.item'); if (it) select(Number(it.getAttribute('data-id')));
+  });
+
+  $('addBtn').addEventListener('click', function(){
+    if (busyAdd) return;
+    var msg = $('addMsg'); msg.className = 'msg'; msg.textContent = '';
+    var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, note = $('fNote').value.trim();
+    if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
+    if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address.'; return; }
+    if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
+    busyAdd = true; $('addBtn').disabled = true;
+    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), note:note }).then(function(r){
+      busyAdd = false; $('addBtn').disabled = false;
+      if (!r.success){ msg.className = 'msg bad'; msg.textContent = r.error || 'Could not save.'; return; }
+      msg.className = 'msg ok'; msg.textContent = 'Assigned. The driver will see it in My Deliveries.';
+      $('fOrder').value = ''; $('fAddr').value = ''; $('fNote').value = '';
+      loadList();
+    }).catch(function(){ busyAdd = false; $('addBtn').disabled = false; msg.className = 'msg bad'; msg.textContent = 'No internet. Try again.'; });
+  });
+
+  initMap();
+  loadDrivers();
+  loadList();
+  setInterval(function(){ if (!document.hidden) loadList(); }, REFRESH_MS);
+  setInterval(function(){ if (!document.hidden) { renderList(); renderDetail(); } }, 1000);
+})();
+</script>
+</body>
+</html>
