@@ -71,6 +71,7 @@
   label.chk{display:flex;align-items:center;gap:9px;margin:14px 0 0;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink);font-weight:500;cursor:pointer}
   label.chk input{width:18px;height:18px;padding:0;accent-color:var(--rose)}
   button.go{box-shadow:0 8px 20px rgba(158,47,74,.3)}
+  a.upd-bar{display:block;text-decoration:none;text-align:center;font-weight:700;font-size:13.5px;background:#fdf0d8;color:#7a5410;border:1px solid #f0d79a;border-radius:14px;padding:11px 12px;margin:0 0 14px}
   a.maps{display:block;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:11px;border-radius:12px;border:1px solid var(--line);color:var(--rose-dark);background:#fff8f7;margin:0 0 10px}
   .gps{font-size:12.5px;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:#f6f2ef;color:var(--ink)}
   .gps.good{background:#e3f4ea} .gps.weak{background:#fdf0d8} .gps.off{background:#fbe3e0}
@@ -82,6 +83,7 @@
 </head>
 <body>
 <div class="wrap">
+  <a id="updBar" class="upd-bar" hidden target="_blank" rel="noopener" href="get-driver-app.html?dl=1"></a>
   <div class="topbar">
     <div class="brand"><div class="logo">🚚</div><div><b>Lalabella Driver</b><div class="who" id="who"></div></div></div>
     <button class="link" id="outBtn" hidden>Log out</button>
@@ -450,6 +452,15 @@
 
   setInterval(renderGps, 1000);
   setInterval(function(){ if (token() && !document.hidden && !$('mainView').hidden && (NATIVE || watchId == null)) load(); }, 30000);
+
+  if (NATIVE && window.LBDriverApp.versionCode){
+    try {
+      var have = Number(window.LBDriverApp.versionCode()) || 0;
+      fetch('downloads/driver-app-version.json?t=' + Date.now(), { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+        if ((Number(j.versionCode) || 0) > have){ var b = $('updBar'); b.textContent = '⬇️ New app version ' + (j.versionName || '') + ' is ready. Tap to download.'; b.hidden = false; }
+      }).catch(function(){});
+    } catch(e){}
+  }
 
   if (token()){ showMain(); load(); } else showLogin('');
 })();
