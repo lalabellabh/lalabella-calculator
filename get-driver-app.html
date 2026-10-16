@@ -99,12 +99,16 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   .intro{align-items:center;text-align:center}
   h1{font-size:clamp(34px,10vw,46px)}
   .lead{max-width:30ch;font-size:15px}
-  .scan{display:none}
+  .scan{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+  .scan .arch{width:clamp(130px,34vw,170px)}
+  .scan p{max-width:26ch}
   .card{border-radius:22px}
+  html,body{height:auto;overflow:auto}
+  .page{height:auto;min-height:100dvh}
+  .main{align-content:start}
   .btn{flex:1 1 100%}
 }
 @media (max-width:860px) and (max-height:700px){
-  .lead{display:none}
   .brand span{font-size:21px}
   .steps li{font-size:13.5px}
   .btn{padding:12px 18px}
@@ -114,6 +118,17 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   .lead{font-size:15px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+
+/* hamburger */
+.menuwrap{position:relative}
+.burger{width:44px;height:44px;border-radius:14px;border:1px solid var(--line,rgba(143,42,69,.18));background:rgba(255,255,255,.85);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(143,42,69,.12)}
+.burger span,.burger span::before,.burger span::after{display:block;width:20px;height:2.5px;border-radius:2px;background:#8f2a45;content:"";position:relative}
+.burger span::before{position:absolute;top:-6px}.burger span::after{position:absolute;top:6px}
+.menu{position:absolute;right:0;top:52px;min-width:220px;background:#fff;border:1px solid rgba(143,42,69,.18);border-radius:16px;box-shadow:0 18px 40px rgba(143,42,69,.22);padding:8px;z-index:50}
+.menu[hidden]{display:none !important}
+.menu a,.menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;text-decoration:none;color:#3a1624;background:none;border:0;border-radius:10px;padding:12px 12px;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer}
+.menu a:hover,.menu button:hover{background:rgba(201,80,107,.1)}
+.menu hr{border:0;border-top:1px solid rgba(143,42,69,.12);margin:6px 4px}
 </style>
 </head>
 <body>
@@ -190,7 +205,15 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 <div class="page" id="page">
   <header class="top">
     <a class="brand" href="driver.html" aria-label="Driver login"><img src="/icons/icon-192.png" alt=""><span>Lalabella</span></a>
-    <a class="back" href="driver.html">Driver login</a>
+    <div class="menuwrap">
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span></button>
+      <nav class="menu" id="menu" hidden>
+        <a href="driver.html">🏠 Home (My deliveries)</a>
+        <a href="get-driver-app.html">📲 Get / update app</a>
+        <hr>
+        <a href="get-app.html">🌸 Lalabella staff app</a>
+      </nav>
+    </div>
   </header>
 
   <main class="main">
@@ -245,6 +268,9 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
 <script>
 (function(){
+  var bu = document.getElementById('burger'), mn = document.getElementById('menu');
+  bu.addEventListener('click', function(e){ e.stopPropagation(); mn.hidden = !mn.hidden; bu.setAttribute('aria-expanded', String(!mn.hidden)); });
+  document.addEventListener('click', function(){ mn.hidden = true; bu.setAttribute('aria-expanded', 'false'); });
   var ua = navigator.userAgent || '';
   var isAndroid = /android/i.test(ua);
   var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
