@@ -78,15 +78,10 @@
         <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
         <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
         <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
+        <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">Approve or edit drivers in <a href="user-admin.html" style="color:var(--rose)">User Management</a>.</div>
         <label for="fNote">Note (optional)</label><input id="fNote" maxlength="300" autocomplete="off">
         <button class="go" id="addBtn">Assign delivery</button>
         <div class="msg" id="addMsg"></div>
-      </div>
-      <div class="card">
-        <h2>Drivers</h2>
-        <div id="drvList"><div class="empty">Loading…</div></div>
-        <div class="msg" id="dMsg"></div>
-        <p class="note" style="font-size:12px;color:var(--muted);margin:10px 0 0">Drivers sign up themselves at <b>mysystemlla.com/driver.html</b> (or in the Driver app). Tap <b>Approve</b> here so they can log in. Use <b>Edit</b> to fix a name or username.</p>
       </div>
       <div class="card">
         <h2>Deliveries</h2>
@@ -243,21 +238,14 @@
       if (sel != null && byId(sel) && byId(sel).status === 'On the way') return loadTrack();
     }).catch(function(){});
   }
-  var drivers = [], dSure = null, dTimer = null;
+  var drivers = [];
   function renderDrivers(){
     var s = $('fDriver'), cur = s.value;
     var act = drivers.filter(function(u){ return u.active && !u.pending; });
-    s.innerHTML = '<option value="">' + (act.length ? 'Pick a driver…' : 'Add a driver first') + '</option>' + act.map(function(u){
+    s.innerHTML = '<option value="">' + (act.length ? 'Pick a driver…' : 'No approved drivers yet') + '</option>' + act.map(function(u){
       return '<option value="' + u.id + '">' + esc(u.name) + '</option>';
     }).join('');
     if (cur) s.value = cur;
-    var ordered = drivers.slice().sort(function(a, b){ return (b.pending ? 1 : 0) - (a.pending ? 1 : 0); });
-    $('drvList').innerHTML = drivers.length ? ordered.map(function(u){
-      return '<div class="item" style="cursor:default;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><b>' + esc(u.name) + '</b> <span class="lab">@' + esc(u.username) + '</span>' +
-        '<div class="lab">' + (u.pending ? 'Waiting for approval' : u.active ? 'Active' : 'Deactivated') + (u.lastLogin ? ' · last login ' + esc(new Date(u.lastLogin).toLocaleDateString('en-GB', { timeZone: TZ, day:'numeric', month:'short' })) : ' · never logged in') + '</div></div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="sm" data-dedit="' + u.id + '">Edit</button><button class="sm" data-dpw="' + u.id + '">Password</button>' +
-        '<button class="sm danger" data-dtog="' + u.id + '">' + (dSure === u.id ? 'Tap again' : (u.pending ? 'Approve' : u.active ? 'Deactivate' : 'Activate')) + '</button></div></div>';
-    }).join('') : '<div class="empty">No drivers yet.</div>';
   }
   function loadDrivers(){
     return api({ action:'drivers' }).then(function(r){
@@ -265,40 +253,23 @@
       drivers = r.drivers || []; renderDrivers();
     }).catch(function(){ $('fDriver').innerHTML = '<option value="">No internet</option>'; });
   }
-  $('drvList').addEventListener('click', function(ev){
-    var t = ev.target.closest('button'); if (!t || t.disabled) return;
-    var m = $('dMsg'); m.className = 'msg'; m.textContent = '';
-    if (t.hasAttribute('data-dedit')){
-      var eid = Number(t.getAttribute('data-dedit')), eu = drivers.filter(function(x){ return x.id === eid; })[0]; if (!eu) return;
-      var nn = prompt('Driver name:', eu.name); if (nn == null) return;
-      var nu = prompt('Username (letters, numbers, . _ -):', eu.username); if (nu == null) return;
-      nn = nn.trim(); nu = nu.trim().toLowerCase();
-      if (nn.length < 2){ m.className = 'msg bad'; m.textContent = 'Write the driver name.'; return; }
-      if (!/^[a-z0-9._-]{3,30}$/.test(nu)){ m.className = 'msg bad'; m.textContent = 'Username: 3-30 letters, numbers, . _ -'; return; }
-      var body = { action:'driverEdit', id:eid }; if (nn !== eu.name) body.fullName = nn; if (nu !== eu.username) body.username = nu;
-      if (!body.fullName && !body.username) return;
-      api(body).then(function(r){
-        if (!r.success){ m.className = 'msg bad'; m.textContent = r.error || 'Could not change.'; return; }
-        m.className = 'msg ok'; m.textContent = 'Saved.'; loadDrivers();
-      }).catch(function(){ m.className = 'msg bad'; m.textContent = 'No internet.'; });
-    } else if (t.hasAttribute('data-dpw')){
-      var id = Number(t.getAttribute('data-dpw')), pw = prompt('New password for this driver (min 6 characters):');
-      if (pw == null) return;
-      if (pw.length < 6){ m.className = 'msg bad'; m.textContent = 'Password must be at least 6 characters.'; return; }
-      api({ action:'driverEdit', id:id, password:pw }).then(function(r){
-        if (!r.success){ m.className = 'msg bad'; m.textContent = r.error || 'Could not change.'; return; }
-        m.className = 'msg ok'; m.textContent = 'Password changed. The driver must log in again.';
-      }).catch(function(){ m.className = 'msg bad'; m.textContent = 'No internet.'; });
-    } else if (t.hasAttribute('data-dtog')){
-      var did = Number(t.getAttribute('data-dtog')), u = drivers.filter(function(x){ return x.id === did; })[0]; if (!u) return;
-      if (dSure !== did){ dSure = did; clearTimeout(dTimer); dTimer = setTimeout(function(){ dSure = null; renderDrivers(); }, 4000); renderDrivers(); return; }
-      dSure = null; clearTimeout(dTimer); t.disabled = true;
-      api({ action:'driverEdit', id:did, active:!u.active }).then(function(r){
-        if (!r.success){ m.className = 'msg bad'; m.textContent = r.error || 'Could not change.'; }
-        loadDrivers();
-      }).catch(function(){ loadDrivers(); });
-    }
+  $('addBtn').addEventListener('click', function(){
+    if (busyAdd) return;
+    var msg = $('addMsg'); msg.className = 'msg'; msg.textContent = '';
+    var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, note = $('fNote').value.trim();
+    if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
+    if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address.'; return; }
+    if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
+    busyAdd = true; $('addBtn').disabled = true;
+    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), note:note }).then(function(r){
+      busyAdd = false; $('addBtn').disabled = false;
+      if (!r.success){ msg.className = 'msg bad'; msg.textContent = r.error || 'Could not save.'; return; }
+      msg.className = 'msg ok'; msg.textContent = 'Assigned. The driver will see it in the Driver page.';
+      $('fOrder').value = ''; $('fAddr').value = ''; $('fNote').value = '';
+      loadList();
+    }).catch(function(){ busyAdd = false; $('addBtn').disabled = false; msg.className = 'msg bad'; msg.textContent = 'No internet. Try again.'; });
   });
+
   initMap();
   loadDrivers();
   loadList();
