@@ -18,6 +18,17 @@
   :root{--rose:#c9506b;--rose-dark:#9e2f4a;--gold:#d9a441;--ink:#2f2024;--muted:#8a7078;--line:#f0dede;--ok:#2e8b57;--warn:#b9770e;--bad:#c0392b;}
   *{box-sizing:border-box}
   [hidden]{display:none !important}
+/* hamburger */
+  .menuwrap{position:relative}
+  .burger{width:44px;height:44px;border-radius:14px;border:1px solid var(--line,rgba(143,42,69,.18));background:rgba(255,255,255,.85);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 4px 14px rgba(143,42,69,.12)}
+  .burger span,.burger span::before,.burger span::after{display:block;width:20px;height:2.5px;border-radius:2px;background:#8f2a45;content:"";position:relative}
+  .burger span::before{position:absolute;top:-6px}.burger span::after{position:absolute;top:6px}
+  .menu{position:absolute;right:0;top:52px;min-width:220px;background:#fff;border:1px solid rgba(143,42,69,.18);border-radius:16px;box-shadow:0 18px 40px rgba(143,42,69,.22);padding:8px;z-index:50}
+  .menu[hidden]{display:none !important}
+  .menu a,.menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;text-decoration:none;color:#3a1624;background:none;border:0;border-radius:10px;padding:12px 12px;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer}
+  .menu a:hover,.menu button:hover{background:rgba(201,80,107,.1)}
+  .menu hr{border:0;border-top:1px solid rgba(143,42,69,.12);margin:6px 4px}
+
   html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink)}
   body{padding:22px 16px 70px}
   .wrap{max-width:560px;margin:0 auto}
@@ -87,7 +98,15 @@
   <a id="updBar" class="upd-bar" hidden target="_blank" rel="noopener" href="get-driver-app.html?dl=1"></a>
   <div class="topbar">
     <div class="brand"><div class="logo">🚚</div><div><b>Lalabella Driver</b><div class="who" id="who"></div></div></div>
-    <button class="link" id="outBtn" hidden>Log out</button>
+    <div class="menuwrap">
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span></button>
+      <nav class="menu" id="menu" hidden>
+        <a href="driver.html">🚚 My deliveries</a>
+        <a href="get-driver-app.html">📲 Get / update app</a>
+        <hr>
+        <button id="outBtn" hidden>🚪 Log out</button>
+      </nav>
+    </div>
   </div>
 
   <div id="loginView" hidden>
@@ -171,7 +190,7 @@
   // ---------- login ----------
   function showLogin(msg){
     stopAll();
-    document.querySelector('.topbar').style.display = 'none';
+    document.querySelector('.topbar .brand').style.visibility = 'hidden';
     $('loginView').hidden = false; $('mainView').hidden = true; $('outBtn').hidden = true; $('who').textContent = '';
     $('loginMsg').style.color = ''; $('loginMsg').textContent = msg || '';
     try { var ru = localStorage.getItem('lbDriverUser'); if (ru && !$('u').value) $('u').value = ru; } catch(e){}
@@ -182,7 +201,7 @@
     var b = document.querySelector('[data-eye="' + id + '"]'); if (b){ b.classList.toggle('on', on); b.setAttribute('aria-label', on ? 'Hide password' : 'Show password'); }
   }
   function showMain(){
-    document.querySelector('.topbar').style.display = '';
+    document.querySelector('.topbar .brand').style.visibility = '';
     $('loginView').hidden = true; $('mainView').hidden = false; $('outBtn').hidden = false;
     $('who').textContent = read(NK);
   }
@@ -445,7 +464,9 @@
   });
 
   $('loginForm').addEventListener('submit', function(e){ e.preventDefault(); doLogin(); });
-  $('outBtn').addEventListener('click', doLogout);
+  $('outBtn').addEventListener('click', function(){ $('menu').hidden = true; doLogout(); });
+  $('burger').addEventListener('click', function(e){ e.stopPropagation(); var m = $('menu'); m.hidden = !m.hidden; $('burger').setAttribute('aria-expanded', String(!m.hidden)); });
+  document.addEventListener('click', function(){ $('menu').hidden = true; });
   document.querySelectorAll('[data-eye]').forEach(function(b){ b.addEventListener('click', function(){ var id = b.getAttribute('data-eye'); setEye(id, $(id).type === 'password'); }); });
   $('toSign').addEventListener('click', function(){ showSign(true); });
   $('toLogin').addEventListener('click', function(){ showSign(false); });
