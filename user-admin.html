@@ -199,6 +199,12 @@
       </div>
       <div class="msg" id="tableMsg"></div>
     </div>
+    <div class="card" id="drvCard">
+      <div class="card-head"><h2>🚚 Delivery Drivers <span class="muted" id="drvCount"></span></h2><span class="muted">Drivers sign up at driver.html. Approve them here, fix names or usernames, reset passwords. They are separate from staff and only see their own deliveries.</span></div>
+      <div id="drvList"><span class="muted">Loading…</span></div>
+      <div class="msg" id="drvMsg"></div>
+    </div>
+
   </div>
 </div>
 
@@ -515,8 +521,57 @@ async function loadReminders(){
 })();
 
 /* start: always ask for the password first */
+
+/* ---------- delivery drivers (own accounts, separate from staff; server: delivery-fast) ---------- */
+let drivers=[], drvSure=null, drvTimer=null;
+async function drvApi(body){
+  const r=await fetch(LB_CONFIG.DELIVERY_API,{method:'POST',headers:{'Content-Type':'application/json',apikey:LB_CONFIG.SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(Object.assign({token:token()},body))});
+  return r.json();
+}
+function renderDrivers(){
+  const ord=drivers.slice().sort((a,b)=>(b.pending?1:0)-(a.pending?1:0));
+  const pend=drivers.filter(d=>d.pending).length;
+  document.getElementById('drvCount').textContent=drivers.length?'('+drivers.length+(pend?' · '+pend+' waiting':'')+')':'';
+  document.getElementById('drvList').innerHTML=ord.length?ord.map(d=>`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;${d.pending?'background:#fff8e8;border-color:#f0d79a':''}">
+    <div style="min-width:0"><b>${esc(d.name)}</b> <span class="muted">@${esc(d.username)}</span><div class="muted">${d.pending?'Waiting for approval':d.active?'Active':'Deactivated'} · ${d.lastLogin?'last login '+esc(fmt(d.lastLogin)):'never logged in'}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button data-d="edit" data-id="${d.id}">Edit</button><button data-d="pw" data-id="${d.id}">Password</button>
+      <button class="${d.pending?'primary':'danger'}" data-d="tog" data-id="${d.id}">${drvSure===d.id?'Tap again':(d.pending?'Approve':d.active?'Deactivate':'Activate')}</button>
+    </div></div>`).join(''):'<span class="muted">No drivers yet. They will show here after they sign up at driver.html.</span>';
+}
+async function loadDrivers(){
+  try{
+    const d=await drvApi({action:'drivers'});
+    if(d.reauth){ showLock(); return; }
+    if(!d.success){ document.getElementById('drvList').innerHTML='<span class="muted">'+esc(d.error||'Could not load drivers.')+'</span>'; return; }
+    drivers=d.drivers||[]; renderDrivers();
+  }catch(e){ document.getElementById('drvList').innerHTML='<span class="muted">Connection error.</span>'; }
+}
+document.getElementById('drvList').addEventListener('click',async ev=>{
+  const b=ev.target.closest('button[data-d]'); if(!b||b.disabled) return;
+  const id=Number(b.dataset.id), u=drivers.find(x=>x.id===id); if(!u) return;
+  const act=b.dataset.d; setMsg('drvMsg','',true);
+  const run=async body=>{ const r=await drvApi(Object.assign({action:'driverEdit',id},body)); setMsg('drvMsg',r.success?'Saved.':(r.error||'Could not save.'),!!r.success); if(r.success) await loadDrivers(); };
+  if(act==='edit'){
+    let n=prompt('Driver name:',u.name); if(n==null) return;
+    let un=prompt('Username (letters, numbers, . _ -):',u.username); if(un==null) return;
+    n=n.trim(); un=un.trim().toLowerCase();
+    const body={}; if(n!==u.name) body.fullName=n; if(un!==u.username) body.username=un;
+    if(!Object.keys(body).length) return;
+    await run(body);
+  } else if(act==='pw'){
+    const pw=prompt('New password for this driver (min 6 characters):'); if(pw==null) return;
+    if(pw.length<6){ setMsg('drvMsg','Password must be at least 6 characters.',false); return; }
+    await run({password:pw});
+  } else if(act==='tog'){
+    if(drvSure!==id){ drvSure=id; clearTimeout(drvTimer); drvTimer=setTimeout(()=>{ drvSure=null; renderDrivers(); },4000); renderDrivers(); return; }
+    drvSure=null; clearTimeout(drvTimer); b.disabled=true;
+    await run({active:!u.active});
+  }
+});
+
 function startAdmin(){
-  loadPositions().then(loadUsers).then(ok=>{ if(ok){ loadInvite(); loadReminders(); } }).catch(()=>{
+  loadPositions().then(loadUsers).then(ok=>{ if(ok){ loadInvite(); loadReminders(); loadDrivers(); } }).catch(()=>{
     document.getElementById('adminArea').style.display='block';
     setMsg('tableMsg','Connection error — please check your connection.',false);
   });
