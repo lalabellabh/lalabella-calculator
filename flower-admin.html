@@ -1,476 +1,283 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
-<script src="shared/admin-gate.js" data-title="Flower Admin"></script>
-
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Flower Admin</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Delivery Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
-  :root{
-    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
-    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
-    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
-    --choc:#6b4226; --choc-deep:#4a2c18;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:
-      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
-      radial-gradient(circle at 92% 12%, rgba(107,66,38,0.08), transparent 40%),
-      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
-    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
-  }
-  .wrap{ max-width:720px; margin:0 auto; padding:26px 18px 60px; }
-  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
-  .back-link:hover{ color:var(--rose-deep); }
-  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); }
-  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; }
-  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; }
-
-  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
-  .tab-btn{
-    flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:#fff;
-    font-weight:700; font-size:14px; cursor:pointer; color:var(--ink-dim);
-  }
-  .tab-btn.active.flower{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; border-color:transparent; }
-  .tab-btn.active.chocolate{ background:linear-gradient(135deg, var(--choc), var(--choc-deep)); color:#fff; border-color:transparent; }
-
-  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
-  .panel{ display:none; }
-  .panel.active{ display:block; }
-
-  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .field{ display:flex; flex-direction:column; gap:4px; }
-  .field.full{ grid-column:1/-1; }
-  label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
-  input, select{
-    border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:14px;
-    color:var(--ink); font-family:inherit; background:#fff; outline:none;
-  }
-  input:focus, select:focus{ border-color:var(--rose); }
-
-  .btn{ padding:12px 20px; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; margin-top:16px; width:100%; }
-  .btn.flower{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
-  .btn.chocolate{ background:linear-gradient(135deg, var(--choc), var(--choc-deep)); color:#fff; }
-  .btn:disabled{ opacity:0.6; cursor:default; }
-
-  .result{ display:none; margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; }
-  .result.ok{ background:#eaf6ec; color:var(--ok); display:block; }
-  .result.err{ background:#fdecec; color:#c0392b; display:block; }
-
-  @media (max-width:600px){ .fields{ grid-template-columns:1fr; } }
+  :root{--rose:#c9506b;--rose-dark:#9e2f4a;--gold:#d9a441;--ink:#2f2024;--muted:#8a7078;--line:#f0dede;--ok:#2e8b57;--warn:#b9770e;--bad:#c0392b;}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',sans-serif;color:var(--ink)}
+  body{padding:22px 16px 70px}
+  .wrap{max-width:1100px;margin:0 auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f1d38c,var(--gold));display:grid;place-items:center;font-size:18px}
+  .brand b{font-family:'Fraunces',serif;font-size:17px}
+  .backlink{font-size:12.5px;color:var(--muted);text-decoration:none;font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(158,47,74,.07);min-width:0}
+  .card h2{font-family:'Fraunces',serif;font-size:16px;margin:0 0 10px}
+  #map{height:440px;border-radius:12px;border:1px solid var(--line);background:#e8e4df}
+  @media(max-width:820px){#map{height:340px}}
+  .mapbar{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin:10px 0 3px;text-transform:uppercase;letter-spacing:.05em}
+  input,select,textarea{font:inherit;font-size:14px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fffdfc;color:var(--ink);width:100%;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--rose)}
+  textarea{resize:vertical;min-height:58px}
+  button{font:inherit;font-weight:700;font-size:13.5px;border-radius:10px;padding:10px 14px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  button.go{background:linear-gradient(135deg,#c9506b,#9e2f4a);border-color:transparent;color:#fff;width:100%;margin-top:12px;padding:12px}
+  button.sm{padding:6px 10px;font-size:12px}
+  button.danger{color:var(--bad)}
+  button:disabled{opacity:.55}
+  .msg{font-size:13px;margin:8px 0 0;min-height:1em}
+  .msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
+  .chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#f1ecea;color:var(--muted);white-space:nowrap}
+  .chip.ok{background:#e3f4ea;color:var(--ok)} .chip.warn{background:#fdf0d8;color:var(--warn)} .chip.bad{background:#fbe3e0;color:var(--bad)}
+  .item{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:8px;cursor:pointer;background:#fffdfc}
+  .item.sel{border-color:var(--rose);box-shadow:0 0 0 2px rgba(201,80,107,.18)}
+  .item .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .item .o{font-family:'Fraunces',serif;font-weight:700;font-size:17px}
+  .item .s{font-size:12.5px;color:var(--muted);margin-top:3px;word-break:break-word}
+  .item .row2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12px}
+  .empty{color:var(--muted);font-size:13.5px;padding:10px 2px}
+  .detail{font-size:13.5px;line-height:1.5;word-break:break-word}
+  .stale{color:var(--bad);font-weight:700}
+  .car{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+  .flag{font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
 </style>
-<style id="chocoSharedNavStyles">
-.choco-nav-toggle{
-  position:fixed; top:16px; left:16px; z-index:9210;
-  width:44px; height:44px; border-radius:12px; border:1px solid rgba(158,47,74,0.16);
-  background:rgba(255,255,255,0.9); color:#9e2f4a; font-size:20px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
-  box-shadow:0 5px 16px rgba(158,47,74,.14);
-}
-.choco-nav-backdrop{
-  position:fixed; inset:0; z-index:9205; background:rgba(60,30,30,0.35); backdrop-filter:blur(3px);
-  opacity:0; pointer-events:none; transition:opacity .2s ease;
-}
-.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
-.choco-drawer{
-  position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
-  background:rgba(255,255,255,.94);
-  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
-  transform:translateX(-100%); transition:transform .25s ease;
-  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
-  font-family:Arial,sans-serif; backdrop-filter:blur(18px);
-}
-.choco-drawer.show{ transform:translateX(0); }
-.choco-drawer a{
-  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
-  color:#2f2024; text-decoration:none; font-size:14px; font-weight:600;
-}
-.choco-drawer a:hover{ background:rgba(201,80,107,0.08); }
-.choco-drawer .choco-drawer-title{
-  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
-  padding:0 12px 8px; opacity:0.8;
-}
-.choco-drawer .choco-music-box{
-  margin-top:10px; padding:12px; border-radius:12px; background:rgba(201,80,107,0.05);
-  border:1px solid #f0dede;
-}
-.choco-drawer .choco-music-box input{
-  width:100%; padding:9px 10px; border:1px solid #f0dede; border-radius:9px;
-  background:#fdf9f8; color:#2f2024; font-size:12px; outline:none; margin-bottom:8px;
-  box-sizing:border-box;
-}
-.choco-drawer .choco-music-box button{
-  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
-  background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff;
-}
-.choco-drawer .choco-music-now{ font-size:10.5px; color:#8a7078; margin-top:8px; word-break:break-all; line-height:1.4; }
-/* hamburger stays visible on mobile too now */
-/* The fixed hamburger button sits at top:16px, extending to about
-   60px tall — without extra clearance it was sitting on top of (and
-   hiding) each page's own title/back-link in that same corner. */
-.wrap{ padding-top:76px !important; }
-.choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
-.choco-hub-grid a{
-  flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
-  font-size:10.5px; background:rgba(201,80,107,0.05); border:1px solid #f0dede;
-  min-height:76px; justify-content:center; white-space:nowrap;
-}
-.choco-hub-grid a span.hub-icon{ font-size:20px; }
-</style>
-
-
 </head>
 <body>
-
-
-<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
-<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
-<nav class="choco-drawer" id="chocoDrawer">
-  <div data-lb-menu></div>
-  <div class="choco-music-box">
-    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
-    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
-    <button id="chocoMusicToggleBtn">♫ Music</button>
-    <div style="display:flex;gap:6px;margin-top:8px;">
-      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
-      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
-    </div>
-    <div class="choco-music-now" id="chocoMusicNow"></div>
-  </div>
-</nav>
-<script src="shared/nav.js"></script>
-<audio id="chocoAudioPlayer" loop></audio>
-<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
-
-
+<script src="shared/nav.js" data-standalone data-shift=".topbar"></script>
 <div class="wrap">
-  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
-  <header>
-    <div class="eyebrow">Lalabella</div>
-    <h1>Flower Admin</h1>
-  </header>
-
-  <div class="card">
-    <div class="panel active" id="panelFlower">
-      <div class="fields">
-        <div class="field full"><label>Flower Name</label><input id="flowerName" placeholder="e.g. Rose"></div>
-        <div class="field"><label>Origin</label><input id="flowerOrigin" placeholder="e.g. Kenya"></div>
-        <div class="field">
-          <label>Unit</label>
-          <select id="flowerUnit"><option>Stem</option><option>Bunch</option><option>Piece</option></select>
-        </div>
-        <div class="field"><label>Stems per Bunch</label><input id="flowerStems" type="number" min="1" value="1"></div>
-        <div class="field"><label>Rate (BHD)</label><input id="flowerRate" type="number" step="0.001" min="0" value="0"></div>
-        <div class="field full" id="hollandHintBox" style="display:none;"><div style="font-size:11px;color:var(--rose-deep);background:var(--blush);border-radius:8px;padding:8px 10px;"></div></div>
-        <div class="field full"><label>Min Stock</label><input id="flowerMinStock" type="number" min="0" value="0"></div>
+  <div class="topbar">
+    <div class="brand"><div class="logo">🗺️</div><b>Delivery Map</b></div>
+    <a class="backlink" href="index.html">← Back to Lalabella</a>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="mapbar"><div class="lab" id="mapTitle">All deliveries on the way</div><div class="lab" id="upd"></div></div>
+        <div id="map" data-lb-theme-skip></div>
+        <div class="detail" id="detail" style="margin-top:12px"></div>
       </div>
-      <button class="btn flower" id="saveFlowerBtn">Add Flower Item</button>
-      <div class="result" id="flowerResult"></div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>New delivery</h2>
+        <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
+        <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
+        <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
+        <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">Approve or edit drivers in <a href="user-admin.html" style="color:var(--rose)">User Management</a>.</div>
+        <label for="fSlot">Delivery time</label><select id="fSlot"><option value="">Any time</option><option value="10 AM - 2 PM">10 AM – 2 PM</option><option value="3 PM - 6 PM">3 PM – 6 PM</option><option value="7 PM - 10 PM">7 PM – 10 PM</option></select>
+        <label for="fNote">Note (optional)</label><input id="fNote" maxlength="300" autocomplete="off">
+        <button class="go" id="addBtn">Assign delivery</button>
+        <div class="msg" id="addMsg"></div>
+      </div>
+      <div class="card">
+        <h2>Deliveries</h2>
+        <div id="list"><div class="empty">Loading…</div></div>
+      </div>
     </div>
   </div>
 </div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+(function(){
+  'use strict';
+  var API = (window.LB_CONFIG && LB_CONFIG.DELIVERY_API) || (LB_CONFIG.SUPABASE_URL + '/functions/v1/delivery-fast');
+  var TZ = 'Asia/Bahrain', STALE_S = 60, REFRESH_MS = 6000;
+  var sureId = null, sureTimer = null, rows = [], sel = null, track = null, serverSkew = 0, map = null, layer = null, fitFor = null, busyAdd = false;
 
-const FLOWER_API = LB_CONFIG.FLOWER_FAST_API;
-
-// ---------- Holland price auto-suggest ----------
-// Quietly loads the HollandTracking list on page open, then watches
-// the Flower Name + Origin fields — when both point to a tracked
-// Holland item, the Rate field is pre-filled using the SAME company
-// formula as everywhere else, treating the Odoo price as the
-// Supplier Rate input. You can still edit it before saving.
-let hollandTrackingList = [];
-fetch(FLOWER_API + '?action=getHollandTracking')
-  .then(r => r.json())
-  .then(data => { hollandTrackingList = Array.isArray(data) ? data : []; })
-  .catch(()=>{});
-
-function computeCompanyRate(supplierRate, unit, stemsPerBunch){
-  const stems = Number(stemsPerBunch) || 1;
-  const perStem = (String(unit).toLowerCase() === 'bunch' && stems > 0) ? supplierRate / stems : supplierRate;
-  return perStem * 3 * 1.10;
-}
-
-let hollandSuggestedRate = null;
-let hollandOdooPrice = null;
-
-function checkHollandSuggestion(){
-  const name = document.getElementById('flowerName').value.trim().toLowerCase();
-  const origin = document.getElementById('flowerOrigin').value.trim().toLowerCase();
-  const hintBox = document.getElementById('hollandHintBox');
-  const hintText = hintBox.querySelector('div');
-
-  if(!name || !origin.includes('holland')){
-    hintBox.style.display = 'none';
-    hollandSuggestedRate = null;
-    hollandOdooPrice = null;
-    return;
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function api(body){
+    return fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json', apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify(Object.assign({ token: token() }, body)) })
+      .then(function(r){ return r.json(); });
   }
-  const match = hollandTrackingList.find(h => String(h['Flower Name'] || '').trim().toLowerCase() === name);
-  if(!match){
-    hintBox.style.display = 'none';
-    hollandSuggestedRate = null;
-    hollandOdooPrice = null;
-    return;
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function fmtT(iso){ return iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour:'numeric', minute:'2-digit' }) : ''; }
+  function fmtDT(iso){ return iso ? new Date(iso).toLocaleString('en-GB', { timeZone: TZ, day:'2-digit', month:'short', hour:'numeric', minute:'2-digit' }) : ''; }
+  function nowMs(){ return Date.now() + serverSkew; }
+  function dist(a, b){
+    var r = Math.PI / 180, R = 6371000, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
   }
-  const odooPrice = Number(match['Odoo Price (BHD)']) || 0;
-  const unit = document.getElementById('flowerUnit').value;
-  const stems = document.getElementById('flowerStems').value;
-  const suggested = computeCompanyRate(odooPrice, unit, stems);
-  const originalRate = Number(document.getElementById('flowerRate').value) || 0;
-
-  if(originalRate > 0 && suggested <= originalRate){
-    // Same price or a decrease — safe to apply directly, no approval
-    // needed. The Rate field is filled in and this is treated as a
-    // normal (already-Approved) item once saved.
-    document.getElementById('flowerRate').value = suggested.toFixed(3);
-    hollandSuggestedRate = null;
-    hollandOdooPrice = null;
-    hintText.textContent = `📋 Odoo price ${odooPrice} → ${suggested.toFixed(3)} BHD, not higher than the original (${originalRate.toFixed(3)}) — applied directly to Rate, no approval needed.`;
-    hintBox.style.display = 'block';
-    return;
+  function trackMeters(){
+    if (!track || !track.points || track.points.length < 2) return 0;
+    var t = 0, last = track.points[0];
+    for (var i = 1; i < track.points.length; i++){ var d = dist(last, track.points[i]); if (d >= 8){ t += d; last = track.points[i]; } }
+    return t;
   }
-
-  // The actual Rate input is left alone — this only shows a proposal.
-  // Approving or rejecting it happens later, through the same Rate
-  // Approval card used everywhere else in the system.
-  hollandSuggestedRate = suggested;
-  hollandOdooPrice = odooPrice;
-  hintText.textContent = `📋 Suggested from Odoo tracking (${match['Date Checked'] || ''}): Odoo price ${odooPrice} → Suggested Rate ${suggested.toFixed(3)} BHD${originalRate > 0 ? ' (higher than the original ' + originalRate.toFixed(3) + ')' : ''}. If you save now, it will go to \"Pending Approval\" — the Rate field above will not change until it is approved on the Dashboard.`;
-  hintBox.style.display = 'block';
-}
-
-// If the person edits the Rate by hand after a Holland auto-fill, this
-// is no longer an unreviewed machine suggestion — treat it as a normal
-// manually-entered rate again (Approved immediately, as usual).
-
-['flowerName','flowerOrigin','flowerUnit','flowerStems'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', checkHollandSuggestion);
-  document.getElementById(id).addEventListener('change', checkHollandSuggestion);
-});
-
-// Rate's own listener only re-checks the comparison text — it never
-// overwrites what you're typing there.
-document.getElementById('flowerRate').addEventListener('input', ()=>{
-  if(hollandSuggestedRate === null) return; // no active suggestion to compare against
-  const originalRate = Number(document.getElementById('flowerRate').value) || 0;
-  const hintText = document.getElementById('hollandHintBox').querySelector('div');
-  if(originalRate > 0 && hollandSuggestedRate <= originalRate){
-    hintText.textContent = `📋 Odoo-based suggestion (${hollandSuggestedRate.toFixed(3)}) is not higher than your current Rate (${originalRate.toFixed(3)}) — you can type it in directly; no approval will be needed if you save this.`;
+  function fmtDist(m){ return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m'; }
+  function ago(iso){
+    if (!iso) return null;
+    var s = Math.max(0, Math.round((nowMs() - new Date(iso).getTime()) / 1000));
+    if (s < 60) return s + ' s ago';
+    if (s < 3600) return Math.round(s / 60) + ' min ago';
+    return Math.round(s / 3600) + ' h ago';
   }
-});
+  function ageS(iso){ return iso ? Math.round((nowMs() - new Date(iso).getTime()) / 1000) : null; }
+  function chip(s){ return '<span class="chip ' + (s === 'On the way' ? 'warn' : s === 'Delivered' ? 'ok' : s === 'Cancelled' ? 'bad' : '') + '">' + esc(s) + '</span>'; }
+  function byId(id){ for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return rows[i]; return null; }
 
-
-// ---------- Flower save ----------
-document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
-  const name = document.getElementById('flowerName').value.trim();
-  const resultBox = document.getElementById('flowerResult');
-  if(!name){
-    resultBox.className = 'result err';
-    resultBox.textContent = 'Flower name is required.';
-    return;
+  // ---------- map ----------
+  function initMap(){
+    if (!window.L){ $('map').innerHTML = '<div class="empty" style="padding:20px">The map could not load. Check the internet and refresh.</div>'; return; }
+    map = L.map('map', { zoomControl:true }).setView([26.2235, 50.5876], 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap contributors' }).addTo(map);
+    layer = L.layerGroup().addTo(map);
   }
-  const btn = document.getElementById('saveFlowerBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-
-  const body = new URLSearchParams({
-    action: 'addFlowerItem',
-    flowerName: name,
-    origin: document.getElementById('flowerOrigin').value,
-    unit: document.getElementById('flowerUnit').value,
-    stemsPerBunch: document.getElementById('flowerStems').value,
-    rate: document.getElementById('flowerRate').value,
-    minStock: document.getElementById('flowerMinStock').value
-  });
-  if(hollandSuggestedRate !== null){
-    body.set('pendingSuggestedRate', hollandSuggestedRate.toFixed(3));
-    body.set('hollandOdooPrice', hollandOdooPrice);
+  function icon(kind){
+    return L.divIcon({ className:'', html:'<div class="' + (kind === 'car' ? 'car' : 'flag') + '">' + (kind === 'car' ? '🚗' : '🏁') + '</div>', iconSize:[28,28], iconAnchor:[14,14] });
   }
-
-  fetch(FLOWER_API, { method: 'POST', body })
-    .then(r => r.json())
-    .then(res => {
-      btn.disabled = false; btn.textContent = 'Add Flower Item';
-      if(res.error || !res.success){
-        resultBox.className = 'result err';
-        resultBox.textContent = 'Error: ' + (res.error || 'Unknown error');
-        return;
-      }
-      resultBox.className = 'result ok';
-      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode +
-        (hollandSuggestedRate !== null ? ' (Rate: Pending Approval — see Dashboard)' : '');
-      document.getElementById('flowerName').value = '';
-      document.getElementById('flowerOrigin').value = '';
-      document.getElementById('flowerRate').value = 0;
-      document.getElementById('flowerMinStock').value = 0;
-      hollandSuggestedRate = null;
-      hollandOdooPrice = null;
-      document.getElementById('hollandHintBox').style.display = 'none';
-    })
-    .catch(err => {
-      btn.disabled = false; btn.textContent = 'Add Flower Item';
-      resultBox.className = 'result err';
-      resultBox.textContent = 'Could not reach the server. Check your connection.';
+  function drawMap(){
+    if (!map) return;
+    layer.clearLayers();
+    var pts = [], fitPts = [];
+    var focus = sel != null ? byId(sel) : null;
+    if (focus && track && track.delivery.id === focus.id && track.points.length){
+      var ll = track.points.map(function(p){ return [p.lat, p.lng]; });
+      L.polyline(ll, { color:'#c9506b', weight:5, opacity:.85 }).addTo(layer);
+      fitPts = fitPts.concat(ll);
+    }
+    rows.forEach(function(r){
+      if (r.lastLat == null || r.lastLng == null) return;
+      var show = r.status === 'On the way' || r.id === sel;
+      if (!show) return;
+      var m = L.marker([r.lastLat, r.lastLng], { icon: icon(r.status === 'On the way' ? 'car' : 'flag'), title:'#' + r.orderNo }).addTo(layer);
+      m.bindTooltip('#' + r.orderNo + ' · ' + r.driverName, { direction:'top', offset:[0,-12] });
+      (function(id){ m.on('click', function(){ if (sel !== id) select(id); }); })(r.id);
+      if (r.id === sel || sel == null) fitPts.push([r.lastLat, r.lastLng]);
+      pts.push([r.lastLat, r.lastLng]);
     });
-});
-
-</script>
-<script>
-(function(){
-  const btn=document.getElementById('chocoNavToggle');
-  const backdrop=document.getElementById('chocoNavBackdrop');
-  const drawer=document.getElementById('chocoDrawer');
-  if(!btn||!backdrop||!drawer) return;
-  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
-  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
-  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
-  backdrop.addEventListener('click', closeDrawer);
-
-  // Smart Home — goes to the Flower hub from a flower page, or the
-  // Chocolate hub from a chocolate page.
-  const homeLink=document.getElementById('chocoHomeLink');
-  if(homeLink){
-    const isFlowerPage = 'flower' === 'flower';
-    homeLink.href = isFlowerPage ? 'flower-tools.html' : 'index.html';
-    homeLink.textContent = isFlowerPage ? '🏠 Flower Tools' : '🏠 Chocolate Home';
-  }
-})();
-
-// ---------- Shared music player (same saved sound as the rest of
-// Lalabella on THIS device — set it once anywhere, it follows you
-// across every page on this same browser/phone). ----------
-(function(){
-  const audio = document.getElementById('chocoAudioPlayer');
-  const musicBtn = document.getElementById('chocoMusicToggleBtn');
-  const urlInput = document.getElementById('chocoMusicUrlInput');
-  const nowText = document.getElementById('chocoMusicNow');
-  const searchInput = document.getElementById('chocoMusicSearchInput');
-  const searchBtn = document.getElementById('chocoMusicSearchBtn');
-  if(!audio || !musicBtn) return;
-  let isPlaying = false;
-  let ytVideoId = null;
-
-  function extractYouTubeId(url){
-    const patterns = [
-      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
-    ];
-    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
-    return null;
-  }
-  function playYouTube(id){
-    document.getElementById('chocoYtPlayerWrap').innerHTML =
-      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
-  }
-  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
-
-  function saveSoundChoice(url, isYouTube){
-    try{
-      localStorage.setItem('lalabellaSoundUrl', url);
-      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
-    }catch(e){}
-  }
-
-  function loadSavedSound(){
-    try{
-      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
-      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
-      if(!savedUrl) return;
-      urlInput.value = savedUrl;
-      if(savedIsYT){
-        ytVideoId = extractYouTubeId(savedUrl);
-      } else {
-        audio.src = savedUrl;
-      }
-      // sessionStorage clears itself the moment the browser tab/window
-      // closes — exactly the reset point we want. If this session has
-      // already pressed ♫ once (on any page), every other page picks
-      // right back up automatically; otherwise it stays silent until
-      // tapped, same as a first-ever visit.
-      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
-      if(sessionPlaying){
-        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
-        isPlaying = true;
-        musicBtn.textContent = '♫ Playing';
-        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
-      } else {
-        isPlaying = false;
-        musicBtn.textContent = '♫ Music';
-        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
-      }
-    }catch(e){}
-  }
-  loadSavedSound();
-
-  function applyUrl(url){
-    const id = extractYouTubeId(url);
-    if(id){
-      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
-      playYouTube(id);
-      nowText.textContent = 'Now playing YouTube track';
-      isPlaying = true; musicBtn.textContent = '♫ Playing';
-      saveSoundChoice(url, true);
-      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
-    } else {
-      ytVideoId = null; stopYouTube();
-      audio.src = url;
-      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
-      saveSoundChoice(url, false);
-      audio.play().then(()=>{
-        isPlaying = true; musicBtn.textContent = '♫ Playing';
-        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
-      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    // Keep following the car: if the followed delivery drives out of view, pan to it.
+    if (focus && focus.status === 'On the way' && focus.lastLat != null && map.getBounds && !map.getBounds().contains([focus.lastLat, focus.lastLng])) map.panTo([focus.lastLat, focus.lastLng]);
+    var key = String(sel);
+    var use = fitPts.length ? fitPts : pts;
+    if (fitFor !== key && use.length){
+      fitFor = key;
+      if (use.length === 1) map.setView(use[0], 16);
+      else map.fitBounds(L.latLngBounds(use), { padding:[40,40], maxZoom:17 });
     }
   }
 
-  musicBtn.addEventListener('click', ()=>{
-    const url = urlInput.value.trim();
-    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
-      applyUrl(url);
+  // ---------- panels ----------
+  function renderList(){
+    var el = $('list');
+    if (!rows.length){ el.innerHTML = '<div class="empty">No deliveries yet. Add the first one above.</div>'; return; }
+    el.innerHTML = rows.map(function(r){
+      var a = r.status === 'On the way' ? ago(r.lastAt) : null;
+      var late = r.status === 'On the way' && (r.lastAt == null || ageS(r.lastAt) > STALE_S);
+      var info = r.status === 'On the way' ? (r.lastAt ? 'GPS ' + a : 'Waiting for first GPS') : r.status === 'Delivered' ? 'Delivered ' + fmtDT(r.deliveredAt) : r.status === 'Assigned' ? 'Not started' : '';
+      return '<div class="item' + (r.id === sel ? ' sel' : '') + '" data-id="' + r.id + '">' +
+        '<div class="t"><span class="o">#' + esc(r.orderNo) + '</span>' + chip(r.status) + '</div>' +
+        '<div class="s">' + esc(r.driverName) + (r.slot ? ' · 🕒 ' + esc(r.slot.replace(/ - /g, ' – ')) : '') + ' · ' + esc(r.address) + '</div>' +
+        '<div class="row2"><span class="' + (late ? 'stale' : '') + '">' + esc(info) + (late && r.lastAt ? ' ⚠️' : '') + '</span>' +
+        (r.status === 'Assigned' || r.status === 'On the way' ? '<button class="sm danger" data-cancel="' + r.id + '">' + (sureId === r.id ? 'Tap again to cancel' : 'Cancel') + '</button>' : '') + '</div></div>';
+    }).join('');
+  }
+  function renderDetail(){
+    var r = sel != null ? byId(sel) : null;
+    $('mapTitle').textContent = r ? 'Order #' + r.orderNo : 'All deliveries on the way';
+    var d = $('detail');
+    if (!r){
+      var n = rows.filter(function(x){ return x.status === 'On the way'; }).length;
+      d.innerHTML = '<span class="empty">' + (n ? n + ' on the way. Tap a delivery to follow it.' : 'No delivery is on the way right now.') + '</span>';
       return;
     }
-    // No new URL typed — just toggle play/pause of whatever's loaded.
-    if(!audio.src && !ytVideoId) return;
-    if(isPlaying){
-      if(ytVideoId) stopYouTube(); else audio.pause();
-      musicBtn.textContent = '♫ Music'; isPlaying = false;
-      // Pausing here means "stop following me" — the next page won't
-      // resume on its own until ♫ is pressed again.
-      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
-    } else {
-      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
-      musicBtn.textContent = '♫ Playing'; isPlaying = true;
-      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    var h = '<b>Driver:</b> ' + esc(r.driverName) + '<br><b>Address:</b> ' + esc(r.address);
+    if (r.slot) h += '<br><b>Time:</b> ' + esc(r.slot.replace(/ - /g, ' – '));
+    if (r.note) h += '<br><b>Note:</b> ' + esc(r.note);
+    h += '<br><b>Status:</b> ' + chip(r.status);
+    if (r.startedAt) h += ' &nbsp;Started ' + esc(fmtT(r.startedAt));
+    if (r.status === 'Delivered') h += ' &nbsp;Delivered ' + esc(fmtDT(r.deliveredAt)) + (r.lastLat != null ? ' (last spot shown with 🏁)' : '');
+    if (r.status === 'On the way'){
+      var s = ageS(r.lastAt);
+      if (r.lastAt == null) h += '<br><span class="stale">No GPS received yet.</span>';
+      else h += '<br><b>Last GPS:</b> ' + esc(ago(r.lastAt)) + (r.lastAcc != null ? ' (±' + r.lastAcc + ' m)' : '') + (s > STALE_S ? ' <span class="stale">⚠️ No update. The driver’s app may be closed or the phone locked.</span>' : '');
     }
+    if (track && track.delivery && track.delivery.id === r.id && track.points.length) h += '<br><b>Moved:</b> ' + esc(fmtDist(trackMeters())) + ' · ' + track.points.length + ' GPS points';
+    if (r.status !== 'On the way' && r.status !== 'Delivered' && r.lastAt) h += '<br><b>Last GPS:</b> ' + esc(fmtDT(r.lastAt));
+    d.innerHTML = h;
+  }
+  function renderAll(){ renderList(); renderDetail(); drawMap(); $('upd').textContent = 'Updated ' + fmtT(new Date(nowMs()).toISOString()); }
+
+  function select(id){
+    sel = (sel === id) ? null : id;
+    track = null; fitFor = null;
+    renderAll();
+    if (sel != null) loadTrack();
+  }
+  function loadTrack(){
+    if (sel == null) return Promise.resolve();
+    var want = sel;
+    return api({ action:'track', id:want }).then(function(r){
+      if (!r.success || sel !== want) return;
+      track = r; renderAll();
+    }).catch(function(){});
+  }
+  function loadList(){
+    return api({ action:'list' }).then(function(r){
+      if (!r.success){
+        $('list').innerHTML = '<div class="empty">' + esc(r.error || 'Could not load.') + '</div>';
+        return;
+      }
+      serverSkew = new Date(r.now).getTime() - Date.now();
+      rows = r.rows || [];
+      renderAll();
+      if (sel != null && byId(sel) && byId(sel).status === 'On the way') return loadTrack();
+    }).catch(function(){});
+  }
+  var drivers = [];
+  function renderDrivers(){
+    var s = $('fDriver'), cur = s.value;
+    var act = drivers.filter(function(u){ return u.active && !u.pending; });
+    s.innerHTML = '<option value="">' + (act.length ? 'Pick a driver…' : 'No approved drivers yet') + '</option>' + act.map(function(u){
+      return '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+    }).join('');
+    if (cur) s.value = cur;
+  }
+  function loadDrivers(){
+    return api({ action:'drivers' }).then(function(r){
+      if (!r.success){ $('fDriver').innerHTML = '<option value="">' + esc(r.error || 'Could not load drivers') + '</option>'; return; }
+      drivers = r.drivers || []; renderDrivers();
+    }).catch(function(){ $('fDriver').innerHTML = '<option value="">No internet</option>'; });
+  }
+  $('addBtn').addEventListener('click', function(){
+    if (busyAdd) return;
+    var msg = $('addMsg'); msg.className = 'msg'; msg.textContent = '';
+    var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, slot = $('fSlot').value, note = $('fNote').value.trim();
+    if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
+    if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address.'; return; }
+    if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
+    busyAdd = true; $('addBtn').disabled = true;
+    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), slot:slot, note:note }).then(function(r){
+      busyAdd = false; $('addBtn').disabled = false;
+      if (!r.success){ msg.className = 'msg bad'; msg.textContent = r.error || 'Could not save.'; return; }
+      msg.className = 'msg ok'; msg.textContent = 'Assigned. The driver will see it in the Driver page.';
+      $('fOrder').value = ''; $('fAddr').value = ''; $('fNote').value = ''; $('fSlot').value = '';
+      loadList();
+    }).catch(function(){ busyAdd = false; $('addBtn').disabled = false; msg.className = 'msg bad'; msg.textContent = 'No internet. Try again.'; });
   });
 
-  // "Search" doesn't auto-pick a video (no API key set up) — it opens
-  // YouTube's own search in a new tab so you can pick the exact one,
-  // then paste that video's link back into the URL box above.
-  if(searchBtn && searchInput){
-    searchBtn.addEventListener('click', ()=>{
-      const q = searchInput.value.trim();
-      if(!q) return;
-      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
-    });
-    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
-  }
+  initMap();
+  loadDrivers();
+  loadList();
+  setInterval(function(){ if (!document.hidden) loadList(); }, REFRESH_MS);
+  setInterval(function(){ if (!document.hidden) { renderList(); renderDetail(); } }, 1000);
 })();
 </script>
-
-
-<script src="joyboy-bubble.js"></script>
 </body>
 </html>
