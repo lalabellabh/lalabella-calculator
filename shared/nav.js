@@ -555,6 +555,11 @@
       '.lbset-btn{width:32px;height:32px;flex:0 0 auto;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);border-radius:8px;cursor:pointer;font-size:13px;padding:0}',
       '.lbset-btn:disabled{opacity:.3;cursor:default}',
       '.lbset-add{display:flex;gap:6px;margin-top:8px}',
+      '.lbset-pick{margin-top:8px;border:1px solid var(--s-line);border-radius:12px;background:var(--s-card);padding:0 10px 10px}',
+      '.lbset-pick summary{cursor:pointer;padding:11px 0;font-size:13px;font-weight:700;color:var(--s-acc);list-style:none}.lbset-pick summary::-webkit-details-marker{display:none}',
+      '.lbset-pg{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--s-dim);margin:10px 0 4px}',
+      '.lbset-pi{display:flex;align-items:center;gap:10px;padding:7px 2px;font-size:13.5px;border-bottom:1px solid var(--s-line);cursor:pointer}.lbset-pi input{width:18px;height:18px;accent-color:var(--s-acc);margin:0;flex:0 0 auto}',
+      '.lbset-pgo{width:100%;margin-top:10px;border:0;background:var(--s-acc);color:#fff;border-radius:10px;padding:11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}',
       '.lbset-ren{flex:1;min-width:0;padding:7px 8px;border:1px solid var(--s-acc);border-radius:8px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
       '.lbset-new{margin-top:10px;padding:10px;border:1px dashed var(--s-line);border-radius:12px;display:flex;flex-direction:column;gap:6px}',
       '.lbset-new b{font-size:12.5px}.lbset-new input{padding:9px 10px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px;min-width:0}',
@@ -641,12 +646,15 @@
 
     const inSection = list.map(x => x.item[0]);
     const addable = Object.keys(REG).map(k => REG[k].item).filter(i => inSection.indexOf(i[0]) === -1 && itemAllowed(i) && SYS.indexOf(i[0]) === -1);
-    if (addable.length) {
-      h += '<div class="lbset-add"><select id="lbsetAdd"><option value="">＋ Add a link from another section…</option>' +
-        addable.map(i => {
-          const m = REG[i[0]].module;
-          return '<option value="' + esc(i[0]) + '">' + i[1] + ' ' + esc(i[2]) + (m ? ' (' + esc(SECTION_TITLES[m]) + ')' : '') + '</option>';
-        }).join('') + '</select><button type="button" data-add>Add</button></div>';
+    {
+      const groups = {};
+      const onPage = (setTab === 'quick' && modKey) ? arranged(modKey).filter(x => !x.hidden).map(x => x.item[0]) : [];  // already in this page's own section
+      addable.filter(i => onPage.indexOf(i[0]) === -1).forEach(i => { const m = REG[i[0]].module || 'quick'; (groups[m] = groups[m] || []).push(i); });
+      if (Object.keys(groups).length) h += '<details class="lbset-pick"><summary>＋ Add tools as shortcuts (tick as many as you want)</summary>' +
+        Object.keys(groups).map(m => '<div class="lbset-pg">' + esc(SECTION_TITLES[m] || m) + '</div>' + groups[m].map(i =>
+          '<label class="lbset-pi"><input type="checkbox" data-pick="' + esc(i[0]) + '"><span>' + i[1] + ' ' + esc(i[2]) + '</span></label>').join('')).join('') +
+        '<button type="button" class="lbset-pgo" data-addmany>Add ticked tools to ' + esc(SECTION_TITLES[setTab]) + '</button>' +
+        '<div class="lbset-note">They show up in the menu right away. Then tap ✏️ to rename them.</div></details>';
     }
     if (setTab === 'quick') {
       h += '<div class="lbset-new"><b>＋ Add your own shortcut</b><div class="r"><input id="lbcIcon" maxlength="4" placeholder="🔗" aria-label="Icon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
@@ -734,6 +742,12 @@
         p.hidden = p.hidden.filter(x => x !== h);
         p.order = p.order.filter(x => x !== h);
       });
+      return;
+    }
+    if (t.hasAttribute('data-addmany')) {
+      const hs = Array.prototype.map.call(document.querySelectorAll('#lbsetBody [data-pick]:checked'), x => x.getAttribute('data-pick'));
+      if (!hs.length) { alert('Tick at least one tool first.'); return; }
+      updatePrefs(setTab, p => { hs.forEach(h => { if (p.added.indexOf(h) === -1) p.added.push(h); p.order = p.order.filter(x => x !== h).concat(h); }); });
       return;
     }
     if (t.hasAttribute('data-add')) {
