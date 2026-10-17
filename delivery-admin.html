@@ -61,6 +61,27 @@
   #cute{display:none;height:440px;border-radius:12px;border:1px solid var(--line);overflow:hidden;background:#ece8de}
   #cute svg{width:100%;height:100%;display:block}
   @media(max-width:820px){#cute{height:340px}}
+  .stats{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .stat{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--muted)}
+  .stat b{font-family:'Fraunces',serif;font-size:16px;color:var(--ink)}
+  .stat.otw b{color:var(--warn)} .stat.dn b{color:var(--ok)}
+  /* Desktop: one full screen, the page itself never scrolls. Long boxes scroll inside themselves (see claude/ui-ux-rules.md). */
+  @media(min-width:900px){
+    html,body{height:100%;overflow:hidden}
+    body{display:flex;flex-direction:column;padding:14px 22px 18px}
+    .wrap{max-width:none;width:100%;flex:1;min-height:0;display:flex;flex-direction:column}
+    .topbar{flex:none;margin-bottom:12px;padding-left:46px}
+    .grid{flex:1;min-height:0;grid-template-columns:minmax(0,1fr) 340px 390px;gap:16px;align-items:stretch}
+    .colmap,.rightcol{display:contents}
+    .card{margin-bottom:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    .card.newcard{display:block;overflow-y:auto}
+    .mapcard .mapbar,.mapcard .vtog{flex:none}
+    .mapcard .vtog{align-self:flex-start}
+    .mapcard #map,.mapcard #cute{flex:1 1 auto;height:auto;min-height:200px}
+    .mapcard .detail{flex:none;max-height:26%;overflow-y:auto}
+    .listcard #list{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+    .listcard #fBr{flex:none}
+  }
 </style>
 </head>
 <body>
@@ -68,11 +89,12 @@
 <div class="wrap">
   <div class="topbar">
     <div class="brand"><div class="logo">🗺️</div><b>Delivery Map</b></div>
+    <div class="stats" id="stats"></div>
     <a class="backlink" href="index.html">← Back to Lalabella</a>
   </div>
   <div class="grid">
-    <div>
-      <div class="card">
+    <div class="colmap">
+      <div class="card mapcard">
         <div class="mapbar"><div class="lab" id="mapTitle">All deliveries on the way</div><div class="lab" id="upd"></div></div>
         <div class="vtog" style="margin-bottom:10px"><button type="button" id="vReal" class="on">🗺️ Real map</button><button type="button" id="vCute">✨ Simple view</button></div>
         <div id="map" data-lb-theme-skip></div>
@@ -80,8 +102,8 @@
         <div class="detail" id="detail" style="margin-top:12px"></div>
       </div>
     </div>
-    <div>
-      <div class="card">
+    <div class="rightcol">
+      <div class="card newcard">
         <h2>New delivery</h2>
         <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
         <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
@@ -95,7 +117,7 @@
         <button class="go" id="addBtn">Assign delivery</button>
         <div class="msg" id="addMsg"></div>
       </div>
-      <div class="card">
+      <div class="card listcard">
         <h2>Deliveries</h2>
         <select id="fBr" aria-label="Show branch" style="margin-bottom:10px"><option value="">All branches</option><option>Moda Mall</option><option>Qalali</option><option>Hamala</option></select>
         <div id="list"><div class="empty">Loading…</div></div>
@@ -378,7 +400,13 @@
     if (r.status !== 'On the way' && r.status !== 'Delivered' && r.lastAt) h += '<br><b>Last GPS:</b> ' + esc(fmtDT(r.lastAt));
     d.innerHTML = h;
   }
-  function renderAll(){ renderList(); renderDetail(); drawMap(); drawCute(); $('upd').textContent = 'Updated ' + fmtT(new Date(nowMs()).toISOString()); }
+  function renderStats(){
+    var c = { 'On the way':0, 'Assigned':0, 'Delivered':0 };
+    rows.forEach(function(r){ if (c[r.status] != null) c[r.status]++; });
+    $('stats').innerHTML = '<span class="stat otw"><b>' + c['On the way'] + '</b> On the way</span><span class="stat"><b>' + c['Assigned'] + '</b> Waiting to start</span><span class="stat dn"><b>' + c['Delivered'] + '</b> Delivered</span>';
+  }
+  window.addEventListener('resize', function(){ try { if (map && view === 'real') map.invalidateSize(); } catch(e){} });
+  function renderAll(){ renderStats(); renderList(); renderDetail(); drawMap(); drawCute(); $('upd').textContent = 'Updated ' + fmtT(new Date(nowMs()).toISOString()); }
 
   function select(id){
     sel = (sel === id) ? null : id;
