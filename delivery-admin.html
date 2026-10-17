@@ -78,7 +78,7 @@
         <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
         <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
         <label for="fMap">Google Maps pin link (optional)</label><input id="fMap" maxlength="500" autocomplete="off" inputmode="url" placeholder="Paste the pin the customer sent on WhatsApp">
-        <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">With a pin, the driver opens the exact spot in Google Maps. Still write the house / flat number in the address.</div>
+        <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">With a pin, the driver opens the exact spot in Google Maps. Address becomes optional when you paste a pin. Add the house / flat number in the address or in the note.</div>
         <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
         <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">Approve or edit drivers in <a href="user-admin.html" style="color:var(--rose)">User Management</a>.</div>
         <label for="fSlot">Delivery time</label><select id="fSlot"><option value="">Any time</option><option value="10 AM - 2 PM">10 AM – 2 PM</option><option value="3 PM - 6 PM">3 PM – 6 PM</option><option value="7 PM - 10 PM">7 PM – 10 PM</option></select>
@@ -263,7 +263,8 @@
     var msg = $('addMsg'); msg.className = 'msg'; msg.textContent = '';
     var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, slot = $('fSlot').value, mapUrl = $('fMap').value.trim(), note = $('fNote').value.trim();
     if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
-    if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address.'; return; }
+    if (!addr && mapUrl && /https?:\/\//i.test(mapUrl)) addr = '📍 Pinned location (open the pin)';
+    if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address or paste the Google Maps pin link.'; return; }
     if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
     busyAdd = true; $('addBtn').disabled = true;
     api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), slot:slot, mapUrl:mapUrl, note:note }).then(function(r){
