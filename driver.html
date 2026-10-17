@@ -47,6 +47,7 @@ html,body{overscroll-behavior-y:contain}
   .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .ord{font-family:'Fraunces',serif;font-size:24px;font-weight:700;margin:2px 0 8px}
   .addr{font-size:15px;line-height:1.45;margin:2px 0 10px;word-break:break-word}
+  .slot{display:inline-block;font-weight:700;font-size:13.5px;color:#8f2a45;background:rgba(201,80,107,.12);border-radius:10px;padding:5px 11px;margin:0 0 10px}
   .note{font-size:13px;color:var(--muted);margin:0 0 10px;word-break:break-word}
   .chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#f1ecea;color:var(--muted)}
   .chip.ok{background:#e3f4ea;color:var(--ok)} .chip.warn{background:#fdf0d8;color:var(--warn)} .chip.bad{background:#fbe3e0;color:var(--bad)}
@@ -368,6 +369,7 @@ html,body{overscroll-behavior-y:contain}
   }
   function card(r){
     var h = '<div class="card"><div class="head"><div><div class="lab">Order</div><div class="ord">#' + esc(r.orderNo) + '</div></div>' + chip(r.status) + '</div>';
+    if (r.slot) h += '<div class="slot">🕒 Deliver ' + esc(r.slot.replace(/ - /g, ' – ')) + '</div>';
     h += '<div class="lab">Address</div><div class="addr">' + esc(r.address) + '</div>';
     if (r.note) h += '<p class="note">' + esc(r.note) + '</p>';
     if (r.status === 'Assigned' || r.status === 'On the way') h += '<a class="maps" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(r.address) + '">🧭 Open in Google Maps</a>';
@@ -389,7 +391,11 @@ html,body{overscroll-behavior-y:contain}
   function render(){
     var el = $('list');
     if (!rows.length){ el.innerHTML = '<div class="empty">No deliveries for you right now.<br>When the admin assigns an order, it shows up here.</div>'; return; }
-    var act = rows.filter(function(r){ return r.status !== 'Delivered'; }), done = rows.filter(function(r){ return r.status === 'Delivered'; });
+    var rank = function(r){ var i = ['10 AM - 2 PM','3 PM - 6 PM','7 PM - 10 PM'].indexOf(r.slot || ''); return i < 0 ? 9 : i; };
+    var act = rows.filter(function(r){ return r.status !== 'Delivered'; }).sort(function(a, b){
+      var oa = a.status === 'On the way' ? 0 : 1, ob = b.status === 'On the way' ? 0 : 1;
+      return oa - ob || rank(a) - rank(b) || (a.id - b.id);
+    }), done = rows.filter(function(r){ return r.status === 'Delivered'; });
     var h = act.map(card).join('');
     if (done.length) h += '<div class="lab" style="margin:16px 4px 8px">Delivered recently</div>' + done.map(card).join('');
     el.innerHTML = h;
