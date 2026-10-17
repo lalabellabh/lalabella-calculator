@@ -86,6 +86,13 @@
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
 
+  // Your own shortcuts (⚙️ Settings → Edit Menu → Quick Tools → "Add your own shortcut"). Saved on this device only.
+  const CUSTOM_KEY = 'lbMenuCustom';
+  function readCustom() {
+    try { const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); return Array.isArray(c) ? c : []; } catch (e) { return []; }
+  }
+  readCustom().forEach(c => { if (c && c.h && c.l && !QUICK.some(q => q[0] === c.h)) QUICK.push([c.h, c.i || '🔗', c.l, '', 'custom']); });
+
   // System / admin pages live in ⚙️ Settings now (keeps the menu short). Still reachable from there.
   const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html'];
 
@@ -162,7 +169,9 @@
       list.sort((a, b) => (pos(a[0]) - pos(b[0])) || (orig.indexOf(a) - orig.indexOf(b)));
     }
     const hidden = p.hidden || [];
-    return list.filter(i => itemAllowed(i) && !(key === 'quick' && SYS.indexOf(i[0]) !== -1)).map(i => ({ item: i, hidden: hidden.indexOf(i[0]) !== -1,
+    const ren = p.rename || {};
+    const named = i => ren[i[0]] ? [i[0], i[1], ren[i[0]], i[3], i[4]] : i;
+    return list.filter(i => itemAllowed(i) && !(key === 'quick' && SYS.indexOf(i[0]) !== -1)).map(i => ({ item: named(i), orig: i, hidden: hidden.indexOf(i[0]) !== -1,
       added: !defaults.some(d => d[0] === i[0]) }));
   }
 
@@ -346,6 +355,20 @@
 
   function dockOff_() { try { return localStorage.getItem('lbDockOff') === '1'; } catch (e) { return false; } }
 
+  // ---- Fold up / open a menu section (⌃ arrow on the title). Remembered on this device. ----
+  const FOLD_KEY = 'lbMenuFold';
+  function folded(key) { try { return !!(JSON.parse(localStorage.getItem(FOLD_KEY) || '{}')[key]); } catch (e) { return false; } }
+  function setFolded(key, v) {
+    try { const f = JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; if (v) f[key] = 1; else delete f[key]; localStorage.setItem(FOLD_KEY, JSON.stringify(f)); } catch (e) {}
+  }
+  function secHead(titleClass, key, title) {
+    const c = folded(key);
+    return '<div class="' + esc(titleClass) + ' lb-sec-title' + (c ? ' lb-closed' : '') + '" data-lb-sec="' + esc(key) + '" role="button" tabindex="0" aria-expanded="' + (c ? 'false' : 'true') + '" aria-label="Fold or open ' + esc(title) + '"><span>' + esc(title) + '</span><span class="lb-sec-chev">⌃</span></div>';
+  }
+  function secBody(key, inner) {
+    return '<div class="lb-sec-body' + (folded(key) ? ' lb-closed' : '') + '" data-lb-body="' + esc(key) + '"><div class="lb-sec-in">' + inner + '</div></div>';
+  }
+
   function render(el) {
     const hubClass = el.getAttribute('data-hub-class') || 'choco-hub-grid';
     const titleClass = el.getAttribute('data-title-class') || 'choco-drawer-title';
@@ -367,12 +390,10 @@
     if (mod) {
       const items = arranged(modKey).filter(x => !x.hidden).map(x => withOrigin(x, modKey));
       items.forEach(i => shown.push(i[0]));
-      html += '<div class="' + esc(titleClass) + '">' + esc(mod.title) + '</div>';
-      html += items.map(i => link(i[0], i[1], i[2])).join('');
+      html += secHead(titleClass, modKey, mod.title) + secBody(modKey, items.map(i => link(i[0], i[1], i[2])).join(''));
     }
     const quick = arranged('quick').filter(x => !x.hidden && shown.indexOf(x.item[0]) === -1).map(x => withOrigin(x, 'quick'));
-    html += '<div class="' + esc(titleClass) + '">Quick Tools</div>';
-    html += quick.map(i => link(i[0], i[1], i[2])).join('');
+    html += secHead(titleClass, 'quick', 'Quick Tools') + secBody('quick', quick.map(i => link(i[0], i[1], i[2])).join(''));
     if (/Android/i.test(navigator.userAgent || '')) html += '<a href="#" data-lb-widget>' + icon_('📱') + 'Link home-screen widget</a>';
     html += '<a href="#" data-lb-settings>' + icon_('⚙️') + 'Settings</a>';
     html += '<a href="#" data-lb-logout>' + icon_('🚪') + 'Log Out</a>';
@@ -381,6 +402,17 @@
     el.innerHTML = html;
     fillWeather(el);
     el.style.display = 'contents';   // links stay direct flex children of the drawer
+    el.querySelectorAll('[data-lb-sec]').forEach(t => {
+      const go = e => {
+        e.preventDefault(); e.stopPropagation();
+        const k = t.getAttribute('data-lb-sec'), c = !t.classList.contains('lb-closed');
+        t.classList.toggle('lb-closed', c); t.setAttribute('aria-expanded', c ? 'false' : 'true');
+        const b = el.querySelector('[data-lb-body="' + k + '"]'); if (b) b.classList.toggle('lb-closed', c);
+        setFolded(k, c);
+      };
+      t.addEventListener('click', go);
+      t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') go(e); });
+    });
     el.querySelector('[data-lb-logout]').addEventListener('click', e => { e.preventDefault(); logout(); });
     const wl = el.querySelector('[data-lb-widget]');
     if (wl) wl.addEventListener('click', e => { e.preventDefault(); if (window.LBWidget) window.LBWidget.link(); });
@@ -391,7 +423,11 @@
   if (!document.getElementById('lb-nav-style')) {
     const st = document.createElement('style');
     st.id = 'lb-nav-style';
-    st.textContent = '[data-lb-menu] a.lb-menu-active{font-weight:700;box-shadow:inset 3px 0 0 currentColor;}' +
+    st.textContent = '.lb-sec-title{display:flex!important;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}' +
+      '.lb-sec-chev{font-size:14px;line-height:1;transition:transform .3s;opacity:.75;padding:2px 4px}.lb-sec-title.lb-closed .lb-sec-chev{transform:rotate(180deg)}' +
+      '.lb-sec-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s ease,opacity .25s ease;opacity:1}.lb-sec-body.lb-closed{grid-template-rows:0fr;opacity:0}' +
+      '.lb-sec-in{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:2px}' +
+      '[data-lb-menu] a.lb-menu-active{font-weight:700;box-shadow:inset 3px 0 0 currentColor;}' +
       '.lb-menu-profile{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 10px;border-radius:12px;' +
         'text-decoration:none;color:inherit;background:rgba(127,127,127,.06);}' +
       '.lb-menu-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:0 0 40px;}' +
@@ -488,7 +524,7 @@
 
   // ---- ⚙️ Settings panel (Appearance + Edit Menu) ----
   const SECTION_TITLES = { chocolate: 'Chocolate Tools', flower: 'Flower Tools', item: 'Item Inventory', quick: 'Quick Tools' };
-  let setTab = null;
+  let setTab = null, renaming = null, custErr = '', custDraft = { i: '', n: '', l: '' };
 
   function settingsStyle() {
     if (document.getElementById('lb-settings-style')) return;
@@ -519,6 +555,11 @@
       '.lbset-btn{width:32px;height:32px;flex:0 0 auto;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);border-radius:8px;cursor:pointer;font-size:13px;padding:0}',
       '.lbset-btn:disabled{opacity:.3;cursor:default}',
       '.lbset-add{display:flex;gap:6px;margin-top:8px}',
+      '.lbset-ren{flex:1;min-width:0;padding:7px 8px;border:1px solid var(--s-acc);border-radius:8px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
+      '.lbset-new{margin-top:10px;padding:10px;border:1px dashed var(--s-line);border-radius:12px;display:flex;flex-direction:column;gap:6px}',
+      '.lbset-new b{font-size:12.5px}.lbset-new input{padding:9px 10px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px;min-width:0}',
+      '.lbset-new .r{display:flex;gap:6px}.lbset-new .r input:first-child{flex:0 0 64px;text-align:center}.lbset-new .r input:last-child{flex:1}',
+      '.lbset-err{color:#c0392b;font-size:12px}',
       '.lbset-add select{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
       '.lbset-add button,.lbset-reset{border:0;background:var(--s-acc-soft);color:var(--s-acc);border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}',
       '.lbset-reset{background:none;padding:10px 0 0;font-size:12px;font-weight:600}',
@@ -586,12 +627,15 @@
     const list = arranged(setTab);
     h += '<div class="lbset-list">' + list.map((x, n) => {
       const i = x.item;
+      const lbl = renaming === i[0]
+        ? '<input class="lbset-ren" id="lbsetRen" maxlength="40" value="' + esc(i[2]) + '" placeholder="New name" aria-label="New name"><button type="button" class="lbset-btn" data-rensave="' + esc(i[0]) + '" aria-label="Save name">✓</button>'
+        : '<span class="lbset-lbl">' + i[1] + ' ' + esc(withOrigin(x, setTab)[2]) + (x.added ? '<span class="lbset-tag">added</span>' : '') + '</span>' +
+          '<button type="button" class="lbset-btn" data-rename="' + esc(i[0]) + '" aria-label="Rename">✏️</button>';
       return '<div class="lbset-row' + (x.hidden ? ' off' : '') + '">' +
-        '<input type="checkbox" data-show="' + esc(i[0]) + '"' + (x.hidden ? '' : ' checked') + ' aria-label="Show ' + esc(i[2]) + '">' +
-        '<span class="lbset-lbl">' + i[1] + ' ' + esc(withOrigin(x, setTab)[2]) + (x.added ? '<span class="lbset-tag">added</span>' : '') + '</span>' +
+        '<input type="checkbox" data-show="' + esc(i[0]) + '"' + (x.hidden ? '' : ' checked') + ' aria-label="Show ' + esc(i[2]) + '">' + lbl +
         '<button type="button" class="lbset-btn" data-move="-1" data-h="' + esc(i[0]) + '"' + (n === 0 ? ' disabled' : '') + ' aria-label="Move up">▲</button>' +
         '<button type="button" class="lbset-btn" data-move="1" data-h="' + esc(i[0]) + '"' + (n === list.length - 1 ? ' disabled' : '') + ' aria-label="Move down">▼</button>' +
-        (x.added ? '<button type="button" class="lbset-btn" data-remove="' + esc(i[0]) + '" aria-label="Remove">✕</button>' : '') +
+        (i[4] === 'custom' ? '<button type="button" class="lbset-btn" data-cdel="' + esc(i[0]) + '" aria-label="Delete shortcut">🗑</button>' : x.added ? '<button type="button" class="lbset-btn" data-remove="' + esc(i[0]) + '" aria-label="Remove">✕</button>' : '') +
         '</div>';
     }).join('') + '</div>';
 
@@ -604,9 +648,42 @@
           return '<option value="' + esc(i[0]) + '">' + i[1] + ' ' + esc(i[2]) + (m ? ' (' + esc(SECTION_TITLES[m]) + ')' : '') + '</option>';
         }).join('') + '</select><button type="button" data-add>Add</button></div>';
     }
+    if (setTab === 'quick') {
+      h += '<div class="lbset-new"><b>＋ Add your own shortcut</b><div class="r"><input id="lbcIcon" maxlength="4" placeholder="🔗" aria-label="Icon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
+        '<input id="lbcLink" maxlength="500" value="' + esc(custDraft.l) + '" placeholder="Page or link (e.g. notes.html or https://…)" aria-label="Link">' +
+        (custErr ? '<div class="lbset-err">' + esc(custErr) + '</div>' : '') +
+        '<button type="button" class="lbset-reset" style="padding:9px 14px;background:var(--s-acc-soft)" data-cadd>Add shortcut</button></div>';
+    }
     h += '<button type="button" class="lbset-reset" data-reset>↺ Reset ' + esc(SECTION_TITLES[setTab]) + ' to default</button>';
-    h += '<div class="lbset-note">Unchecked = hidden from the menu. Saved on this device only.</div>';
+    h += '<div class="lbset-note">Unchecked = hidden from the menu. ✏️ = rename. Saved on this device only.</div>';
     box.innerHTML = h;
+  }
+
+  function saveRename(h) {
+    const inp = document.getElementById('lbsetRen');
+    const v = inp ? inp.value.replace(/\s+/g, ' ').trim().slice(0, 40) : '';
+    renaming = null;
+    updatePrefs(setTab, p => { p.rename = p.rename || {}; if (v) p.rename[h] = v; else delete p.rename[h]; });
+  }
+  function addCustom() {
+    const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+    const name = val('lbcName').replace(/\s+/g, ' ').slice(0, 40), ico = val('lbcIcon') || '🔗';
+    let href = val('lbcLink');
+    custErr = ''; custDraft = { i: val('lbcIcon'), n: val('lbcName'), l: href };
+    if (!name) custErr = 'Write a name for the shortcut.';
+    else if (!href) custErr = 'Paste the page or link.';
+    else if (/^\s*(javascript|data|vbscript|file):/i.test(href)) custErr = 'That kind of link is not allowed.';
+    else if (/^https?:\/\//i.test(href)) { /* ok */ }
+    else if (/^[\w\-\/]+\.html?(\?[^\s]*)?$/i.test(href)) { /* page in this system */ }
+    else if (/^[\w\-]+(\.[\w\-]+)+(\/\S*)?$/.test(href)) href = 'https://' + href;
+    else custErr = 'Use a page like notes.html or a link starting with https://';
+    if (!custErr && QUICK.some(q => q[0] === href)) custErr = 'That link is already in the menu — use ✏️ to rename it.';
+    if (custErr) { drawSettings(); return; }
+    const c = readCustom(); c.push({ h: href, i: ico, l: name });
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (x) { custErr = 'Could not save on this device.'; drawSettings(); return; }
+    const it = [href, ico, name, '', 'custom']; QUICK.push(it); REG[href] = { item: it, module: null };
+    custDraft = { i: '', n: '', l: '' };
+    updatePrefs('quick', p => { p.order = p.order.filter(x => x !== href).concat(href); });
   }
 
   function onSettingsClick(e) {
@@ -620,7 +697,19 @@
       drawSettings(); return;
     }
     if (t.dataset.mode) { if (window.LBTheme) window.LBTheme.set(t.dataset.mode); drawSettings(); return; }
-    if (t.dataset.tab) { setTab = t.dataset.tab; drawSettings(); return; }
+    if (t.dataset.tab) { setTab = t.dataset.tab; renaming = null; custErr = ''; drawSettings(); return; }
+    if (t.dataset.rename) { renaming = t.dataset.rename; drawSettings(); const r = document.getElementById('lbsetRen'); if (r) { r.focus(); r.select(); } return; }
+    if (t.dataset.rensave) { saveRename(t.dataset.rensave); return; }
+    if (t.dataset.cdel) {
+      if (!confirm('Delete this shortcut?')) return;
+      const h = t.dataset.cdel;
+      try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(readCustom().filter(c => c.h !== h))); } catch (x) {}
+      const q = QUICK.findIndex(z => z[0] === h); if (q !== -1) QUICK.splice(q, 1);
+      delete REG[h];
+      updatePrefs('quick', p => { p.hidden = p.hidden.filter(x => x !== h); p.order = p.order.filter(x => x !== h); if (p.rename) delete p.rename[h]; });
+      return;
+    }
+    if (t.hasAttribute('data-cadd')) { addCustom(); return; }
     if (t.dataset.show) {
       const h = t.dataset.show, on = t.checked;
       updatePrefs(setTab, p => { p.hidden = p.hidden.filter(x => x !== h); if (!on) p.hidden.push(h); });
@@ -683,6 +772,11 @@
     document.body.appendChild(back);
     back.addEventListener('click', e => { if (e.target === back || e.target.closest('.lbset-x')) closeSettings(); });
     back.querySelector('.lbset').addEventListener('click', onSettingsClick);
+    back.querySelector('.lbset').addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (e.target.id === 'lbsetRen' && renaming) { e.preventDefault(); saveRename(renaming); }
+      else if (/^lbc(Icon|Name|Link)$/.test(e.target.id)) { e.preventDefault(); addCustom(); }
+    });
     document.addEventListener('keydown', escClose);
     drawSettings();
   }
