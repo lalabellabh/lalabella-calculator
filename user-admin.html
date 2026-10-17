@@ -535,6 +535,7 @@ function renderDrivers(){
   document.getElementById('drvList').innerHTML=ord.length?ord.map(d=>`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;${d.pending?'background:#fff8e8;border-color:#f0d79a':''}">
     <div style="min-width:0"><b>${esc(d.name)}</b> <span class="muted">@${esc(d.username)}</span><div class="muted">${d.pending?'Waiting for approval':d.active?'Active':'Deactivated'} · ${d.lastLogin?'last login '+esc(fmt(d.lastLogin)):'never logged in'}</div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <select data-d="branch" data-id="${d.id}" aria-label="Branch of ${esc(d.name)}" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px">${['','Moda Mall','Qalali','Hamala'].map(b=>`<option value="${b}"${(d.branch||'')===b?' selected':''}>${b?'🏬 '+b:'🏬 Any branch'}</option>`).join('')}</select>
       <button data-d="edit" data-id="${d.id}">Edit</button><button data-d="pw" data-id="${d.id}">Password</button>
       <button class="${d.pending?'primary':'danger'}" data-d="tog" data-id="${d.id}">${drvSure===d.id?'Tap again':(d.pending?'Approve':d.active?'Deactivate':'Activate')}</button>
     </div></div>`).join(''):'<span class="muted">No drivers yet. They will show here after they sign up at driver.html.</span>';
@@ -547,6 +548,11 @@ async function loadDrivers(){
     drivers=d.drivers||[]; renderDrivers();
   }catch(e){ document.getElementById('drvList').innerHTML='<span class="muted">Connection error.</span>'; }
 }
+document.getElementById('drvList').addEventListener('change',async ev=>{
+  const s=ev.target.closest('select[data-d="branch"]'); if(!s) return;
+  const r=await drvApi({action:'driverEdit',id:Number(s.dataset.id),branch:s.value});
+  setMsg('drvMsg',r.success?'Branch saved.':(r.error||'Could not save.'),!!r.success); await loadDrivers();
+});
 document.getElementById('drvList').addEventListener('click',async ev=>{
   const b=ev.target.closest('button[data-d]'); if(!b||b.disabled) return;
   const id=Number(b.dataset.id), u=drivers.find(x=>x.id===id); if(!u) return;
