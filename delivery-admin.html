@@ -231,14 +231,18 @@
       var X = function(p){ return [ox + (p[1] - lng0) * k * sc, PT + (ah - ch) / 2 + (maxLa - p[0]) * sc]; };
       if (line.length > 1){
         var d = line.map(function(p, i){ var q = X(p); return (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join('');
-        svg += '<path d="' + d + '" fill="none" stroke="#c4415c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 11" class="rt"/>';
+        svg += '<path d="' + d + '" fill="none" stroke="#c4415c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
         routeD = d;
         var a = X(line[0]);
-        svg += '<circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="9" fill="#fff" stroke="#2b2220" stroke-width="4"/><text x="' + a[0].toFixed(1) + '" y="' + (a[1] + 28).toFixed(1) + '" font-size="13" text-anchor="middle" fill="#6b625c">Start</text>';
+        svg += '<circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="9" fill="#fff" stroke="#2b2220" stroke-width="4"/><text x="' + a[0].toFixed(1) + '" y="' + (a[1] + 28).toFixed(1) + '" font-size="13" text-anchor="middle" fill="#6b625c">Shop</text>';
+      }
+      if (dest && line.length && focus && focus.status !== 'Delivered' && focus.status !== 'Cancelled'){
+        var c0 = X(line[line.length - 1]), q0 = X(dest), ym = (c0[1] + q0[1]) / 2;
+        svg += '<path d="M' + c0[0].toFixed(1) + ' ' + c0[1].toFixed(1) + 'V' + ym.toFixed(1) + 'H' + q0[0].toFixed(1) + 'V' + q0[1].toFixed(1) + '" fill="none" stroke="#c4415c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 11" class="rt"/>';
       }
       if (dest){
         var q = X(dest);
-        svg += '<g transform="translate(' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ')"><g class="pn"><path d="M0 0C-22-22-20-46 0-46C20-46 22-22 0 0Z" fill="#c4415c"/><circle cx="0" cy="-28" r="7" fill="#fff"/></g></g><text x="' + q[0].toFixed(1) + '" y="' + (q[1] + 18).toFixed(1) + '" font-size="13" text-anchor="middle" fill="#6b625c">Order #' + esc(focus.orderNo) + '</text>';
+        svg += '<g transform="translate(' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ')"><g class="pn"><path d="M0 0C-22-22-20-46 0-46C20-46 22-22 0 0Z" fill="#c4415c"/><circle cx="0" cy="-28" r="7" fill="#fff"/></g></g><text x="' + (q[0] > W - 170 ? q[0] - 28 : q[0] + 28).toFixed(1) + '" y="' + (q[1] - 24).toFixed(1) + '" font-size="13" text-anchor="' + (q[0] > W - 170 ? 'end' : 'start') + '" fill="#6b625c">Order #' + esc(focus.orderNo) + '</text>';
       }
       var carAt = function(key, p, label, done, replay){
         var c = X(p), cx = c[0].toFixed(1), cy = c[1].toFixed(1), anim = '', pv = carPrev[key];
@@ -326,10 +330,16 @@
       }
       serverSkew = new Date(r.now).getTime() - Date.now();
       rows = r.rows || [];
+      // Only one delivery on the way: follow it automatically (once per delivery), so its route shows without a tap.
+      if (sel == null){
+        var otw = rows.filter(function(x){ return x.status === 'On the way'; });
+        if (otw.length === 1 && !autoSel[otw[0].id]){ autoSel[otw[0].id] = true; sel = otw[0].id; track = null; fitFor = null; }
+      }
       renderAll();
       if (sel != null && byId(sel) && byId(sel).status === 'On the way') return loadTrack();
     }).catch(function(){});
   }
+  var autoSel = {};
   var drivers = [];
   function renderDrivers(){
     var s = $('fDriver'), cur = s.value;
