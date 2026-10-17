@@ -1,4 +1,4 @@
-// LALABELLA DELIVERY TRACKING — Supabase Edge Function (delivery-fast)  v6 (v6: branch per driver and per delivery; v5: Google Maps link per delivery; v4: delivery time slot; v3: driver signup, admin approves)
+// LALABELLA DELIVERY TRACKING — Supabase Edge Function (delivery-fast)  v7 (v7: pin coordinates saved so the driver app can sound "near"; v6: branch per driver and per delivery; v5: Google Maps link per delivery; v4: delivery time slot; v3: driver signup, admin approves)
 // Admin puts in an order (Order No + address + driver). The driver taps Start, the phone sends its GPS,
 // the admin sees the car on a map. Delivered stops it and keeps the last spot + time.
 // v2: drivers have their OWN accounts (table delivery_drivers) and their own token. A driver token works ONLY here,
@@ -101,7 +101,7 @@ async function getDelivery(id: unknown) {
   return (r && r[0]) || null;
 }
 const pub = (d: any) => ({
-  id: d.id, orderNo: d.order_no, address: d.address, note: d.note, slot: d.slot || '', mapUrl: d.map_url || '', branch: d.branch || '', driverId: d.dd_id, driverName: d.driver_name,
+  id: d.id, orderNo: d.order_no, address: d.address, note: d.note, slot: d.slot || '', mapUrl: d.map_url || '', branch: d.branch || '', destLat: d.dest_lat ?? null, destLng: d.dest_lng ?? null, driverId: d.dd_id, driverName: d.driver_name,
   status: d.status, createdAt: d.created_at, startedAt: d.started_at, deliveredAt: d.delivered_at,
   lastLat: d.last_lat, lastLng: d.last_lng, lastAcc: d.last_acc, lastAt: d.last_at,
 });
@@ -273,6 +273,30 @@ function mapLink(v: unknown): string | null {
   const out = u.toString();
   return out.length <= 500 ? out : null;
 }
+// Find the pin's coordinates: straight from the link when it has them, otherwise follow the short link's redirects (Google hosts only).
+function coordsIn(s: string): [number, number] | null {
+  let m = /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/.exec(s) || /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/.exec(s)
+    || /[?&](?:q|ll|query|destination|daddr)=(-?\d{1,3}\.\d+)(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i.exec(s);
+  if (!m) return null;
+  const a = Number(m[1]), b = Number(m[2]);
+  return goodPos(a, b) ? [a, b] : null;
+}
+async function pinCoords(url: string): Promise<[number, number] | null> {
+  let cur = url;
+  for (let i = 0; i < 5; i++) {
+    const c = coordsIn(cur); if (c) return c;
+    let u: URL; try { u = new URL(cur); } catch { return null; }
+    const h = u.hostname.toLowerCase();
+    if (!(h === 'maps.app.goo.gl' || h === 'goo.gl' || /^(www\.)?google\.com(\.[a-z]{2})?$/.test(h) || /^maps\.google\.com(\.[a-z]{2})?$/.test(h))) return null;
+    try {
+      const r = await fetch(cur, { redirect: 'manual', signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36' } });
+      const loc = r.headers.get('location');
+      if (loc) { cur = new URL(loc, cur).toString(); continue; }
+      return null;   // no redirect and no coordinates in the address: better no pin than a wrong one
+    } catch { return null; }
+  }
+  return coordsIn(cur);
+}
 const SLOTS = ['10 AM - 2 PM', '3 PM - 6 PM', '7 PM - 10 PM'];
 async function actCreate(me: any, p: any) {
   const orderNo = clip(p.orderNo, 40), address = clip(p.address, 300), note = clip(p.note, 300);
@@ -293,7 +317,9 @@ async function actCreate(me: any, p: any) {
   const branch = pickBr || dr.branch || null;
   const dup = (await rest('GET', `deliveries?select=id&order_no=eq.${enc(orderNo)}&status=in.(Assigned,"On the way")&limit=1`)) || [];
   if (dup.length) return fail(`Order ${orderNo} already has a delivery that is not finished.`);
-  const row = await rest('POST', 'deliveries', { order_no: orderNo, address, note, slot: slot || null, map_url: mapUrl, branch, dd_id: dr.id, driver_name: dr.full_name, created_by: me.id });
+  let pin: [number, number] | null = null;
+  if (mapUrl) { try { pin = await pinCoords(mapUrl); } catch { pin = null; } }
+  const row = await rest('POST', 'deliveries', { order_no: orderNo, address, note, slot: slot || null, map_url: mapUrl, dest_lat: pin ? pin[0] : null, dest_lng: pin ? pin[1] : null, branch, dd_id: dr.id, driver_name: dr.full_name, created_by: me.id });
   rest('DELETE', `delivery_points?at=lt.${enc(new Date(Date.now() - KEEP_POINTS_DAYS * 86400000).toISOString())}`, undefined, 'return=minimal').catch(() => {});
   return json({ success: true, id: row && row[0] && row[0].id });
 }
