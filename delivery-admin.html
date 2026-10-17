@@ -87,6 +87,7 @@
         <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
         <label for="fMap">Google Maps pin link (optional)</label><input id="fMap" maxlength="500" autocomplete="off" inputmode="url" placeholder="Paste the pin the customer sent on WhatsApp">
         <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">With a pin, the driver opens the exact spot in Google Maps. Address becomes optional when you paste a pin. Add the house / flat number in the address or in the note.</div>
+        <label for="fBranch">Branch</label><select id="fBranch"><option value="">Pick a branch…</option><option>Moda Mall</option><option>Qalali</option><option>Hamala</option></select>
         <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
         <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">Approve or edit drivers in <a href="user-admin.html" style="color:var(--rose)">User Management</a>.</div>
         <label for="fSlot">Delivery time</label><select id="fSlot"><option value="">Any time</option><option value="10 AM - 2 PM">10 AM – 2 PM</option><option value="3 PM - 6 PM">3 PM – 6 PM</option><option value="7 PM - 10 PM">7 PM – 10 PM</option></select>
@@ -96,6 +97,7 @@
       </div>
       <div class="card">
         <h2>Deliveries</h2>
+        <select id="fBr" aria-label="Show branch" style="margin-bottom:10px"><option value="">All branches</option><option>Moda Mall</option><option>Qalali</option><option>Hamala</option></select>
         <div id="list"><div class="empty">Loading…</div></div>
       </div>
     </div>
@@ -107,7 +109,7 @@
   'use strict';
   var API = (window.LB_CONFIG && LB_CONFIG.DELIVERY_API) || (LB_CONFIG.SUPABASE_URL + '/functions/v1/delivery-fast');
   var TZ = 'Asia/Bahrain', STALE_S = 60, REFRESH_MS = 6000;
-  var sureId = null, sureTimer = null, rows = [], sel = null, track = null, serverSkew = 0, map = null, layer = null, fitFor = null, busyAdd = false;
+  var sureId = null, sureTimer = null, allRows = [], rows = [], sel = null, track = null, serverSkew = 0, map = null, layer = null, fitFor = null, busyAdd = false;
 
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   function api(body){
@@ -339,14 +341,14 @@
   // ---------- panels ----------
   function renderList(){
     var el = $('list');
-    if (!rows.length){ el.innerHTML = '<div class="empty">No deliveries yet. Add the first one above.</div>'; return; }
+    if (!rows.length){ el.innerHTML = '<div class="empty">' + (allRows.length ? 'No deliveries for this branch.' : 'No deliveries yet. Add the first one above.') + '</div>'; return; }
     el.innerHTML = rows.map(function(r){
       var a = r.status === 'On the way' ? ago(r.lastAt) : null;
       var late = r.status === 'On the way' && (r.lastAt == null || ageS(r.lastAt) > STALE_S);
       var info = r.status === 'On the way' ? (r.lastAt ? 'GPS ' + a : 'Waiting for first GPS') : r.status === 'Delivered' ? 'Delivered ' + fmtDT(r.deliveredAt) : r.status === 'Assigned' ? 'Not started' : '';
       return '<div class="item' + (r.id === sel ? ' sel' : '') + '" data-id="' + r.id + '">' +
         '<div class="t"><span class="o">#' + esc(r.orderNo) + '</span>' + chip(r.status) + '</div>' +
-        '<div class="s">' + esc(r.driverName) + (r.slot ? ' · 🕒 ' + esc(r.slot.replace(/ - /g, ' – ')) : '') + ' · ' + esc(r.address) + (r.mapUrl ? ' · 📍' : '') + '</div>' +
+        '<div class="s">' + (r.branch ? '🏬 ' + esc(r.branch) + ' · ' : '') + esc(r.driverName) + (r.slot ? ' · 🕒 ' + esc(r.slot.replace(/ - /g, ' – ')) : '') + ' · ' + esc(r.address) + (r.mapUrl ? ' · 📍' : '') + '</div>' +
         '<div class="row2"><span class="' + (late ? 'stale' : '') + '">' + esc(info) + (late && r.lastAt ? ' ⚠️' : '') + '</span>' +
         (r.status === 'Assigned' || r.status === 'On the way' ? '<button class="sm danger" data-cancel="' + r.id + '">' + (sureId === r.id ? 'Tap again to cancel' : 'Cancel') + '</button>' : '') + '</div></div>';
     }).join('');
@@ -360,7 +362,7 @@
       d.innerHTML = '<span class="empty">' + (n ? n + ' on the way. Tap a delivery to follow it.' : 'No delivery is on the way right now.') + '</span>';
       return;
     }
-    var h = '<b>Driver:</b> ' + esc(r.driverName) + '<br><b>Address:</b> ' + esc(r.address);
+    var h = (r.branch ? '<b>Branch:</b> ' + esc(r.branch) + '<br>' : '') + '<b>Driver:</b> ' + esc(r.driverName) + '<br><b>Address:</b> ' + esc(r.address);
     if (/^https:\/\//.test(r.mapUrl || '')) h += '<br><b>Pin:</b> <a href="' + esc(r.mapUrl) + '" target="_blank" rel="noopener">📍 Open pin</a>';
     if (r.slot) h += '<br><b>Time:</b> ' + esc(r.slot.replace(/ - /g, ' – '));
     if (r.note) h += '<br><b>Note:</b> ' + esc(r.note);
@@ -399,7 +401,7 @@
         return;
       }
       serverSkew = new Date(r.now).getTime() - Date.now();
-      rows = r.rows || [];
+      allRows = r.rows || []; applyBranch();
       // Only one delivery on the way: follow it automatically (once per delivery), so its route shows without a tap.
       if (sel == null){
         var otw = rows.filter(function(x){ return x.status === 'On the way'; });
@@ -413,9 +415,10 @@
   var drivers = [];
   function renderDrivers(){
     var s = $('fDriver'), cur = s.value;
-    var act = drivers.filter(function(u){ return u.active && !u.pending; });
-    s.innerHTML = '<option value="">' + (act.length ? 'Pick a driver…' : 'No approved drivers yet') + '</option>' + act.map(function(u){
-      return '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+    var b = $('fBranch').value;
+    var act = drivers.filter(function(u){ return u.active && !u.pending && (!b || !u.branch || u.branch === b); });
+    s.innerHTML = '<option value="">' + (!b ? 'Pick the branch first' : act.length ? 'Pick a driver…' : 'No driver for ' + b + ' yet') + '</option>' + act.map(function(u){
+      return '<option value="' + u.id + '">' + esc(u.name) + (u.branch ? '' : ' (any branch)') + '</option>';
     }).join('');
     if (cur) s.value = cur;
   }
@@ -453,9 +456,11 @@
     if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
     if (!addr && mapUrl && /https?:\/\//i.test(mapUrl)) addr = '📍 Pinned location (open the pin)';
     if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address or paste the Google Maps pin link.'; return; }
+    var branch = $('fBranch').value;
+    if (!branch){ msg.className = 'msg bad'; msg.textContent = 'Pick the branch.'; return; }
     if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
     busyAdd = true; $('addBtn').disabled = true;
-    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), slot:slot, mapUrl:mapUrl, note:note }).then(function(r){
+    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), branch:branch, slot:slot, mapUrl:mapUrl, note:note }).then(function(r){
       busyAdd = false; $('addBtn').disabled = false;
       if (!r.success){ msg.className = 'msg bad'; msg.textContent = r.error || 'Could not save.'; return; }
       msg.className = 'msg ok'; msg.textContent = 'Assigned. The driver will see it in the Driver page.';
@@ -464,6 +469,16 @@
     }).catch(function(){ busyAdd = false; $('addBtn').disabled = false; msg.className = 'msg bad'; msg.textContent = 'No internet. Try again.'; });
   });
 
+  function applyBranch(){
+    var b = $('fBr').value;
+    rows = b ? allRows.filter(function(r){ return r.branch === b; }) : allRows.slice();
+    if (sel != null && !byId(sel)){ sel = null; track = null; fitFor = null; }
+  }
+  try { var sb = localStorage.getItem('lbDelBranch'), sf = localStorage.getItem('lbDelFilter'); if (sb) $('fBranch').value = sb; if (sf) $('fBr').value = sf; } catch (e) {}
+  if ($('fBranch').value !== '' && !$('fBranch').value) $('fBranch').value = '';
+  $('fBranch').addEventListener('change', function(){ try { localStorage.setItem('lbDelBranch', $('fBranch').value); } catch (e) {} $('fDriver').value = ''; renderDrivers(); });
+  $('fBr').addEventListener('change', function(){ try { localStorage.setItem('lbDelFilter', $('fBr').value); } catch (e) {} applyBranch(); renderAll(); });
+  renderDrivers();
   initMap();
   $('vReal').addEventListener('click', function(){ setView('real'); });
   $('vCute').addEventListener('click', function(){ setView('cute'); });
