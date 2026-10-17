@@ -77,8 +77,11 @@
         <h2>New delivery</h2>
         <label for="fOrder">Order No.</label><input id="fOrder" maxlength="40" autocomplete="off">
         <label for="fAddr">Address</label><textarea id="fAddr" maxlength="300" placeholder="Building 3205, Road 4654, Block 346, Seef"></textarea>
+        <label for="fMap">Google Maps pin link (optional)</label><input id="fMap" maxlength="500" autocomplete="off" inputmode="url" placeholder="Paste the pin the customer sent on WhatsApp">
+        <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">With a pin, the driver opens the exact spot in Google Maps. Still write the house / flat number in the address.</div>
         <label for="fDriver">Driver</label><select id="fDriver"><option value="">Loading…</option></select>
         <div style="margin:4px 0 0;font-size:12px;color:var(--muted)">Approve or edit drivers in <a href="user-admin.html" style="color:var(--rose)">User Management</a>.</div>
+        <label for="fSlot">Delivery time</label><select id="fSlot"><option value="">Any time</option><option value="10 AM - 2 PM">10 AM – 2 PM</option><option value="3 PM - 6 PM">3 PM – 6 PM</option><option value="7 PM - 10 PM">7 PM – 10 PM</option></select>
         <label for="fNote">Note (optional)</label><input id="fNote" maxlength="300" autocomplete="off">
         <button class="go" id="addBtn">Assign delivery</button>
         <div class="msg" id="addMsg"></div>
@@ -182,7 +185,7 @@
       var info = r.status === 'On the way' ? (r.lastAt ? 'GPS ' + a : 'Waiting for first GPS') : r.status === 'Delivered' ? 'Delivered ' + fmtDT(r.deliveredAt) : r.status === 'Assigned' ? 'Not started' : '';
       return '<div class="item' + (r.id === sel ? ' sel' : '') + '" data-id="' + r.id + '">' +
         '<div class="t"><span class="o">#' + esc(r.orderNo) + '</span>' + chip(r.status) + '</div>' +
-        '<div class="s">' + esc(r.driverName) + ' · ' + esc(r.address) + '</div>' +
+        '<div class="s">' + esc(r.driverName) + (r.slot ? ' · 🕒 ' + esc(r.slot.replace(/ - /g, ' – ')) : '') + ' · ' + esc(r.address) + (r.mapUrl ? ' · 📍' : '') + '</div>' +
         '<div class="row2"><span class="' + (late ? 'stale' : '') + '">' + esc(info) + (late && r.lastAt ? ' ⚠️' : '') + '</span>' +
         (r.status === 'Assigned' || r.status === 'On the way' ? '<button class="sm danger" data-cancel="' + r.id + '">' + (sureId === r.id ? 'Tap again to cancel' : 'Cancel') + '</button>' : '') + '</div></div>';
     }).join('');
@@ -197,6 +200,8 @@
       return;
     }
     var h = '<b>Driver:</b> ' + esc(r.driverName) + '<br><b>Address:</b> ' + esc(r.address);
+    if (/^https:\/\//.test(r.mapUrl || '')) h += '<br><b>Pin:</b> <a href="' + esc(r.mapUrl) + '" target="_blank" rel="noopener">📍 Open pin</a>';
+    if (r.slot) h += '<br><b>Time:</b> ' + esc(r.slot.replace(/ - /g, ' – '));
     if (r.note) h += '<br><b>Note:</b> ' + esc(r.note);
     h += '<br><b>Status:</b> ' + chip(r.status);
     if (r.startedAt) h += ' &nbsp;Started ' + esc(fmtT(r.startedAt));
@@ -256,16 +261,16 @@
   $('addBtn').addEventListener('click', function(){
     if (busyAdd) return;
     var msg = $('addMsg'); msg.className = 'msg'; msg.textContent = '';
-    var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, note = $('fNote').value.trim();
+    var order = $('fOrder').value.trim(), addr = $('fAddr').value.trim(), drv = $('fDriver').value, slot = $('fSlot').value, mapUrl = $('fMap').value.trim(), note = $('fNote').value.trim();
     if (!order){ msg.className = 'msg bad'; msg.textContent = 'Write the Order No.'; return; }
     if (!addr){ msg.className = 'msg bad'; msg.textContent = 'Write the address.'; return; }
     if (!drv){ msg.className = 'msg bad'; msg.textContent = 'Pick a driver.'; return; }
     busyAdd = true; $('addBtn').disabled = true;
-    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), note:note }).then(function(r){
+    api({ action:'create', orderNo:order, address:addr, driverId:Number(drv), slot:slot, mapUrl:mapUrl, note:note }).then(function(r){
       busyAdd = false; $('addBtn').disabled = false;
       if (!r.success){ msg.className = 'msg bad'; msg.textContent = r.error || 'Could not save.'; return; }
       msg.className = 'msg ok'; msg.textContent = 'Assigned. The driver will see it in the Driver page.';
-      $('fOrder').value = ''; $('fAddr').value = ''; $('fNote').value = '';
+      $('fOrder').value = ''; $('fAddr').value = ''; $('fNote').value = ''; $('fSlot').value = ''; $('fMap').value = '';
       loadList();
     }).catch(function(){ busyAdd = false; $('addBtn').disabled = false; msg.className = 'msg bad'; msg.textContent = 'No internet. Try again.'; });
   });
