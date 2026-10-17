@@ -372,7 +372,7 @@ html,body{overscroll-behavior-y:contain}
     if (r.slot) h += '<div class="slot">🕒 Deliver ' + esc(r.slot.replace(/ - /g, ' – ')) + '</div>';
     h += '<div class="lab">Address</div><div class="addr">' + esc(r.address) + '</div>';
     if (r.note) h += '<p class="note">' + esc(r.note) + '</p>';
-    if (r.status === 'Assigned' || r.status === 'On the way') h += '<a class="maps" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(r.address) + '">🧭 Open in Google Maps</a>';
+    if (r.status === 'Assigned' || r.status === 'On the way') h += '<a class="maps" target="_blank" rel="noopener" href="' + (/^https:\/\//.test(r.mapUrl || '') ? esc(r.mapUrl) : 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(r.address)) + '">🧭 Open in Google Maps' + (/^https:\/\//.test(r.mapUrl || '') ? ' (exact pin)' : '') + '</a>';
     if (r.status === 'Assigned'){
       h += '<button class="go" data-a="start" data-id="' + r.id + '"' + (busy[r.id] ? ' disabled' : '') + '>▶ Start Delivery</button>';
     } else if (r.status === 'On the way'){
