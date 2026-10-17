@@ -95,6 +95,7 @@
           <button class="primary" id="saveRules" type="button">Save</button>
         </div>
         <div class="msg" id="rulesMsg"></div>
+        <div id="rulesHist" style="margin-top:10px;font-size:12.5px;color:var(--muted)"></div>
       </div>
       <div class="card">
         <h2>🔒 Who can open this page</h2>
@@ -198,7 +199,7 @@
         h += '<tr class="det"><td colspan="9"><div class="lg">' + (r.logs.length ? r.logs.map(function(l){
           var map = l.lat != null ? ' · <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + l.lat + ',' + l.lng + '">map</a>' : '';
           var k = loc(l);
-          return '<div class="' + k + 'l"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) : 'no location') + (k === 'g' ? '<span class="tag g">IN SHOP ✓</span>' : (k === 'r' ? '<span class="tag r">' + (l.kind === 'blocked' ? 'BLOCKED' : 'OUTSIDE SHOP') + '</span>' : '')) + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
+          return '<div class="' + k + 'l"><b>' + esc(KIND[l.kind] || l.kind) + '</b> ' + esc(fT(l.at)) + ' — ' + (l.dist != null ? l.dist + ' m from ' + esc(l.near) + (l.radius ? ' (limit ' + l.radius + ' m)' : '') : 'no location') + (k === 'g' ? '<span class="tag g">IN SHOP ✓</span>' : (k === 'r' ? '<span class="tag r">' + (l.kind === 'blocked' ? 'BLOCKED' : 'OUTSIDE SHOP') + '</span>' : '')) + (l.via === 'fingerprint' ? ' · 🖐️ fingerprint' : ' · button') + (l.note ? ' · ' + esc(l.note) : '') + map + '</div>';
         }).join('') : 'No punches.') + '</div>' + maps(r) + '</td></tr>';
       }
     });
@@ -215,7 +216,7 @@
       if (!d.success) return;
       S.settings = d; $('ownerBox').style.display = d.isOwner ? 'block' : 'none';
       if (!d.isOwner) return;
-      $('radius').value = d.radius; $('grace').value = d.grace;
+      $('radius').value = d.radius; $('grace').value = d.grace; showHist(d.history);
       $('evWho').innerHTML = '<option value="">Everyone</option>' + d.users.map(function(u){ return '<option value="' + u.id + '">' + esc(u.name) + '</option>'; }).join('');
       if (!$('evDay').value) $('evDay').value = bhToday();
       $('evList').innerHTML = d.events.length ? d.events.map(function(e){
@@ -233,7 +234,18 @@
       });
     });
   }
-  function flash(id, d, okText){ var m = $(id); m.style.color = d.success ? '#2e8b57' : '#b23a3a'; m.textContent = d.success ? okText : (d.error || 'Failed.'); }
+  function showHist(h){
+    var el = $('rulesHist'); if (!el) return;
+    if (!h || !h.length){ el.innerHTML = ''; return; }
+    el.innerHTML = '<b>Rules history</b>' + h.map(function(x){
+      var parts = [];
+      if (x.old_radius !== x.new_radius) parts.push('distance ' + x.old_radius + ' → ' + x.new_radius + ' m');
+      if (x.old_grace !== x.new_grace) parts.push('grace ' + x.old_grace + ' → ' + x.new_grace + ' min');
+      var d = new Date(x.at).toLocaleString('en-GB', { timeZone: TZ, day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+      return '<div>' + esc(d) + ' · ' + esc(x.by_name || 'Owner') + ' · ' + esc(parts.join(', ')) + '</div>';
+    }).join('');
+  }
+  function flash(id, d, okText){ var m = $(id); m.style.color = d.success ? '#2e8b57' : '#b23a3a'; m.textContent = d.success ? okText : (d.error || 'Failed.'); if (d.success && id === 'rulesMsg'){ S.settings = null; loadSettings(); } }
   $('saveRules').onclick = function(){ api({ action:'radiusSet', radius: $('radius').value, grace: $('grace').value }).then(function(d){ flash('rulesMsg', d, 'Saved.'); }); };
   $('evAdd').onclick = function(){
     api({ action:'eventAdd', day: $('evDay').value, userId: $('evWho').value || 0, reason: $('evReason').value }).then(function(d){
