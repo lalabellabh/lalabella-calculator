@@ -253,7 +253,7 @@
     if (focus){
       if (track && track.delivery && track.delivery.id === focus.id && track.points.length) line = track.points.map(function(p){ return [p.lat, p.lng]; });
       else if (focus.lastLat != null) line = [[focus.lastLat, focus.lastLng]];
-      dest = pinFromUrl(focus.mapUrl);
+      dest = pinFromUrl(focus.mapUrl) || (focus.destLat != null && focus.destLng != null ? [Number(focus.destLat), Number(focus.destLng)] : null);
     } else {
       rows.forEach(function(r){ if (r.status === 'On the way' && r.lastLat != null) list.push(r); });
     }
