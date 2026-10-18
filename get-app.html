@@ -348,7 +348,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   if (isIOS) pick(1);
 
   // ?dl=1 starts the Android download straight away (the button stays if the browser blocks it)
-  if (isAndroid && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { $('apkBtn').click(); } catch(e){} }, 600);
+  if (isAndroid && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { var m = /[?&]app=(\w+)/.exec(location.search), k = m ? m[1].toLowerCase() : ''; $(k === 'messenger' ? 'mBtn' : (k === 'driver' ? 'dBtn' : 'apkBtn')).click(); } catch(e){} }, 600);
 })();
 </script>
 </body>
