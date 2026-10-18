@@ -71,8 +71,9 @@ async function restUpsert(path: string, body: unknown, onConflict: string, prefe
 // ---------------------------------------------------------------
 async function findUserByToken(token: string) {
   const t = String(token || '').trim();
-  if (!t) return null;
-  const rows = await rest('GET', `users?select=*&limit=1&token=eq.${encodeURIComponent(t)}`);
+  if (!t || !/^[a-f0-9]{20,}$/i.test(t)) return null;
+  // Staff use users.token; Messenger visitors use users.vtoken (v5).
+  const rows = await rest('GET', `users?select=*&limit=1&or=(token.eq.${t},vtoken.eq.${t})`);
   return (rows && rows[0]) || null;
 }
 function touchLastSeen(user: any) {
@@ -85,13 +86,24 @@ function touchLastSeen(user: any) {
 async function sessionUser(token: string) {
   const user = await findUserByToken(token);
   if (!user) return null;
-  if (String(user.status || 'Active') === 'Inactive') return null;
-  const created = user.token_created ? new Date(user.token_created).getTime() : 0;
+  if (String(user.status || 'Active') !== 'Active') return null;
+  const t = String(token || '').trim();
+  const isV = user.vtoken === t && user.token !== t;
+  if (isV && String(user.role) !== 'Visitor') return null;
+  const created = (isV ? user.vtoken_created : user.token_created) ? new Date(isV ? user.vtoken_created : user.token_created).getTime() : 0;
   if (!created || Date.now() - created > SESSION_MAX_AGE_MS) return null;
   touchLastSeen(user);
   return user;
 }
 function isAdminRole(u: any) { return String(u.role || '').toLowerCase() === 'admin'; }
+function isVisitor(u: any) { return String(u.role || '') === 'Visitor'; }
+// v5 Visitors (Messenger-only accounts): they see ONLY admins (and themselves); staff never see visitors; admins see everyone.
+function canSee(me: any, role: string, id: number) {
+  if (id === me.id) return true;
+  if (isAdminRole(me)) return true;
+  if (isVisitor(me)) return String(role || '').toLowerCase() === 'admin';
+  return String(role || '') !== 'Visitor';
+}
 function resolvePhotoUrl(link: string) {
   if (!link) return '';
   const s = String(link).trim();
@@ -167,8 +179,8 @@ function pxCheckImage(v: string, max: number, what: string) {
 }
 async function pxOnline(me: any) {
   const since = new Date(Date.now() - PX_ACTIVE_MINUTES * 60000).toISOString();
-  const rows = await rest('GET', `users?select=id,full_name,username,position,branch,status,last_seen&last_seen=gt.${encodeURIComponent(since)}&order=last_seen.desc`);
-  return (rows || []).filter((r: any) => String(r.status || 'Active').toLowerCase() === 'active').map((r: any) => ({
+  const rows = await rest('GET', `users?select=id,full_name,username,position,branch,status,role,last_seen&last_seen=gt.${encodeURIComponent(since)}&order=last_seen.desc`);
+  return (rows || []).filter((r: any) => String(r.status || 'Active').toLowerCase() === 'active' && canSee(me, r.role, r.id)).map((r: any) => ({
     userId: r.id, name: r.full_name || r.username, position: r.position || '', branch: r.branch || '',
     lastSeen: r.id === me.id ? new Date().toISOString() : r.last_seen,
   }));
@@ -190,9 +202,9 @@ function pxCleanupExpired(nowIso: string) {
 async function pxStatusList(me: any) {
   const nowIso = new Date().toISOString();
   pxCleanupExpired(nowIso);
-  const rows = await rest('GET', `profile_status?select=id,user_id,text,thumb,has_image,kind,bg,audio,created_at,expires_at,users(full_name,username,position,branch,status)&expires_at=gt.${encodeURIComponent(nowIso)}&order=created_at.asc`);
+  const rows = await rest('GET', `profile_status?select=id,user_id,text,thumb,has_image,kind,bg,audio,created_at,expires_at,users(full_name,username,position,branch,status,role)&expires_at=gt.${encodeURIComponent(nowIso)}&order=created_at.asc`);
   const now = Date.now();
-  const list = (rows || []).filter((r: any) => new Date(r.expires_at).getTime() > now && (!r.users || String(r.users.status || 'Active').toLowerCase() === 'active'))
+  const list = (rows || []).filter((r: any) => new Date(r.expires_at).getTime() > now && (!r.users || (String(r.users.status || 'Active').toLowerCase() === 'active' && canSee(me, r.users.role, r.user_id))))
     .map((r: any) => { const u = r.users || {}; return { id: r.id, userId: r.user_id, name: u.full_name || u.username || 'Staff', position: u.position || '', branch: u.branch || '', text: r.text || '', thumb: r.thumb || '', hasImage: !!r.has_image, kind: r.kind === 'video' ? 'video' : 'image', bg: r.bg || '', audio: r.audio || '', createdAt: r.created_at, expiresAt: r.expires_at, mine: r.user_id === me.id }; });
   const mineRows = await rest('GET', `users?select=profile_private&id=eq.${me.id}&limit=1`);
   return { success: true, me: { id: me.id, name: me.full_name || me.username, private: !!(mineRows && mineRows[0] && mineRows[0].profile_private) }, isAdmin: isAdminRole(me), statuses: list, online: await pxOnline(me) };
@@ -342,7 +354,7 @@ async function pxProfileView(p: any, me: any) {
   if (!id) return { success: false, error: 'Missing person.' };
   const rows = await rest('GET', `users?select=id,full_name,username,position,role,branch,date_registered,photo_link,status,profile_private,last_seen&id=eq.${id}&limit=1`);
   const u = rows && rows[0];
-  if (!u || String(u.status || 'Active').toLowerCase() !== 'active') return { success: false, error: 'This person is not available.' };
+  if (!u || String(u.status || 'Active').toLowerCase() !== 'active' || !canSee(me, u.role, u.id)) return { success: false, error: 'This person is not available.' };
   const name = u.full_name || u.username;
   if (u.profile_private && u.id !== me.id) return { success: true, profile: { id: u.id, name, private: true } };
   const banners = await rest('GET', `profile_banners?select=slot,image,pos_x,pos_y,zoom&user_id=eq.${u.id}&order=slot.asc`);
@@ -403,6 +415,7 @@ async function route(action: string, p: any) {
   if (!me) return json({ success: false, error: 'Session expired. Please log in again.' });
   try {
     let out: any;
+    if (isVisitor(me) && ['statusAdd', 'statusVideoUp', 'statusSoundUp', 'bannerSave'].includes(action)) return json({ success: false, error: 'Visitor accounts can look around but cannot post.' });
     if (action === 'statusList') out = await pxStatusList(me);
     else if (action === 'statusImage') out = await pxStatusImage(p);
     else if (action === 'statusAdd') out = await pxStatusAdd(p, me);
