@@ -50,8 +50,15 @@ a,button{font:inherit}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 .brand img{width:40px;height:40px;border-radius:11px;background:#fff;padding:3px;box-shadow:0 4px 14px rgba(143,42,69,.2)}
 .brand span{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:24px;letter-spacing:.4px}
-.back{color:var(--muted);text-decoration:none;font-size:14px;padding:8px 4px}
-.back:hover{color:var(--rose)}
+.home{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:700;font-size:15px;color:var(--wine);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:10px 18px;box-shadow:0 4px 14px rgba(143,42,69,.14)}
+.home:hover{color:var(--rose);transform:translateY(-1px)}
+.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.apps button{border:1px solid var(--line);background:rgba(255,255,255,.55);color:var(--muted);border-radius:16px;padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600;font-size:13.5px;transition:background .2s,color .2s,box-shadow .2s}
+.apps button .ic{font-size:22px;line-height:1}
+.apps button[aria-selected="true"]{background:#fff;color:var(--wine);box-shadow:0 4px 14px rgba(143,42,69,.2);border-color:var(--rose)}
+@media (prefers-color-scheme: dark){ .apps button{background:rgba(255,255,255,.06)} .apps button[aria-selected="true"]{background:#3b1824;color:var(--ink)} }
+.appPane[hidden]{display:none}
+.ver{color:var(--muted);font-size:13px;margin:2px 0 0}
 
 .main{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);align-items:center;gap:clamp(24px,6vw,96px);max-width:1080px;width:100%;margin:0 auto}
 
@@ -191,7 +198,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 <div class="page" id="page">
   <header class="top">
     <a class="brand" href="index.html" aria-label="Lalabella home"><img src="/icons/icon-192.png" alt=""><span>Lalabella</span></a>
-    <a class="back" href="index.html">Back to home</a>
+    <a class="home" href="index.html">← Home</a>
   </header>
 
   <main class="main">
@@ -212,6 +219,13 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
         <div class="act"><a class="btn" id="updBtn" href="downloads/Lalabella.apk" download="Lalabella.apk" hidden>Download the latest app</a></div>
       </div>
 
+      <div class="apps" role="tablist" aria-label="Choose an app">
+        <button role="tab" id="aL" aria-selected="true" data-app="L"><span class="ic">🌸</span>Lalabella</button>
+        <button role="tab" id="aM" aria-selected="false" data-app="M"><span class="ic">💬</span>Messenger</button>
+        <button role="tab" id="aD" aria-selected="false" data-app="D"><span class="ic">🛵</span>Driver</button>
+      </div>
+
+      <div class="appPane" id="appL">
       <div class="seg" role="tablist" aria-label="Phone type">
         <button role="tab" id="tabA" aria-controls="pA" aria-selected="true">Android</button>
         <button role="tab" id="tabI" aria-controls="pI" aria-selected="false" tabindex="-1">iPhone</button>
@@ -241,6 +255,31 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
         <p class="note">Apple only allows app files through the App Store, so iPhone uses the home screen version. It looks and works the same. No in-notification reply, chat bubbles or widgets on iPhone (Apple's limit).</p>
         <p class="note"><a href="iphone.html" style="color:var(--rose)"><b>Full iPhone guide + shortcut icons</b> (Attendance, Schedule, Chat, Calculators)</a></p>
       </div>
+      </div>
+
+      <div class="appPane" id="appM" hidden>
+        <div class="act"><a class="btn" id="mBtn" href="downloads/LalabellaMessenger.apk" download="LalabellaMessenger.apk">Download Messenger</a></div>
+        <p class="ver" id="mVer"></p>
+        <ol class="steps">
+          <li><span>Tap <b>Download</b>, then open <span class="k">LalabellaMessenger.apk</span> from your notifications or Downloads.</span></li>
+          <li><span>If asked, allow installs from this browser, then <b>Install anyway</b> on the Play Protect warning.</span></li>
+          <li><span>Open <b>Lalabella Messenger</b> and log in with your staff account.</span></li>
+          <li><span>Allow <b>Notifications</b>. Chat alerts now come only from this app.</span></li>
+        </ol>
+        <p class="note"><b>Important:</b> Settings → Apps → Lalabella Messenger → Battery → <b>Unrestricted</b>, so messages keep arriving when the phone sleeps. In the app's Settings you can turn on the floating chat head, pick a wallpaper and make things transparent.</p>
+        <p class="note">Android only for now. On iPhone, use the website chat.</p>
+      </div>
+
+      <div class="appPane" id="appD" hidden>
+        <div class="act"><a class="btn" id="dBtn" href="downloads/LalabellaDriver.apk" download="LalabellaDriver.apk">Download Driver app</a></div>
+        <ol class="steps">
+          <li><span>Tap <b>Download</b>, then open <span class="k">LalabellaDriver.apk</span>.</span></li>
+          <li><span>Allow the install, then <b>Install anyway</b> on the Play Protect warning.</span></li>
+          <li><span>Open <b>Lalabella Driver</b>, log in, or tap <b>Sign up</b> and wait for the shop to approve you.</span></li>
+        </ol>
+        <p class="note">For delivery drivers only. Set battery to <b>Unrestricted</b> and keep Location on while delivering.</p>
+        <p class="note"><a href="get-driver-app.html" style="color:var(--rose)"><b>Full Driver app page</b></a></p>
+      </div>
     </section>
   </main>
 </div>
@@ -253,6 +292,19 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
   var $ = function(id){ return document.getElementById(id); };
   var tabs = [$('tabA'), $('tabI')], panels = [$('pA'), $('pI')];
+  var appBtns = [$('aL'), $('aM'), $('aD')], appPanes = [$('appL'), $('appM'), $('appD')], appKeys = ['L', 'M', 'D'];
+  function pickApp(i){
+    appBtns.forEach(function(b, n){ b.setAttribute('aria-selected', n === i ? 'true' : 'false'); appPanes[n].hidden = n !== i; });
+  }
+  appBtns.forEach(function(b, n){ b.addEventListener('click', function(){ pickApp(n); }); });
+  (function(){
+    var m = /[?&]app=(\w+)/.exec(location.search), k = m ? m[1].toLowerCase() : '';
+    var i = k === 'messenger' || k === 'm' ? 1 : (k === 'driver' || k === 'd' ? 2 : 0);
+    if (i) pickApp(i);
+  })();
+  fetch('downloads/messenger-app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.versionName) { $('mVer').textContent = 'Latest version ' + j.versionName; $('mBtn').href = 'downloads/LalabellaMessenger.apk?v=' + encodeURIComponent(j.versionCode || j.versionName); }
+  }).catch(function(){});
 
   function pick(i, focus){
     tabs.forEach(function(t, n){ t.setAttribute('aria-selected', n === i ? 'true' : 'false'); t.tabIndex = n === i ? 0 : -1; panels[n].hidden = n !== i; });
