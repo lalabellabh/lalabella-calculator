@@ -71,6 +71,9 @@
   .b-me{background:var(--teal-soft);color:var(--teal-dark)}
   .b-lock{background:#fbeaea;color:var(--red)}
   .b-off{background:#eee;color:#777}
+  .b-pend{background:#fff3d6;color:#8a5a00}
+  .b-vis{background:#e8eefc;color:#2d4a9a}
+  tr.pending td{background:#fffbea}
   .actions{display:flex;gap:6px;flex-wrap:wrap}
   tr.inactive td{opacity:.6}
   tr.dirty{background:#fffaf0}
@@ -335,7 +338,8 @@ function rowHtml(u){
   
   const branches=BRANCHES.indexOf(u.branch)===-1&&u.branch?BRANCHES.concat([u.branch]):BRANCHES;
   const self=u.isMe;
-  return `<tr data-u="${esc(u.username)}" class="${u.status==='Inactive'?'inactive':''}">
+  const vis=u.role==='Visitor';
+  return `<tr data-u="${esc(u.username)}" class="${u.status==='Inactive'?'inactive':''}${u.status==='Pending'?' pending':''}">
     <td data-label="User" class="name">
       <input type="text" data-f="fullName" value="${esc(u.fullName||'')}" placeholder="Full name" style="font-weight:700;font-size:13.5px;padding:5px 7px;margin-bottom:3px;width:100%;max-width:170px;">
       <div style="display:flex;align-items:center;gap:2px;margin-bottom:2px;">
@@ -343,18 +347,19 @@ function rowHtml(u){
         <input type="text" data-f="username" value="${esc(u.username)}" style="font-size:11.5px;padding:4px 5px;width:100%;max-width:140px;color:var(--muted);">
       </div>
       <span>joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
-      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}
-      <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:600;cursor:${self?'default':'pointer'};">
+      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}${vis?'<span class="badge b-vis">Visitor (Messenger only)</span>':''}${u.status==='Pending'?'<span class="badge b-pend">Waiting for approval</span>':''}
+      ${vis?'':`<label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:600;cursor:${self?'default':'pointer'};">
         <input type="checkbox" data-a="toggleCanManage" ${u.canManageUsers?'checked':''} ${self?'disabled title="You cannot remove your own access"':''}>
         User Management access
-      </label>
+      </label>`}
     </td>
     <td data-label="Position"><select data-f="position"><option value="">— Not set —</option>${opt(posOptions(u.position),u.position)}</select></td>
-    <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(['Staff','Admin'],u.role)}</select></td>
-    <td data-label="Branch"><select data-f="branch">${opt(branches,u.branch)}</select></td>
-    <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(['Active','Inactive'],u.status)}</select></td>
+    <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(vis?['Visitor','Staff','Admin']:['Staff','Admin'],u.role)}</select></td>
+    <td data-label="Branch"><select data-f="branch">${vis&&!u.branch?'<option value="">— Not set —</option>':''}${opt(branches,u.branch)}</select></td>
+    <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(u.status==='Pending'?['Pending','Active','Inactive']:['Active','Inactive'],u.status)}</select></td>
     <td data-label="Last login">${esc(fmt(u.lastLogin))}${u.failedAttempts?`<br><span class="muted">${u.failedAttempts} failed tr${u.failedAttempts===1?'y':'ies'}</span>`:''}</td>
     <td data-label="Actions"><div class="actions">
+      ${u.status==='Pending'?'<button class="primary" data-a="approve">Approve</button>':''}
       <button class="primary" data-a="save" disabled>Save</button>
       ${u.locked||u.failedAttempts?'<button class="warn" data-a="unlock">Unlock</button>':''}
       <button data-a="reset">Reset Password</button>
@@ -398,6 +403,14 @@ tbody.addEventListener('click',async ev=>{
   const tr=btn.closest('tr[data-u]'); const u=users.find(x=>x.username===tr.dataset.u); if(!u) return;
   const act=btn.dataset.a;
   if(act==='reset'){ openPw(u); return; }
+  if(act==='approve'){
+    if(!confirm('Approve '+(u.fullName||u.username)+' as a Messenger visitor? They can then log in to the Messenger app and chat with admins only.')) return;
+    btn.disabled=true; btn.textContent='Approving…';
+    const d=await api({action:'adminUpdateUser',username:u.username,status:'Active'});
+    setMsg('tableMsg',d.success?(u.username+': approved. They can log in to the Messenger app now.'):(d.error||'Could not approve.'),d.success);
+    if(d.success) loadUsers(); else { btn.disabled=false; btn.textContent='Approve'; }
+    return;
+  }
   if(act==='unlock'){
     btn.disabled=true;
     const d=await api({action:'adminUnlockUser',username:u.username});
