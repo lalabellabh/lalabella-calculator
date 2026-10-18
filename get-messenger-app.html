@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get Lalabella Messenger</title>
+<link rel="icon" href="/icons/icon-192.png">
+<style>
+  :root{--bg:#f4f8f9;--ink:#1b2a2f;--muted:#6b7b81;--acc:#2f6570;--acc2:#4c9aae;--card:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#2f6570,#6bb5c4);min-height:100vh;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px 16px}
+  .card{background:var(--card);border-radius:26px;max-width:460px;width:100%;padding:28px 24px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+  .logo{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#2f6570,#5aa0aa);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:40px}
+  h1{margin:0 0 6px;text-align:center;font-size:26px}
+  .lead{margin:0 0 18px;text-align:center;color:var(--muted);line-height:1.5}
+  .btn{display:block;text-align:center;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;text-decoration:none;font-weight:700;padding:15px;border-radius:16px;font-size:17px}
+  ol{padding-left:20px;line-height:1.6;margin:20px 0 0}
+  .note{background:#eef5f6;border-radius:14px;padding:12px 14px;margin-top:16px;font-size:14px;line-height:1.5;color:#35515a}
+  .ver{text-align:center;color:var(--muted);font-size:13px;margin-top:14px}
+  ul{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">💬</div>
+  <h1>Lalabella Messenger</h1>
+  <p class="lead">The team chat as its own app — chat bubbles, stories, wallpapers, a home-screen widget, and the only place that sends you message notifications.</p>
+  <a class="btn" id="apkBtn" href="downloads/LalabellaMessenger.apk" download="LalabellaMessenger.apk">Download for Android</a>
+  <div class="ver" id="ver"></div>
+  <ol>
+    <li>Tap <b>Download</b>, then open <b>LalabellaMessenger.apk</b> from your notifications or Downloads.</li>
+    <li>Allow <b>Install unknown apps</b> if Android asks.</li>
+    <li>Open <b>Lalabella Messenger</b> and log in with your staff account.</li>
+    <li>Allow <b>Notifications</b>. In Settings you can also turn on the floating chat head and pick a wallpaper.</li>
+  </ol>
+  <div class="note"><b>Important:</b> Settings → Apps → Lalabella Messenger → Battery → <b>Unrestricted</b>, so Android doesn't pause the app when the phone sleeps (Xiaomi, Oppo, Vivo, Samsung may do this otherwise).</div>
+  <ul><li>Android only for now.</li><li>The website and the main Lalabella app no longer notify you about chat.</li></ul>
+</div>
+<script>
+  fetch('downloads/messenger-app-version.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      document.getElementById('ver').textContent = 'Latest version ' + j.versionName;
+      document.getElementById('apkBtn').href = 'downloads/LalabellaMessenger.apk?v=' + j.versionCode;
+    }).catch(function () {});
+</script>
+</body>
+</html>
