@@ -574,6 +574,7 @@ body::before{
     <a class="seedsLink" id="seedsLink" href="seeds-card.html" title="Open the Seeds of Success card">🌱 Seeds</a>
     <button id="clear">Clear</button>
     <button id="removeSpaceBtn" title="Remove extra blank lines/spacing from the text">🧹 Remove Space</button>
+    <button id="translateBtn" type="button" title="Translate the message (English / Arabic / Filipino)" style="display:none;">🌐 Translate</button>
     <button id="watermarkToggleBtn" title="Show/hide the small leaf watermark on the card" style="background:#eaf7ec;">🌿 Watermark: ON</button>
     <button id="saveCard">💾 Save</button>
     <button id="loadCard">📂 Load</button>
@@ -712,7 +713,27 @@ body::before{
   </div>
 </section>
 
-<div id="qrModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:20px;">
+<div id="trModal" style="display:none;position:fixed;inset:0;z-index:9300;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fffaf6;border-radius:18px;max-width:420px;width:100%;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative;max-height:90vh;overflow:auto;">
+    <button id="trClose" type="button" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:18px;color:#8a7078;cursor:pointer;">✕</button>
+    <div style="font-family:'Fraunces',Georgia,serif;font-size:17px;color:#9e2f4a;margin-bottom:6px;">🌐 Translate message</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <select id="trLang" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px;">
+        <option value="en">English</option><option value="ar">العربية (Arabic)</option><option value="tl">Filipino (Tagalog)</option>
+      </select>
+      <button id="trGo" type="button" style="padding:10px 16px;border:none;border-radius:10px;background:#9e2f4a;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Translate</button>
+    </div>
+    <div id="trNote" style="font-size:12px;color:#8a7078;margin-bottom:8px;min-height:16px;"></div>
+    <div id="trOut" style="display:none;">
+      <textarea id="trText" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="trReplace" type="button" style="flex:1;padding:10px;border:none;border-radius:10px;background:#5f8f63;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Replace message</button>
+        <button id="trBelow" type="button" style="flex:1;padding:10px;border:1px solid #5f8f63;border-radius:10px;background:#fff;color:#3f6f43;font-weight:700;cursor:pointer;font-size:13px;">Add below</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="qrModal" style="display:none;position:fixed;inset:0;z-index:9300;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fffaf6;border-radius:18px;max-width:360px;width:100%;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative;">
     <button id="qrModalClose" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:18px;color:#8a7078;cursor:pointer;">✕</button>
     <div style="font-family:'Fraunces',Georgia,serif;font-size:17px;color:#9e2f4a;margin-bottom:6px;">🔗 Make a QR Code</div>
@@ -2443,6 +2464,68 @@ updatePrintSize();
 
 </script>
 
+<script>
+// ---------- Translate the card message (English / Arabic / Filipino) ----------
+// The Translate button only shows while the card has a message. Translation uses a free online service,
+// line by line, so the line breaks of the message stay the same. It needs internet.
+(function(){
+  const $=id=>document.getElementById(id);
+  const ta=document.getElementById('textArea'), btn=$('translateBtn'), modal=$('trModal');
+  if(!ta||!btn||!modal) return;
+  const PLACEHOLDER='Type or paste your message here…';
+  const msgText=()=>{ const t=(ta.innerText||'').replace(/\u00a0/g,' ').trim(); return (!t||t===PLACEHOLDER||ta.classList.contains('placeholder'))?'':t; };
+  const refresh=()=>{ btn.style.display=msgText()?'':'none'; };
+  new MutationObserver(refresh).observe(ta,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+  ta.addEventListener('input',refresh); ta.addEventListener('blur',refresh);
+  refresh();
+
+  async function tr1(text,lang){
+    try{
+      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+lang+'&dt=t&q='+encodeURIComponent(text));
+      if(!r.ok) throw new Error('http '+r.status);
+      const j=await r.json();
+      const out=(j[0]||[]).map(x=>x[0]||'').join('');
+      if(out) return out;
+      throw new Error('empty');
+    }catch(e){
+      const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair=autodetect|'+lang);
+      const j=await r.json();
+      const out=j&&j.responseData&&j.responseData.translatedText;
+      if(!out||/MYMEMORY WARNING|INVALID/i.test(out)) throw new Error('fail');
+      return out;
+    }
+  }
+  async function translateAll(text,lang){
+    const lines=text.split(/\n/);
+    const res=await Promise.all(lines.map(l=>l.trim()?tr1(l.trim(),lang):Promise.resolve('')));
+    return res.join('\n');
+  }
+  const show=(on)=>{ modal.style.display=on?'flex':'none'; };
+  btn.addEventListener('click',()=>{ if(typeof playClick==='function') playClick(); $('trOut').style.display='none'; $('trNote').textContent=''; show(true); });
+  $('trClose').addEventListener('click',()=>show(false));
+  modal.addEventListener('click',e=>{ if(e.target===modal) show(false); });
+  $('trGo').addEventListener('click',async()=>{
+    const text=msgText(); if(!text){ show(false); return; }
+    const go=$('trGo'); go.disabled=true; go.textContent='…'; $('trNote').textContent='Translating…'; $('trOut').style.display='none';
+    try{
+      const out=await translateAll(text,$('trLang').value);
+      $('trText').value=out; $('trText').dir=$('trLang').value==='ar'?'rtl':'ltr';
+      $('trOut').style.display='block'; $('trNote').textContent='You can still edit the translation before using it.';
+    }catch(e){ $('trNote').textContent='Could not translate. Check the internet and try again.'; }
+    go.disabled=false; go.textContent='Translate';
+  });
+  const toHtml=t=>t.split('\n').map(l=>l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('<br>');
+  function setDir(d){ const b=document.querySelector('[data-dir="'+d+'"]'); if(b) b.click(); else ta.dir=d; }
+  $('trReplace').addEventListener('click',()=>{
+    ta.classList.remove('placeholder'); ta.innerHTML=toHtml($('trText').value);
+    setDir($('trLang').value==='ar'?'rtl':'ltr'); refresh(); show(false);
+  });
+  $('trBelow').addEventListener('click',()=>{
+    ta.classList.remove('placeholder'); ta.innerHTML=ta.innerHTML+'<br><br>'+toHtml($('trText').value);
+    refresh(); show(false);
+  });
+})();
+</script>
 <script src="joyboy-bubble.js"></script>
 <script src="shared/card-bg.js"></script>
 </body>
