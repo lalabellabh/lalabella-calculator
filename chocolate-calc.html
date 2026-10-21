@@ -1847,7 +1847,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}</span></div>
+        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${(entry.mode === 'pieces' && entry.kg > 0) ? ' · ' + Math.round(entry.kg * 1000) + ' g' : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -1891,7 +1891,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}</span></div>
+        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${(entry.mode === 'pieces' && entry.kg > 0) ? ' · ' + Math.round(entry.kg * 1000) + ' g' : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
