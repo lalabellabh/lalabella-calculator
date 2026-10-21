@@ -713,23 +713,46 @@ body::before{
   </div>
 </section>
 
-<div id="trModal" style="display:none;position:fixed;inset:0;z-index:9300;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fffaf6;border-radius:18px;max-width:420px;width:100%;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative;max-height:90vh;overflow:auto;">
-    <button id="trClose" type="button" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:18px;color:#8a7078;cursor:pointer;">✕</button>
-    <div style="font-family:'Fraunces',Georgia,serif;font-size:17px;color:#9e2f4a;margin-bottom:6px;">🌐 Translate message</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <select id="trLang" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px;">
-        <option value="en">English</option><option value="ar">العربية (Arabic)</option><option value="tl">Filipino (Tagalog)</option>
-      </select>
-      <button id="trGo" type="button" style="padding:10px 16px;border:none;border-radius:10px;background:#9e2f4a;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Translate</button>
+<div id="trModal" style="display:none;position:fixed;inset:0;z-index:9300;background:rgba(60,30,35,.45);align-items:center;justify-content:center;padding:16px;">
+  <style>
+    #trBox{background:#fffaf6;border-radius:20px;max-width:760px;width:100%;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative;max-height:92vh;overflow:auto;box-sizing:border-box}
+    #trBox .trGrid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:18px;overflow:hidden;background:#f3f7fd}
+    #trBox .trPane{padding:12px 14px;display:flex;flex-direction:column;min-height:230px;box-sizing:border-box}
+    #trBox .trSrc{background:#fff}
+    #trBox select{padding:9px 10px;border:1px solid #e3d6da;border-radius:10px;font-size:14px;background:#fff;width:100%;box-sizing:border-box}
+    #trBox .trTxt{flex:1;border:0;outline:0;resize:none;background:transparent;font-size:20px;font-weight:700;line-height:1.55;min-height:120px;width:100%;box-sizing:border-box;font-family:inherit}
+    #trBox .trSrc .trTxt{color:#111}
+    #trBox #trOutTxt{flex:1;font-size:20px;font-weight:700;line-height:1.55;color:#0f4c81;min-height:120px;white-space:pre-wrap;word-break:break-word}
+    #trBox .trRm{font-size:12px;color:#8a8f98;min-height:16px;white-space:pre-wrap;margin:6px 0}
+    #trBox .trIcons{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+    #trBox .trIc{border:0;background:none;font-size:18px;cursor:pointer;padding:6px 8px;border-radius:8px;color:#555}
+    #trBox .trIc:hover{background:#eef2f8}
+    #trBox .trSwap{width:40px;height:40px;border-radius:50%;border:0;background:#e6eefb;cursor:pointer;font-size:18px;margin:0 6px;flex:none}
+    @media(max-width:620px){#trBox .trGrid{grid-template-columns:1fr}}
+  </style>
+  <div id="trBox">
+    <button id="trClose" type="button" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:18px;color:#8a7078;cursor:pointer;z-index:2">✕</button>
+    <div style="font-family:'Fraunces',Georgia,serif;font-size:17px;color:#9e2f4a;margin:0 0 10px 4px;">🌐 Translate</div>
+    <div style="display:flex;align-items:center;margin-bottom:10px;">
+      <select id="trFrom"><option value="auto">Detect language</option><option value="en">English</option><option value="ar">العربية (Arabic)</option><option value="tl">Filipino (Tagalog)</option></select>
+      <button id="trSwap" class="trSwap" type="button" title="Swap languages">⇄</button>
+      <select id="trTo"><option value="en">English</option><option value="ar">العربية (Arabic)</option><option value="tl">Filipino (Tagalog)</option></select>
     </div>
-    <div id="trNote" style="font-size:12px;color:#8a7078;margin-bottom:8px;min-height:16px;"></div>
-    <div id="trOut" style="display:none;">
-      <textarea id="trText" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;box-sizing:border-box;"></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button id="trReplace" type="button" style="flex:1;padding:10px;border:none;border-radius:10px;background:#5f8f63;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Replace message</button>
-        <button id="trBelow" type="button" style="flex:1;padding:10px;border:1px solid #5f8f63;border-radius:10px;background:#fff;color:#3f6f43;font-weight:700;cursor:pointer;font-size:13px;">Add below</button>
+    <div class="trGrid">
+      <div class="trPane trSrc">
+        <textarea id="trIn" class="trTxt" placeholder="Type or paste text…"></textarea>
+        <div id="trRm" class="trRm"></div>
+        <div class="trIcons"><button id="trSpeakIn" class="trIc" type="button" title="Listen">🔊</button><button id="trCopyIn" class="trIc" type="button" title="Copy">📋</button></div>
       </div>
+      <div class="trPane">
+        <div id="trOutTxt"></div>
+        <div id="trNote" class="trRm"></div>
+        <div class="trIcons"><button id="trRetry" class="trIc" type="button" title="Translate again">↻</button><button id="trSpeakOut" class="trIc" type="button" title="Listen">🔊</button><button id="trCopyOut" class="trIc" type="button" title="Copy">📋</button></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="trReplace" type="button" style="flex:1;padding:11px;border:none;border-radius:12px;background:#5f8f63;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">Replace message on card</button>
+      <button id="trBelow" type="button" style="flex:1;padding:11px;border:1px solid #5f8f63;border-radius:12px;background:#fff;color:#3f6f43;font-weight:700;cursor:pointer;font-size:13px;">Add below on card</button>
     </div>
   </div>
 </div>
@@ -2465,12 +2488,12 @@ updatePrintSize();
 </script>
 
 <script>
-// ---------- Translate the card message (English / Arabic / Filipino) ----------
-// The Translate button only shows while the card has a message. Translation uses a free online service,
-// line by line, so the line breaks of the message stay the same. It needs internet.
+// ---------- Translate (side by side: original | translation, with pronunciation) ----------
+// The Translate button only shows while the card has a message. Uses a free online translation service
+// (needs internet), line by line so the line breaks stay the same.
 (function(){
   const $=id=>document.getElementById(id);
-  const ta=document.getElementById('textArea'), btn=$('translateBtn'), modal=$('trModal');
+  const ta=$('textArea'), btn=$('translateBtn'), modal=$('trModal');
   if(!ta||!btn||!modal) return;
   const PLACEHOLDER='Type or paste your message here…';
   const msgText=()=>{ const t=(ta.innerText||'').replace(/\u00a0/g,' ').trim(); return (!t||t===PLACEHOLDER||ta.classList.contains('placeholder'))?'':t; };
@@ -2479,51 +2502,67 @@ updatePrintSize();
   ta.addEventListener('input',refresh); ta.addEventListener('blur',refresh);
   refresh();
 
-  async function tr1(text,lang){
+  const VOICE={en:'en-US',ar:'ar-SA',tl:'fil-PH'};
+  let seq=0, detected='', timer=null;
+  async function tr1(text,from,to){
+    const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl='+from+'&tl='+to+'&dt=t&dt=rm&q='+encodeURIComponent(text);
     try{
-      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+lang+'&dt=t&q='+encodeURIComponent(text));
-      if(!r.ok) throw new Error('http '+r.status);
+      const r=await fetch(url); if(!r.ok) throw new Error('http');
       const j=await r.json();
-      const out=(j[0]||[]).map(x=>x[0]||'').join('');
-      if(out) return out;
-      throw new Error('empty');
+      const seg=(j[0]||[]);
+      const out=seg.map(x=>x[0]||'').join('');
+      let rm=''; seg.forEach(x=>{ if(x&&x[3]) rm+=x[3]; });
+      if(!out) throw new Error('empty');
+      return {t:out,rm:rm,det:j[2]||''};
     }catch(e){
-      const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair=autodetect|'+lang);
-      const j=await r.json();
-      const out=j&&j.responseData&&j.responseData.translatedText;
+      const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+(from==='auto'?'autodetect':from)+'|'+to);
+      const j=await r.json(); const out=j&&j.responseData&&j.responseData.translatedText;
       if(!out||/MYMEMORY WARNING|INVALID/i.test(out)) throw new Error('fail');
-      return out;
+      return {t:out,rm:'',det:''};
     }
   }
-  async function translateAll(text,lang){
-    const lines=text.split(/\n/);
-    const res=await Promise.all(lines.map(l=>l.trim()?tr1(l.trim(),lang):Promise.resolve('')));
-    return res.join('\n');
+  async function run(){
+    const mine=++seq, text=$('trIn').value.trim();
+    const to=$('trTo').value, from=$('trFrom').value;
+    $('trOutTxt').dir=to==='ar'?'rtl':'ltr';
+    $('trIn').dir=(from==='ar'||(from==='auto'&&/[\u0600-\u06FF]/.test(text)))?'rtl':'ltr';
+    if(!text){ $('trOutTxt').textContent=''; $('trRm').textContent=''; $('trNote').textContent=''; return; }
+    $('trNote').textContent='Translating…';
+    try{
+      const lines=$('trIn').value.split(/\n/);
+      const res=await Promise.all(lines.map(l=>l.trim()?tr1(l.trim(),from,to):Promise.resolve({t:'',rm:'',det:''})));
+      if(mine!==seq) return;
+      $('trOutTxt').textContent=res.map(x=>x.t).join('\n');
+      $('trRm').textContent=res.map(x=>x.rm).join('\n').replace(/\n{2,}/g,'\n').trim();
+      detected=(res.find(x=>x.det)||{}).det||'';
+      $('trNote').textContent='';
+    }catch(e){ if(mine===seq) $('trNote').textContent='Could not translate. Check the internet and try again.'; }
   }
-  const show=(on)=>{ modal.style.display=on?'flex':'none'; };
-  btn.addEventListener('click',()=>{ if(typeof playClick==='function') playClick(); $('trOut').style.display='none'; $('trNote').textContent=''; show(true); });
+  const later=()=>{ clearTimeout(timer); timer=setTimeout(run,450); };
+  const show=on=>{ modal.style.display=on?'flex':'none'; };
+  btn.addEventListener('click',()=>{ if(typeof playClick==='function') playClick(); $('trIn').value=msgText(); $('trFrom').value='auto'; $('trOutTxt').textContent=''; $('trRm').textContent=''; show(true); run(); });
   $('trClose').addEventListener('click',()=>show(false));
   modal.addEventListener('click',e=>{ if(e.target===modal) show(false); });
-  $('trGo').addEventListener('click',async()=>{
-    const text=msgText(); if(!text){ show(false); return; }
-    const go=$('trGo'); go.disabled=true; go.textContent='…'; $('trNote').textContent='Translating…'; $('trOut').style.display='none';
-    try{
-      const out=await translateAll(text,$('trLang').value);
-      $('trText').value=out; $('trText').dir=$('trLang').value==='ar'?'rtl':'ltr';
-      $('trOut').style.display='block'; $('trNote').textContent='You can still edit the translation before using it.';
-    }catch(e){ $('trNote').textContent='Could not translate. Check the internet and try again.'; }
-    go.disabled=false; go.textContent='Translate';
+  $('trIn').addEventListener('input',later);
+  $('trFrom').addEventListener('change',run); $('trTo').addEventListener('change',run);
+  $('trRetry').addEventListener('click',run);
+  $('trSwap').addEventListener('click',()=>{
+    const f=$('trFrom').value==='auto'?(detected&&['en','ar','tl'].includes(detected)?detected:'en'):$('trFrom').value, t=$('trTo').value;
+    const out=$('trOutTxt').textContent;
+    $('trFrom').value=t; $('trTo').value=f; if(out) $('trIn').value=out; run();
   });
+  const copy=async t=>{ try{ await navigator.clipboard.writeText(t); }catch(e){ const x=document.createElement('textarea'); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand('copy');}catch(_){} x.remove(); } };
+  $('trCopyIn').addEventListener('click',()=>copy($('trIn').value));
+  $('trCopyOut').addEventListener('click',()=>copy($('trOutTxt').textContent));
+  function speak(text,lang){ try{ if(!text||!window.speechSynthesis) return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=VOICE[lang]||'en-US'; speechSynthesis.speak(u); }catch(e){} }
+  $('trSpeakOut').addEventListener('click',()=>speak($('trOutTxt').textContent,$('trTo').value));
+  $('trSpeakIn').addEventListener('click',()=>{ const f=$('trFrom').value; speak($('trIn').value,f==='auto'?(detected||'en'):f); });
   const toHtml=t=>t.split('\n').map(l=>l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('<br>');
   function setDir(d){ const b=document.querySelector('[data-dir="'+d+'"]'); if(b) b.click(); else ta.dir=d; }
-  $('trReplace').addEventListener('click',()=>{
-    ta.classList.remove('placeholder'); ta.innerHTML=toHtml($('trText').value);
-    setDir($('trLang').value==='ar'?'rtl':'ltr'); refresh(); show(false);
-  });
-  $('trBelow').addEventListener('click',()=>{
-    ta.classList.remove('placeholder'); ta.innerHTML=ta.innerHTML+'<br><br>'+toHtml($('trText').value);
-    refresh(); show(false);
-  });
+  $('trReplace').addEventListener('click',()=>{ const out=$('trOutTxt').textContent; if(!out) return;
+    ta.classList.remove('placeholder'); ta.innerHTML=toHtml(out); setDir($('trTo').value==='ar'?'rtl':'ltr'); refresh(); show(false); });
+  $('trBelow').addEventListener('click',()=>{ const out=$('trOutTxt').textContent; if(!out) return;
+    ta.classList.remove('placeholder'); ta.innerHTML=ta.innerHTML+'<br><br>'+toHtml(out); refresh(); show(false); });
 })();
 </script>
 <script src="joyboy-bubble.js"></script>
