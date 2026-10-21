@@ -1009,14 +1009,18 @@
       const cat = (items || []).find(c => String(c['Chocolate Name']||'').trim().toLowerCase() === String(it.name).trim().toLowerCase());
       const gpp = cat ? Number(cat['Grams']) || 0 : 0;
       if(u === 'pcs'){ pcs += qty; kg += qty * gpp / 1000; } else { kg += u === 'g' ? qty / 1000 : qty; }
-      return `<div class="lookup-row"><span>${it.name} (${qty} ${u})</span><span>${fmtBD(line)}</span></div>`;
+      const gTxt = (u === 'pcs' && gpp > 0) ? ' · ' + Math.round(qty * gpp * 10) / 10 + ' g' : '';   // total grams beside the pieces
+      return `<div class="lookup-row"><span>${it.name} (${qty} ${u}${gTxt})</span><span>${fmtBD(line)}</span></div>`;
     }).join('');
     const bbTxt = bbShort(d['Best Before']);
     const sum = (pcs > 0 ? pcs + 'pcs / ' : '') + kg.toFixed(3) + 'kgs' + (bbTxt ? ' best before ' + bbTxt : '');
     lastLookup = { code: code, meta: [d['Display Name'] || '', fmtDate(d['Date']), d['Created By'] ? 'by ' + d['Created By'] : ''].filter(Boolean).join(' · '),
       lines: (d['Items'] || []).map(it=>{ const qty = Number(it.qty) || 0, price = Number(it.price) || 0;
         const u = it.unit === 'g' ? 'g' : (it.unit === 'kg' ? 'kg' : 'pcs');
-        return [it.extra ? it.name + ' · Extra' : it.name + ' (' + qty + ' ' + u + ')', fmtBD(qty * price)]; }),
+        const cat = it.extra ? null : (items || []).find(c => String(c['Chocolate Name']||'').trim().toLowerCase() === String(it.name).trim().toLowerCase());
+        const gpp = cat ? Number(cat['Grams']) || 0 : 0;
+        const gTxt = (u === 'pcs' && gpp > 0) ? ' · ' + Math.round(qty * gpp * 10) / 10 + ' g' : '';
+        return [it.extra ? it.name + ' · Extra' : it.name + ' (' + qty + ' ' + u + gTxt + ')', fmtBD(qty * price)]; }),
       total: fmtBD(total), sum: sum };
     el.innerHTML = `
       <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
