@@ -1501,9 +1501,32 @@ function addDeleteHandle(box){
   });
   box.appendChild(del);
 }
-function addImage(src){
+// Finds an empty spot on the card (not on top of the text lines or other pictures) for a square box of size w.
+// Prefers the bottom, centered; falls back to the bottom-center if the card is completely full.
+function findFreeSpot(w){
+  const cw=card.offsetWidth, ch=card.offsetHeight, pad=4;
+  const r=card.getBoundingClientRect(), sc=(r.width/cw)||1;
+  const obs=[];
+  card.querySelectorAll('.image-item').forEach(el=>obs.push({l:el.offsetLeft,t:el.offsetTop,r:el.offsetLeft+el.offsetWidth,b:el.offsetTop+el.offsetHeight}));
+  try{
+    if(textArea.textContent.trim()){
+      const rg=document.createRange();rg.selectNodeContents(textArea);
+      Array.from(rg.getClientRects()).forEach(q=>{ if(q.width>0&&q.height>0) obs.push({l:(q.left-r.left)/sc,t:(q.top-r.top)/sc,r:(q.right-r.left)/sc,b:(q.bottom-r.top)/sc}); });
+    }
+  }catch(e){}
+  const free=(l,t)=>!obs.some(o=>l<o.r+pad&&l+w>o.l-pad&&t<o.b+pad&&t+w>o.t-pad);
+  const cx=Math.round((cw-w)/2);
+  const xs=[cx];
+  for(let d=8;d<=cw;d+=8){ if(cx+d<=cw-w-6)xs.push(cx+d); if(cx-d>=6)xs.push(cx-d); }
+  for(let t=ch-w-8;t>=6;t-=8){
+    for(const l of xs){ if(free(l,t)) return {left:l,top:t}; }
+  }
+  return {left:cx,top:Math.max(6,ch-w-8)};
+}
+function addImage(src,opts){
   playAdd();
  const box=document.createElement('div');box.className='image-item';box.style.left='12px';box.style.top='12px';box.style.width='120px';
+ if(opts&&opts.size){ const sp=findFreeSpot(opts.size); box.style.width=opts.size+'px'; box.style.left=sp.left+'px'; box.style.top=sp.top+'px'; }
  const img=document.createElement('img');img.src=src;box.appendChild(img);
  const handle=document.createElement('div');handle.className='resize-handle';box.appendChild(handle);
  addDeleteHandle(box);
@@ -1658,7 +1681,7 @@ document.getElementById('qrGenerateBtn').addEventListener('click', () => {
       <button id="qrAddToCardBtn" style="display:block;width:100%;padding:9px;border:none;border-radius:10px;background:#5f8f63;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">✓ Add to Card</button>
     `;
     document.getElementById('qrAddToCardBtn').addEventListener('click', () => {
-      addImage(lastQrDataUrl);
+      addImage(lastQrDataUrl,{size:100});
       qrModal.style.display = 'none';
       playAdd();
     });
