@@ -724,7 +724,7 @@ body::before{
 </div>
 <div id="qrCanvasHolder" style="display:none;"></div>
 
-<div id="imageToolbar" style="display:none;position:fixed;z-index:500;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px 8px;align-items:center;gap:6px;">
+<div id="imageToolbar" style="display:none;position:fixed;z-index:9150;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px 8px;align-items:center;gap:6px;">
   <button id="removeBgBtn" style="font-size:12px;padding:6px 10px;" title="Remove white/light background">🎨 Remove BG</button>
   <button id="fitCircleBtn" style="font-size:12px;padding:6px 10px;" title="Fit inside the circle">⭕ Fit Circle</button>
   <button id="bringFrontBtn" style="font-size:12px;padding:6px 10px;" title="Bring to front">⬆️ Front</button>
@@ -1367,7 +1367,11 @@ function showImageToolbar(el){
   }
   const rect = el.getBoundingClientRect();
   bar.style.display = 'flex';
-  bar.style.top = Math.max(8, rect.top - bar.offsetHeight - 10) + 'px';
+  // above the picture; if there is no room above (picture near the top) put it just below, never hidden behind the top panel
+  const panelEl = document.querySelector('.panel'), minTop = panelEl ? Math.max(8, panelEl.getBoundingClientRect().bottom + 6) : 8;
+  let topPos = rect.top - bar.offsetHeight - 10;
+  if(topPos < minTop) topPos = rect.bottom + 10;
+  bar.style.top = Math.max(8, Math.min(window.innerHeight - bar.offsetHeight - 8, topPos)) + 'px';
   bar.style.left = Math.min(window.innerWidth - bar.offsetWidth - 8, Math.max(8, rect.left)) + 'px';
 }
 document.addEventListener('click', (e)=>{
