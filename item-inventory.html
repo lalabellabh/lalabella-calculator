@@ -572,6 +572,20 @@ body>.wrap{position:relative;z-index:1}
   <div id="itemPhotoLbCap" style="color:#fff;font-weight:600;font-size:16px;text-align:center;"></div>
 </div>
 
+<div id="cropModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(20,8,12,.78);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:18px;width:min(360px,100%);padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.4);text-align:center;">
+    <div class="card-title" style="margin:0 0 8px;">✂️ Crop Photo</div>
+    <div style="font-size:11.5px;color:var(--ink-dim);margin-bottom:8px;">I-drag ang picture para ilipat, gamitin ang slider para mag-zoom.</div>
+    <canvas id="cropCanvas" width="300" height="300" style="width:300px;max-width:100%;aspect-ratio:1/1;border-radius:12px;border:1.5px solid var(--line);background:#eee;touch-action:none;cursor:grab;"></canvas>
+    <input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" style="width:100%;margin-top:10px;">
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button type="button" class="btn btn-outline" id="cropCancelBtn" style="margin-top:8px;flex:1;">Cancel</button>
+      <button type="button" class="btn" id="cropUseBtn" style="margin-top:8px;flex:1;">Use Photo</button>
+    </div>
+    <button type="button" id="cropFullBtn" style="margin-top:10px;background:none;border:none;color:var(--ink-dim);font-size:12px;text-decoration:underline;cursor:pointer;">Use the whole picture (no crop)</button>
+  </div>
+</div>
+
 <div id="editItemModal" style="display:none;position:fixed;inset:0;z-index:9400;background:rgba(58,37,48,.55);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
   <div style="background:#fff;border-radius:18px;border:1px solid var(--line);width:min(520px,100%);margin:auto;padding:18px 18px 20px;box-shadow:0 18px 50px rgba(58,37,48,.3);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -614,6 +628,7 @@ body>.wrap{position:relative;z-index:1}
       <img id="eiPhotoPreview" class="photo-preview" alt="Preview">
       <button type="button" id="eiPhotoClearBtn" title="Remove photo" style="display:none;align-items:center;justify-content:center;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);">✕</button>
     </div>
+    <button type="button" id="eiCropBtn" style="display:none;margin-top:8px;padding:8px 14px;background:var(--blush);border:1px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;">✂️ Crop</button>
     <div class="photo-hint" id="eiPhotoHint"></div>
 
     <label>Notes</label>
@@ -1708,7 +1723,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     openItemPhoto(this.getAttribute('src'), document.getElementById('eiName').value);
   });
   // ---------- Edit Item (Admin) ----------
-  let eiItem = null, eiPhotoData = null, eiRemovePhoto = false;
+  let eiItem = null, eiPhotoData = null, eiRemovePhoto = false, eiSrcImg = null; // eiSrcImg = last picked image (for ✂️ Crop)
   function eiSet(id, val){
     const el = document.getElementById(id);
     if(el.tagName === 'SELECT' && val && ![...el.options].some(o => o.value === val || o.text === val)){
@@ -1720,12 +1735,13 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     const pv = document.getElementById('eiPhotoPreview');
     if(src){ pv.src = src; pv.classList.add('show'); document.getElementById('eiPhotoClearBtn').style.display = 'flex'; }
     else { pv.removeAttribute('src'); pv.classList.remove('show'); document.getElementById('eiPhotoClearBtn').style.display = 'none'; }
+    document.getElementById('eiCropBtn').style.display = (eiSrcImg && eiPhotoData) ? 'inline-block' : 'none';
   }
   function openEditItem(){
     if(!selectedBarcodeItem) return;
     if(!lbIsAdmin()){ alert('Only an Admin can edit items.'); return; }
     const it = eiItem = selectedBarcodeItem;
-    eiPhotoData = null; eiRemovePhoto = false;
+    eiPhotoData = null; eiRemovePhoto = false; eiSrcImg = null;
     eiSet('eiName', it['Item Name'] || '');
     eiSet('eiType', it['Item Type'] || 'Consumable');
     eiSet('eiCategory', it['Category'] || '');
@@ -1742,21 +1758,93 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     document.getElementById('editItemModal').style.display = 'flex';
   }
   function closeEditItem(){ document.getElementById('editItemModal').style.display = 'none'; eiItem = null; }
+  // ---- Cropper (square, drag + zoom) ----
+  const crop = { img:null, scale:1, min:1, x:0, y:0, drag:null };
+  const CROP_VIEW = 300;
+  function cropDraw(){
+    const c = document.getElementById('cropCanvas'), g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0,0,CROP_VIEW,CROP_VIEW);
+    if(!crop.img) return;
+    g.drawImage(crop.img, crop.x, crop.y, crop.img.width * crop.scale, crop.img.height * crop.scale);
+  }
+  function cropClamp(){
+    const w = crop.img.width * crop.scale, h = crop.img.height * crop.scale;
+    crop.x = Math.min(0, Math.max(CROP_VIEW - w, crop.x));
+    crop.y = Math.min(0, Math.max(CROP_VIEW - h, crop.y));
+  }
+  function cropSetZoom(z, cx, cy){
+    // zoom around a point (default: centre) so the picture does not jump
+    cx = cx === undefined ? CROP_VIEW/2 : cx; cy = cy === undefined ? CROP_VIEW/2 : cy;
+    const ns = crop.min * z, k = ns / crop.scale;
+    crop.x = cx - (cx - crop.x) * k; crop.y = cy - (cy - crop.y) * k;
+    crop.scale = ns; cropClamp(); cropDraw();
+  }
+  function openCropper(img){
+    crop.img = img;
+    crop.min = Math.max(CROP_VIEW / img.width, CROP_VIEW / img.height);
+    crop.scale = crop.min;
+    crop.x = (CROP_VIEW - img.width * crop.scale) / 2;
+    crop.y = (CROP_VIEW - img.height * crop.scale) / 2;
+    document.getElementById('cropZoom').value = 1;
+    document.getElementById('cropModal').style.display = 'flex';
+    cropDraw();
+  }
+  function closeCropper(){ document.getElementById('cropModal').style.display = 'none'; }
+  (function(){
+    const c = document.getElementById('cropCanvas');
+    const pos = e => { const r = c.getBoundingClientRect(); return { x:(e.clientX - r.left) * CROP_VIEW / r.width, y:(e.clientY - r.top) * CROP_VIEW / r.height }; };
+    c.addEventListener('pointerdown', e => { if(!crop.img) return; const p = pos(e); crop.drag = { px:p.x, py:p.y, x:crop.x, y:crop.y }; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing'; });
+    c.addEventListener('pointermove', e => { if(!crop.drag) return; const p = pos(e); crop.x = crop.drag.x + (p.x - crop.drag.px); crop.y = crop.drag.y + (p.y - crop.drag.py); cropClamp(); cropDraw(); });
+    const end = () => { crop.drag = null; c.style.cursor = 'grab'; };
+    c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+    c.addEventListener('wheel', e => { if(!crop.img) return; e.preventDefault(); const z = document.getElementById('cropZoom'); z.value = Math.min(4, Math.max(1, Number(z.value) - e.deltaY * 0.002)); const p = pos(e); cropSetZoom(Number(z.value), p.x, p.y); }, { passive:false });
+    document.getElementById('cropZoom').addEventListener('input', function(){ if(crop.img) cropSetZoom(Number(this.value)); });
+  })();
+  function cropToDataUrl(full){
+    const out = document.createElement('canvas'), OUT = 400;
+    const g = out.getContext('2d'); g.fillStyle = '#fff';
+    if(full){
+      // whole picture, fitted inside a 400px box (no cropping)
+      const img = crop.img, k = Math.min(OUT / img.width, OUT / img.height, 1);
+      out.width = Math.max(1, Math.round(img.width * k)); out.height = Math.max(1, Math.round(img.height * k));
+      g.fillRect(0,0,out.width,out.height); g.drawImage(img, 0, 0, out.width, out.height);
+    } else {
+      out.width = OUT; out.height = OUT; g.fillRect(0,0,OUT,OUT);
+      const sx = -crop.x / crop.scale, sy = -crop.y / crop.scale, sw = CROP_VIEW / crop.scale;
+      g.drawImage(crop.img, sx, sy, sw, sw, 0, 0, OUT, OUT);
+    }
+    return out.toDataURL('image/jpeg', 0.7);
+  }
+  function cropAccept(full){
+    const c = cropToDataUrl(full);
+    eiPhotoData = c; eiRemovePhoto = false;
+    eiShowPhoto(c);
+    document.getElementById('eiPhotoHint').textContent = 'Ready (~' + Math.round((c.length * 0.75) / 1024) + ' KB) — pindutin ang Save Changes.';
+    closeCropper();
+  }
+  document.getElementById('cropUseBtn').addEventListener('click', () => cropAccept(false));
+  document.getElementById('cropFullBtn').addEventListener('click', () => cropAccept(true));
+  document.getElementById('cropCancelBtn').addEventListener('click', closeCropper);
+  document.getElementById('cropModal').addEventListener('mousedown', e => { if(e.target.id === 'cropModal') closeCropper(); });
+  document.getElementById('eiCropBtn').addEventListener('click', () => { if(eiSrcImg) openCropper(eiSrcImg); });
+
   async function eiHandleFile(file){
     if(!file) return;
     const hint = document.getElementById('eiPhotoHint');
-    hint.textContent = 'Compressing…';
+    hint.textContent = 'Loading…';
     try{
-      const c = await compressImage(file);
-      eiPhotoData = c; eiRemovePhoto = false;
-      eiShowPhoto(c);
-      hint.textContent = 'Compressed to ~' + Math.round((c.length * 0.75) / 1024) + ' KB';
-    }catch(e){ hint.textContent = 'Could not process this image.'; eiPhotoData = null; }
+      const url = URL.createObjectURL(file);
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
+      eiSrcImg = img;
+      hint.textContent = '';
+      openCropper(img);
+    }catch(e){ hint.textContent = 'Could not process this image.'; }
   }
+
   document.getElementById('editItemOpenBtn').addEventListener('click', openEditItem);
   document.getElementById('editItemCloseBtn').addEventListener('click', closeEditItem);
   document.getElementById('editItemModal').addEventListener('mousedown', e => { if(e.target.id === 'editItemModal') closeEditItem(); });
-  document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.getElementById('editItemModal').style.display === 'flex') closeEditItem(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape'){ if(document.getElementById('cropModal').style.display === 'flex') closeCropper(); else if(document.getElementById('editItemModal').style.display === 'flex') closeEditItem(); } });
   document.getElementById('eiPhotoFile').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
   document.getElementById('eiPhotoCamera').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
   document.getElementById('eiPaste').addEventListener('paste', function(e){
@@ -1768,7 +1856,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   document.getElementById('eiPhotoClearBtn').addEventListener('click', function(){
     // New unsaved photo -> discard it and fall back to the saved one. Otherwise remove the saved photo.
     if(eiPhotoData){
-      eiPhotoData = null;
+      eiPhotoData = null; eiSrcImg = null;
       ['eiPhotoCamera','eiPhotoFile'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('eiPhotoHint').textContent = '';
       eiShowPhoto(eiItem && eiItem['Photo Link (Drive)'] ? eiItem['Photo Link (Drive)'] : '');
