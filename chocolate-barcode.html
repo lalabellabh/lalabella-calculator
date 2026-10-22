@@ -793,6 +793,8 @@
       label = n + ' kg';
       total = kg * pricePerKg;
     }
+    const eqL = (kg != null && !isWholePackagedItem && weightPerPiece > 0) ? eqUnitText(unitMode === 'piece' ? 'piece' : (unitMode === 'gram' ? 'g' : 'kg'), n, weightPerPiece) : '';
+    if(eqL) label += ' (' + eqL + ')';
     return { total, label };
   }
 
@@ -1009,7 +1011,7 @@
       const cat = (items || []).find(c => String(c['Chocolate Name']||'').trim().toLowerCase() === String(it.name).trim().toLowerCase());
       const gpp = cat ? Number(cat['Grams']) || 0 : 0;
       if(u === 'pcs'){ pcs += qty; kg += qty * gpp / 1000; } else { kg += u === 'g' ? qty / 1000 : qty; }
-      const gTxt = (u === 'pcs' && gpp > 0) ? ' · ' + Math.round(qty * gpp * 10) / 10 + ' g' : '';   // total grams beside the pieces
+      const gTxt = gpp > 0 ? (eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) ? ' · ' + eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) : '') : '';   // grams beside pieces, pieces beside grams/kg
       return `<div class="lookup-row"><span>${it.name} (${qty} ${u}${gTxt})</span><span>${fmtBD(line)}</span></div>`;
     }).join('');
     const bbTxt = bbShort(d['Best Before']);
@@ -1019,7 +1021,7 @@
         const u = it.unit === 'g' ? 'g' : (it.unit === 'kg' ? 'kg' : 'pcs');
         const cat = it.extra ? null : (items || []).find(c => String(c['Chocolate Name']||'').trim().toLowerCase() === String(it.name).trim().toLowerCase());
         const gpp = cat ? Number(cat['Grams']) || 0 : 0;
-        const gTxt = (u === 'pcs' && gpp > 0) ? ' · ' + Math.round(qty * gpp * 10) / 10 + ' g' : '';
+        const gTxt = gpp > 0 ? (eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) ? ' · ' + eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) : '') : '';
         return [it.extra ? it.name + ' · Extra' : it.name + ' (' + qty + ' ' + u + gTxt + ')', fmtBD(qty * price)]; }),
       total: fmtBD(total), sum: sum };
     el.innerHTML = `
@@ -1211,7 +1213,8 @@ function updateDisplayLineHint(){
   const unitTxt = unit === 'g' ? price.toFixed(4).replace(/0+$/,'') + ' BD / g'
                 : unit === 'kg' ? price.toFixed(3) + ' BD / kg'
                 : price.toFixed(3) + ' BD / piece';
-  hint.textContent = unitTxt + ((unit !== 'kg' && perKg > 0) ? '  ·  ' + perKg.toFixed(3) + ' BD / kg' : '');
+  const eqH = eqUnitText(unit, qty, displayMatch['Packaging Type'] && String(displayMatch['Packaging Type']).trim().toLowerCase() !== 'piece' ? 0 : displayMatch['Grams']);
+  hint.textContent = unitTxt + ((unit !== 'kg' && perKg > 0) ? '  ·  ' + perKg.toFixed(3) + ' BD / kg' : '') + (eqH ? '  ·  ' + qty + ' ' + DISPLAY_UNIT_SHORT[unit] + ' = ' + eqH : '');
 }
 
 document.getElementById('displaySearch').addEventListener('input', function(){
@@ -1263,9 +1266,25 @@ document.getElementById('addDisplayExtraBtn').addEventListener('click', ()=>{
   renderDisplayCart();
 });
 
+// Pieces <-> weight: pieces show their grams, grams/kg show the matching number of pieces. unit: 'piece' | 'g' | 'kg'
+function eqUnitText(unit, qty, gpp){
+  qty = Number(qty) || 0; gpp = Number(gpp) || 0;
+  if(!(qty > 0) || !(gpp > 0)) return '';
+  if(unit === 'piece') return Math.round(qty * gpp * 10) / 10 + ' g';
+  const kg = unit === 'kg' ? qty : qty / 1000, pcs = kg * 1000 / gpp, r = Math.round(pcs);
+  return (Math.abs(pcs - r) < 0.01 ? r : '≈ ' + (Math.round(pcs * 10) / 10)) + ' pc' + (Math.abs(pcs - 1) < 0.01 ? '' : 's');
+}
+function eqForName(name){ const c = (items || []).find(x => String(x['Chocolate Name']||'').trim().toLowerCase() === String(name).trim().toLowerCase()); return c ? c : null; }
+function eqLine(name, unit, qty){
+  const c = eqForName(name);
+  if(!c || String(c['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece') return '';
+  return eqUnitText(unit, qty, c['Grams']);
+}
+
 function displayQtyText(c){
   const u = c.unit || 'piece';
-  return c.qty + ' ' + DISPLAY_UNIT_SHORT[u];
+  const eq = c.extra ? '' : eqLine(c.name, u, c.qty);
+  return c.qty + ' ' + DISPLAY_UNIT_SHORT[u] + (eq ? ' (' + eq + ')' : '');
 }
 
 function renderDisplayCart(skipAuto){
