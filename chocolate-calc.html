@@ -1500,13 +1500,22 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     else if(mode === 'grams') kg = n / 1000;
     else kg = n;
     const total = (selected.whole && mode === 'pieces') ? n * selected.pricePerKg : kg * selected.pricePerKg;
-    totalKgEl.textContent = kg.toFixed(3) + ' kg';
+    const eq = eqText(mode, kg, selected.grams, selected.whole);
+    totalKgEl.textContent = kg.toFixed(3) + ' kg' + (eq ? ' · ' + eq : '');
     totalAmountEl.textContent = fmtBD(total);
     currentKg = kg;
     currentTotal = total;
     addBtn.disabled = !(n > 0);
   }
 
+  // Pieces <-> weight: pieces mode shows the grams, grams/kg mode shows the matching number of pieces.
+  function eqText(m, kg, gpp, whole){
+    if(whole || !(kg > 0) || !(gpp > 0)) return '';
+    if(m === 'pieces') return Math.round(kg * 1000 * 10) / 10 + ' g';
+    const pcs = kg * 1000 / gpp, r = Math.round(pcs);
+    return (Math.abs(pcs - r) < 0.01 ? r : '≈ ' + (Math.round(pcs * 10) / 10)) + ' pc' + (Math.abs(pcs - 1) < 0.01 ? '' : 's');
+  }
+  function entryEq(e){ return eqText(e.mode, e.kg, e.gpp, e.whole); }
   function qtyLabel(n, m){
     if(m === 'pieces') return n + ' pc' + (n != 1 ? 's' : '');
     if(m === 'grams') return n + ' g';
@@ -1532,7 +1541,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       row.innerHTML = `
         <div>
           <div class="list-row-name">${entry.name}</div>
-          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)} · ${entry.kg.toFixed(3)} kg</div>
+          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)} · ${entry.kg.toFixed(3)} kg${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</div>
         </div>
         <div class="list-row-right">
           <div class="list-row-price">${fmtBD(entry.total)}</div>
@@ -1696,6 +1705,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       amount: parseFloat(amountEl.value),
       mode: mode,
       kg: currentKg,
+      gpp: selected.grams,
+      whole: !!selected.whole,
       total: currentTotal
     });
     renderCart();
@@ -1824,7 +1835,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         const cat = DATA.find(d => String(d.name).trim().toLowerCase() === String(it.name).trim().toLowerCase());
         const qty = Number(it.qty) || 0;
         const kg = mode === 'pieces' ? qty * ((cat && cat.grams) || 0) / 1000 : (mode === 'grams' ? qty / 1000 : qty);
-        cart.push({ name: it.name, code: cat ? cat.code : '', amount: qty, mode, kg, total: qty * (Number(it.price) || 0) });
+        cart.push({ name: it.name, code: cat ? cat.code : '', amount: qty, mode, kg, gpp: cat ? cat.grams : 0, whole: cat ? !!cat.whole : false, total: qty * (Number(it.price) || 0) });
       });
       renderCart();
       searchEl.value = ''; handleSearchTyping('');
@@ -1847,7 +1858,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${(entry.mode === 'pieces' && entry.kg > 0) ? ' · ' + Math.round(entry.kg * 1000) + ' g' : ''}</span></div>
+        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -1891,7 +1902,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${(entry.mode === 'pieces' && entry.kg > 0) ? ' · ' + Math.round(entry.kg * 1000) + ' g' : ''}</span></div>
+        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
