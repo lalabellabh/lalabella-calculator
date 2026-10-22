@@ -566,6 +566,58 @@ body>.wrap{position:relative;z-index:1}
 </div>
 
 
+<div id="editItemModal" style="display:none;position:fixed;inset:0;z-index:9400;background:rgba(58,37,48,.55);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;border:1px solid var(--line);width:min(520px,100%);margin:auto;padding:18px 18px 20px;box-shadow:0 18px 50px rgba(58,37,48,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="card-title" style="margin:0;">✏️ Edit Item</div>
+      <button type="button" id="editItemCloseBtn" aria-label="Close" style="border:none;background:var(--blush);width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer;color:var(--ink);">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-dim);margin-bottom:4px;">Changes apply to this item in <b>all branches</b>. Stock quantities are not changed here.</div>
+
+    <label>Item Name</label>
+    <input type="text" id="eiName" autocomplete="off">
+
+    <div class="grid-2">
+      <div><label>Type</label>
+        <select id="eiType"><option>Consumable</option><option>Fixed Asset</option></select></div>
+      <div><label>Category</label>
+        <select id="eiCategory"><option value="">— Select —</option><option>Packaging</option><option>Ribbon</option><option>Vase</option><option>Card &amp; Paper</option><option>Furniture</option><option>Display</option><option>Tools &amp; Equipment</option><option>Other</option></select></div>
+    </div>
+    <div class="grid-2">
+      <div><label>Unit</label>
+        <select id="eiUnit"><option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option></select></div>
+      <div><label>Price (BHD)</label>
+        <input type="number" id="eiPrice" min="0" step="0.001"></div>
+    </div>
+    <div class="grid-2">
+      <div><label>Min Stock</label>
+        <input type="number" id="eiMin" min="0" step="1" placeholder="Optional"></div>
+      <div><label>Item Code</label>
+        <input type="text" id="eiCode" autocomplete="off"></div>
+    </div>
+
+    <label>Photo</label>
+    <div style="display:flex; gap:8px;">
+      <label for="eiPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
+      <label for="eiPhotoFile" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">🖼️ Choose File</label>
+    </div>
+    <input type="file" id="eiPhotoCamera" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="eiPhotoFile" accept="image/*" style="display:none;">
+    <div id="eiPaste" tabindex="0" style="margin-top:8px; padding:10px; border:1.5px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--ink-dim); cursor:text; background:var(--blush);">Or click here and paste (Ctrl+V) a screenshot</div>
+    <div style="position:relative;display:inline-block;">
+      <img id="eiPhotoPreview" class="photo-preview" alt="Preview">
+      <button type="button" id="eiPhotoClearBtn" title="Remove photo" style="display:none;align-items:center;justify-content:center;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--rust);color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);">✕</button>
+    </div>
+    <div class="photo-hint" id="eiPhotoHint"></div>
+
+    <label>Notes</label>
+    <textarea id="eiNotes" rows="2" placeholder="Optional"></textarea>
+
+    <button class="btn" id="eiSaveBtn">Save Changes</button>
+    <div class="result" id="eiResult"></div>
+  </div>
+</div>
+
 <div id="scannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <video id="scannerVideo" autoplay playsinline muted style="width:100%;max-width:400px;border-radius:10px;"></video>
   <div style="color:#fff;font-size:12px;margin-top:10px;text-align:center;">Point the camera at the item's barcode</div>
@@ -1054,6 +1106,7 @@ body>.wrap{position:relative;z-index:1}
         <div id="bcCode" style="font-size:10px;color:var(--ink-dim);"></div>
       </div>
       <button class="btn btn-outline" id="printBarcodeBtn">🖨️ Print This Label</button>
+      <button class="btn" id="editItemOpenBtn" style="display:none;">✏️ Edit Item / Photo</button>
     </div>
 
     <div class="card">
@@ -1608,8 +1661,130 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     try{
       JsBarcode('#bcBarcode', String(item['Item Code']||'000000'), { format:'CODE128', width:1.3, height:32, displayValue:false });
     }catch(e){}
+    const eb = document.getElementById('editItemOpenBtn');
+    if(eb) eb.style.display = lbIsAdmin() ? 'block' : 'none';
     document.getElementById('barcodeCard').scrollIntoView({behavior:'smooth'});
   }
+
+  function lbIsAdmin(){
+    try{
+      const u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {};
+      return String(u.role || '') === 'Admin';
+    }catch(e){ return false; }
+  }
+
+  // ---------- Edit Item (Admin) ----------
+  let eiItem = null, eiPhotoData = null, eiRemovePhoto = false;
+  function eiSet(id, val){
+    const el = document.getElementById(id);
+    if(el.tagName === 'SELECT' && val && ![...el.options].some(o => o.value === val || o.text === val)){
+      const o = document.createElement('option'); o.textContent = val; el.appendChild(o);
+    }
+    el.value = (val === null || val === undefined) ? '' : val;
+  }
+  function eiShowPhoto(src){
+    const pv = document.getElementById('eiPhotoPreview');
+    if(src){ pv.src = src; pv.classList.add('show'); document.getElementById('eiPhotoClearBtn').style.display = 'flex'; }
+    else { pv.removeAttribute('src'); pv.classList.remove('show'); document.getElementById('eiPhotoClearBtn').style.display = 'none'; }
+  }
+  function openEditItem(){
+    if(!selectedBarcodeItem) return;
+    if(!lbIsAdmin()){ alert('Only an Admin can edit items.'); return; }
+    const it = eiItem = selectedBarcodeItem;
+    eiPhotoData = null; eiRemovePhoto = false;
+    eiSet('eiName', it['Item Name'] || '');
+    eiSet('eiType', it['Item Type'] || 'Consumable');
+    eiSet('eiCategory', it['Category'] || '');
+    eiSet('eiUnit', it['Unit'] || 'Piece');
+    eiSet('eiPrice', it['Price (BHD)'] === undefined || it['Price (BHD)'] === null ? '' : it['Price (BHD)']);
+    eiSet('eiMin', it['Min Stock'] === undefined || it['Min Stock'] === null ? '' : it['Min Stock']);
+    eiSet('eiCode', it['Item Code'] || '');
+    eiSet('eiNotes', it['Notes'] || '');
+    document.getElementById('eiPhotoHint').textContent = '';
+    ['eiPhotoCamera','eiPhotoFile'].forEach(id => document.getElementById(id).value = '');
+    eiShowPhoto(it['Photo Link (Drive)'] || '');
+    const r = document.getElementById('eiResult'); r.className = 'result'; r.textContent = '';
+    const b = document.getElementById('eiSaveBtn'); b.disabled = false; b.textContent = 'Save Changes';
+    document.getElementById('editItemModal').style.display = 'flex';
+  }
+  function closeEditItem(){ document.getElementById('editItemModal').style.display = 'none'; eiItem = null; }
+  async function eiHandleFile(file){
+    if(!file) return;
+    const hint = document.getElementById('eiPhotoHint');
+    hint.textContent = 'Compressing…';
+    try{
+      const c = await compressImage(file);
+      eiPhotoData = c; eiRemovePhoto = false;
+      eiShowPhoto(c);
+      hint.textContent = 'Compressed to ~' + Math.round((c.length * 0.75) / 1024) + ' KB';
+    }catch(e){ hint.textContent = 'Could not process this image.'; eiPhotoData = null; }
+  }
+  document.getElementById('editItemOpenBtn').addEventListener('click', openEditItem);
+  document.getElementById('editItemCloseBtn').addEventListener('click', closeEditItem);
+  document.getElementById('editItemModal').addEventListener('mousedown', e => { if(e.target.id === 'editItemModal') closeEditItem(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.getElementById('editItemModal').style.display === 'flex') closeEditItem(); });
+  document.getElementById('eiPhotoFile').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
+  document.getElementById('eiPhotoCamera').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
+  document.getElementById('eiPaste').addEventListener('paste', function(e){
+    const items = (e.clipboardData || window.clipboardData).items;
+    for(let i = 0; i < items.length; i++){
+      if(items[i].type.indexOf('image') !== -1){ eiHandleFile(items[i].getAsFile()); break; }
+    }
+  });
+  document.getElementById('eiPhotoClearBtn').addEventListener('click', function(){
+    // New unsaved photo -> discard it and fall back to the saved one. Otherwise remove the saved photo.
+    if(eiPhotoData){
+      eiPhotoData = null;
+      ['eiPhotoCamera','eiPhotoFile'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('eiPhotoHint').textContent = '';
+      eiShowPhoto(eiItem && eiItem['Photo Link (Drive)'] ? eiItem['Photo Link (Drive)'] : '');
+    } else {
+      eiRemovePhoto = true;
+      eiShowPhoto('');
+      document.getElementById('eiPhotoHint').textContent = 'Photo will be removed when you save.';
+    }
+  });
+  document.getElementById('eiSaveBtn').addEventListener('click', async function(){
+    if(!eiItem) return;
+    const btn = this, box = document.getElementById('eiResult');
+    const newName = document.getElementById('eiName').value.trim();
+    const code = document.getElementById('eiCode').value.trim();
+    const price = document.getElementById('eiPrice').value;
+    const fail = m => { box.className = 'result err show'; box.textContent = m; };
+    if(!newName) return fail('Item name is required.');
+    if(!code) return fail('Item code is required.');
+    if(price !== '' && Number(price) < 0) return fail('Price cannot be negative.');
+    btn.disabled = true; btn.textContent = 'Saving…'; box.className = 'result';
+    const oldName = eiItem['Item Name'];
+    const params = new URLSearchParams({
+      action: 'updateItemInventory',
+      itemName: oldName,
+      newName,
+      itemType: document.getElementById('eiType').value,
+      category: document.getElementById('eiCategory').value,
+      unit: document.getElementById('eiUnit').value,
+      price,
+      minStock: document.getElementById('eiMin').value,
+      itemCode: code,
+      notes: document.getElementById('eiNotes').value,
+      photoBase64: eiPhotoData || '',
+      removePhoto: (eiRemovePhoto && !eiPhotoData) ? '1' : ''
+    });
+    try{
+      const res = await (await fetch(API_URL, { method:'POST', body: params })).json();
+      if(res.error){ btn.disabled = false; btn.textContent = 'Save Changes'; return fail(res.error); }
+      box.className = 'result ok show';
+      box.textContent = '✓ Saved — ' + newName + ' updated.';
+      const keepCode = res.itemCode || code;
+      await loadItems(true);
+      const fresh = ITEMS.find(x => x['Item Code'] === keepCode);
+      if(fresh) showBarcode(fresh);
+      setTimeout(closeEditItem, 700);
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      fail('Could not reach the server. Check your connection.');
+    }
+  });
 
   document.getElementById('printBarcodeBtn').addEventListener('click', ()=>{
     if(!selectedBarcodeItem) return;
