@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -374,13 +375,39 @@
     renderHistory();
   });
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Initial Stock (Opening Balance)',
+      placeholder: 'item, batch…',
+      getDate: e => e['Receive Date'],
+      getText: e => [e['Chocolate Name'], e.ID, e['Batch No.'], e['Created By']].join(' '),
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:e => fmtDate(e['Receive Date'])},
+        {h:'ID', v:e => e.ID},
+        {h:'Item', v:e => e['Chocolate Name']},
+        {h:'Qty', v:e => (e['Qty Received'] ?? 0) + ' ' + (e.Unit || ''), right:true},
+        {h:'Price/Kg', v:e => e['Price / Kg'] != null && e['Price / Kg'] !== '' ? Number(e['Price / Kg']).toFixed(3) : '', right:true},
+        {h:'Batch', v:e => e['Batch No.']},
+        {h:'By', v:e => e['Created By']}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
-    const list = entries
-      .filter(e => e.Branch === currentBranch && e['Delivery Note No'] === 'INITIAL STOCK')
-      .sort((a,b) => new Date(b['Receive Date']) - new Date(a['Receive Date']));
+    const base = entries.filter(e => e.Branch === currentBranch && e['Delivery Note No'] === 'INITIAL STOCK');
     const el = document.getElementById('historyList');
-    if(list.length === 0){
+    if(base.length === 0){
       el.innerHTML = '<div class="empty-note">No opening balance logged yet for ' + currentBranch + '.</div>';
+      return;
+    }
+    const list = getHT().apply(base);
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">No entries match this filter.</div>';
       return;
     }
     el.innerHTML = list.map(e => `
