@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -309,11 +310,42 @@
     document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${s}"></option>`).join('');
   }
 
-  function renderHistory(list){
+  let lastTransfers = [];
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Flower Transfer',
+      placeholder: 'transfer no, flower, name…',
+      limit: 30,
+      getDate: t => t.Date,
+      getText: t => [t.Flower, t['Transfer No.'], t['From Branch'], t['To Branch'], t['Transferred By']].join(' '),
+      columns: [
+        {h:'Date', v:t => fmtDate(t.Date)},
+        {h:'Transfer No', v:t => t['Transfer No.']},
+        {h:'Flower', v:t => t.Flower},
+        {h:'From', v:t => t['From Branch']},
+        {h:'To', v:t => t['To Branch']},
+        {h:'Qty', v:t => t.Qty, right:true},
+        {h:'Value', v:t => Number(t.Value || 0).toFixed(3), right:true, sum:true},
+        {h:'By', v:t => t['Transferred By']}
+      ],
+      onChange: () => renderHistory(lastTransfers)
+    });
+    return _ht;
+  }
+  function renderHistory(allList){
     const el = document.getElementById('historyList');
     const filterBranch = document.getElementById('historyBranchFilter').value;
-    if(!list || list.length === 0){
+    lastTransfers = allList || [];
+    if(!allList || allList.length === 0){
       el.innerHTML = '<div class="empty-note">No transfers logged yet.</div>';
+      return;
+    }
+    const list = getHT().apply(allList);
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">No transfers match this filter.</div>';
       return;
     }
     el.innerHTML = list.map(t => {

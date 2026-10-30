@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -811,13 +812,40 @@ body{
     });
   }
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Supply Log — Invoices',
+      placeholder: 'invoice no, supplier…',
+      getDate: e => e.dateReceived,
+      getText: e => [e.invoiceNo, e.supplier, e.orderBy, e.remarks].join(' '),
+      selects: [{label:'Supplier', get:e => e.supplier}],
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:e => fmtDate(new Date(e.dateReceived))},
+        {h:'Invoice No', v:e => e.invoiceNo},
+        {h:'Supplier', v:e => e.supplier},
+        {h:'Qty', v:e => e.qty, right:true},
+        {h:'Order by', v:e => e.orderBy},
+        {h:'Amount', v:e => Number(e.subtotal || 0).toFixed(3), right:true, sum:true},
+        {h:'Remarks', v:e => e.remarks}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
-    const list = entries
-      .filter(e => e.branch === currentBranch)
-      .sort((a,b) => new Date(b.dateReceived) - new Date(a.dateReceived));
+    const branchRows = entries.filter(e => e.branch === currentBranch);
     const el = document.getElementById('historyList');
-    if(list.length === 0){
+    if(branchRows.length === 0){
       el.innerHTML = '<div class="empty-note">No invoices logged yet for ' + currentBranch + '.</div>';
+      return;
+    }
+    const list = getHT().apply(branchRows);
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">No invoices match this filter.</div>';
       return;
     }
     el.innerHTML = list.map(e => `
