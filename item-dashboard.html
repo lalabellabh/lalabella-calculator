@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -50,10 +51,10 @@
   .col{ flex:1; display:flex; flex-direction:column; gap:18px; min-width:0; }
   @media(max-width:800px){ .layout{ flex-direction:column; } }
 
-  .branch-tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .branch-tabs{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
   .branch-tab{ padding:11px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:11.5px; color:var(--ink-dim); cursor:pointer; border-radius:10px; }
   .branch-tab.active{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
-  @media(max-width:500px){ .branch-tabs{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:500px){ .branch-tabs{ grid-template-columns:1fr 1fr 1fr; } }
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
   .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
   input[type=text], input[type=number]{ width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); outline:none; margin-bottom:10px; box-sizing:border-box; }
@@ -149,6 +150,7 @@
     <button class="branch-tab" data-branch="ModaMall">ModaMall</button>
     <button class="branch-tab" data-branch="Hamala">Hamala</button>
     <button class="branch-tab" data-branch="Galali">Galali</button>
+    <button class="branch-tab" data-branch="Saudi">Saudi</button>
   </div>
 
   <div class="kpi-grid">
@@ -286,10 +288,42 @@
     renderStockList(filtered);
   });
 
+  const HIST_TYPE = { receive:'In', release:'Out', transfer:'Transfer' };
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Item Movement History',
+      placeholder: 'item name, code, name of person…',
+      getDate: h => h['Date'],
+      getText: h => [h['Item Name'], h['Item Code'], h['Branch'], h['From Branch'], h['To Branch'], h['Reason/Event'], h['Received By'], h['Released By'], h['Transferred By']].join(' '),
+      selects: [
+        {label:'Type', get:h => HIST_TYPE[h._type]},
+        {label:'Branch', get:h => h._type === 'transfer' ? null : h['Branch']}
+      ],
+      subtitle: () => currentBranch === 'All' ? 'All branches' : currentBranch,
+      columns: [
+        {h:'Date', v:h => fmtDate(h['Date'])},
+        {h:'Type', v:h => HIST_TYPE[h._type]},
+        {h:'Item', v:h => h['Item Name']},
+        {h:'Code', v:h => h['Item Code']},
+        {h:'Branch', v:h => h._type === 'transfer' ? (h['From Branch'] + ' → ' + h['To Branch']) : h['Branch']},
+        {h:'Qty', v:h => h._type === 'receive' ? '+' + h['Qty Received'] : h._type === 'release' ? '-' + h['Qty Released'] : h['Qty'], right:true},
+        {h:'By', v:h => h['Received By'] || h['Released By'] || h['Transferred By']},
+        {h:'Reason', v:h => h['Reason/Event']}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
     const el = document.getElementById('historyList');
     if(!ALL_HISTORY.length){ el.innerHTML = '<div class="empty">No history yet.</div>'; return; }
-    el.innerHTML = ALL_HISTORY.map((h, i) => {
+    const shownHist = getHT().apply(ALL_HISTORY);
+    if(!shownHist.length){ el.innerHTML = '<div class="empty">No entries match this filter.</div>'; return; }
+    el.innerHTML = shownHist.map((h) => {
+      const i = ALL_HISTORY.indexOf(h);
       const isReceive = h._type === 'receive';
       const isTransfer = h._type === 'transfer';
       let badgeLabel, qty, meta, isEditable;

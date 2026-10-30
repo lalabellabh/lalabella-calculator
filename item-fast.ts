@@ -210,7 +210,7 @@ async function getItemHistory(branchFilter: string) {
     entries.push({ _type: 'transfer', _row: r.id, Date: r.transferred_at, 'Item Code': r.item_code, 'Item Name': r.item_name, 'From Branch': r.from_branch, 'To Branch': r.to_branch, Qty: r.qty, 'Transferred By': r.transferred_by });
   });
   entries.sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
-  return entries.slice(0, 100);
+  return entries.slice(0, 1000);
 }
 
 // ---------------------------------------------------------------
