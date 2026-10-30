@@ -24,6 +24,18 @@ async function sbGet(table: string, query: string) {
   if (!res.ok) throw new Error(`db ${res.status}: ${(await res.text()).slice(0, 300)}`);
   return res.json();
 }
+// PostgREST returns at most 1000 rows per request. For tables that grow every day this reads them all, page by page (query must include a stable order).
+async function sbGetAll(table: string, query: string) {
+  const out: any[] = [];
+  for (let off = 0; ; off += 1000) {
+    const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}&limit=1000&offset=${off}`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } });
+    if (!res.ok) throw new Error(`db ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const part = await res.json();
+    out.push(...part);
+    if (part.length < 1000) break;
+  }
+  return out;
+}
 async function sbPost(table: string, rows: unknown[]) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
@@ -490,7 +502,8 @@ async function getWeeklyBudget(p: Record<string, any>) {
   const branch = p.branch;
   const budgetRows = await sbGet('flower_budgets', `select=*&branch=eq.${encodeURIComponent(branch)}`);
   const weeklyLimit = budgetRows.length ? (Number(budgetRows[0].weekly_budget) || 350) : 350;
-  const now = new Date(); const day = now.getDay();
+  const nowBH = new Date(Date.now() + 3 * 3600 * 1000);
+  const now = new Date(Date.UTC(nowBH.getUTCFullYear(), nowBH.getUTCMonth(), nowBH.getUTCDate())); const day = now.getDay();
   const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(now.getDate() - day);
   const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999);
   const dbRows = await sbGet('flower_database', `select=amount,entry_date&branch=eq.${encodeURIComponent(branch)}`);
@@ -506,22 +519,36 @@ async function getFlowerDashboard(selBranch: string) {
   const branches = ['ModaMall', 'Hamala', 'Galali'];
   const activeBranches = selBranch === 'All' ? branches : [selBranch];
   const [dbRows, itemRows, histRows, transferRows, budgetRows, rateRows, fulfillmentRows] = await Promise.all([
-    sbGet('flower_database', 'select=*'), sbGet('flower_item', 'select=*&status=eq.Active'), sbGet('flower_stock_history', 'select=*'),
-    sbGet('flower_transfer_history', 'select=*'), sbGet('flower_budgets', 'select=*'), sbGet('flower_rate_change_history', 'select=*'),
-    sbGet('flower_arrangement_fulfillments', 'select=*'),
+    sbGetAll('flower_database', 'select=*&order=id.asc'), sbGet('flower_item', 'select=*&status=eq.Active'), sbGetAll('flower_stock_history', 'select=*&order=id.asc'),
+    sbGetAll('flower_transfer_history', 'select=*&order=id.asc'), sbGet('flower_budgets', 'select=*'), sbGet('flower_rate_change_history', 'select=*'),
+    sbGetAll('flower_arrangement_fulfillments', 'select=*&order=id.asc'),
   ]);
   const dbFlowerRows = dbRows.filter((r: any) => r.type !== 'Supply');
   const flowerMaster: Record<string, { legacyRate: number; minStock: number | null; unit: string }> = {};
   itemRows.forEach((r: any) => { const name = String(r.flower_name || '').trim(); const origin = String(r.origin || '').trim(); if (!name) return; if (origin === 'Legacy/Unknown') flowerMaster[name] = { legacyRate: Number(r.rate) || 0, minStock: r.min_stock === null ? null : Number(r.min_stock), unit: r.unit || '' }; else if (origin === 'Holland' && !flowerMaster[name]) flowerMaster[name] = { legacyRate: Number(r.rate) || 0, minStock: r.min_stock === null ? null : Number(r.min_stock), unit: r.unit || '' }; });
   const distinctFlowerCount = Object.keys(flowerMaster).length;
-  const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const { start: weekStart, end: weekEnd } = getWeekRange(now);
+  const now = new Date();
+  // 'today' / this week are Bahrain (UTC+3) days, not the server's UTC day.
+  const nowBH = new Date(Date.now() + 3 * 3600 * 1000);
+  const today = new Date(Date.UTC(nowBH.getUTCFullYear(), nowBH.getUTCMonth(), nowBH.getUTCDate()));
+  const { start: weekStart, end: weekEnd } = getWeekRange(today);
   const lastConsolidatedIndex: Record<string, { found: boolean; lastDate: Date; qty: number }> = {};
   histRows.forEach((row: any) => { if (String(row.item_code || '').trim() !== 'CONSOLIDATED') return; const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); if (!branch || !flower) return; const d = row.count_date ? new Date(row.count_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const key = branch + '|' + flower; const prev = lastConsolidatedIndex[key]; if (!prev || d > prev.lastDate) lastConsolidatedIndex[key] = { found: true, lastDate: d, qty: Number(row.physical_count) || 0 }; });
   const purchasedIndex: Record<string, number> = {}, purchasedCostIndex: Record<string, number> = {};
   dbFlowerRows.forEach((row: any) => { const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); if (!branch || !flower || activeBranches.indexOf(branch) === -1) return; const d = row.entry_date ? new Date(row.entry_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const key = branch + '|' + flower; const last = lastConsolidatedIndex[key]; const fromDate = last ? last.lastDate : new Date(0); if (!(d > fromDate && d <= now)) return; const qty = Number(row.qty) || 0; const stockQty = getStockEquivalent(qty, row.unit, row.stems_per_bunch); const rate = Number(row.rate) || 0; const companyCost = qty * rate * 3 * 1.10; purchasedIndex[key] = (purchasedIndex[key] || 0) + stockQty; purchasedCostIndex[key] = (purchasedCostIndex[key] || 0) + companyCost; });
   const transferIndex: Record<string, { In: number; Out: number }> = {};
   transferRows.forEach((row: any) => { const d = row.transfer_date ? new Date(row.transfer_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const flower = String(row.flower_name || '').trim(); const qty = Number(row.qty) || 0; if (!flower || !qty) return; const toBranch = String(row.to_branch || '').trim(); if (toBranch && activeBranches.indexOf(toBranch) !== -1) { const key = toBranch + '|' + flower; const last = lastConsolidatedIndex[key]; if (d > (last ? last.lastDate : new Date(0))) { transferIndex[key] = transferIndex[key] || { In: 0, Out: 0 }; transferIndex[key].In += qty; } } const fromBranch = String(row.from_branch || '').trim(); if (fromBranch && activeBranches.indexOf(fromBranch) !== -1) { const key = fromBranch + '|' + flower; const last = lastConsolidatedIndex[key]; if (d > (last ? last.lastDate : new Date(0))) { transferIndex[key] = transferIndex[key] || { In: 0, Out: 0 }; transferIndex[key].Out += qty; } } });
+  // Transfers in the selected scope (a transfer counts once even if both its branches are in scope), by transfer number.
+  const trTodaySet = new Set<string>(), trWeekSet = new Set<string>();
+  let lastTransfer: any = null, lastTransferDate: Date | null = null;
+  transferRows.forEach((row: any) => {
+    const d = row.transfer_date ? new Date(row.transfer_date) : null; if (!d || isNaN(d.getTime())) return;
+    const inScope = activeBranches.indexOf(String(row.to_branch || '').trim()) !== -1 || activeBranches.indexOf(String(row.from_branch || '').trim()) !== -1; if (!inScope) return;
+    const no = String(row.transfer_no || row.id);
+    if (d.getTime() === today.getTime()) trTodaySet.add(no);
+    if (d >= weekStart && d <= weekEnd) trWeekSet.add(no);
+    if (d <= today && (!lastTransferDate || d > lastTransferDate)) { lastTransferDate = d; lastTransfer = { Date: row.transfer_date, Flower: row.flower_name, Qty: row.qty, From: row.from_branch, To: row.to_branch }; }
+  });
   const fulfillmentIndex: Record<string, number> = {};
   fulfillmentRows.forEach((row: any) => { const d = row.fulfilled_date ? new Date(row.fulfilled_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); const qty = Number(row.qty) || 0; if (!branch || !flower || !qty || activeBranches.indexOf(branch) === -1) return; const key = branch + '|' + flower; const last = lastConsolidatedIndex[key]; if (d > (last ? last.lastDate : new Date(0))) fulfillmentIndex[key] = (fulfillmentIndex[key] || 0) + qty; });
   const availableStockCache: Record<string, number> = {};
@@ -557,9 +584,9 @@ async function getFlowerDashboard(selBranch: string) {
   const lowStockList: any[] = [];
   activeBranches.forEach(b => { Object.keys(flowerMaster).forEach(name => { const minStock = flowerMaster[name].minStock; if (minStock === null || minStock <= 0) return; const qty = availableStock(b, name); if (qty < minStock) lowStockList.push({ Flower: name, Branch: b, AvailableQty: qty, MinStock: minStock }); }); });
   lowStockList.sort((a, b) => (a.AvailableQty - a.MinStock) - (b.AvailableQty - b.MinStock));
-  return { branch: selBranch, topSummary: { currentAvailableFlowers, newReceivedThisWeekQty, companyInventoryValue, currentInventoryCost, standardX3Reference, todayPurchases, todaysTransfers: 0, weeklyBudget },
-    quickStats: { flowersAvailable: currentAvailableFlowers, purchasedThisWeek: newReceivedThisWeekQty, transferredThisWeek: 0, usedThisWeek: usedThisWeekQty, usedCostThisWeek, wastedThisWeek: wastedThisWeekQty, wastedCostThisWeek, currentInventoryValue: companyInventoryValue },
-    lastActivity: { lastPurchase, lastStockCount, lastTransfer: null }, branchSummary, lowStockList, pendingApprovals, pendingApprovalsCount, distinctFlowerCount, recentReceiving: recentReceivingTop, itemStockLevels };
+  return { branch: selBranch, topSummary: { currentAvailableFlowers, newReceivedThisWeekQty, companyInventoryValue, currentInventoryCost, standardX3Reference, todayPurchases, todaysTransfers: trTodaySet.size, weeklyBudget },
+    quickStats: { flowersAvailable: currentAvailableFlowers, purchasedThisWeek: newReceivedThisWeekQty, transferredThisWeek: trWeekSet.size, usedThisWeek: usedThisWeekQty, usedCostThisWeek, wastedThisWeek: wastedThisWeekQty, wastedCostThisWeek, currentInventoryValue: companyInventoryValue },
+    lastActivity: { lastPurchase, lastStockCount, lastTransfer }, branchSummary, lowStockList, pendingApprovals, pendingApprovalsCount, distinctFlowerCount, recentReceiving: recentReceivingTop, itemStockLevels };
 }
 
 // ---------------------------------------------------------------
