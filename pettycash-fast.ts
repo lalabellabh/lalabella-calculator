@@ -1,4 +1,6 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v6
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v7
+// v7 (Oct 2026): setPettyCashBalance (ADMIN ONLY) — set the money currently inside the petty cash. Saved as a visible
+//                'Balance adjustment' entry (top-up or expense of the difference) so history and totals stay consistent.
 // v6 (Oct 2026): editPettyCashEntry (ADMIN ONLY) — fix the date / purpose / amount / type of a saved entry (back-dating).
 //                dates are validated as YYYY-MM-DD on add and edit.
 // v5 (Oct 2026): setting the petty cash target is ADMIN ONLY too.
@@ -155,6 +157,24 @@ async function handleEditPettyCashEntry(p: any, user: any) {
   await sbPatch('petty_cash_transactions', `id=eq.${id}`, fields);
   return { success: true };
 }
+async function handleSetPettyCashBalance(p: any, user: any) {
+  if (!isAdmin(user)) return { error: 'Only an Admin can set the balance. Please ask an Admin.' };
+  const branch = p.branch;
+  const newBalance = Number(p.balance);
+  if (!branch || branch === 'All') return { error: 'Please select a specific branch.' };
+  if (p.balance === undefined || p.balance === '' || isNaN(newBalance) || newBalance < 0) return { error: 'Invalid balance.' };
+  const cur = await handleGetPettyCash({ branch });
+  const current = Number(cur.balance) || 0;
+  const diff = Math.round((newBalance - current) * 1000) / 1000;
+  if (diff === 0) return { success: true, unchanged: true, balance: current };
+  const entryDate = p.date && validDate(String(p.date)) ? String(p.date) : new Date().toISOString().slice(0, 10);
+  await sbPost('petty_cash_transactions', [{
+    branch, entry_date: entryDate,
+    purpose: `Balance adjustment (${current.toFixed(3)} → ${newBalance.toFixed(3)})`,
+    amount: Math.abs(diff), entry_type: diff > 0 ? 'topup' : 'expense', entered_by: String(p.enteredBy || '').slice(0, 80),
+  }]);
+  return { success: true, previous: current, balance: newBalance, adjustment: diff };
+}
 async function handleDeletePettyCashEntry(p: any, user: any) {
   if (!isAdmin(user)) return { error: ADMIN_ONLY_MSG };
   const id = Number(p.id);
@@ -239,6 +259,7 @@ Deno.serve(async (req) => {
     if (action === 'getPettyCash') return json(await handleGetPettyCash(p));
     if (action === 'addPettyCashEntry') return json(await handleAddPettyCashEntry(p));
     if (action === 'editPettyCashEntry') return json(await handleEditPettyCashEntry(p, user));
+    if (action === 'setPettyCashBalance') return json(await handleSetPettyCashBalance(p, user));
     if (action === 'deletePettyCashEntry') return json(await handleDeletePettyCashEntry(p, user));
     if (action === 'setPettyCashTarget') return json(await handleSetPettyCashTarget(p, user));
     if (action === 'getCashCounts') return json(await handleGetCashCounts(p));
