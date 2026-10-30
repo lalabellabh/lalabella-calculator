@@ -1501,7 +1501,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     else kg = n;
     const total = (selected.whole && mode === 'pieces') ? n * selected.pricePerKg : kg * selected.pricePerKg;
     const eq = eqText(mode, kg, selected.grams, selected.whole);
-    totalKgEl.textContent = kg.toFixed(3) + ' kg' + (eq ? ' · ' + eq : '');
+    totalKgEl.textContent = (mode === 'pieces' && eq) ? eq : kg.toFixed(3) + ' kg' + (eq ? ' · ' + eq : '');   // pieces: show the weight once (grams), not kg + grams
     totalAmountEl.textContent = fmtBD(total);
     currentKg = kg;
     currentTotal = total;
@@ -1541,7 +1541,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       row.innerHTML = `
         <div>
           <div class="list-row-name">${entry.name}</div>
-          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)} · ${entry.kg.toFixed(3)} kg${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</div>
+          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)} · ${(entry.mode === 'pieces' && entryEq(entry)) ? entryEq(entry) : entry.kg.toFixed(3) + ' kg' + (entryEq(entry) ? ' · ' + entryEq(entry) : '')}</div>
         </div>
         <div class="list-row-right">
           <div class="list-row-price">${fmtBD(entry.total)}</div>
