@@ -261,7 +261,9 @@ async function processFlowerItem(item: any, ctx: any) {
 
   let approvalStatus = 'Approved';
   const compareRate = legacyRate !== null ? legacyRate : (existingRow ? Number(existingRow.rate) : null);
-  if (compareRate !== null && !isNaN(compareRate) && compareRate !== 0) approvalStatus = 'Pending Approval';
+  // Needs approval only when the suggested rate really differs from the current standard (legacy/holland) rate.
+  // Same rate (to 3 decimals) = nothing to approve.
+  if (compareRate !== null && !isNaN(compareRate) && compareRate !== 0 && Math.round(suggestedRate * 1000) !== Math.round(compareRate * 1000)) approvalStatus = 'Pending Approval';
 
   let finalRate: number;
   if (existingRow) {

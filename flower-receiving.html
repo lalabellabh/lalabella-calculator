@@ -835,7 +835,11 @@ body::after{
     // now — there's no more auto-approve-if-close-enough shortcut. Only
     // a truly first-ever entry (nothing at all to compare against)
     // goes straight to Approved.
-    if(existingRate !== null && existingRate !== 0){
+    if(existingRate !== null && existingRate !== 0 && Math.round(suggested*1000) === Math.round(existingRate*1000)){
+      preview.className = 'rate-preview approved';
+      statusEl.className = 'rate-status approved';
+      statusEl.textContent = '✓ Same as ' + existingRateSource + ' rate ' + fmtBD(existingRate) + ' — no approval needed';
+    } else if(existingRate !== null && existingRate !== 0){
       const diffPercent = Math.abs((suggested - existingRate) / existingRate) * 100;
       preview.className = 'rate-preview pending';
       statusEl.className = 'rate-status pending';
