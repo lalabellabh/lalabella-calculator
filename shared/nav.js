@@ -14,6 +14,7 @@
  *
  * ⚙️ SETTINGS (bottom of every menu, per device — saved in localStorage):
  *   - Appearance: Light / Dark / Auto (uses shared/theme.js)
+ *   - Look & feel: wallpaper, see-through boxes, glassy style, icon shape (shared/appearance.js, key "lbLook")
  *   - Edit Menu: hide/show, reorder, or add links to this module's section
  *     and to Quick Tools (key "lbMenuPrefs"). Admin-only links and the
  *     Position filter still apply on top of this.
@@ -29,6 +30,13 @@
  */
 (function () {
   const selfScript = document.currentScript;
+  // Wallpaper / see-through boxes / glassy style / icon shape (⚙️ Settings → Look & feel). See shared/appearance.js.
+  if (!window.LBLook && !document.querySelector('script[src="shared/appearance.js"]')) {
+    const ap = document.createElement('script');
+    ap.src = 'shared/appearance.js';
+    ap.onload = () => { try { if (document.getElementById('lbsetBody')) drawSettings(); } catch (e) {} };
+    (document.head || document.documentElement).appendChild(ap);
+  }
   // ---- Module menus (shown on pages of that module) ----
   const MODULES = {
     chocolate: { title: 'Chocolate Tools', home: 'index.html', homeLabel: 'Chocolate Home', items: [
@@ -176,7 +184,9 @@
   }
 
   let iconClass = '';
-  function icon_(i) { return iconClass ? '<span class="' + esc(iconClass) + '">' + i + '</span>' : i + ' '; }
+  // Icon shape (⚙️ Settings → Look & feel): circle / box icons wrap the emoji so shared/appearance.js can style them.
+  function iconShape_() { try { const o = JSON.parse(localStorage.getItem('lbLook') || '{}'); return o.icons === 'circle' || o.icons === 'square' ? o.icons : ''; } catch (e) { return ''; } }
+  function icon_(i) { return iconClass ? '<span class="' + esc(iconClass) + '">' + i + '</span>' : (iconShape_() ? '<span class="lb-ic">' + i + '</span>' : i + ' '); }
 
   function link(href, icon, label, extra) {
     const external = /^https?:/i.test(href);
@@ -568,6 +578,17 @@
       '.lbset-add select{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
       '.lbset-add button,.lbset-reset{border:0;background:var(--s-acc-soft);color:var(--s-acc);border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}',
       '.lbset-reset{background:none;padding:10px 0 0;font-size:12px;font-weight:600}',
+      '.lbset-walls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}',
+      '.lbset-wall{position:relative;aspect-ratio:16/10;border:2px solid var(--s-line);border-radius:10px;background:var(--s-card) center/cover no-repeat;color:var(--s-ink);font:inherit;font-size:11px;font-weight:700;cursor:pointer;padding:0;display:flex;align-items:flex-end;justify-content:flex-start;overflow:hidden}',
+      '.lbset-wall span{display:block;width:100%;padding:12px 6px 4px;background:linear-gradient(transparent,rgba(0,0,0,.55));color:#fff;text-align:left;text-shadow:0 1px 2px rgba(0,0,0,.5);font-size:10.5px}',
+      '.lbset-wall.none{align-items:center;justify-content:center;text-align:center;color:var(--s-dim)}',
+      '.lbset-wall.on{border-color:var(--s-acc);box-shadow:0 0 0 2px var(--s-acc-soft)}',
+      '.lbset-wall.on::after{content:"✓";position:absolute;top:4px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--s-acc);color:#fff;font-size:11px;line-height:18px;text-align:center}',
+      '.lbset-wall.add{border-style:dashed;align-items:center;justify-content:center;text-align:center;color:var(--s-acc);cursor:pointer}',
+      '.lbset-wallx{position:absolute;top:3px;left:3px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:11px;line-height:22px;padding:0;cursor:pointer;z-index:2}',
+      '.lbset-wallbox{position:relative}',
+      '.lbset-range{width:100%;accent-color:var(--s-acc);margin:6px 0 0}',
+      '.lbset-rl{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600}',
       '@media(max-width:600px){.lbset-back{align-items:flex-end;padding:0}.lbset{width:100%;border-radius:18px 18px 0 0;max-height:86vh;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}}',
       '@media print{.lbset-back{display:none!important}}'
     ].join('\n');
@@ -587,6 +608,33 @@
     drawSettings();
   }
 
+  let lookErr = '';
+  function lookHtml() {
+    const L = window.LBLook;
+    if (!L) return '';
+    const g = L.get(), pres = L.presets(), mine = L.walls();
+    let h = '<h4>Wallpaper</h4><div class="lbset-walls">';
+    h += '<button type="button" class="lbset-wall none' + (g.wall === 'off' ? ' on' : '') + '" data-wall="off">No wallpaper</button>';
+    pres.forEach(p => { h += '<button type="button" class="lbset-wall' + (g.wall === p.id ? ' on' : '') + '" data-wall="' + p.id + '" style="background-image:url(&quot;' + p.uri + '&quot;)"><span>' + esc(p.name) + '</span></button>'; });
+    mine.forEach((u, i) => {
+      h += '<div class="lbset-wallbox"><button type="button" class="lbset-wall' + (g.wall === 'u' + i ? ' on' : '') + '" data-wall="u' + i + '" style="background-image:url(&quot;' + u + '&quot;);width:100%"><span>My photo ' + (i + 1) + '</span></button>' +
+        '<button type="button" class="lbset-wallx" data-wallx="' + i + '" aria-label="Remove my photo ' + (i + 1) + '">✕</button></div>';
+    });
+    if (mine.length < L.maxWalls) h += '<label class="lbset-wall add">＋ Add my own<input type="file" accept="image/*" data-wallfile hidden></label>';
+    h += '</div>' + (lookErr ? '<div class="lbset-err">' + esc(lookErr) + '</div>' : '') +
+      '<div class="lbset-note">Pick one of the Lalabella designs or add your own photo (up to ' + L.maxWalls + '). Saved on this device only. The home page keeps its own background.</div>';
+    h += '<h4>Boxes &amp; icons</h4><div class="lbset-seg lbset-seg2">' +
+      '<button type="button" data-glass="on" class="' + (g.glass ? 'on' : '') + '">🪟 Glassy: On</button>' +
+      '<button type="button" data-glass="off" class="' + (g.glass ? '' : 'on') + '">Glassy: Off</button></div>' +
+      '<div class="lbset-rl" style="margin-top:12px"><span>See-through boxes</span><span id="lbsetAlphaVal">' + g.alpha + '%</span></div>' +
+      '<input class="lbset-range" type="range" min="0" max="70" step="5" value="' + g.alpha + '" data-alpha aria-label="Box transparency">' +
+      '<div class="lbset-note">0% = solid boxes. Higher = you see the wallpaper through them. Glassy adds a frosted blur.</div>' +
+      '<div class="lbset-rl" style="margin:12px 0 6px"><span>Icon shape</span></div><div class="lbset-seg">' +
+      [['plain', 'Default'], ['circle', '⭕ Circle'], ['square', '⬜ Box']].map(m => '<button type="button" data-icons="' + m[0] + '" class="' + (g.icons === m[0] ? 'on' : '') + '">' + m[1] + '</button>').join('') + '</div>' +
+      '<button type="button" class="lbset-reset" data-lookreset>↺ Reset look &amp; feel</button>';
+    return h;
+  }
+
   function drawSettings() {
     const box = document.getElementById('lbsetBody');
     if (!box) return;
@@ -598,6 +646,8 @@
     if (!T) h += '<div class="lbset-note">Theme file not loaded on this page.</div>';
     else if (T.isNativeDark()) h += '<div class="lbset-note">This page already has its own dark design, so it stays as is. Other pages follow your choice.</div>';
     else if (mode === 'auto') h += '<div class="lbset-note">Auto follows your phone or computer setting.</div>';
+
+    h += lookHtml();
 
     // Side dock on/off
     const dockOn = !dockOff_();
@@ -697,6 +747,12 @@
   function onSettingsClick(e) {
     const t = e.target.closest('button,input');
     if (!t) return;
+    if (t.type === 'range' || t.type === 'file') return;
+    if (t.dataset.wall) { lookErr = ''; window.LBLook.set({ wall: t.dataset.wall }); drawSettings(); return; }
+    if (t.dataset.wallx) { if (!confirm('Remove this photo?')) return; lookErr = ''; window.LBLook.removeWall(parseInt(t.dataset.wallx, 10)); drawSettings(); return; }
+    if (t.dataset.glass) { window.LBLook.set({ glass: t.dataset.glass === 'on' }); drawSettings(); return; }
+    if (t.dataset.icons) { window.LBLook.set({ icons: t.dataset.icons }); drawSettings(); return; }
+    if (t.hasAttribute('data-lookreset')) { if (!confirm('Reset wallpaper, boxes and icons to the default look?')) return; lookErr = ''; window.LBLook.reset(); drawSettings(); return; }
     if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
     if (t.dataset.chatmode) {
       const m = t.dataset.chatmode;
@@ -786,6 +842,22 @@
     document.body.appendChild(back);
     back.addEventListener('click', e => { if (e.target === back || e.target.closest('.lbset-x')) closeSettings(); });
     back.querySelector('.lbset').addEventListener('click', onSettingsClick);
+    back.querySelector('.lbset').addEventListener('input', e => {
+      if (e.target.hasAttribute && e.target.hasAttribute('data-alpha')) {
+        const v = parseInt(e.target.value, 10) || 0;
+        window.LBLook.set({ alpha: v });
+        const lb = document.getElementById('lbsetAlphaVal'); if (lb) lb.textContent = v + '%';
+      }
+    });
+    back.querySelector('.lbset').addEventListener('change', e => {
+      if (e.target.hasAttribute && e.target.hasAttribute('data-wallfile')) {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        lookErr = '';
+        window.LBLook.addWall(f).then(i => { window.LBLook.set({ wall: 'u' + i }); drawSettings(); })
+          .catch(err => { lookErr = (err && err.message) || 'Could not add that picture.'; drawSettings(); });
+      }
+    });
     back.querySelector('.lbset').addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
       if (e.target.id === 'lbsetRen' && renaming) { e.preventDefault(); saveRename(renaming); }
@@ -804,6 +876,7 @@
   // admin-only links would stay hidden until a full reload.
   window.addEventListener('lb:user-changed', renderAll);
   window.addEventListener('lb:theme-changed', drawSettings);
+  window.addEventListener('lb:look-changed', renderAll);
   window.addEventListener('storage', e => { if (e.key === 'lalabellaUser' || e.key === PREFS_KEY) renderAll(); });
 
   // Joyboy floating chat bubble — loaded here, once, instead of a
