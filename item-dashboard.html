@@ -131,7 +131,7 @@
     </section>
 
     <section class="panel glass p-al">
-      <div class="ph"><h2>📉 Low Stock</h2><span class="cnt" id="lowCnt">0</span></div>
+      <div class="ph"><h2>📉 Low Stock</h2><span class="cnt" id="lowCnt">0</span><select class="search" id="lowCat" style="width:auto;margin:0 0 0 auto;padding:5px 10px;font-size:12px" title="Filter by category"><option value="">All categories</option></select></div>
       <div class="scroll" id="alScroll"></div>
     </section>
 
@@ -182,7 +182,7 @@
   const empty = t => `<div class="empty">${t}</div>`;
 
   /* ---------- state that survives re-renders ---------- */
-  const ui = { branch:'All', q:'' };
+  const ui = { branch:'All', q:'', cat:'' };
   let dash = null, ALL_HISTORY = [];
 
   function keepScroll(ids, fn){
@@ -278,7 +278,7 @@
     const all = dash ? (dash.allItemsList || []) : [];
     const list = ui.q ? all.filter(i => String(i.name||'').toLowerCase().includes(ui.q) || String(i.code||'').toLowerCase().includes(ui.q)) : all;
     document.getElementById('stCnt').textContent = ui.q ? list.length + ' / ' + all.length : String(all.length);
-    document.getElementById('stScroll').innerHTML = list.length ? list.map(it => `<div class="row"><div class="nm">${esc(it.name)}<div class="mt">${esc(it.type||'')} · ${esc(it.code||'')}</div></div>
+    document.getElementById('stScroll').innerHTML = list.length ? list.map(it => `<div class="row"><div class="nm">${esc(it.name)}<div class="mt">${esc(it.type||'')}${it.category ? ' · ' + esc(it.category) : ''} · ${esc(it.code||'')}</div></div>
       <div class="rt ${Number(it.qty) < 0 ? 'neg' : ''}">${fmtNum(it.qty)} ${esc(it.unit||'')}</div></div>`).join('') : empty(ui.q ? 'No match.' : 'No items found.');
   }
 
@@ -305,11 +305,18 @@
   }
 
   function renderLow(){
-    const low = dash.lowStockList || [];
-    document.getElementById('lowCnt').textContent = String(low.length);
-    document.getElementById('alScroll').innerHTML = low.length ? low.map(it => `<div class="row"><div class="nm">${esc(it.name)}<div class="mt">${esc(it.code||'')}${it.branch ? ' · ' + esc(it.branch) : ''}</div></div>
-      <div class="rt neg">${fmtNum(it.qty)} / ${fmtNum(it.minStock)} ${esc(it.unit||'')}</div></div>`).join('') : empty('No low stock items right now.');
+    const all = dash.lowStockList || [];
+    // category picker is built from the low-stock items themselves; keeps the chosen one across refreshes
+    const cats = [...new Set(all.map(it => it.category || 'No category'))].sort((a,b)=>a.localeCompare(b));
+    if(ui.cat && cats.indexOf(ui.cat) === -1) ui.cat = '';
+    const sel = document.getElementById('lowCat');
+    sel.innerHTML = '<option value="">All categories (' + all.length + ')</option>' + cats.map(c => `<option value="${esc(c)}"${c === ui.cat ? ' selected' : ''}>${esc(c)} (${all.filter(it => (it.category || 'No category') === c).length})</option>`).join('');
+    const low = ui.cat ? all.filter(it => (it.category || 'No category') === ui.cat) : all;
+    document.getElementById('lowCnt').textContent = ui.cat ? low.length + ' / ' + all.length : String(all.length);
+    document.getElementById('alScroll').innerHTML = low.length ? low.map(it => `<div class="row"><div class="nm">${esc(it.name)}<div class="mt">${it.category ? '<b>' + esc(it.category) + '</b> · ' : ''}${esc(it.code||'')}${it.branch ? ' · ' + esc(it.branch) : ''}</div></div>
+      <div class="rt neg">${fmtNum(it.qty)} / ${fmtNum(it.minStock)} ${esc(it.unit||'')}</div></div>`).join('') : empty(ui.cat ? 'Nothing low in this category.' : 'No low stock items right now.');
   }
+  document.getElementById('lowCat').addEventListener('change', function(){ ui.cat = this.value; keepScroll(['alScroll'], renderLow); });
 
   /* ---------- history (filter / print bar from shared/history-tools.js) ---------- */
   const HIST_TYPE = { receive:'In', release:'Out', transfer:'Transfer' };

@@ -199,9 +199,9 @@ async function getItemDashboard(branchFilterRaw: string) {
     const name = String(r.item_name || '').trim(); if (!name) return;
     const qty = Number(r.qty) || 0, price = Number(r.price_bhd) || 0;
     const hasMinStock = r.min_stock !== null && r.min_stock !== undefined && r.min_stock !== '';
-    if (!byName[name]) byName[name] = { name, code: r.item_code, type: String(r.item_type || 'Consumable').trim(), qty: 0, unit: r.unit, price, photo: resolvePhotoUrl(r.photo_link) };
+    if (!byName[name]) byName[name] = { name, code: r.item_code, type: String(r.item_type || 'Consumable').trim(), category: String(r.category || '').trim(), qty: 0, unit: r.unit, price, photo: resolvePhotoUrl(r.photo_link) };
     byName[name].qty += qty;
-    if (hasMinStock && qty < Number(r.min_stock)) lowStockList.push({ name, code: r.item_code, qty, unit: r.unit, minStock: Number(r.min_stock), branch: r.branch });
+    if (hasMinStock && qty < Number(r.min_stock)) lowStockList.push({ name, code: r.item_code, qty, unit: r.unit, minStock: Number(r.min_stock), branch: r.branch, category: String(r.category || '').trim() });
   });
   const allItemsList = Object.values(byName).sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)));
   let totalItems = 0, consumableCount = 0, fixedAssetCount = 0, totalInventoryValue = 0;
