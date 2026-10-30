@@ -148,6 +148,10 @@
       'html[data-lb-icons="circle"] :is(' + ICONS_BARE + '),html[data-lb-icons="square"] :is(' + ICONS_BARE + '){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:1.9em;height:1.9em;line-height:1;flex:0 0 auto;vertical-align:middle;background:rgba(158,47,74,.11)}',
       'html[data-lb-icons="circle"][data-lb-theme="dark"] :is(' + ICONS_BARE + '),html[data-lb-icons="square"][data-lb-theme="dark"] :is(' + ICONS_BARE + '){background:rgba(255,255,255,.12)}',
       '.lb-ic{margin-right:.55em;font-size:.95em}',
+      // menu shortcut tiles (Chocolate / Flower / Item Inv.): equal width, icon centred with room above it
+      'html[data-lb-icons] :is(.nav-hub-grid,.choco-hub-grid,.hub-grid,.hub){grid-template-columns:repeat(3,minmax(0,1fr))}',
+      'html[data-lb-icons] a:has(>.hub-icon){padding-top:9px;padding-bottom:9px;gap:4px;justify-content:center;align-items:center}',
+      'html[data-lb-icons] a>.hub-icon{width:1.75em;height:1.75em;margin:0 auto}',
       '@media print{html.lb-wall{background:none!important}}'
     ].join('\n');
     document.head.appendChild(s);
