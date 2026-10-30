@@ -29,6 +29,18 @@ async function sbGet(table: string, query: string) {
   if (!res.ok) throw new Error(`db ${res.status}: ${(await res.text()).slice(0, 300)}`);
   return res.json();
 }
+// PostgREST returns at most 1000 rows per request: read page by page (query needs a stable order).
+async function sbGetAll(table: string, query: string) {
+  const out: any[] = [];
+  for (let off = 0; ; off += 1000) {
+    const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}&limit=1000&offset=${off}`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } });
+    if (!res.ok) throw new Error(`db ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const part = await res.json();
+    out.push(...part);
+    if (part.length < 1000) break;
+  }
+  return out;
+}
 async function sbPost(table: string, rows: unknown[]) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
@@ -176,7 +188,9 @@ async function getItemInventory(branchFilter: string) {
 }
 async function getItemDashboard(branchFilterRaw: string) {
   const branchFilter = branchFilterRaw || 'All';
-  let rows = await sbGet('item_inventory', 'select=*');
+  let rows = await sbGetAll('item_inventory', 'select=*&order=id.asc');
+  const branchAgg: Record<string, any> = {};
+  rows.forEach((r: any) => { const b = String(r.branch || '').trim(); if (!b) return; const a = branchAgg[b] = branchAgg[b] || { branch: b, items: 0, qty: 0, value: 0, low: 0 }; const q = Number(r.qty) || 0; a.items++; a.qty += q; a.value += q * (Number(r.price_bhd) || 0); if (r.min_stock !== null && r.min_stock !== undefined && r.min_stock !== '' && q < Number(r.min_stock)) a.low++; });
   if (branchFilter !== 'All') rows = rows.filter((r: any) => String(r.branch || '').trim().toLowerCase() === branchFilter.trim().toLowerCase());
 
   const byName: Record<string, any> = {};
@@ -198,14 +212,14 @@ async function getItemDashboard(branchFilterRaw: string) {
     .filter((r: any) => branchFilter === 'All' || String(r.branch || '').trim().toLowerCase() === branchFilter.trim().toLowerCase());
   const recentReleases = histRows.map((r: any) => ({ Date: r.released_at, 'Item Code': r.item_code, 'Item Name': r.item_name, Branch: r.branch, 'Qty Released': r.qty_released, 'Reason/Event': r.reason_event, 'Released By': r.released_by, 'Photo Link': resolvePhotoUrl(r.photo_link) }));
 
-  return { branch: branchFilter, totalItems, consumableCount, fixedAssetCount, totalInventoryValue, lowStockList, allItemsList, recentReleases };
+  return { branch: branchFilter, totalItems, consumableCount, fixedAssetCount, totalInventoryValue, lowStockList, allItemsList, recentReleases, branchSummary: Object.values(branchAgg) };
 }
 async function getItemHistory(branchFilter: string) {
   const entries: any[] = [];
   const matches = (b: string) => !branchFilter || branchFilter === 'All' || String(b || '').trim().toLowerCase() === branchFilter.trim().toLowerCase();
-  (await sbGet('item_receiving_history', 'select=*')).forEach((r: any) => { if (!matches(r.branch)) return; entries.push({ _type: 'receive', _row: r.id, Date: r.received_at, 'Item Code': r.item_code, 'Item Name': r.item_name, Branch: r.branch, 'Qty Received': r.qty_received, 'Received By': r.received_by, 'Photo Link': resolvePhotoUrl(r.photo_link) }); });
-  (await sbGet('item_release_history', 'select=*')).forEach((r: any) => { if (!matches(r.branch)) return; entries.push({ _type: 'release', _row: r.id, Date: r.released_at, 'Item Code': r.item_code, 'Item Name': r.item_name, Branch: r.branch, 'Qty Released': r.qty_released, 'Reason/Event': r.reason_event, 'Released By': r.released_by, 'Photo Link': resolvePhotoUrl(r.photo_link) }); });
-  (await sbGet('item_transfer_history', 'select=*')).forEach((r: any) => {
+  (await sbGetAll('item_receiving_history', 'select=*&order=id.asc')).forEach((r: any) => { if (!matches(r.branch)) return; entries.push({ _type: 'receive', _row: r.id, Date: r.received_at, 'Item Code': r.item_code, 'Item Name': r.item_name, Branch: r.branch, 'Qty Received': r.qty_received, 'Received By': r.received_by, 'Photo Link': resolvePhotoUrl(r.photo_link) }); });
+  (await sbGetAll('item_release_history', 'select=*&order=id.asc')).forEach((r: any) => { if (!matches(r.branch)) return; entries.push({ _type: 'release', _row: r.id, Date: r.released_at, 'Item Code': r.item_code, 'Item Name': r.item_name, Branch: r.branch, 'Qty Released': r.qty_released, 'Reason/Event': r.reason_event, 'Released By': r.released_by, 'Photo Link': resolvePhotoUrl(r.photo_link) }); });
+  (await sbGetAll('item_transfer_history', 'select=*&order=id.asc')).forEach((r: any) => {
     if (branchFilter && branchFilter !== 'All') { const mf = String(r.from_branch || '').trim().toLowerCase() === branchFilter.trim().toLowerCase(); const mt = String(r.to_branch || '').trim().toLowerCase() === branchFilter.trim().toLowerCase(); if (!mf && !mt) return; }
     entries.push({ _type: 'transfer', _row: r.id, Date: r.transferred_at, 'Item Code': r.item_code, 'Item Name': r.item_name, 'From Branch': r.from_branch, 'To Branch': r.to_branch, Qty: r.qty, 'Transferred By': r.transferred_by });
   });
