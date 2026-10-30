@@ -18,8 +18,8 @@
  * buttons, banners, pop-ups and anything fixed on screen are left alone.
  * Everything is undone when the setting goes back to 0 / None, and while printing.
  *
- * Pages that are already full dark designs (home page, Nova, chocolate calculator)
- * keep their own background; they only get the icon shape.
+ * Pages that are always dark (Nova, chocolate calculator) keep their own background;
+ * they only get the icon shape. The home page is included (it has its own Light/Dark switch).
  *
  * Page code can use: LBLook.get(), LBLook.set({...}), LBLook.reset(),
  * and listen for the 'lb:look-changed' event.
@@ -123,8 +123,11 @@
     return { r: +m[1], g: +m[2], b: +m[3], a: a };
   }
   function lightness(c) { return (Math.max(c.r, c.g, c.b) + Math.min(c.r, c.g, c.b)) / 510; }
-  function nativeDark() { return !!(window.LBTheme && window.LBTheme.isNativeDark && window.LBTheme.isNativeDark()); }
-  function themeDark() { return root.getAttribute('data-lb-theme') === 'dark'; }
+  // Pages that are always dark (Nova, chocolate calculator) keep their own background. The HOME page is included:
+  // it has its own Light/Dark switch (class idx-dark-ui) instead of the shared one.
+  var isHome = /^(index\.html)?$/i.test(location.pathname.split('/').pop() || '');
+  function nativeDark() { return !isHome && !!(window.LBTheme && window.LBTheme.isNativeDark && window.LBTheme.isNativeDark()); }
+  function themeDark() { return root.getAttribute('data-lb-theme') === 'dark' || root.classList.contains('idx-dark-ui'); }
 
   // ---------------- injected CSS ----------------
   var ICONS_ALL = '.card-icon,.hub-icon,.nav-icon,.stat-icon,.desktop-tool-icon,.group-icon,.head-icon,.pxv-ico,.lb-ic';
@@ -379,6 +382,15 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.addEventListener('load', function () { applyAll(); });                    // after the page finished its own styling
   window.addEventListener('lb:theme-changed', function () { applyWall(); applyAll(); });         // Light/Dark switched
+  // the home page flips its own dark class: follow it
+  if (window.MutationObserver) {
+    var lastDark = null;
+    new MutationObserver(function () {
+      var d = themeDark();
+      if (lastDark === null) { lastDark = d; return; }
+      if (d !== lastDark) { lastDark = d; applyWall(); applyBoxes(); }
+    }).observe(root, { attributes: true, attributeFilter: ['class', 'data-lb-theme'] });
+  }
   window.addEventListener('storage', function (e) {
     if (e.key === KEY || e.key === WKEY) { st = readSt(); applyAll(); changed(); }
   });

@@ -622,7 +622,7 @@
     });
     if (mine.length < L.maxWalls) h += '<label class="lbset-wall add">＋ Add my own<input type="file" accept="image/*" data-wallfile hidden></label>';
     h += '</div>' + (lookErr ? '<div class="lbset-err">' + esc(lookErr) + '</div>' : '') +
-      '<div class="lbset-note">Pick one of the Lalabella designs or add your own photo (up to ' + L.maxWalls + '). Saved on this device only. The home page keeps its own background.</div>';
+      '<div class="lbset-note">Pick one of the Lalabella designs or add your own photo (up to ' + L.maxWalls + '). Saved on this device only.</div>';
     h += '<h4>Text size</h4><div class="lbset-rl"><span>Bigger / smaller text &amp; screen</span><span id="lbsetTextVal">' + g.text + '%</span></div>' +
       '<input class="lbset-range" type="range" min="85" max="140" step="5" value="' + g.text + '" data-text aria-label="Text size">' +
       '<div class="lbset-rl" style="font-size:11px;color:var(--s-dim);font-weight:500"><span>Small</span><span>Normal 100%</span><span>Large</span></div>' +
