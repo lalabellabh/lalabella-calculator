@@ -586,7 +586,8 @@ body>.wrap{position:relative;z-index:1}
   </div>
 </div>
 
-<div id="editItemModal" style="display:none;position:fixed;inset:0;z-index:9400;background:rgba(58,37,48,.55);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
+<datalist id="itemSizeList"><option value="Small"><option value="Medium"><option value="Large"><option value="Extra Large"><option value="5 cm"><option value="10 cm"><option value="15 cm"><option value="20 cm"><option value="25 cm"><option value="30 cm"><option value="40 cm"><option value="50 cm"><option value="1 m"><option value="One Size"></datalist>
+<div id="editItemModal" style="display:none;position:fixed;inset:0;z-index:9400;background:rgba(58,37,48,.55);align-items:flex-start;justify-content:center;padding:16px 16px 110px;overflow-y:auto;">
   <div style="background:#fff;border-radius:18px;border:1px solid var(--line);width:min(520px,100%);margin:auto;padding:18px 18px 20px;box-shadow:0 18px 50px rgba(58,37,48,.3);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div class="card-title" style="margin:0;">✏️ Edit Item</div>
@@ -615,6 +616,8 @@ body>.wrap{position:relative;z-index:1}
       <div><label>Item Code</label>
         <input type="text" id="eiCode" autocomplete="off"></div>
     </div>
+    <label>Size</label>
+    <input type="text" id="eiSize" list="itemSizeList" maxlength="40" placeholder="e.g. Small, 5 cm" autocomplete="off">
 
     <label>Photo</label>
     <div style="display:flex; gap:8px;">
@@ -939,6 +942,9 @@ body>.wrap{position:relative;z-index:1}
           <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
         </div>
       </div>
+
+      <label>Size <span style="text-transform:none;">(optional — e.g. ribbon 2.5 cm, vase Large; pick or type)</span></label>
+      <input type="text" id="addItemSize" list="itemSizeList" maxlength="40" placeholder="e.g. Small, 5 cm" autocomplete="off">
 
       <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
       <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
@@ -1650,7 +1656,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
         <div class="item-row" data-code="${it['Item Code']}">
           ${photo ? `<img class="item-thumb" src="${photo}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<div class="item-thumb"></div>`}
           <div class="item-info">
-            <div class="item-name">${it['Item Name']}</div>
+            <div class="item-name">${it['Item Name']}${it['Size'] ? ' <span style="font-weight:500;color:var(--ink-dim);">· ' + String(it['Size']).replace(/[<>&]/g,'') + '</span>' : ''}</div>
             <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
           </div>
           <div class="item-qty ${isLow?'low':''}">${qty} ${it['Unit']||''}</div>
@@ -1675,7 +1681,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   function showBarcode(item){
     selectedBarcodeItem = item;
     document.getElementById('barcodeCard').style.display = 'block';
-    document.getElementById('bcName').textContent = item['Item Name'];
+    document.getElementById('bcName').textContent = item['Item Name'] + (item['Size'] ? ' · ' + item['Size'] : '');
     document.getElementById('bcPrice').textContent = fmtBD(item['Price (BHD)']);
     document.getElementById('bcCode').textContent = item['Item Code'];
     document.getElementById('bcBarcode').innerHTML = '';
@@ -1749,6 +1755,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     eiSet('eiPrice', it['Price (BHD)'] === undefined || it['Price (BHD)'] === null ? '' : it['Price (BHD)']);
     eiSet('eiMin', it['Min Stock'] === undefined || it['Min Stock'] === null ? '' : it['Min Stock']);
     eiSet('eiCode', it['Item Code'] || '');
+    eiSet('eiSize', it['Size'] || '');
     eiSet('eiNotes', it['Notes'] || '');
     document.getElementById('eiPhotoHint').textContent = '';
     ['eiPhotoCamera','eiPhotoFile'].forEach(id => document.getElementById(id).value = '');
@@ -1888,6 +1895,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       price,
       minStock: document.getElementById('eiMin').value,
       itemCode: code,
+      size: document.getElementById('eiSize').value.trim(),
       notes: document.getElementById('eiNotes').value,
       photoBase64: eiPhotoData || '',
       removePhoto: (eiRemovePhoto && !eiPhotoData) ? '1' : ''
@@ -1910,7 +1918,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
 
   document.getElementById('printBarcodeBtn').addEventListener('click', ()=>{
     if(!selectedBarcodeItem) return;
-    document.getElementById('printName').textContent = selectedBarcodeItem['Item Name'];
+    document.getElementById('printName').textContent = selectedBarcodeItem['Item Name'] + (selectedBarcodeItem['Size'] ? ' · ' + selectedBarcodeItem['Size'] : '');
     document.getElementById('printPrice').textContent = fmtBD(selectedBarcodeItem['Price (BHD)']);
     document.getElementById('printCode').textContent = selectedBarcodeItem['Item Code'];
     document.getElementById('printBarcode').innerHTML = '';
@@ -2106,6 +2114,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       unit: document.getElementById('addItemUnit').value,
       price: document.getElementById('addItemPrice').value || 0,
       minStock: document.getElementById('addItemMinStock').value,
+      size: document.getElementById('addItemSize').value.trim(),
       notes: document.getElementById('addItemNotes').value,
       photoBase64: addItemPhotoData || '',
       enteredBy: document.getElementById('addItemEnteredBy').value
@@ -2135,6 +2144,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       document.getElementById('addItemQty').value = '';
       document.getElementById('addItemPrice').value = '';
       document.getElementById('addItemMinStock').value = '';
+      document.getElementById('addItemSize').value = '';
       document.getElementById('addItemNotes').value = '';
       document.getElementById('addItemPhoto').value = '';
       document.getElementById('addItemPhotoCamera').value = '';

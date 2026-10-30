@@ -177,6 +177,29 @@
       <div class="result" id="flowerResult"></div>
     </div>
   </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;margin-bottom:6px;">✏️ Fix an Existing Flower Item</div>
+    <p style="font-size:12.5px;color:var(--ink-dim);margin:0 0 12px;">Search a flower already in the catalog to correct its name, unit, stems per bunch, rate or min stock, or to switch it off (Inactive). Origin and Item Code cannot be changed here.</p>
+    <div class="fields">
+      <div class="field full"><label>Flower</label>
+        <input id="fixSearch" list="fixList" placeholder="Start typing to search…" autocomplete="off">
+        <datalist id="fixList"></datalist>
+        <div id="fixInfo" style="font-size:11.5px;color:var(--ink-dim);margin-top:2px;"></div>
+      </div>
+      <div class="field full"><label>Rename to <span style="font-weight:400;">(optional — leave as is to keep the same name)</span></label>
+        <input id="fixName" placeholder="Pick a flower above first" maxlength="60" disabled></div>
+      <div class="field"><label>Unit</label>
+        <select id="fixUnit" disabled><option>Stem</option><option>Bunch</option><option>Piece</option></select></div>
+      <div class="field"><label>Stems per Bunch</label><input id="fixStems" type="number" min="1" disabled></div>
+      <div class="field"><label>Rate (BHD)</label><input id="fixRate" type="number" step="0.001" min="0" disabled></div>
+      <div class="field"><label>Min Stock</label><input id="fixMin" type="number" min="0" disabled></div>
+      <div class="field full"><label>Status</label>
+        <select id="fixStatus" disabled><option>Active</option><option>Inactive</option></select></div>
+    </div>
+    <button class="btn flower" id="fixSaveBtn" disabled>Save Changes</button>
+    <div class="result" id="fixResult"></div>
+  </div>
 </div>
 
 <script>
@@ -322,6 +345,77 @@ document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
       resultBox.className = 'result err';
       resultBox.textContent = 'Could not reach the server. Check your connection.';
     });
+});
+
+// ---------- Fix an existing flower item (Admin) ----------
+const FLOWER_FIX_API = LB_CONFIG.FLOWER_FIX_API;
+let fixItems = [], fixCurrent = null;
+const fixLabel = it => (it['Flowers'] || '') + ' — ' + (it['Origin'] || 'no origin') + ' (' + (it['Item Code'] || '') + ')' + (it['Status'] === 'Inactive' ? ' [Inactive]' : '');
+function fixLoad(){
+  return fetch(FLOWER_API + '?action=getFlowerItems&_ts=' + Date.now()).then(r => r.json()).then(d => {
+    fixItems = Array.isArray(d) ? d.filter(x => x['Item Code']) : [];
+    const dl = document.getElementById('fixList');
+    dl.innerHTML = '';
+    fixItems.forEach(it => { const o = document.createElement('option'); o.value = fixLabel(it); dl.appendChild(o); });
+  }).catch(()=>{});
+}
+fixLoad();
+function fixSetEnabled(on){
+  ['fixName','fixUnit','fixStems','fixRate','fixMin','fixStatus','fixSaveBtn'].forEach(id => document.getElementById(id).disabled = !on);
+}
+function fixSelectUnit(v){
+  const sel = document.getElementById('fixUnit');
+  if(v && ![...sel.options].some(o => o.text === v)){ const o = document.createElement('option'); o.textContent = v; sel.appendChild(o); }
+  sel.value = v || 'Stem';
+}
+document.getElementById('fixSearch').addEventListener('input', function(){
+  const v = this.value.trim().toLowerCase();
+  const it = fixItems.find(x => fixLabel(x).toLowerCase() === v);
+  fixCurrent = it || null;
+  const info = document.getElementById('fixInfo');
+  if(!it){ fixSetEnabled(false); document.getElementById('fixName').value = ''; info.textContent = ''; return; }
+  fixSetEnabled(true);
+  document.getElementById('fixName').value = it['Flowers'] || '';
+  fixSelectUnit(it['Unit']);
+  document.getElementById('fixStems').value = it['Stems per Bunch'] === null || it['Stems per Bunch'] === undefined ? '' : it['Stems per Bunch'];
+  document.getElementById('fixRate').value = it['Rate'] === null || it['Rate'] === undefined ? '' : it['Rate'];
+  document.getElementById('fixMin').value = it['Min Stock'] === null || it['Min Stock'] === undefined ? '' : it['Min Stock'];
+  document.getElementById('fixStatus').value = it['Status'] === 'Inactive' ? 'Inactive' : 'Active';
+  info.textContent = 'Code ' + it['Item Code'] + ' · Origin ' + (it['Origin'] || '—');
+});
+document.getElementById('fixSaveBtn').addEventListener('click', async function(){
+  const box = document.getElementById('fixResult'), btn = this;
+  const fail = m => { box.className = 'result err'; box.textContent = m; };
+  if(!fixCurrent) return fail('Pick a flower from the list first.');
+  const name = document.getElementById('fixName').value.trim();
+  if(!name) return fail('The flower name cannot be empty.');
+  const stems = document.getElementById('fixStems').value;
+  if(stems !== '' && Number(stems) < 1) return fail('Stems per bunch must be 1 or more.');
+  btn.disabled = true; btn.textContent = 'Saving…'; box.className = 'result';
+  const body = new URLSearchParams({
+    action: 'updateFlowerItem',
+    itemCode: fixCurrent['Item Code'],
+    newName: name,
+    unit: document.getElementById('fixUnit').value,
+    stemsPerBunch: stems,
+    rate: document.getElementById('fixRate').value,
+    minStock: document.getElementById('fixMin').value,
+    status: document.getElementById('fixStatus').value
+  });
+  try{
+    const res = await (await fetch(FLOWER_FIX_API, { method: 'POST', body })).json();
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    if(res.error || !res.success) return fail(res.error || 'Could not save.');
+    box.className = 'result ok';
+    box.textContent = '✓ Saved — ' + name + (res.warning ? '  ⚠ ' + res.warning : '');
+    const code = fixCurrent['Item Code'];
+    await fixLoad();
+    const fresh = fixItems.find(x => x['Item Code'] === code);
+    if(fresh){ document.getElementById('fixSearch').value = fixLabel(fresh); document.getElementById('fixSearch').dispatchEvent(new Event('input')); }
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    fail('Could not reach the server. Check your connection.');
+  }
 });
 
 </script>

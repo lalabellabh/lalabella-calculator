@@ -131,6 +131,9 @@
     <datalist id="itemNameList"></datalist>
     <div id="branchStockBreakdown" style="display:none;margin-top:8px;padding:10px 12px;background:var(--blush);border-radius:10px;font-size:12px;"></div>
 
+    <label>New Name <span style="text-transform:none;">(change it here to rename the item in every branch)</span></label>
+    <input type="text" id="editItemNewName" placeholder="Pick an item above first" autocomplete="off">
+
     <div class="grid-2">
       <div>
         <label>Item Type</label>
@@ -179,6 +182,13 @@
       </div>
     </div>
 
+    <label>Size <span style="text-transform:none;">(e.g. Small, 5 cm — pick or type)</span></label>
+    <input type="text" id="editItemSize" list="itemSizeList" maxlength="40" placeholder="e.g. Small, 5 cm" autocomplete="off">
+    <datalist id="itemSizeList"><option value="Small"><option value="Medium"><option value="Large"><option value="Extra Large"><option value="5 cm"><option value="10 cm"><option value="15 cm"><option value="20 cm"><option value="25 cm"><option value="30 cm"><option value="40 cm"><option value="50 cm"><option value="1 m"><option value="One Size"></datalist>
+
+    <label>Notes</label>
+    <textarea id="editItemNotes" rows="2" placeholder="Optional"></textarea>
+
     <label>Photo <span style="text-transform:none;">(optional — replaces the existing one if uploaded)</span></label>
     <div style="display:flex; gap:8px;">
       <label for="editItemPhotoCamera" style="flex:1; margin:0; text-transform:none; text-align:center; padding:10px 0; background:var(--blush); border:1px solid var(--line); border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink);">📷 Take Photo</label>
@@ -212,6 +222,7 @@
   const API_URL = LB_CONFIG.ITEM_FAST_API;
   let ITEMS = [];
   let editItemPhotoData = null;
+  let editOriginalName = '';   // the saved name of the item being edited (needed so a rename finds the right rows)
 
   async function loadItems(){
     try{
@@ -229,6 +240,10 @@
     const typed = this.value.trim().toLowerCase();
     const match = ITEMS.find(it => String(it['Item Name']||'').trim().toLowerCase() === typed);
     if(match){
+      editOriginalName = match['Item Name'] || '';
+      document.getElementById('editItemNewName').value = editOriginalName;
+      document.getElementById('editItemSize').value = match['Size'] || '';
+      document.getElementById('editItemNotes').value = match['Notes'] || '';
       // All rows sharing this Item Name — one per branch that stocks it.
       const branchRows = ITEMS.filter(it => String(it['Item Name']||'').trim().toLowerCase() === typed);
       const breakdown = document.getElementById('branchStockBreakdown');
@@ -267,6 +282,8 @@
       } else {
         document.getElementById('editItemBarcodeWrap').style.display = 'none';
       }
+    } else {
+      editOriginalName = '';
     }
   });
 
@@ -322,10 +339,16 @@
   document.getElementById('saveEditItemBtn').addEventListener('click', async ()=>{
     const btn = document.getElementById('saveEditItemBtn');
     const resultBox = document.getElementById('editItemResult');
-    const itemName = document.getElementById('editItemName').value.trim();
+    const itemName = editOriginalName;
     if(!itemName){
       resultBox.className = 'result err show';
-      resultBox.textContent = 'Type or pick an item name first.';
+      resultBox.textContent = 'Pick an existing item from the list first.';
+      return;
+    }
+    const newName = document.getElementById('editItemNewName').value.trim();
+    if(!newName){
+      resultBox.className = 'result err show';
+      resultBox.textContent = 'The item name cannot be empty.';
       return;
     }
     btn.disabled = true; btn.textContent = 'Saving…';
@@ -334,6 +357,9 @@
     const params = new URLSearchParams({
       action: 'updateItemInventory',
       itemName,
+      newName,
+      size: document.getElementById('editItemSize').value.trim(),
+      notes: document.getElementById('editItemNotes').value,
       itemType: document.getElementById('editItemType').value,
       category: document.getElementById('editItemCategory').value,
       unit: document.getElementById('editItemUnit').value,
@@ -352,7 +378,9 @@
         return;
       }
       resultBox.className = 'result ok show';
-      resultBox.textContent = '✓ Saved — ' + itemName + ' updated.';
+      resultBox.textContent = '✓ Saved — ' + newName + ' updated.';
+      editOriginalName = newName;
+      document.getElementById('editItemName').value = newName;
       editItemPhotoData = null;
       document.getElementById('editItemPhoto').value = '';
       await loadItems();

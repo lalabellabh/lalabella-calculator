@@ -157,7 +157,7 @@ async function genItemCode(itemName: string) {
 function mapInventoryRow(r: any) {
   return { 'Item Code': r.item_code, 'Item Name': r.item_name, 'Item Type': r.item_type, 'Category': r.category, 'Branch': r.branch,
     'Qty': r.qty, 'Unit': r.unit, 'Price (BHD)': r.price_bhd, 'Min Stock': r.min_stock,
-    'Photo Link (Drive)': resolvePhotoUrl(r.photo_link), 'Date Added': r.date_added, 'Notes': r.notes, 'Entered By': r.entered_by };
+    'Size': r.size || '', 'Photo Link (Drive)': resolvePhotoUrl(r.photo_link), 'Date Added': r.date_added, 'Notes': r.notes, 'Entered By': r.entered_by };
 }
 
 // ---------------------------------------------------------------
@@ -299,6 +299,7 @@ async function updateItemInventory(p: Record<string, any>) {
   if (p.price !== undefined && p.price !== '') fields.price_bhd = Number(p.price) || 0;
   if (p.minStock !== undefined) fields.min_stock = p.minStock === '' ? null : Number(p.minStock);
   if (p.notes !== undefined) fields.notes = String(p.notes);
+  if (p.size !== undefined) fields.size = String(p.size).trim().slice(0, 40);
 
   if (p.photoBase64) {
     const photoLink = await saveItemPhoto(p.photoBase64, fields.item_code || oldCode);
@@ -334,7 +335,7 @@ async function addNewItem(p: Record<string, any>) {
   let photoLink = '';
   if (p.photoBase64) photoLink = await saveItemPhoto(p.photoBase64, itemCode);
   await sbPost('item_inventory', [{ item_code: itemCode, item_name: itemName, item_type: p.itemType || 'Consumable', category: p.category || '', branch,
-    qty: Number(p.qty) || 0, unit: p.unit || 'Piece', price_bhd: Number(p.price) || 0,
+    qty: Number(p.qty) || 0, unit: p.unit || 'Piece', size: String(p.size || '').trim().slice(0, 40), price_bhd: Number(p.price) || 0,
     min_stock: (p.minStock !== undefined && p.minStock !== '') ? Number(p.minStock) : null,
     photo_link: photoLink, date_added: new Date().toISOString(), notes: p.notes || '', entered_by: p.enteredBy || '' }]);
   return { success: true, itemCode, photoLink };
@@ -351,7 +352,7 @@ async function receiveItem(p: Record<string, any>) {
     const source = anyRows[0];
     currentQty = 0; newQty = qtyReceived; receivingItemCode = source.item_code;
     await sbPost('item_inventory', [{ item_code: source.item_code, item_name: itemName, item_type: source.item_type, category: source.category, branch,
-      qty: qtyReceived, unit: source.unit, price_bhd: source.price_bhd, min_stock: source.min_stock, photo_link: source.photo_link,
+      qty: qtyReceived, unit: source.unit, size: source.size || '', price_bhd: source.price_bhd, min_stock: source.min_stock, photo_link: source.photo_link,
       date_added: new Date().toISOString(), notes: source.notes, entered_by: source.entered_by }]);
   } else {
     currentQty = Number(branchRows[0].qty) || 0; newQty = currentQty + qtyReceived; receivingItemCode = branchRows[0].item_code;
@@ -403,7 +404,7 @@ async function transferItem(p: Record<string, any>) {
   const toRows = await sbGet('item_inventory', `select=*&item_name=eq.${encodeURIComponent(itemName)}&branch=eq.${encodeURIComponent(toBranch)}`);
   if (!toRows.length) {
     const src = fromRows[0];
-    await sbPost('item_inventory', [{ item_code: src.item_code, item_name: itemName, item_type: src.item_type, category: src.category, branch: toBranch, qty, unit: src.unit, price_bhd: src.price_bhd, min_stock: src.min_stock, photo_link: src.photo_link, date_added: new Date().toISOString(), notes: src.notes, entered_by: src.entered_by }]);
+    await sbPost('item_inventory', [{ item_code: src.item_code, item_name: itemName, item_type: src.item_type, category: src.category, branch: toBranch, qty, unit: src.unit, size: src.size || '', price_bhd: src.price_bhd, min_stock: src.min_stock, photo_link: src.photo_link, date_added: new Date().toISOString(), notes: src.notes, entered_by: src.entered_by }]);
   } else {
     const toQty = Number(toRows[0].qty) || 0;
     await sbPatch('item_inventory', `id=eq.${toRows[0].id}`, { qty: toQty + qty });
