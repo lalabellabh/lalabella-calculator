@@ -148,7 +148,9 @@ html,body{ margin:0; padding:0; }
     #app > *{ margin-bottom:12px; }
     #app .topbar{ padding:8px 12px 8px 62px; }
     #app .note{ text-align:left; max-width:none; }
-    #app .kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #app .kpis, #app .kpis.k8{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #app .kpi .k-lb, #app .kpi .k-s{ white-space:normal; overflow:visible; text-overflow:clip; }
+    #app .kpi .k-v{ font-size:17px; }
     #app .main{ display:flex; flex-direction:column; }
     #app .panel{ max-height:440px; }
     #app .p-cat{ max-height:520px; }
