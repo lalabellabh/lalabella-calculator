@@ -777,7 +777,8 @@ body::after{
     // Bunch = Supplier Rate ÷ Stems per Bunch × 3 × 1.10 VAT
     // Stem/Piece/Plant/Box = Supplier Rate × 3 × 1.10 VAT
     const perStem = (unit === 'Bunch' && stems > 0) ? rate / stems : rate;
-    return perStem * 3 * 1.10;
+    // rounded to 3 decimals (half-up); the tiny +1e-9 stops float errors like 0.5774999… from rounding down
+    return Math.round((perStem * 3 * 1.10 + 1e-9) * 1000) / 1000;
   }
 
   const STOCK_EQ_LABELS = {
