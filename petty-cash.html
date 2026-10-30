@@ -414,6 +414,12 @@
       <input type="date" id="pcDate">
       <label>What was it used for?</label>
       <input type="text" id="pcPurpose" placeholder="e.g. Office supplies">
+      <div id="pcCarBox" style="display:none;">
+        <label>Car plate number</label>
+        <input type="text" id="pcCarPlate" maxlength="30" placeholder="e.g. 123456" autocomplete="off">
+        <label>Driver</label>
+        <input type="text" id="pcDriver" maxlength="60" placeholder="Driver name" autocomplete="off">
+      </div>
       <label>Amount (BD)</label>
       <input type="number" step="0.001" min="0.001" id="pcAmount" placeholder="0.000">
       <label>Your Name</label>
@@ -477,6 +483,10 @@
   <label>Date</label><input type="date" id="peDate">
   <label>Type</label><select id="peType"><option value="expense">Expense</option><option value="topup">Top-up</option></select>
   <label>Purpose</label><input type="text" id="pePurpose" maxlength="200">
+  <div id="peCarBox" style="display:none;">
+    <label>Car plate number</label><input type="text" id="peCarPlate" maxlength="30">
+    <label>Driver</label><input type="text" id="peDriver" maxlength="60">
+  </div>
   <label>Amount (BD)</label><input type="number" step="0.001" min="0.001" id="peAmount">
   <div style="display:flex;gap:8px;"><button class="save-btn" id="peSave">Save</button><button class="print-btn" id="peCancel" type="button">Cancel</button></div>
   <div class="msg" id="peMsg"></div>
@@ -636,7 +646,7 @@ function pcFiltered(){
     if(from && d<from) return false;
     if(to && d>to) return false;
     if(ty && t.type!==ty) return false;
-    if(q && !((t.purpose||'')+' '+(t.enteredBy||'')).toLowerCase().includes(q)) return false;
+    if(q && !((t.purpose||'')+' '+(t.enteredBy||'')+' '+(t.carPlate||'')+' '+(t.driver||'')).toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -657,6 +667,7 @@ function renderPettyHistory(){
     <div class="txn-row">
       <div>
         <div class="txn-main">${esc(t.purpose)}</div>
+        ${carLine(t)}
         <div class="txn-date">${fmtDate(t.date)} · ${esc(t.branch)} · ${esc(t.enteredBy)||'—'}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -684,7 +695,7 @@ document.getElementById('pcPrintBtn').addEventListener('click',()=>{
   const extra=[ty?(ty==='topup'?'Top-up only':'Expense only'):'',q?`Search: "${esc(q)}"`:''].filter(Boolean).join(' · ');
   const tt=pcTotals(list);
   const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td></tr>`).join('');
+  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}${carText(t)?'<br><small>'+esc(carText(t))+'</small>':''}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td></tr>`).join('');
   document.getElementById('printArea').innerHTML=`
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash</h2>
     <p>${esc(branch)} · ${range}${extra?' · '+extra:''}</p>
@@ -707,10 +718,19 @@ function openPcEdit(id){
   document.getElementById('peDate').value=String(t.date).slice(0,10);
   document.getElementById('peType').value=t.type;
   document.getElementById('pePurpose').value=t.purpose;
+  document.getElementById('peCarPlate').value=t.carPlate||''; document.getElementById('peDriver').value=t.driver||'';
+  syncCarBox('pePurpose','peCarBox');
   document.getElementById('peAmount').value=t.amount;
   const m=document.getElementById('peMsg'); m.className='msg'; m.textContent='';
   document.getElementById('pcEditModal').classList.add('open');
 }
+// Petrol / fuel entries need the car plate number and the driver
+function isPetrol(p){ return /petrol|petron|gasoline|fuel|diesel|بنزين/i.test(String(p||'')); }
+function carText(t){ return (t && (t.carPlate || t.driver)) ? ('Car: ' + (t.carPlate||'—') + ' · Driver: ' + (t.driver||'—')) : ''; }
+function carLine(t){ const x = carText(t); return x ? '<div class="txn-date">🚗 ' + esc(x) + '</div>' : ''; }
+function syncCarBox(purposeId, boxId){ document.getElementById(boxId).style.display = isPetrol(document.getElementById(purposeId).value) ? 'block' : 'none'; }
+document.getElementById('pcPurpose').addEventListener('input', ()=> syncCarBox('pcPurpose','pcCarBox'));
+document.getElementById('pePurpose').addEventListener('input', ()=> syncCarBox('pePurpose','peCarBox'));
 function closePcEdit(){ document.getElementById('pcEditModal').classList.remove('open'); pcEditId=null; }
 document.getElementById('peCancel').addEventListener('click',closePcEdit);
 document.getElementById('pcEditModal').addEventListener('click',e=>{ if(e.target.id==='pcEditModal') closePcEdit(); });
@@ -720,9 +740,11 @@ document.getElementById('peSave').addEventListener('click',async()=>{
   const amount=document.getElementById('peAmount').value, type=document.getElementById('peType').value;
   m.className='msg';
   if(!date||!purpose||!(Number(amount)>0)){ m.className='msg error'; m.textContent='Fill in date, purpose and a valid amount.'; return; }
+  const carPlate=document.getElementById('peCarPlate').value.trim(), driver=document.getElementById('peDriver').value.trim();
+  if(isPetrol(purpose) && type==='expense' && (!carPlate||!driver)){ m.className='msg error'; m.textContent='Petrol: please enter the car plate number and the driver.'; return; }
   btn.disabled=true; btn.textContent='Saving…';
   try{
-    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,token:getToken()});
+    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:isPetrol(purpose)?carPlate:'',driver:isPetrol(purpose)?driver:'',token:getToken()});
     const res=await fetch(PETTYCASH_API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
     const data=await res.json();
     if(!data.success){ m.className='msg error'; m.textContent=data.error||'Failed to save.'; return; }
@@ -818,16 +840,21 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
 
   if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
   if(!purpose || !amount || Number(amount) <= 0){ msg.textContent = 'Please fill in the purpose and amount.'; msg.className = 'msg error'; return; }
+  const petrol = isPetrol(purpose) && pcType === 'expense';
+  const carPlate = petrol ? document.getElementById('pcCarPlate').value.trim() : '';
+  const driver = petrol ? document.getElementById('pcDriver').value.trim() : '';
+  if(petrol && (!carPlate || !driver)){ msg.textContent = 'Petrol: please enter the car plate number and the driver.'; msg.className = 'msg error'; return; }
 
   const btn = document.getElementById('pcSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
-    const params = new URLSearchParams({ action: 'addPettyCashEntry', branch, date, purpose, amount, type: pcType, enteredBy, token: getToken() });
+    const params = new URLSearchParams({ action: 'addPettyCashEntry', branch, date, purpose, amount, type: pcType, enteredBy, carPlate, driver, token: getToken() });
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Entry'; return; }
     msg.textContent = 'Saved!'; msg.className = 'msg success';
     document.getElementById('pcPurpose').value = '';
+    document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; syncCarBox('pcPurpose','pcCarBox');
     document.getElementById('pcAmount').value = '';
     loadPettyCash();
   }catch(e){
@@ -904,7 +931,7 @@ async function printCashCount(id){
   const pettyRows = pettyTxns.map(t => `
     <tr>
       <td>${fmtDate(t.date)}</td>
-      <td>${t.purpose}</td>
+      <td>${esc(t.purpose)}${carText(t) ? '<br><small>' + esc(carText(t)) + '</small>' : ''}</td>
       <td>${t.type === 'topup' ? 'Top-up' : 'Expense'}</td>
       <td>${t.enteredBy || '—'}</td>
       <td style="text-align:right;">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</td>
