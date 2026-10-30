@@ -23,7 +23,8 @@
     #app .main.f4{ display:flex; flex-direction:column; }
   }
   #app .footbar .btn{ white-space:nowrap; flex:none; }
-  #app .kpis.k8{ grid-template-columns:repeat(8,minmax(0,1fr)); }
+  @media (min-width:1251px){ #app .kpis.k8{ grid-template-columns:repeat(8,minmax(0,1fr)); } }
+  @media (min-width:900px) and (max-width:1250px){ #app .kpis.k8{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
 </style>
 
 <style id="chocoSharedNavStyles">
@@ -342,7 +343,7 @@
       kpi('🌸','Available flowers', fmtNum(s.currentAvailableFlowers), ((distinctCount !== null || data.distinctFlowerCount != null) ? fmtNum(distinctCount !== null ? distinctCount : data.distinctFlowerCount) + ' flower names' : ''), 'var(--rose)') +
       kpi('📥','Received this week', fmtNum(s.newReceivedThisWeekQty), 'stems / pieces', 'var(--teal)') +
       kpi('🌹','Company value', fmtBD(s.companyInventoryValue), 'at legacy rate', 'var(--plum)') +
-      kpi('🧾','Inventory cost', fmtBD(s.currentInventoryCost), 'x3 ref ' + fmtBD(s.standardX3Reference), 'var(--sky)') +
+      kpi('🧾','Company-policy value', fmtBD(s.currentInventoryCost), 'supplier cost x3 x1.10', 'var(--sky)') +
       kpi('🛒',"Today's purchases", fmtBD(s.todayPurchases), 'incl. VAT', 'var(--amber)') +
       kpi('🔁',"Today's transfers", fmtNum(s.todaysTransfers), 'this week ' + fmtNum((data.quickStats || {}).transferredThisWeek), 'var(--gold)') +
       kpi('🌿','Weekly budget', (b.percentUsed || 0) + '%', esc(b.status || '') + ' · ' + fmtBD(b.remaining) + ' left', 'var(--ok)', bCls) +
