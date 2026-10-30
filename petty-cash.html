@@ -383,7 +383,17 @@
       <div class="label">Petty Cash Balance</div>
       <div class="amount" id="pettyBalance">—</div>
       <div id="targetLine" style="color:rgba(255,255,255,.65);font-size:11.5px;margin-top:6px;"></div>
-      <div style="margin-top:10px;"><a href="#" id="toggleTargetLink" style="color:var(--gold-light);font-size:11px;text-decoration:none;">⚙️ Set target amount</a></div>
+      <div style="margin-top:10px;"><a href="#" id="toggleTargetLink" style="color:var(--gold-light);font-size:11px;text-decoration:none;">⚙️ Set target amount</a>
+        <a href="#" id="toggleBalanceLink" style="color:var(--gold-light);font-size:11px;text-decoration:none;margin-left:14px;">✏️ Set current balance</a></div>
+    </div>
+
+        <div class="card" id="pcBalanceCard" style="display:none;">
+      <h2>✏️ Set Current Balance</h2>
+      <label>The money actually inside the petty cash right now (BD)</label>
+      <input type="number" step="0.001" min="0" id="pcBalanceInput" placeholder="e.g. 85.500">
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;">Saved as a “Balance adjustment” entry in History, so everything stays traceable.</div>
+      <button class="save-btn" id="pcBalanceSaveBtn">Save Balance</button>
+      <div class="msg" id="pcBalanceMsg"></div>
     </div>
 
     <div class="card" id="pcTargetCard" style="display:none;">
@@ -477,7 +487,7 @@
   @media print{ #printArea{ display:block !important; } }
   /* Staff (non-Admin): hide delete buttons and "Set target amount". Server also blocks them. */
   html.not-admin .delete-btn, html.not-admin .edit-btn{ display:none !important; }
-  html.not-admin #toggleTargetLink, html.not-admin #pcTargetCard{ display:none !important; }
+  html.not-admin #toggleTargetLink, html.not-admin #pcTargetCard, html.not-admin #toggleBalanceLink, html.not-admin #pcBalanceCard{ display:none !important; }
 </style>
 
 <script>
@@ -588,6 +598,8 @@ async function loadPettyCash(){
   const targetCard = document.getElementById('pcTargetCard');
   const toggleLink = document.getElementById('toggleTargetLink');
   targetCard.style.display = 'none'; // always start collapsed, whichever branch is picked
+  document.getElementById('pcBalanceCard').style.display = 'none';
+  document.getElementById('toggleBalanceLink').style.display = (branch === 'All') ? 'none' : 'inline';
   toggleLink.style.display = (branch === 'All') ? 'none' : 'inline';
   try{
     const res = await fetch(PETTYCASH_API_URL + '?action=getPettyCash&branch=' + encodeURIComponent(branch) + '&token=' + encodeURIComponent(getToken()));
@@ -739,6 +751,39 @@ document.getElementById('toggleTargetLink').addEventListener('click', (e)=>{
   const card = document.getElementById('pcTargetCard');
   card.style.display = (card.style.display === 'none') ? 'block' : 'none';
 });
+
+document.getElementById('toggleBalanceLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  const card = document.getElementById('pcBalanceCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+  const cur = parseFloat((document.getElementById('pettyBalance').textContent || '').replace(/[^0-9.\-]/g,''));
+  if(card.style.display === 'block' && !isNaN(cur)) document.getElementById('pcBalanceInput').value = cur.toFixed(3);
+});
+document.getElementById('pcBalanceSaveBtn').addEventListener('click', async ()=>{
+  const branch = document.getElementById('branchSelect').value;
+  const bal = document.getElementById('pcBalanceInput').value;
+  const msg = document.getElementById('pcBalanceMsg');
+  msg.className = 'msg';
+  if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
+  if(bal === '' || Number(bal) < 0){ msg.textContent = 'Please enter a valid amount.'; msg.className = 'msg error'; return; }
+  if(!confirm('Set the petty cash balance of ' + branch + ' to ' + Number(bal).toFixed(3) + ' BD?')) return;
+  const btn = document.getElementById('pcBalanceSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const enteredBy = (document.getElementById('pcEnteredBy').value || '').trim();
+    const params = new URLSearchParams({ action: 'setPettyCashBalance', branch, balance: bal, enteredBy, token: getToken() });
+    const res = await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() });
+    const data = await res.json();
+    if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; }
+    else {
+      msg.textContent = data.unchanged ? 'Already the same balance.' : 'Balance set to ' + Number(data.balance).toFixed(3) + ' BD.';
+      msg.className = 'msg success';
+      loadPettyCash();
+    }
+  }catch(e){ msg.textContent = 'Connection error.'; msg.className = 'msg error'; }
+  btn.disabled = false; btn.textContent = 'Save Balance';
+});
+
 document.getElementById('pcTargetSaveBtn').addEventListener('click', async ()=>{
   const branch = document.getElementById('branchSelect').value;
   const targetAmount = document.getElementById('pcTarget').value;
