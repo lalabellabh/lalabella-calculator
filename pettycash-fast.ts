@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v7
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v8
+// v8 (Oct 2026): car_plate + driver columns on petty_cash_transactions (for petrol entries) — saved on add/edit, returned by getPettyCash.
 // v7 (Oct 2026): setPettyCashBalance (ADMIN ONLY) — set the money currently inside the petty cash. Saved as a visible
 //                'Balance adjustment' entry (top-up or expense of the difference) so history and totals stay consistent.
 // v6 (Oct 2026): editPettyCashEntry (ADMIN ONLY) — fix the date / purpose / amount / type of a saved entry (back-dating).
@@ -104,7 +105,7 @@ async function handleGetPettyCash(p: any) {
 
   return {
     balance, targetAmount,
-    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by })),
+    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '' })),
   };
 }
 async function handleSetPettyCashTarget(p: any, user: any) {
@@ -123,11 +124,13 @@ async function handleAddPettyCashEntry(p: any) {
   const amount = Number(p.amount) || 0;
   const entryType = p.type === 'topup' ? 'topup' : 'expense';
   const enteredBy = p.enteredBy || '';
+  const carPlate = String(p.carPlate || '').trim().slice(0, 30).toUpperCase();
+  const driver = String(p.driver || '').trim().slice(0, 60);
   if (!branch) return { error: 'Branch is required.' };
   if (!validDate(entryDate)) return { error: 'Invalid date.' };
   if (!purpose) return { error: 'Purpose is required.' };
   if (amount <= 0) return { error: 'Amount must be greater than zero.' };
-  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy }]);
+  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver }]);
   return { success: true };
 }
 // Admin only: fix the date (back-date), purpose, amount or type of a saved entry.
@@ -152,6 +155,8 @@ async function handleEditPettyCashEntry(p: any, user: any) {
     if (!(amount > 0)) return { error: 'Amount must be greater than zero.' };
     fields.amount = amount;
   }
+  if (p.carPlate !== undefined) fields.car_plate = String(p.carPlate).trim().slice(0, 30).toUpperCase();
+  if (p.driver !== undefined) fields.driver = String(p.driver).trim().slice(0, 60);
   if (p.type !== undefined && p.type !== '') fields.entry_type = p.type === 'topup' ? 'topup' : 'expense';
   if (!Object.keys(fields).length) return { success: true, unchanged: true };
   await sbPatch('petty_cash_transactions', `id=eq.${id}`, fields);
