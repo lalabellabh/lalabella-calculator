@@ -623,6 +623,10 @@
     if (mine.length < L.maxWalls) h += '<label class="lbset-wall add">＋ Add my own<input type="file" accept="image/*" data-wallfile hidden></label>';
     h += '</div>' + (lookErr ? '<div class="lbset-err">' + esc(lookErr) + '</div>' : '') +
       '<div class="lbset-note">Pick one of the Lalabella designs or add your own photo (up to ' + L.maxWalls + '). Saved on this device only. The home page keeps its own background.</div>';
+    h += '<h4>Text size</h4><div class="lbset-rl"><span>Bigger / smaller text &amp; screen</span><span id="lbsetTextVal">' + g.text + '%</span></div>' +
+      '<input class="lbset-range" type="range" min="85" max="140" step="5" value="' + g.text + '" data-text aria-label="Text size">' +
+      '<div class="lbset-rl" style="font-size:11px;color:var(--s-dim);font-weight:500"><span>Small</span><span>Normal 100%</span><span>Large</span></div>' +
+      '<div class="lbset-note">Makes everything on the page bigger or smaller (like zoom), saved on this device. Applies when you let go of the slider.</div>';
     h += '<h4>Boxes &amp; icons</h4><div class="lbset-seg lbset-seg2">' +
       '<button type="button" data-glass="on" class="' + (g.glass ? 'on' : '') + '">🪟 Glassy: On</button>' +
       '<button type="button" data-glass="off" class="' + (g.glass ? '' : 'on') + '">Glassy: Off</button></div>' +
@@ -752,7 +756,7 @@
     if (t.dataset.wallx) { if (!confirm('Remove this photo?')) return; lookErr = ''; window.LBLook.removeWall(parseInt(t.dataset.wallx, 10)); drawSettings(); return; }
     if (t.dataset.glass) { window.LBLook.set({ glass: t.dataset.glass === 'on' }); drawSettings(); return; }
     if (t.dataset.icons) { window.LBLook.set({ icons: t.dataset.icons }); drawSettings(); return; }
-    if (t.hasAttribute('data-lookreset')) { if (!confirm('Reset wallpaper, boxes and icons to the default look?')) return; lookErr = ''; window.LBLook.reset(); drawSettings(); return; }
+    if (t.hasAttribute('data-lookreset')) { if (!confirm('Reset wallpaper, text size, boxes and icons to the default look?')) return; lookErr = ''; window.LBLook.reset(); drawSettings(); return; }
     if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
     if (t.dataset.chatmode) {
       const m = t.dataset.chatmode;
@@ -843,6 +847,7 @@
     back.addEventListener('click', e => { if (e.target === back || e.target.closest('.lbset-x')) closeSettings(); });
     back.querySelector('.lbset').addEventListener('click', onSettingsClick);
     back.querySelector('.lbset').addEventListener('input', e => {
+      if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { const lb = document.getElementById('lbsetTextVal'); if (lb) lb.textContent = (parseInt(e.target.value, 10) || 100) + '%'; return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-alpha')) {
         const v = parseInt(e.target.value, 10) || 0;
         window.LBLook.set({ alpha: v });
@@ -850,6 +855,7 @@
       }
     });
     back.querySelector('.lbset').addEventListener('change', e => {
+      if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { window.LBLook.set({ text: parseInt(e.target.value, 10) || 100 }); return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-wallfile')) {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
