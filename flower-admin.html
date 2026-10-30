@@ -221,7 +221,8 @@ fetch(FLOWER_API + '?action=getHollandTracking')
 function computeCompanyRate(supplierRate, unit, stemsPerBunch){
   const stems = Number(stemsPerBunch) || 1;
   const perStem = (String(unit).toLowerCase() === 'bunch' && stems > 0) ? supplierRate / stems : supplierRate;
-  return perStem * 3 * 1.10;
+  // rounded to 3 decimals (half-up); the tiny +1e-9 stops float errors like 0.5774999… from rounding down
+  return Math.round((perStem * 3 * 1.10 + 1e-9) * 1000) / 1000;
 }
 
 let hollandSuggestedRate = null;
