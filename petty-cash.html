@@ -278,6 +278,19 @@
     .txn-row{align-items:flex-start;}
     .denom-grid{grid-template-columns:1fr 68px 82px;}
   }
+
+  .pc-filter{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;align-items:end;}
+  .pc-filter input,.pc-filter select{margin-bottom:0;width:100%;padding:9px 10px;border:1px solid #eadbdd;border-radius:11px;font-size:12.5px;font-family:inherit;background:rgba(255,250,249,.88);color:var(--ink);}
+  .pc-filter label{margin-bottom:4px;}
+  .pc-sum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;font-weight:700;margin:4px 0 8px;color:var(--muted);}
+  .pc-sum .g{color:var(--good);} .pc-sum .b{color:var(--bad);}
+  .pc-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+  .edit-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:4px;opacity:.65;}
+  .edit-btn:hover{opacity:1;}
+  #pcEditModal{position:fixed;inset:0;background:rgba(40,20,28,.45);z-index:9400;display:none;align-items:center;justify-content:center;padding:16px 16px 110px;}
+  #pcEditModal.open{display:flex;}
+  #pcEditModal .box{background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:400px;max-height:100%;overflow:auto;}
+  #pcEditModal select{width:100%;padding:11px 13px;border:1px solid #eadbdd;border-radius:11px;font-size:13px;font-family:inherit;margin-bottom:13px;background:rgba(255,250,249,.88);}
   @media print{
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
@@ -401,6 +414,17 @@
 
     <div class="card">
       <h2>📋 History</h2>
+      <div class="pc-filter">
+        <div><label>From</label><input type="date" id="pcFrom"></div>
+        <div><label>To</label><input type="date" id="pcTo"></div>
+        <div><label>Type</label><select id="pcFType"><option value="">All</option><option value="expense">Expense</option><option value="topup">Top-up</option></select></div>
+        <div><label>Search</label><input type="text" id="pcFSearch" placeholder="purpose / name"></div>
+      </div>
+      <div class="pc-toolbar">
+        <button class="print-btn" id="pcFClear" type="button">Clear filter</button>
+        <button class="print-btn" id="pcPrintBtn" type="button">🖨️ Print</button>
+      </div>
+      <div class="pc-sum" id="pcSum"></div>
       <div id="pcHistory"><div class="empty">Loading…</div></div>
     </div>
   </div>
@@ -438,12 +462,21 @@
   </div>
 </div>
 
+<div id="pcEditModal"><div class="box">
+  <h2 style="margin-bottom:12px;">✏️ Edit Entry</h2>
+  <label>Date</label><input type="date" id="peDate">
+  <label>Type</label><select id="peType"><option value="expense">Expense</option><option value="topup">Top-up</option></select>
+  <label>Purpose</label><input type="text" id="pePurpose" maxlength="200">
+  <label>Amount (BD)</label><input type="number" step="0.001" min="0.001" id="peAmount">
+  <div style="display:flex;gap:8px;"><button class="save-btn" id="peSave">Save</button><button class="print-btn" id="peCancel" type="button">Cancel</button></div>
+  <div class="msg" id="peMsg"></div>
+</div></div>
 <div id="printArea" style="display:none;"></div>
 
 <style>
   @media print{ #printArea{ display:block !important; } }
   /* Staff (non-Admin): hide delete buttons and "Set target amount". Server also blocks them. */
-  html.not-admin .delete-btn{ display:none !important; }
+  html.not-admin .delete-btn, html.not-admin .edit-btn{ display:none !important; }
   html.not-admin #toggleTargetLink, html.not-admin #pcTargetCard{ display:none !important; }
 </style>
 
@@ -576,26 +609,116 @@ async function loadPettyCash(){
     }
 
     window.lastPettyCashTxns = data.transactions;
-    if(!data.transactions.length){ hist.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
-    hist.innerHTML = data.transactions.map(t => `
-      <div class="txn-row">
-        <div>
-          <div class="txn-main">${t.purpose}</div>
-          <div class="txn-date">${fmtDate(t.date)} · ${t.branch} · ${t.enteredBy||'—'}</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="txn-amt ${t.type}">${t.type === 'topup' ? '+' : '−'}${fmtBD(t.amount)}</div>
-          <button class="delete-btn" data-id="${t.id}" title="Delete">🗑️</button>
-        </div>
-      </div>
-    `).join('');
-    hist.querySelectorAll('.delete-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=> deletePettyCashEntry(btn.dataset.id));
-    });
+    renderPettyHistory();
   }catch(e){
     hist.innerHTML = '<div class="empty">Could not load — check your connection.</div>';
   }
 }
+
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pcFiltered(){
+  const from=document.getElementById('pcFrom').value, to=document.getElementById('pcTo').value;
+  const ty=document.getElementById('pcFType').value, q=document.getElementById('pcFSearch').value.trim().toLowerCase();
+  return (window.lastPettyCashTxns||[]).filter(t=>{
+    const d=String(t.date||'').slice(0,10);
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    if(ty && t.type!==ty) return false;
+    if(q && !((t.purpose||'')+' '+(t.enteredBy||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function pcTotals(list){
+  let top=0,exp=0; list.forEach(t=>{ if(t.type==='topup') top+=Number(t.amount); else exp+=Number(t.amount); });
+  return {top,exp,net:top-exp};
+}
+function renderPettyHistory(){
+  const hist=document.getElementById('pcHistory');
+  const all=window.lastPettyCashTxns||[];
+  const list=pcFiltered();
+  const sum=document.getElementById('pcSum');
+  if(!all.length){ hist.innerHTML='<div class="empty">No entries yet.</div>'; sum.innerHTML=''; return; }
+  const tt=pcTotals(list);
+  sum.innerHTML=`<span>${list.length} entr${list.length===1?'y':'ies'}</span><span class="g">Top-up +${fmtBD(tt.top)}</span><span class="b">Expense −${fmtBD(tt.exp)}</span><span>Net ${tt.net<0?'−':''}${fmtBD(Math.abs(tt.net))}</span>`;
+  if(!list.length){ hist.innerHTML='<div class="empty">No entries match this filter.</div>'; return; }
+  hist.innerHTML=list.map(t=>`
+    <div class="txn-row">
+      <div>
+        <div class="txn-main">${esc(t.purpose)}</div>
+        <div class="txn-date">${fmtDate(t.date)} · ${esc(t.branch)} · ${esc(t.enteredBy)||'—'}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="txn-amt ${t.type}">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</div>
+        <button class="edit-btn" data-id="${t.id}" title="Edit">✏️</button>
+        <button class="delete-btn" data-id="${t.id}" title="Delete">🗑️</button>
+      </div>
+    </div>`).join('');
+  hist.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>deletePettyCashEntry(btn.dataset.id)));
+  hist.querySelectorAll('.edit-btn').forEach(btn=>btn.addEventListener('click',()=>openPcEdit(btn.dataset.id)));
+}
+['pcFrom','pcTo','pcFType'].forEach(id=>document.getElementById(id).addEventListener('change',renderPettyHistory));
+document.getElementById('pcFSearch').addEventListener('input',renderPettyHistory);
+document.getElementById('pcFClear').addEventListener('click',()=>{
+  ['pcFrom','pcTo','pcFType','pcFSearch'].forEach(id=>document.getElementById(id).value='');
+  renderPettyHistory();
+});
+document.getElementById('pcPrintBtn').addEventListener('click',()=>{
+  const list=pcFiltered();
+  if(!list.length){ alert('Nothing to print — no entries match this filter.'); return; }
+  const branch=document.getElementById('branchSelect').value;
+  const from=document.getElementById('pcFrom').value, to=document.getElementById('pcTo').value;
+  const ty=document.getElementById('pcFType').value, q=document.getElementById('pcFSearch').value.trim();
+  const range=(from||to)?`${from?fmtDate(from):'start'} – ${to?fmtDate(to):'today'}`:'All dates';
+  const extra=[ty?(ty==='topup'?'Top-up only':'Expense only'):'',q?`Search: "${esc(q)}"`:''].filter(Boolean).join(' · ');
+  const tt=pcTotals(list);
+  const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td></tr>`).join('');
+  document.getElementById('printArea').innerHTML=`
+    <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash</h2>
+    <p>${esc(branch)} · ${range}${extra?' · '+extra:''}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="text-align:right;margin-top:10px;font-size:13px;line-height:1.7;">
+      Total Top-up: +${fmtBD(tt.top)}<br>Total Expense: −${fmtBD(tt.exp)}<br><b>Net: ${tt.net<0?'−':''}${fmtBD(Math.abs(tt.net))}</b>
+    </div>
+    <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(new Date().toISOString().slice(0,10))} · ${list.length} entries</p>`;
+  window.print();
+});
+
+let pcEditId=null;
+function openPcEdit(id){
+  const t=(window.lastPettyCashTxns||[]).find(x=>String(x.id)===String(id));
+  if(!t) return;
+  pcEditId=t.id;
+  document.getElementById('peDate').value=String(t.date).slice(0,10);
+  document.getElementById('peType').value=t.type;
+  document.getElementById('pePurpose').value=t.purpose;
+  document.getElementById('peAmount').value=t.amount;
+  const m=document.getElementById('peMsg'); m.className='msg'; m.textContent='';
+  document.getElementById('pcEditModal').classList.add('open');
+}
+function closePcEdit(){ document.getElementById('pcEditModal').classList.remove('open'); pcEditId=null; }
+document.getElementById('peCancel').addEventListener('click',closePcEdit);
+document.getElementById('pcEditModal').addEventListener('click',e=>{ if(e.target.id==='pcEditModal') closePcEdit(); });
+document.getElementById('peSave').addEventListener('click',async()=>{
+  const m=document.getElementById('peMsg'), btn=document.getElementById('peSave');
+  const date=document.getElementById('peDate').value, purpose=document.getElementById('pePurpose').value.trim();
+  const amount=document.getElementById('peAmount').value, type=document.getElementById('peType').value;
+  m.className='msg';
+  if(!date||!purpose||!(Number(amount)>0)){ m.className='msg error'; m.textContent='Fill in date, purpose and a valid amount.'; return; }
+  btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,token:getToken()});
+    const res=await fetch(PETTYCASH_API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
+    const data=await res.json();
+    if(!data.success){ m.className='msg error'; m.textContent=data.error||'Failed to save.'; return; }
+    closePcEdit(); loadPettyCash();
+  }catch(e){ m.className='msg error'; m.textContent='Connection error.'; }
+  finally{ btn.disabled=false; btn.textContent='Save'; }
+});
+
 loadPettyCash();
 
 async function deletePettyCashEntry(id){
