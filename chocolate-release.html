@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -935,6 +936,29 @@ body{background:
     document.getElementById('grandTotalDisplay').textContent = fmtBD(itemsTotal + extrasTotal);
   }
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Chocolate Release',
+      placeholder: 'release no, item, customer…',
+      limit: 20,
+      getDate: r => r.date,
+      getText: r => r.rn + ' ' + r.type + ' ' + r.text,
+      selects: [{label:'Type', get:r => r.type}],
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:r => fmtDate(r.date)},
+        {h:'Release No', v:r => r.rn},
+        {h:'Type', v:r => r.type},
+        {h:'Items', v:r => r.count, right:true},
+        {h:'Total', v:r => Number(r.total).toFixed(3), right:true, sum:true}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
     const el = document.getElementById('historyList');
     if(history.length === 0){
@@ -944,14 +968,19 @@ body{background:
     const byRelease = {};
     history.forEach(h => {
       const rn = h['Release No'];
-      if(!byRelease[rn]) byRelease[rn] = { date: h['Realese Date'], type: h['Transaction Type'], total: 0, count: 0 };
+      if(!byRelease[rn]) byRelease[rn] = { rn, date: h['Realese Date'], type: h['Transaction Type'], total: 0, count: 0, text: '' };
       byRelease[rn].total += Number(h['Total']) || 0;
       byRelease[rn].count += 1;
+      byRelease[rn].text += ' ' + Object.values(h).filter(v => typeof v === 'string').join(' ');
     });
-    const releaseNos = Object.keys(byRelease).sort().reverse().slice(0, 20);
     const vh=document.getElementById('vHistory'); if(vh) vh.textContent=Object.keys(byRelease).length;
-    el.innerHTML = releaseNos.map(rn => {
-      const r = byRelease[rn];
+    const groups = Object.values(byRelease);
+    const shownList = getHT().apply(groups);
+    if(shownList.length === 0){
+      el.innerHTML = '<div class="empty-note">No releases match this filter.</div>';
+      return;
+    }
+    el.innerHTML = shownList.map(r => { const rn = r.rn;
       return `
         <div class="hist-row">
           <div class="hist-top">

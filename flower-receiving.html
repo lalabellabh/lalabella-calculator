@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -913,13 +914,45 @@ body::after{
     });
   }
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Flower Receiving',
+      placeholder: 'invoice no, flower, supplier…',
+      limit: 20,
+      getDate: e => e.Date,
+      getText: e => [e.Flower, e.Origin, e.Supplier, e['Invoice No'], e['Received By'], e.ID].join(' '),
+      selects: [{label:'Supplier', get:e => e.Supplier}],
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:e => fmtDate(e.Date)},
+        {h:'Invoice #', v:e => e['Invoice No']},
+        {h:'Item', v:e => e.Flower},
+        {h:'Origin', v:e => e.Type === 'Supply' ? 'Supply' : e.Origin},
+        {h:'Qty', v:e => e.Qty + ' ' + (e.Unit || ''), right:true},
+        {h:'Rate', v:e => Number(e.Rate || 0).toFixed(3), right:true},
+        {h:'Amount', v:e => Number(e.Amount || 0).toFixed(3), right:true, sum:true},
+        {h:'Supplier', v:e => e.Supplier},
+        {h:'By', v:e => e['Received By']}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
     const el = document.getElementById('historyList');
     if(entries.length === 0){
       el.innerHTML = '<div class="empty-note">No receiving logged yet for this branch.</div>';
       return;
     }
-    el.innerHTML = entries.slice(0, 20).map(e => `
+    const list = getHT().apply(entries);
+    if(list.length === 0){
+      el.innerHTML = '<div class="empty-note">No entries match this filter.</div>';
+      return;
+    }
+    el.innerHTML = list.map(e => `
       <div class="hist-row">
         <div class="hist-name">${e.Type === 'Supply' ? '🎀 ' : ''}${e.Flower || '—'} <span style="color:var(--ink-dim); font-weight:400;">(${e.Type === 'Supply' ? 'Supply' : (e.Origin || 'N/A')})</span></div>
         <div class="hist-meta">${fmtDate(e.Date)} · Qty ${e.Qty} ${e.Unit || ''} · Rate ${fmtBD(e.Rate)}/${e.Unit || 'unit'}</div>

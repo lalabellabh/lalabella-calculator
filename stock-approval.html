@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -261,14 +262,43 @@
     renderAdjustmentHistory(adjHistory);
   }
 
+  let lastAdj = [];
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('adjustmentHistory'),
+      title: 'Stock Adjustment History',
+      placeholder: 'chocolate, reason, approved by…',
+      limit: 40,
+      getDate: a => a['Date'],
+      getText: a => [a['Chocolate'], a['Branch'], a['Reason'], a['Approved By']].join(' '),
+      selects: [{label:'Branch', get:a => a['Branch']}],
+      columns: [
+        {h:'Date', v:a => fmtDate(a['Date'])},
+        {h:'Branch', v:a => a['Branch']},
+        {h:'Chocolate', v:a => a['Chocolate']},
+        {h:'Adjustment', v:a => a['Adjustment Qty'], right:true},
+        {h:'Reason', v:a => a['Reason']},
+        {h:'Approved by', v:a => a['Approved By']}
+      ],
+      onChange: () => renderAdjustmentHistory(lastAdj)
+    });
+    return _ht;
+  }
   function renderAdjustmentHistory(adjHistory){
     const el = document.getElementById('adjustmentHistory');
     if(!adjHistory || adjHistory.length === 0){
       el.innerHTML = '<div class="empty-note">No adjustments approved yet.</div>';
       return;
     }
-    const sorted = [...adjHistory].sort((a,b) => new Date(b['Date']) - new Date(a['Date']));
-    el.innerHTML = sorted.slice(0, 40).map(a => {
+    lastAdj = adjHistory;
+    const sorted = getHT().apply(adjHistory);
+    if(sorted.length === 0){
+      el.innerHTML = '<div class="empty-note">No adjustments match this filter.</div>';
+      return;
+    }
+    el.innerHTML = sorted.map(a => {
       const qty = Number(a['Adjustment Qty']);
       const varCls = qty >= 0 ? 'variance-pos' : 'variance-neg';
       const sign = qty > 0 ? '+' : '';

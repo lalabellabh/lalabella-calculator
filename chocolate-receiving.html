@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -863,11 +864,35 @@
     updatePulseStats();
   });
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Chocolate Receiving',
+      placeholder: 'item, supplier, batch, delivery note…',
+      limit: 40,
+      getDate: e => e['Receive Date'],
+      getText: e => [e['Chocolate Name'], e.ID, e.Supplier, e['Batch No.'], e['Delivery Note No'], e['Invoice No'], e['Created By'], e.Remarks].join(' '),
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:e => fmtDate(e['Receive Date'])},
+        {h:'ID', v:e => e.ID},
+        {h:'Item', v:e => e['Chocolate Name']},
+        {h:'Qty', v:e => (e['Qty Received'] ?? e['Current Stock'] ?? 0) + ' ' + (e.Unit || ''), right:true},
+        {h:'Price/Kg', v:e => e['Price / Kg'] != null && e['Price / Kg'] !== '' ? Number(e['Price / Kg']).toFixed(3) : '', right:true},
+        {h:'Batch', v:e => e['Batch No.']},
+        {h:'Expiry', v:e => e['Expiry Date'] ? fmtDate(e['Expiry Date']) : ''},
+        {h:'Delivery Note', v:e => e['Delivery Note No']},
+        {h:'Supplier', v:e => e.Supplier},
+        {h:'By', v:e => e['Created By']}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
-    const list = entries
-      .filter(e => e.Branch === currentBranch)
-      .sort((a,b) => new Date(b['Receive Date']) - new Date(a['Receive Date']))
-      .slice(0, 40);
+    const list = getHT().apply(entries.filter(e => e.Branch === currentBranch));
     const el = document.getElementById('historyList');
     if(list.length === 0){
       el.innerHTML = '<div class="empty-note">No stock received yet for ' + currentBranch + '.</div>';

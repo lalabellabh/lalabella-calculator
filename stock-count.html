@@ -4,6 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -743,18 +744,46 @@
     updateGarden();
   }
 
+  let _ht = null;
+  function getHT(){
+    if(_ht) return _ht;
+    _ht = HistoryTools.create({
+      listEl: document.getElementById('historyList'),
+      title: 'Stock Count History',
+      placeholder: 'chocolate name…',
+      limit: 40,
+      getDate: h => h['Date'],
+      getText: h => [h['Chocolate'], h['Status']].join(' '),
+      selects: [{label:'Status', get:h => h['Status']}],
+      subtitle: () => currentBranch,
+      columns: [
+        {h:'Date', v:h => fmtDate(h['Date'])},
+        {h:'Chocolate', v:h => h['Chocolate']},
+        {h:'System', v:h => h['System Stock'], right:true},
+        {h:'Physical', v:h => h['Physical Count'], right:true},
+        {h:'Variance', v:h => h['Variance'], right:true},
+        {h:'Status', v:h => h['Status']}
+      ],
+      onChange: () => renderHistory()
+    });
+    return _ht;
+  }
   function renderHistory(){
     const el = document.getElementById('historyList');
     if(history.length === 0){
       el.innerHTML = '<div class="empty-note">No count sessions yet for ' + currentBranch + '.</div>';
       return;
     }
-    const sorted = [...history].sort((a,b) => new Date(b['Date']) - new Date(a['Date']));
+    const sorted = getHT().apply(history);
+    if(sorted.length === 0){
+      el.innerHTML = '<div class="empty-note">No count sessions match this filter.</div>';
+      return;
+    }
     const statusClass = {
       'Confirmed':'status-confirmed', 'Pending Approval':'status-pending',
       'Approved':'status-approved', 'Rejected':'status-rejected', 'Recount Requested':'status-recount'
     };
-    el.innerHTML = sorted.slice(0, 40).map(h => `
+    el.innerHTML = sorted.map(h => `
       <div class="hist-row">
         <div class="hist-top">
           <span>${h['Chocolate'] || '—'}</span>
