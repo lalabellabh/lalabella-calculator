@@ -239,7 +239,6 @@
       <button data-branch="Galali">Galali</button>
     </div>
     <button class="btn" id="refreshBtn">↻ Refresh</button>
-    <button class="btn" id="themeBtn" title="Light / Dark">🌙</button>
     <div class="note" id="lastRefreshedNote"></div>
   </div>
 
@@ -297,16 +296,10 @@
   function applyMode(){
     const dark = !!(window.LBTheme && LBTheme.isDark && LBTheme.isDark());
     app.setAttribute('data-mode', dark ? 'dark' : 'light');
-    document.getElementById('themeBtn').textContent = dark ? '☀️' : '🌙';
   }
   window.addEventListener('lb:theme-changed', applyMode);
   document.addEventListener('DOMContentLoaded', applyMode);
   applyMode(); setTimeout(applyMode, 300);
-  document.getElementById('themeBtn').addEventListener('click', ()=>{
-    if(!window.LBTheme) return;
-    LBTheme.set(LBTheme.isDark() ? 'light' : 'dark');
-    setTimeout(applyMode, 50);
-  });
 
   /* ---------- helpers ---------- */
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
