@@ -10,6 +10,7 @@
  *   alpha  0..70  how see-through the white/dark boxes are (%)
  *   glass  true   frosted-glass blur behind the boxes
  *   icons  'plain' (as designed) | 'circle' | 'square'
+ *   text   85..140  text / screen size in % (100 = as designed). Done with CSS zoom on the page.
  *
  * How the boxes work: the page keeps its own CSS. This file looks for big
  * plain-coloured boxes (cards, panels — white/cream in Light, dark in Dark),
@@ -26,17 +27,18 @@
 (function () {
   if (window.LBLook) return;
   var KEY = 'lbLook', WKEY = 'lbLookWalls', MAX_WALLS = 3;
-  var DEF = { wall: 'off', alpha: 0, glass: false, icons: 'plain' };
+  var DEF = { wall: 'off', alpha: 0, glass: false, icons: 'plain', text: 100 };
   var root = document.documentElement;
 
   function readSt() {
     var o = {};
     try { o = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
-    var s = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons };
+    var s = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text };
     if (typeof o.wall === 'string') s.wall = o.wall;
     if (typeof o.alpha === 'number' && isFinite(o.alpha)) s.alpha = Math.max(0, Math.min(70, Math.round(o.alpha)));
     s.glass = o.glass === true;
     if (o.icons === 'circle' || o.icons === 'square') s.icons = o.icons;
+    if (typeof o.text === 'number' && isFinite(o.text)) s.text = Math.max(85, Math.min(140, Math.round(o.text)));
     return s;
   }
   var st = readSt();
@@ -279,6 +281,10 @@
       root.style.removeProperty('--lb-wallimg'); root.style.removeProperty('--lb-scrim');
     }
   }
+  var printingNow = false;
+  function applyText() {
+    if (st.text === 100 || printingNow) root.style.removeProperty('zoom'); else root.style.zoom = String(st.text / 100);
+  }
   function applyIcons() {
     if (st.icons === 'circle' || st.icons === 'square') root.setAttribute('data-lb-icons', st.icons);
     else root.removeAttribute('data-lb-icons');
@@ -291,7 +297,7 @@
     });
   }
   function applyAll() {
-    css(); applyWall(); applyIcons();
+    css(); applyWall(); applyIcons(); applyText();
     if (st.glass && !nativeDark()) root.setAttribute('data-lb-glass', '1'); else root.removeAttribute('data-lb-glass');
     applyBoxes();
   }
@@ -299,7 +305,7 @@
     try { window.dispatchEvent(new CustomEvent('lb:look-changed', { detail: get() })); } catch (e) {}
   }
 
-  function get() { return { wall: st.wall, alpha: st.alpha, glass: st.glass, icons: st.icons }; }
+  function get() { return { wall: st.wall, alpha: st.alpha, glass: st.glass, icons: st.icons, text: st.text }; }
   function set(patch) {
     patch = patch || {};
     if (typeof patch.wall === 'string') st.wall = (patch.wall === 'off' || wallUrl(patch.wall)) ? patch.wall : 'off';
@@ -308,12 +314,13 @@
       st.glass = patch.glass;
       if (st.glass && st.alpha === 0 && typeof patch.alpha !== 'number') st.alpha = 35;   // glass needs something to see through
     }
+    if (typeof patch.text === 'number' && isFinite(patch.text)) st.text = Math.max(85, Math.min(140, Math.round(patch.text)));
     if (patch.icons === 'plain' || patch.icons === 'circle' || patch.icons === 'square') st.icons = patch.icons;
     // first wallpaper picked while boxes are solid → make them a little see-through so the wallpaper shows
     if (typeof patch.wall === 'string' && st.wall !== 'off' && st.alpha === 0 && typeof patch.alpha !== 'number') st.alpha = 25;
     save(); applyAll(); changed();
   }
-  function reset() { st = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons }; save(); applyAll(); changed(); }
+  function reset() { st = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text }; save(); applyAll(); changed(); }
 
   // Add a wallpaper from a photo the person picks (shrunk so it fits on the device).
   function addWall(file) {
@@ -375,6 +382,6 @@
   window.addEventListener('storage', function (e) {
     if (e.key === KEY || e.key === WKEY) { st = readSt(); applyAll(); changed(); }
   });
-  window.addEventListener('beforeprint', function () { pause(releaseAll); });
-  window.addEventListener('afterprint', function () { applyBoxes(); });
+  window.addEventListener('beforeprint', function () { printingNow = true; applyText(); pause(releaseAll); });
+  window.addEventListener('afterprint', function () { printingNow = false; applyText(); applyBoxes(); });
 })();
