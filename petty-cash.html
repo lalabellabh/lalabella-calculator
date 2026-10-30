@@ -412,8 +412,10 @@
       </div>
       <label>Date</label>
       <input type="date" id="pcDate">
-      <label>What was it used for?</label>
-      <input type="text" id="pcPurpose" placeholder="e.g. Office supplies">
+      <div id="pcCatBox"><label>What was it used for?</label>
+      <select id="pcCat"></select></div>
+      <div id="pcRemarksBox" style="display:none;"><label id="pcRemarksLbl">Remarks (why?)</label>
+      <input type="text" id="pcRemarks" maxlength="150" placeholder="e.g. Taxi 3 BD — company car not used" autocomplete="off"></div>
       <div id="pcCarBox" style="display:none;">
         <label>Car plate number</label>
         <input type="text" id="pcCarPlate" maxlength="30" placeholder="e.g. 123456" autocomplete="off">
@@ -482,7 +484,8 @@
   <h2 style="margin-bottom:12px;">✏️ Edit Entry</h2>
   <label>Date</label><input type="date" id="peDate">
   <label>Type</label><select id="peType"><option value="expense">Expense</option><option value="topup">Top-up</option></select>
-  <label>Purpose</label><input type="text" id="pePurpose" maxlength="200">
+  <div id="peCatBox"><label>Purpose</label><select id="peCat"></select></div>
+  <div id="peRemarksBox" style="display:none;"><label id="peRemarksLbl">Remarks (why?)</label><input type="text" id="peRemarks" maxlength="150" autocomplete="off"></div>
   <div id="peCarBox" style="display:none;">
     <label>Car plate number</label><input type="text" id="peCarPlate" maxlength="30">
     <label>Driver</label><input type="text" id="peDriver" maxlength="60">
@@ -595,11 +598,13 @@ document.getElementById('typeExpenseBtn').addEventListener('click', ()=>{
   pcType = 'expense';
   document.getElementById('typeExpenseBtn').classList.add('active');
   document.getElementById('typeTopupBtn').classList.remove('active');
+  syncPurposeUI('pc');
 });
 document.getElementById('typeTopupBtn').addEventListener('click', ()=>{
   pcType = 'topup';
   document.getElementById('typeTopupBtn').classList.add('active');
   document.getElementById('typeExpenseBtn').classList.remove('active');
+  syncPurposeUI('pc');
 });
 
 async function loadPettyCash(){
@@ -717,34 +722,77 @@ function openPcEdit(id){
   pcEditId=t.id;
   document.getElementById('peDate').value=String(t.date).slice(0,10);
   document.getElementById('peType').value=t.type;
-  document.getElementById('pePurpose').value=t.purpose;
   document.getElementById('peCarPlate').value=t.carPlate||''; document.getElementById('peDriver').value=t.driver||'';
-  syncCarBox('pePurpose','peCarBox');
+  fillPurposeUI('pe', t.purpose, t.type);
   document.getElementById('peAmount').value=t.amount;
   const m=document.getElementById('peMsg'); m.className='msg'; m.textContent='';
   document.getElementById('pcEditModal').classList.add('open');
 }
-// Petrol / fuel entries need the car plate number and the driver
-function isPetrol(p){ return /petrol|petron|gasoline|fuel|diesel|بنزين/i.test(String(p||'')); }
+// Purpose is a drop-down (so nobody gets confused). Edit PC_CATS to change the list.
+//  Petrol  -> car plate + driver required (always the company car)
+//  Others  -> remarks required (why / where it was used, e.g. taxi because the company car was not used)
+const PC_CATS = ['Petrol', 'Supplies', 'Others'];
+const PC_OTHERS_PREFIX = 'Others: ';
+function pcTypeOf(pre){ return pre==='pc' ? pcType : document.getElementById('peType').value; }
+function syncPurposeUI(pre){
+  const topup = pcTypeOf(pre)==='topup';
+  const cat = document.getElementById(pre+'Cat').value;
+  document.getElementById(pre+'CatBox').style.display = topup ? 'none' : 'block';
+  const needRem = topup || cat==='Others';
+  document.getElementById(pre+'RemarksBox').style.display = needRem ? 'block' : 'none';
+  document.getElementById(pre+'RemarksLbl').textContent = topup ? 'Note (optional)' : 'Remarks (why? where was it used?)';
+  document.getElementById(pre+'CarBox').style.display = (!topup && cat==='Petrol') ? 'block' : 'none';
+}
+// Build the saved purpose text from the drop-down + remarks. Returns {purpose} or {error}.
+function readPurpose(pre){
+  const topup = pcTypeOf(pre)==='topup';
+  const cat = document.getElementById(pre+'Cat').value;
+  const rem = document.getElementById(pre+'Remarks').value.trim();
+  if(topup) return { purpose: rem || 'Top-up' };
+  if(!cat) return { error: 'Please choose what it was used for.' };
+  if(cat==='Others'){
+    if(!rem) return { error: 'Others: please write the remarks (why and where it was used).' };
+    return { purpose: PC_OTHERS_PREFIX + rem };
+  }
+  return { purpose: cat };
+}
+function isPetrol(p){ return String(p||'')==='Petrol'; }
+function fillPurposeUI(pre, purpose, type){
+  const sel = document.getElementById(pre+'Cat'), rem = document.getElementById(pre+'Remarks');
+  const pur = String(purpose||'');
+  if(type==='topup'){ sel.value='Others'; rem.value = pur==='Top-up' ? '' : pur; }
+  else if(pur.indexOf(PC_OTHERS_PREFIX)===0){ sel.value='Others'; rem.value = pur.slice(PC_OTHERS_PREFIX.length); }
+  else if(pur && PC_CATS.indexOf(pur)>=0){ sel.value=pur; rem.value=''; }
+  else { sel.value='Others'; rem.value=pur; } // older free-text entries
+  syncPurposeUI(pre);
+}
 function carText(t){ return (t && (t.carPlate || t.driver)) ? ('Car: ' + (t.carPlate||'—') + ' · Driver: ' + (t.driver||'—')) : ''; }
 function carLine(t){ const x = carText(t); return x ? '<div class="txn-date">🚗 ' + esc(x) + '</div>' : ''; }
-function syncCarBox(purposeId, boxId){ document.getElementById(boxId).style.display = isPetrol(document.getElementById(purposeId).value) ? 'block' : 'none'; }
-document.getElementById('pcPurpose').addEventListener('input', ()=> syncCarBox('pcPurpose','pcCarBox'));
-document.getElementById('pePurpose').addEventListener('input', ()=> syncCarBox('pePurpose','peCarBox'));
+['pc','pe'].forEach(pre=>{
+  const sel=document.getElementById(pre+'Cat');
+  sel.innerHTML = '<option value="">— Select purpose —</option>' + PC_CATS.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+  sel.addEventListener('change', ()=> syncPurposeUI(pre));
+});
+document.getElementById('peType').addEventListener('change', ()=> syncPurposeUI('pe'));
+syncPurposeUI('pc');
 function closePcEdit(){ document.getElementById('pcEditModal').classList.remove('open'); pcEditId=null; }
 document.getElementById('peCancel').addEventListener('click',closePcEdit);
 document.getElementById('pcEditModal').addEventListener('click',e=>{ if(e.target.id==='pcEditModal') closePcEdit(); });
 document.getElementById('peSave').addEventListener('click',async()=>{
   const m=document.getElementById('peMsg'), btn=document.getElementById('peSave');
-  const date=document.getElementById('peDate').value, purpose=document.getElementById('pePurpose').value.trim();
+  const date=document.getElementById('peDate').value;
   const amount=document.getElementById('peAmount').value, type=document.getElementById('peType').value;
   m.className='msg';
+  const pr=readPurpose('pe');
+  if(pr.error){ m.className='msg error'; m.textContent=pr.error; return; }
+  const purpose=pr.purpose;
   if(!date||!purpose||!(Number(amount)>0)){ m.className='msg error'; m.textContent='Fill in date, purpose and a valid amount.'; return; }
   const carPlate=document.getElementById('peCarPlate').value.trim(), driver=document.getElementById('peDriver').value.trim();
-  if(isPetrol(purpose) && type==='expense' && (!carPlate||!driver)){ m.className='msg error'; m.textContent='Petrol: please enter the car plate number and the driver.'; return; }
+  const petrolE = isPetrol(document.getElementById('peCat').value) && type==='expense';
+  if(petrolE && (!carPlate||!driver)){ m.className='msg error'; m.textContent='Petrol: please enter the car plate number and the driver.'; return; }
   btn.disabled=true; btn.textContent='Saving…';
   try{
-    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:isPetrol(purpose)?carPlate:'',driver:isPetrol(purpose)?driver:'',token:getToken()});
+    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:petrolE?carPlate:'',driver:petrolE?driver:'',token:getToken()});
     const res=await fetch(PETTYCASH_API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
     const data=await res.json();
     if(!data.success){ m.className='msg error'; m.textContent=data.error||'Failed to save.'; return; }
@@ -832,15 +880,17 @@ document.getElementById('pcTargetSaveBtn').addEventListener('click', async ()=>{
 document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
   const branch = document.getElementById('branchSelect').value;
   const date = document.getElementById('pcDate').value;
-  const purpose = document.getElementById('pcPurpose').value.trim();
+  const pr = readPurpose('pc');
+  const purpose = pr.purpose || '';
   const amount = document.getElementById('pcAmount').value;
   const enteredBy = document.getElementById('pcEnteredBy').value.trim();
   const msg = document.getElementById('pcMsg');
   msg.className = 'msg';
 
   if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
+  if(pr.error){ msg.textContent = pr.error; msg.className = 'msg error'; return; }
   if(!purpose || !amount || Number(amount) <= 0){ msg.textContent = 'Please fill in the purpose and amount.'; msg.className = 'msg error'; return; }
-  const petrol = isPetrol(purpose) && pcType === 'expense';
+  const petrol = isPetrol(document.getElementById('pcCat').value) && pcType === 'expense';
   const carPlate = petrol ? document.getElementById('pcCarPlate').value.trim() : '';
   const driver = petrol ? document.getElementById('pcDriver').value.trim() : '';
   if(petrol && (!carPlate || !driver)){ msg.textContent = 'Petrol: please enter the car plate number and the driver.'; msg.className = 'msg error'; return; }
@@ -853,8 +903,8 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Entry'; return; }
     msg.textContent = 'Saved!'; msg.className = 'msg success';
-    document.getElementById('pcPurpose').value = '';
-    document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; syncCarBox('pcPurpose','pcCarBox');
+    document.getElementById('pcRemarks').value = '';
+    document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; syncPurposeUI('pc');
     document.getElementById('pcAmount').value = '';
     loadPettyCash();
   }catch(e){
