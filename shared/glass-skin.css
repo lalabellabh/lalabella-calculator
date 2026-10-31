@@ -94,12 +94,13 @@ body[data-skin] .modal-overlay .modal{ background:var(--pop); color:var(--pop-in
 body[data-skin][data-gmode="dark"] .modal-overlay .modal label{ color:var(--ink-dim); }
 
 /* ---- Desktop: one page, no page scroll — long boxes scroll on their own ---- */
-@media(min-width:901px) and (min-height:620px){
+@media(min-width:901px) and (min-height:520px){
   html:has(body[data-skin]), body[data-skin]{ height:100%; overflow:hidden; }
   body[data-skin]{ padding:0!important; margin:0; }
   body[data-skin] .wrap{ padding-top:12px!important; max-width:none; height:100vh; padding:12px 16px 14px; margin:0; display:grid; gap:12px; grid-template-rows:auto minmax(0,1fr); grid-template-columns:var(--gcols,minmax(0,1fr) minmax(0,1fr)); align-items:stretch; }
   body[data-skin] .wrap .gtop{ grid-column:1 / -1; margin:0; }
-  body[data-skin] .wrap > .card, body[data-skin] .wrap > .panel, body[data-skin] .wrap .card.gcell{ overflow:auto; min-height:0; margin:0; }
+  body[data-skin] .wrap > .card, body[data-skin] .wrap > .panel, body[data-skin] .wrap .card.gcell,
+  body[data-skin] .wrap .receiving-layout > .card, body[data-skin] .wrap .release-layout > .card, body[data-skin] .wrap .count-layout > .card{ overflow:auto; min-height:0; margin:0; }
   body[data-skin] .wrap .receiving-layout, body[data-skin] .wrap .release-layout, body[data-skin] .wrap .count-layout{ display:contents; }
   body[data-skin] .wrap .gcol{ display:flex; flex-direction:column; gap:12px; overflow:auto; min-height:0; margin:0; padding:0; }
   body[data-skin] .wrap .gcol > .card, body[data-skin] .wrap .gcol > div > .card{ margin:0; flex:none; overflow:visible; }
@@ -122,10 +123,16 @@ body[data-skin] .wrap .gen-btn:hover{ background:linear-gradient(135deg,var(--ro
 body[data-skin] .wrap .gtop .tabs{ display:flex; gap:4px; background:var(--chip); padding:4px; border-radius:13px; margin:0; }
 body[data-skin] .wrap .tab{ border-radius:10px; background:transparent; color:var(--ink-dim); font:600 12px 'Space Grotesk',sans-serif; padding:8px 12px; border:0; }
 body[data-skin] .wrap .tab.active{ background:linear-gradient(135deg,var(--rose),var(--plum)); color:#fff; }
-@media(min-width:901px) and (min-height:620px){
+@media(min-width:901px) and (min-height:520px){
   body[data-skin] .wrap .gcol > *{ flex:none; }
   body[data-skin] .wrap .gcell{ grid-column:var(--gc); grid-row:var(--gr,2); }
 }
 body[data-skin] .wrap .preset-btn{ background:var(--paper); border-color:var(--line); color:var(--ink-dim); }
 body[data-skin] .wrap .preset-btn.active{ background:linear-gradient(135deg,var(--rose),var(--plum)); border-color:transparent; color:#fff; }
 body[data-skin][data-pg="chocolate-admin"] .wrap > .card{ max-width:920px; width:100%; justify-self:center; overflow:auto; }
+
+/* hamburger sits INSIDE the top bar box (all screen sizes) */
+body[data-skin] .wrap{ padding-top:10px!important; }
+body[data-skin] .wrap .gtop{ min-height:64px; }
+body[data-skin] .choco-nav-toggle{ top:20px!important; left:22px!important; width:44px; height:44px; }
+@media(max-width:900px){ body[data-skin] .wrap{ padding-left:16px; padding-right:16px; } }
