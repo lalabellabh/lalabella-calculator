@@ -4,7 +4,7 @@
   var pg = (location.pathname.split('/').pop() || '').replace(/\.html$/i, '');
   // per page: grid columns (desktop), which element goes in which column, and groups of boxes stacked in one scrolling column
   var PAGES = {
-    'chocolate-receiving': { cols: 'minmax(0,1.05fr) minmax(0,1fr) minmax(0,.8fr)', place: { '.pulse-card': ['3', '2'], '#historyList': ['2', '2'] } },
+    'chocolate-receiving': { cols: 'minmax(0,1.05fr) minmax(0,1fr) minmax(0,.8fr)', place: { '.receiving-layout > .card:first-child': ['1'], '#historyList': ['2'], '.pulse-card': ['3'] } },
     'chocolate-release': { cols: 'minmax(0,1.1fr) minmax(0,1fr) minmax(0,.75fr)', col: ['.release-main'], place: { '.release-main': ['1', '2'], '.release-visual': ['3', '2'], '#historyList': ['2', '2'] } },
     'stock-count': { cols: 'minmax(0,1.15fr) minmax(0,.85fr)', col: ['.count-layout > div:first-child'], place: { '.count-layout > div:first-child': ['1', '2'], '.count-garden': ['2', '2'] } },
     'stock-approval': { cols: 'minmax(0,1fr) minmax(0,1fr)' },
@@ -38,13 +38,18 @@
     // stack several boxes into one scrolling column
     if (cfg.stack) {
       var els = cfg.stack[0].map(function (s) { var e = w.querySelector(s); return e && (e.closest('.card') || e); }).filter(Boolean);
-      if (els.length) { var col = document.createElement('div'); col.className = 'gcol'; els[0].parentNode.insertBefore(col, els[0]); els.forEach(function (e) { col.appendChild(e); }); col.classList.add('gcell'); col.style.setProperty('--gc', String(cfg.stack[1])); col.style.setProperty('--gr', '2'); }
+      if (els.length) { var col = document.createElement('div'); col.className = 'gcol'; els[0].parentNode.insertBefore(col, els[0]); els.forEach(function (e) { col.appendChild(e); }); col.classList.add('gcell'); col.style.setProperty('--gc', String(cfg.stack[1])); col.style.setProperty('--gr', '3'); }
     }
     (cfg.col || []).forEach(function (s) { var e = w.querySelector(s); if (e) e.classList.add('gcol'); });
     if (cfg.cols) w.style.setProperty('--gcols', cfg.cols);
+    // boxes that are direct children of .wrap and not placed above: one per column, in order (explicit, so a banner or hidden element can't shift them)
+    var n = 0; [].slice.call(w.children).forEach(function (c) {
+      if (!c.classList.contains('card') || c.classList.contains('gcell')) return;
+      n++; c.classList.add('gcell'); c.style.setProperty('--gc', pg === 'chocolate-admin' ? '1' : String(n)); c.style.setProperty('--gr', '3');
+    });
     Object.keys(cfg.place || {}).forEach(function (sel) {
       var el = w.querySelector(sel); if (!el) return; el = (el.classList.contains('gcol') ? el : (el.closest('.card,.panel') || el));
-      var v = cfg.place[sel]; el.classList.add('gcell'); el.style.setProperty('--gc', v[0]); el.style.setProperty('--gr', v[1] || '2');
+      var v = cfg.place[sel]; el.classList.add('gcell'); el.style.setProperty('--gc', v[0]); el.style.setProperty('--gr', '3');
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();

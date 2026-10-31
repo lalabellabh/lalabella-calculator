@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>try{if(sessionStorage.getItem("lalabellaToken")||localStorage.getItem("lalabellaToken"))document.documentElement.className+=" lb-has-token"}catch(e){}</script>
+<style>html.lb-has-token #lala-lock-overlay{display:none!important}</style>
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="shared/tool-edit.js"></script>
@@ -1168,6 +1170,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   applyWelcome();
 
   function showLock(){
+    document.documentElement.classList.remove('lb-has-token');
     applyWelcome();
     sessionStorage.removeItem('lalabellaToken');
     sessionStorage.removeItem('lalabellaUser');
