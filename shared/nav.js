@@ -64,6 +64,7 @@
       ['flower-barcode.html', '🏷️', 'Barcode'],
       ['flower-calc.html', '🧮', 'Flower Calculator'],
       ['flower-admin.html', '🔐', 'Flower Admin', 'admin'],
+      ['flower-photos.html', '🖼️', 'Flower Photos', 'admin'],
       ['flower-odoo-import.html', '📥', 'Odoo Price Import', 'admin'],
       ['flower-guide.html', '📖', 'Flower Guide']
     ]},
