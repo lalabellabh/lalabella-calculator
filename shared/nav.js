@@ -686,6 +686,12 @@
       '<button type="button" data-dock="on" class="' + (dockOn ? 'on' : '') + '">🧲 On</button>' +
       '<button type="button" data-dock="off" class="' + (dockOn ? '' : 'on') + '">Off</button></div>' +
       '<div class="lbset-note">On = one slim glass handle on the screen edge that slides out Chat, Nova, the orders bell and your own shortcuts. Off = nothing floats on the screen (open Chat and Nova from the list below).</div>';
+    // New-order alert sound (Shopify orders): volume of the ring on this device
+    { let av = 80; try { const v = parseInt(localStorage.getItem('lbAlertVol'), 10); if (isFinite(v)) av = Math.max(0, Math.min(100, v)); } catch (e) {}
+      h += '<h4>New-order alert sound</h4><div class="lbset-rl"><span>Volume</span><span id="lbsetVolVal">' + (av ? av + '%' : 'Silent') + '</span></div>' +
+        '<input class="lbset-range" type="range" min="0" max="100" step="5" value="' + av + '" data-alertvol aria-label="Alert volume">' +
+        '<button type="button" class="lbset-reset" style="margin-top:8px" data-alerttest>🔔 Test sound</button>' +
+        '<div class="lbset-note">Rings when a new Shopify order comes in and stays until you tap the pop-up. 0 = silent (you still get the pop-up). The phone\'s own notification sound (app closed) follows the phone\'s volume. Saved on this device.</div>'; }
     // Chat alerts (Android app only): how a new message shows up on the phone
     if (/Android/i.test(navigator.userAgent || '')) {
       let cm = 'bubble'; try { cm = localStorage.getItem('lbChatMode') || 'bubble'; } catch (e) {}
@@ -788,6 +794,7 @@
     if (t.dataset.glass) { window.LBLook.set({ glass: t.dataset.glass === 'on' }); drawSettings(); return; }
     if (t.dataset.icons) { window.LBLook.set({ icons: t.dataset.icons }); drawSettings(); return; }
     if (t.hasAttribute('data-lookreset')) { if (!confirm('Reset wallpaper, text size, boxes and icons to the default look?')) return; lookErr = ''; window.LBLook.reset(); drawSettings(); return; }
+    if (t.hasAttribute('data-alerttest')) { if (window.lbAlertTest) window.lbAlertTest(); return; }
     if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
     if (t.dataset.chatmode) {
       const m = t.dataset.chatmode;
@@ -881,6 +888,12 @@
     back.querySelector('.lbset').addEventListener('click', onSettingsClick);
     back.querySelector('.lbset').addEventListener('input', e => {
       if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { const lb = document.getElementById('lbsetTextVal'); if (lb) lb.textContent = (parseInt(e.target.value, 10) || 100) + '%'; return; }
+      if (e.target.hasAttribute && e.target.hasAttribute('data-alertvol')) {
+        const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+        try { localStorage.setItem('lbAlertVol', String(v)); } catch (x) {}
+        const lb = document.getElementById('lbsetVolVal'); if (lb) lb.textContent = v ? v + '%' : 'Silent';
+        return;
+      }
       if (e.target.hasAttribute && e.target.hasAttribute('data-alpha')) {
         const v = parseInt(e.target.value, 10) || 0;
         window.LBLook.set({ alpha: v });
@@ -888,6 +901,7 @@
       }
     });
     back.querySelector('.lbset').addEventListener('change', e => {
+      if (e.target.hasAttribute && e.target.hasAttribute('data-alertvol')) { if (window.lbAlertTest) window.lbAlertTest(); return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { window.LBLook.set({ text: parseInt(e.target.value, 10) || 100 }); return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-wallfile')) {
         const f = e.target.files && e.target.files[0];
