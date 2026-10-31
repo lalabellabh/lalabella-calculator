@@ -399,6 +399,7 @@
     if(open) ui.openCats.add(i); else ui.openCats.delete(i);
   });
   document.getElementById('kpis').addEventListener('click', e=>{
+    const h = e.target.closest('[data-href]'); if(h){ location.href = h.dataset.href; return; }
     const k = e.target.closest('[data-goto]'); if(!k) return;
     ui.alTab = k.dataset.goto; renderAlerts(); syncTabs();
     document.getElementById('alScroll').scrollTop = 0;
@@ -435,7 +436,7 @@
       kpi('📥',"Today's receiving", fmtBD(d.todayReceiving), 'this week ' + fmtBD(d.weekReceiving), 'var(--teal)') +
       kpi('📤',"Today's releases", fmtBD(d.todayReleases), 'this week ' + fmtBD(d.weekReleases), 'var(--sky)') +
       kpi('🔁',"Today's transfers", fmtNum(d.todayTransfers), 'this week ' + fmtNum(d.weekTransfers), 'var(--amber)') +
-      kpi('⏳','Pending approvals', fmtNum(d.pendingApprovalsCount), 'stock counts', 'var(--plum)', d.pendingApprovalsCount > 0 ? 'warn' : '') +
+      kpi('⏳','Pending approvals', fmtNum(d.pendingApprovalsCount), 'tap to open Stock Approval', 'var(--plum)', d.pendingApprovalsCount > 0 ? 'warn' : '').replace('<div class="kpi glass', '<div data-href="stock-approval.html" class="kpi click glass') +
       kpi('⚠️','Near expiry / expired', fmtNum(d.nearExpiryCount) + ' / ' + fmtNum(d.expiredCount), 'tap to view', 'var(--bad)', expCls, d.expiredCount > 0 ? 'exp' : 'near') +
       kpi('📉','Low stock items', fmtNum(d.lowStockCount), 'tap to view', 'var(--gold)', d.lowStockCount > 0 ? 'warn' : '', 'low');
   }
