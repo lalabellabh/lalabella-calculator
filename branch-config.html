@@ -37,7 +37,8 @@
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 16px rgba(158,47,74,0.05); margin-bottom:16px; }
   .branch{ border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; position:relative; }
   .branch .remove-branch{ position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%; background:var(--blush); border:none; color:#c0392b; cursor:pointer; font-size:12px; }
-  .fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .fields{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+  .field select,.field input{ min-width:0; max-width:100%; }
   .field{ display:flex; flex-direction:column; gap:4px; }
   .field.full{ grid-column:1/-1; }
   label{ font-size:11px; color:var(--ink-dim); font-weight:600; }
