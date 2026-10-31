@@ -1,4 +1,5 @@
-// LALABELLA — Web Push (Supabase Edge Function)  v6
+// LALABELLA — Web Push (Supabase Edge Function)  v7
+// v7: approvalNotify = a flower rate change is waiting for approval => Admin devices only (third choice: mute_approvals).
 // v6: per-device notification choices. Each device can mute 💬 chat and/or 🛍️ order alerts
 //     (columns push_subscriptions.mute_chat / mute_orders). New staff actions getPrefs / setPrefs.
 // v5: order notification shows one # (the order number already starts with #).
@@ -8,14 +9,15 @@
 //   vapidKey                          -> {publicKey}
 //   subscribe {subscription}          -> saves this device for the logged-in user
 //   unsubscribe {endpoint}            -> removes this device
-//   getPrefs {endpoint}               -> {registered, chat, orders}  (true = notifications ON for that kind)
-//   setPrefs {endpoint, chat, orders} -> saves which kinds this device wants
+//   getPrefs {endpoint}               -> {registered, chat, orders, approvals}  (true = notifications ON for that kind)
+//   setPrefs {endpoint, chat, orders, approvals} -> saves which kinds this device wants
 //   test                              -> sends a test notification to the caller's devices
 // Internal actions (database triggers / other functions only; must carry push_config.internal_key as `key`):
 //   chatNotify {messageId}            -> new chat message => the right people (team / DM / group)
 //                                        v4: payload carries `reply` (who a quick-reply goes to) so the
 //                                        notification can show a Reply box.
 //   orderNotify {orders:[{orderNo,branch,address}]} -> new order(s) => everyone subscribed (who has orders ON)
+//   approvalNotify {items:[{flower,origin,oldRate,newRate}]} -> rate approval(s) waiting => Admin users' devices (who have approvals ON)
 //
 // VAPID keys + the internal key live in public.push_config (RLS on, no policies = service role only).
 
@@ -94,7 +96,7 @@ async function sendTo(subs: any[], payload: Record<string, unknown>) {
 // Subscriptions of the given users (or everyone), active users only, minus the sender,
 // minus devices that muted this kind ('chat' | 'orders').
 async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '') {
-  let q = 'push_subscriptions?select=id,user_id,endpoint,p256dh,auth,mute_chat,mute_orders&limit=500';
+  let q = 'push_subscriptions?select=id,user_id,endpoint,p256dh,auth,mute_chat,mute_orders,mute_approvals&limit=500';
   if (userIds) {
     if (!userIds.length) return [];
     q += `&user_id=in.(${userIds.join(',')})`;
@@ -103,10 +105,12 @@ async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '') {
   if (excludeUserId) subs = subs.filter((s: any) => s.user_id !== excludeUserId);
   if (kind === 'chat') subs = subs.filter((s: any) => !s.mute_chat);
   if (kind === 'orders') subs = subs.filter((s: any) => !s.mute_orders);
+  if (kind === 'approvals') subs = subs.filter((s: any) => !s.mute_approvals);
   if (!subs.length) return [];
   const uids = Array.from(new Set(subs.map((s: any) => s.user_id)));
-  const act = await rest('GET', `users?select=id&status=eq.Active&id=in.(${uids.join(',')})`);
-  const ok = new Set((act || []).map((u: any) => u.id));
+  const act = await rest('GET', `users?select=id,role&status=eq.Active&id=in.(${uids.join(',')})`);
+  // approvals go to Admins only (only they can approve)
+  const ok = new Set((act || []).filter((u: any) => kind !== 'approvals' || String(u.role || '').toLowerCase() === 'admin').map((u: any) => u.id));
   return subs.filter((s: any) => ok.has(s.user_id));
 }
 
@@ -118,7 +122,7 @@ Deno.serve(async (req) => {
 
   try {
     // ---- internal (database triggers / other functions) ----
-    if (p.action === 'chatNotify' || p.action === 'orderNotify') {
+    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify') {
       const c = await config();
       if (!p.key || String(p.key) !== c.internal_key) return json({ success: false, error: 'Unauthorized.' }, 401);
 
@@ -144,6 +148,18 @@ Deno.serve(async (req) => {
         const body = (m.kind || 'text') === 'text' ? String(m.body || '') : (LABEL[m.kind] || 'New message');
         const subs = await subsFor(userIds, m.user_id, 'chat');
         const r = await sendTo(subs, { title: clip(title, 80), body: clip(body, 160), url: safeUrl(url, 'chatbox.html'), tag, reply });
+        return json({ success: true, ...r });
+      }
+
+      if (p.action === 'approvalNotify') {
+        const items = (Array.isArray(p.items) ? p.items : []).slice(0, 20);
+        if (!items.length) return json({ success: true, sent: 0 });
+        const subs = await subsFor(null, 0, 'approvals');
+        if (!subs.length) return json({ success: true, sent: 0 });
+        const f = (o: any) => `${clip(o.flower, 40)}${o.origin ? ' (' + clip(o.origin, 30) + ')' : ''} ${Number(o.oldRate || 0).toFixed(3)} ➜ ${Number(o.newRate || 0).toFixed(3)}`;
+        const body = items.length === 1 ? f(items[0]) : `${f(items[0])} · +${items.length - 1} more`;
+        const title = items.length === 1 ? '🌸 Rate approval needed' : `🌸 ${items.length} rate approvals needed`;
+        const r = await sendTo(subs, { title, body: clip(body, 160), url: 'flower-dashboard.html', tag: 'approvals' });
         return json({ success: true, ...r });
       }
 
@@ -193,10 +209,10 @@ Deno.serve(async (req) => {
       }
       case 'getPrefs': {
         const endpoint = String(p.endpoint || '');
-        if (!endpoint) return json({ success: true, registered: false, chat: true, orders: true });
-        const r = await rest('GET', `push_subscriptions?select=mute_chat,mute_orders&user_id=eq.${me.id}&endpoint=eq.${encodeURIComponent(endpoint)}&limit=1`);
-        if (!r || !r[0]) return json({ success: true, registered: false, chat: true, orders: true });
-        return json({ success: true, registered: true, chat: !r[0].mute_chat, orders: !r[0].mute_orders });
+        if (!endpoint) return json({ success: true, registered: false, chat: true, orders: true, approvals: true });
+        const r = await rest('GET', `push_subscriptions?select=mute_chat,mute_orders,mute_approvals&user_id=eq.${me.id}&endpoint=eq.${encodeURIComponent(endpoint)}&limit=1`);
+        if (!r || !r[0]) return json({ success: true, registered: false, chat: true, orders: true, approvals: true });
+        return json({ success: true, registered: true, chat: !r[0].mute_chat, orders: !r[0].mute_orders, approvals: !r[0].mute_approvals });
       }
       case 'setPrefs': {
         const endpoint = String(p.endpoint || '');
@@ -204,6 +220,7 @@ Deno.serve(async (req) => {
         const fields: Record<string, boolean> = {};
         if (typeof p.chat === 'boolean') fields.mute_chat = !p.chat;
         if (typeof p.orders === 'boolean') fields.mute_orders = !p.orders;
+        if (typeof p.approvals === 'boolean') fields.mute_approvals = !p.approvals;
         if (!Object.keys(fields).length) return json({ success: false, error: 'Nothing to save.' });
         const r = await rest('PATCH', `push_subscriptions?user_id=eq.${me.id}&endpoint=eq.${encodeURIComponent(endpoint)}`, fields);
         if (!r || !r.length) return json({ success: false, error: 'This device is not registered yet. Turn notifications on first.' });
