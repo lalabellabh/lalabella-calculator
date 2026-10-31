@@ -767,14 +767,14 @@
     P.status().then(st => {
       const e2 = document.getElementById('lbsetPush');
       if (!e2) return;
-      const on = (v, k) => '<button type="button" data-pushk="' + k + '" class="' + (v ? 'on' : '') + '">' + (k === 'chat' ? '💬 Chat messages: ' : '🛍️ New orders: ') + (v ? 'On' : 'Off') + '</button>';
+      const on = (v, k) => '<button type="button" data-pushk="' + k + '" class="' + (v ? 'on' : '') + '">' + (k === 'chat' ? '💬 Chat messages: ' : k === 'orders' ? '🛍️ New orders: ' : '🌸 Rate approvals: ') + (v ? 'On' : 'Off') + '</button>';
       let x = '';
       if (!st.supported) x = '<div class="lbset-note">This browser cannot show notifications when the app is closed.</div>';
       else if (st.needsHomeScreen) x = '<div class="lbset-note">On iPhone/iPad, notifications only work from the Home Screen app (iOS 16.4 or newer). Add Lalabella to your Home Screen, open it from there, then come back here.</div>';
       else if (st.perm === 'denied') x = '<div class="lbset-note">Notifications are blocked for Lalabella on this device. Allow them in the phone/browser settings for this app or site, then reopen this panel.</div>';
       else if (!st.on) x = '<button type="button" class="lbset-reset" style="margin-top:0" data-pushon>🔔 Turn on notifications</button>' +
         '<div class="lbset-note">' + (st.userOff ? 'Notifications are off on this device.' : 'Get alerts for new orders and messages even when the app is closed.') + '</div>';
-      else x = '<div class="lbset-seg lbset-seg2">' + on(st.chat, 'chat') + on(st.orders, 'orders') + '</div>' +
+      else x = '<div class="lbset-seg lbset-seg2">' + on(st.chat, 'chat') + on(st.orders, 'orders') + (isAdmin() ? on(st.approvals, 'approvals') : '') + '</div>' +
         '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="lbset-reset" style="margin:0;flex:1" data-pushtest>Send test</button>' +
         '<button type="button" class="lbset-reset" style="margin:0;flex:1" data-pushoff>Turn off here</button></div>' +
         '<div class="lbset-note">On for this device. Choose what you want to be notified about. Saved for this device only.</div>';
@@ -830,7 +830,7 @@
     if (t.dataset.pushk) {
       const k = t.dataset.pushk, nowOn = t.classList.contains('on');
       t.disabled = true;
-      window.LBPush.setPrefs(k === 'chat' ? !nowOn : undefined, k === 'orders' ? !nowOn : undefined).then(ok => { if (!ok) pushMsg = 'Could not save. Try again.'; fillPush(); });
+      window.LBPush.setPrefs(k === 'chat' ? !nowOn : undefined, k === 'orders' ? !nowOn : undefined, k === 'approvals' ? !nowOn : undefined).then(ok => { if (!ok) pushMsg = 'Could not save. Try again.'; fillPush(); });
       return;
     }
     if (t.hasAttribute('data-alerttest')) { if (window.lbAlertTest) window.lbAlertTest(); return; }

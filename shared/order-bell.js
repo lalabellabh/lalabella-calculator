@@ -64,10 +64,33 @@
     }).join('');
     var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
     toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New order to assign' : rows.length + ' new orders to assign') + '</b>' + one + more;
-    toast.firstChild.textContent = '📦';
+    toast.firstChild.textContent = '📦'; toast.removeAttribute('data-go');
     toast.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 14000);
   }
+  // Flower rate changes waiting for an Admin's approval (the server only sends these to Admins).
+  function showApprToast(n, rows) {
+    var one = rows.slice(0, 2).map(function (r) {
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(r.flower) + '</b>' + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
+    }).join('');
+    toast.firstChild.textContent = '🌸'; toast.setAttribute('data-go', 'flower-dashboard.html');
+    toast.querySelector('.tt').innerHTML = '<b>' + (n === 1 ? 'Rate approval needed' : n + ' rate approvals needed') + '</b>' + one + '<div style="color:#8a7078;margin-top:2px">Tap to review</div>';
+    toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 20000);
+    try { beep(); } catch (e) {}
+  }
+  function apprHtml(rows) {
+    if (!rows.length) return '';
+    return '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px"><b>🌸 ' + rows.length + ' rate approval' + (rows.length > 1 ? 's' : '') + ' waiting</b>' +
+      rows.slice(0, 5).map(function (r) {
+        return '<div style="font-size:12px;margin-top:3px">' + esc(r.flower) + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
+      }).join('') + (rows.length > 5 ? '<div style="font-size:11px;color:#8a7078">+ ' + (rows.length - 5) + ' more</div>' : '') +
+      '<a href="flower-dashboard.html" style="margin-top:6px;padding:6px 0">Review approvals</a></div>';
+  }
+  var APPR_KEY = 'lbobAppr';   // last approval count this browser tab saw (so moving between pages does not pop up again)
+  function apprSeen() { try { var v = sessionStorage.getItem(APPR_KEY); return v === null ? null : parseInt(v, 10); } catch (e) { return null; } }
+  function apprSave(n) { try { sessionStorage.setItem(APPR_KEY, String(n)); } catch (e) {} }
+
   // New order from Shopify: stays on screen and rings (loud, repeating) until someone taps it.
   function showShopToast(rows) {
     var one = rows.slice(0, 2).map(function (o) {
@@ -76,7 +99,7 @@
         (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + '</div>';
     }).join('');
     var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
-    toast.firstChild.textContent = '🛍️';
+    toast.firstChild.textContent = '🛍️'; toast.removeAttribute('data-go');
     toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New Shopify order!' : rows.length + ' new Shopify orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
     toast.classList.add('show');
     clearTimeout(toastTimer);
@@ -84,7 +107,8 @@
   }
   toast.addEventListener('click', function (e) {
     if (e.target.closest('.x')) { hideToast(); return; }
-    hideToast();
+    var go = toast.getAttribute('data-go'); hideToast();
+    if (go) { location.href = go; return; }
     if (own) { var op = document.getElementById('lalaBellPanel'); if (!op || !op.classList.contains('show')) own.click(); return; }
     panel.classList.add('show'); layoutPanel(); refresh();
   });
@@ -226,7 +250,12 @@
       .then(function (d) {
         if (d && d.success === false) return;
         var n = Number(d.count) || 0, rows = Array.isArray(d.ordersDetail) ? d.ordersDetail : [];
-        if (n > 0) { badge.textContent = String(n); badge.classList.add('show'); } else badge.classList.remove('show');
+        var apRows = Array.isArray(d.approvalsDetail) ? d.approvalsDetail : [], ap = Number(d.pendingApprovals) || 0;
+        var shown = n + ap;
+        if (shown > 0) { badge.textContent = String(shown); badge.classList.add('show'); } else badge.classList.remove('show');
+        var seenAp = apprSeen();
+        if (seenAp !== null && ap > seenAp) showApprToast(ap, apRows);
+        apprSave(ap);
         if (lastCount !== null && n > lastCount && !own) { alarm(); btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
         lastCount = n;
         var prev = seenSet();
@@ -235,7 +264,7 @@
           if (fresh.length) showToast(fresh);
         }
         saveSeen(rows);
-        list.innerHTML = rows.length ? rows.map(orderHtml).join('') : '<div class="e">No unassigned orders right now.</div>';
+        list.innerHTML = apprHtml(apRows) + (rows.length ? rows.map(orderHtml).join('') : '<div class="e">No unassigned orders right now.</div>');
       })
       .catch(function () {});
   }
