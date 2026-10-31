@@ -467,7 +467,7 @@ document.getElementById('pwCancel').addEventListener('click',closePw);
 document.getElementById('pwModal').addEventListener('click',e=>{ if(e.target.id==='pwModal') closePw(); });
 document.getElementById('pwSave').addEventListener('click',async()=>{
   const pw=document.getElementById('pwInput').value;
-  if(pw.length<6){ setMsg('pwMsg','At least 6 characters.',false); return; }
+  if(pw.length<8){ setMsg('pwMsg','At least 8 characters.',false); return; }
   const btn=document.getElementById('pwSave'); btn.disabled=true;
   const d=await api({action:'adminResetPassword',username:pwUser.username,newPassword:pw});
   btn.disabled=false;
