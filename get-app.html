@@ -76,7 +76,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
 /* right: glass card with the steps */
 .card{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:26px;padding:clamp(16px,2.6vh,26px) clamp(16px,2.4vw,28px);box-shadow:0 22px 50px rgba(143,42,69,.16);min-height:0;max-height:100%;overflow:auto}
-.seg{display:grid;grid-template-columns:1fr 1fr;background:rgba(143,42,69,.09);border-radius:16px;padding:4px;gap:4px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(143,42,69,.09);border-radius:16px;padding:4px;gap:4px}
 .seg button{border:0;background:none;color:var(--muted);font-weight:600;font-size:15px;padding:11px 8px;border-radius:12px;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
 .seg button[aria-selected="true"]{background:#fff;color:var(--wine);box-shadow:0 3px 10px rgba(143,42,69,.18)}
 @media (prefers-color-scheme: dark){ .seg button[aria-selected="true"]{background:#3b1824;color:var(--ink)} }
@@ -229,6 +229,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
       <div class="seg" role="tablist" aria-label="Phone type">
         <button role="tab" id="tabA" aria-controls="pA" aria-selected="true">Android</button>
         <button role="tab" id="tabI" aria-controls="pI" aria-selected="false" tabindex="-1">iPhone</button>
+        <button role="tab" id="tabC" aria-controls="pC" aria-selected="false" tabindex="-1">PC / Mac</button>
       </div>
 
       <div class="panel" id="pA" role="tabpanel" aria-labelledby="tabA">
@@ -254,6 +255,17 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
         </ol>
         <p class="note">Apple only allows app files through the App Store, so iPhone uses the home screen version. It looks and works the same. No in-notification reply, chat bubbles or widgets on iPhone (Apple's limit).</p>
         <p class="note"><a href="iphone.html" style="color:var(--rose)"><b>Full iPhone guide + shortcut icons</b> (Attendance, Schedule, Chat, Calculators)</a></p>
+      </div>
+
+      <div class="panel" id="pC" role="tabpanel" aria-labelledby="tabC" hidden>
+        <div class="act"><a class="btn" href="desktop.html">Install on PC / Mac</a></div>
+        <ol class="steps">
+          <li><span>Open <b>mysystemlla.com</b> in <b>Chrome</b> or <b>Edge</b> and log in.</span></li>
+          <li><span>Click the <b>Install</b> icon at the right end of the address bar.</span></li>
+          <li><span>Allow <b>Notifications</b>. New orders and messages show up even when the window is closed.</span></li>
+          <li><span>For the shop PC: set it to open at start and never sleep. See the full guide.</span></li>
+        </ol>
+        <p class="note"><a href="desktop.html" style="color:var(--rose)"><b>Full PC / Mac guide</b> (open at start, alarm sound and volume)</a></p>
       </div>
       </div>
 
@@ -291,7 +303,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
   var $ = function(id){ return document.getElementById(id); };
-  var tabs = [$('tabA'), $('tabI')], panels = [$('pA'), $('pI')];
+  var tabs = [$('tabA'), $('tabI'), $('tabC')], panels = [$('pA'), $('pI'), $('pC')];
   var appBtns = [$('aL'), $('aM'), $('aD')], appPanes = [$('appL'), $('appM'), $('appD')], appKeys = ['L', 'M', 'D'];
   function pickApp(i){
     appBtns.forEach(function(b, n){ b.setAttribute('aria-selected', n === i ? 'true' : 'false'); appPanes[n].hidden = n !== i; });
@@ -313,7 +325,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
   tabs.forEach(function(t, n){
     t.addEventListener('click', function(){ pick(n); });
     t.addEventListener('keydown', function(e){
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); pick(n ? 0 : 1, true); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); pick((n + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length, true); }
     });
   });
 
@@ -345,7 +357,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
     });
     return;
   }
-  if (isIOS) pick(1);
+  if (isIOS) pick(1); else if (!isAndroid) pick(2);
 
   // ?dl=1 starts the Android download straight away (the button stays if the browser blocks it)
   if (isAndroid && /[?&]dl=1\b/.test(location.search)) setTimeout(function(){ try { var m = /[?&]app=(\w+)/.exec(location.search), k = m ? m[1].toLowerCase() : ''; $(k === 'messenger' ? 'mBtn' : (k === 'driver' ? 'dBtn' : 'apkBtn')).click(); } catch(e){} }, 600);
