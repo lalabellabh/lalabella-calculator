@@ -105,6 +105,26 @@ async function savePettyPhoto(base64Data: string): Promise<string> {
   return `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
 }
 
+// The bucket is PRIVATE: the DB keeps the stored object URL, but anything sent to the browser
+// is swapped for a short-lived signed URL (1 hour). If signing fails the photo is simply left out.
+const PHOTO_PUBLIC_PREFIX = `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/`;
+async function signPettyPhotos(rows: any[]): Promise<Record<string, string>> {
+  const paths = [...new Set((rows || []).map((r: any) => String(r.photo_url || '')).filter((u: string) => u.startsWith(PHOTO_PUBLIC_PREFIX)).map((u: string) => u.slice(PHOTO_PUBLIC_PREFIX.length)))];
+  const out: Record<string, string> = {};
+  if (!paths.length) return out;
+  try {
+    const res = await fetch(`${SB_URL}/storage/v1/object/sign/${PHOTO_BUCKET}`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 3600, paths }),
+    });
+    if (!res.ok) { console.error('sign failed', res.status); return out; }
+    const arr = await res.json();
+    (arr || []).forEach((x: any) => { if (x && x.path && x.signedURL && !x.error) out[PHOTO_PUBLIC_PREFIX + x.path] = `${SB_URL}/storage/v1${x.signedURL}`; });
+  } catch (e) { console.error('sign error', e); }
+  return out;
+}
+
 function validDate(d: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
   const t = new Date(d + 'T00:00:00Z');
@@ -130,9 +150,10 @@ async function handleGetPettyCash(p: any) {
     balance = targetAmount + netFromTransactions;
   }
 
+  const signed = await signPettyPhotos(rows || []);
   return {
     balance, targetAmount,
-    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url || '' })),
+    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '' })),
   };
 }
 async function handleSetPettyCashTarget(p: any, user: any) {
@@ -163,7 +184,7 @@ async function handleAddPettyCashEntry(p: any) {
     if (!photoUrl) return { error: 'The photo could not be saved (too big or not a picture). Nothing was saved — please try again.' };
   }
   await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver, photo_url: photoUrl || null }]);
-  return { success: true, photoUrl };
+  return { success: true, photoUrl: photoUrl ? ((await signPettyPhotos([{ photo_url: photoUrl }]))[photoUrl] || '') : '' };
 }
 // Admin only: fix the date (back-date), purpose, amount or type of a saved entry.
 async function handleEditPettyCashEntry(p: any, user: any) {

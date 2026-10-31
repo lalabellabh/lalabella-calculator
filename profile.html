@@ -430,7 +430,7 @@ document.getElementById('savePwBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('savePwBtn'),msg=document.getElementById('pwMsg'),currentPassword=document.getElementById('currentPw').value,newPassword=document.getElementById('newPw').value,confirmPassword=document.getElementById('confirmPw').value;
   const pwErr=t=>{msg.className='msg err';msg.textContent=t;msg.style.display='block'};
   if(!currentPassword||!newPassword||!confirmPassword){pwErr('All three fields are required.');return}
-  if(newPassword.length<6){pwErr('New password must be at least 6 characters.');return}
+  if(newPassword.length<8){pwErr('New password must be at least 8 characters.');return}
   if(newPassword!==confirmPassword){pwErr('New passwords do not match.');return}
   btn.disabled=true;btn.textContent='Updating…';
   const token=getToken();
