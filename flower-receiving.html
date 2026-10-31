@@ -1144,6 +1144,7 @@ body::after{
 
   document.getElementById('submitBtn').addEventListener('click', async ()=>{
     if(cart.length === 0) return;
+    if(!document.getElementById('fReceivedBy').value.trim()){ alert('Please enter your name in "Received By" before saving.'); document.getElementById('fReceivedBy').focus(); return; }
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
