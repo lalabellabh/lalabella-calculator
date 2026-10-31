@@ -427,7 +427,7 @@
   function renderKpis(){
     const d = data;
     const pcs = Number(d.totalPieces) || 0, noW = Number(d.piecesNoWeight) || 0;
-    const stockSub = pcs > 0 ? (fmtNum(pcs) + ' pcs' + (noW > 0 ? ' (' + fmtNum(noW) + ' no wt)' : '')) : 'all branches in view';
+    const stockSub = pcs > 0 ? (fmtNum(pcs) + ' pcs' + (noW > 0 ? ' · incl. ' + fmtNum(noW) + ' pcs counted by piece (cans), not in kg' : '')) : 'all branches in view';
     const expCls = d.expiredCount > 0 ? 'danger' : (d.nearExpiryCount > 0 ? 'warn' : '');
     document.getElementById('kpis').innerHTML =
       kpi('📦','Stock', fmtKg(d.totalAvailable), stockSub, 'var(--rose)') +
