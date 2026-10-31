@@ -168,3 +168,8 @@ body[data-skin] .wrap .gtop header{ margin:0!important; }
 body[data-skin] .wrap .type-btn{ background:transparent; color:var(--ink-dim); }
 body[data-skin] .wrap .type-btn.active{ background:linear-gradient(135deg,var(--rose),var(--plum)); color:#fff; box-shadow:0 4px 12px rgba(201,80,107,.35); }
 body[data-skin] .wrap .card #refreshBtn{ background:var(--glass-strong)!important; color:var(--ink)!important; border-color:var(--glass-brd)!important; }
+
+/* pages whose menu button is .nav-toggle (e.g. Flower Arrangements): same inside-the-top-bar spot */
+body[data-skin] .nav-toggle{ top:20px!important; left:22px!important; width:44px!important; height:44px!important; border-radius:12px!important; }
+body[data-skin] .wrap .scan-hero{ margin-bottom:0!important; flex:none; }
+body[data-skin] .wrap .gcol, body[data-skin] .wrap .card.gcell{ scrollbar-width:thin; scrollbar-color:rgba(80,40,50,.25) transparent; }
