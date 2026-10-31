@@ -80,6 +80,10 @@
   .dlg .cnt{ font-size:11px; color:var(--ink-dim); text-align:right; }
   .dlg .row2{ display:flex; gap:8px; }
   .dlg .row2 .btn{ flex:1; padding:11px; font-size:13px; }
+  .pastebox{ display:none; margin-top:6px; border:1.5px dashed var(--line); border-radius:9px; padding:7px 6px; text-align:center; font-size:11px; color:var(--ink-dim); cursor:pointer; outline:none; user-select:none; }
+  .pastebox:focus,.row.sel .pastebox{ border-color:var(--rose); color:var(--rose-deep); background:var(--blush); }
+  .row.sel{ box-shadow:0 0 0 2px var(--rose); }
+  @media (hover:hover) and (pointer:fine){ .pastebox{ display:block; } }
   input[type=file]{ display:none; }
 </style>
 </head>
@@ -130,7 +134,7 @@
         '<div class="pic">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" loading="lazy"><button type="button" class="xrm" data-a="rm" aria-label="Remove picture">✕</button>' : 'No photo') + '</div>' +
         '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + (it.rate ? Number(it.rate).toFixed(3) + ' BHD' : 'No price') + (it.unit ? ' · ' + esc(it.unit) : '') + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div><svg class="bc" data-code="' + esc(it.code) + '" aria-label="Barcode - tap to enlarge"></svg>' : '') + '<div class="fv' + (it.flavor ? '' : ' none') + '" data-a="edit">' + (it.flavor ? esc(it.flavor) : '＋ Add flavor / description') + '</div><div class="st"></div></div>' +
         '<div class="acts"><button class="btn" data-a="cam">📷 Camera</button>' +
-        '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' + '</div></div>';
+        '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' + '</div><div class="pastebox" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div></div></div>';
     }).join('');
     drawBarcodes();
   }
@@ -332,6 +336,33 @@
     var row = im.closest('.row'); var nm = row && row.querySelector('.nm');
     var it2 = items.filter(function (i) { return i.id === Number(row.getAttribute('data-id')); })[0];
     openBig(im.src, nm ? nm.textContent : '');
+  });
+
+  // ---- Snip & paste (web only): click a card's paste box (or just hover/click the card), then Ctrl+V ----
+  var pasteId = null;
+  function selRow(row) {
+    if (!row) return;
+    pasteId = Number(row.getAttribute('data-id'));
+    Array.prototype.forEach.call(document.querySelectorAll('.row.sel'), function (r) { r.classList.remove('sel'); });
+    row.classList.add('sel');
+  }
+  document.getElementById('list').addEventListener('click', function (e) {
+    var row = e.target.closest('.row'); if (row) selRow(row);
+    var pb = e.target.closest('.pastebox'); if (pb) pb.focus();
+  });
+  document.getElementById('list').addEventListener('mouseover', function (e) {
+    var row = e.target.closest('.row'); if (row && Number(row.getAttribute('data-id')) !== pasteId) selRow(row);
+  });
+  document.addEventListener('paste', function (e) {
+    var t = e.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (document.querySelector('.ed, .dlg, .lb')) return;
+    var items = (e.clipboardData && e.clipboardData.items) || [], file = null;
+    for (var i = 0; i < items.length; i++) { if (items[i].kind === 'file' && /^image\//.test(items[i].type)) { file = items[i].getAsFile(); break; } }
+    if (!file) return;
+    e.preventDefault();
+    if (!pasteId) { alert('Pumili muna ng card: i-click o i-hover ang card, tapos Ctrl+V.'); return; }
+    var id = pasteId, url = URL.createObjectURL(file);
+    openEditor(url, itemName(id), false).then(function (data) { URL.revokeObjectURL(url); if (data) saveCropped(id, data); });
   });
   document.getElementById('q').addEventListener('input', render);
   document.getElementById('flt').addEventListener('change', render);
