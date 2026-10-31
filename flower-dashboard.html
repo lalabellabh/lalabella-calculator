@@ -117,7 +117,7 @@
       </div>
       <div class="scroll" id="alScroll"></div>
       <div class="footbar" id="aprFoot" style="display:none">
-        <input type="text" class="field" id="approverName" placeholder="Your name (for the record)">
+        <input type="text" class="field" id="approverName" placeholder="Your name (blank = your login name)">
         <button class="btn primary" id="saveAllBtn" disabled>💾 Save All (0)</button>
       </div>
     </section>
@@ -275,7 +275,8 @@
   document.getElementById('saveAllBtn').addEventListener('click', async ()=>{
     const btn = document.getElementById('saveAllBtn'), rowsQ = Object.keys(ui.queue);
     if(!rowsQ.length) return;
-    const approvedBy = document.getElementById('approverName').value.trim();
+    const me = window.LALABELLA_USER || (function(){ try{ return JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || 'null'); }catch(e){ return null; } })() || {};
+    const approvedBy = document.getElementById('approverName').value.trim() || me.fullName || me.username || '';
     btn.disabled = true; btn.textContent = 'Saving…';
     let failed = false;
     try{
