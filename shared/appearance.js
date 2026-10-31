@@ -28,12 +28,15 @@
 (function () {
   if (window.LBLook) return;
   var KEY = 'lbLook', WKEY = 'lbLookWalls', MAX_WALLS = 3;
-  var DEF = { wall: 'off', alpha: 0, glass: false, icons: 'plain', text: 100, auto: true };
+  // Default look = glassy, see-through boxes over the Rose Blush wallpaper (a device that never chose anything). Anyone can switch it off in Settings.
+  var DEF = { wall: 'rose', alpha: 35, glass: true, icons: 'plain', text: 100, auto: true };
   var root = document.documentElement;
 
   function readSt() {
     var o = {};
-    try { o = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
+    var stored = null;
+    try { stored = localStorage.getItem(KEY); o = JSON.parse(stored || '{}') || {}; } catch (e) {}
+    if (stored === null) return { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text, auto: DEF.auto };
     var s = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text, auto: o.auto !== false };
     if (typeof o.wall === 'string') s.wall = o.wall;
     if (typeof o.alpha === 'number' && isFinite(o.alpha)) s.alpha = Math.max(0, Math.min(70, Math.round(o.alpha)));
