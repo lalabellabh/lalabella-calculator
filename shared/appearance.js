@@ -11,6 +11,7 @@
  *   glass  true   frosted-glass blur behind the boxes
  *   icons  'plain' (as designed) | 'circle' | 'square'
  *   text   85..140  text / screen size in % (100 = as designed). Done with CSS zoom on the page.
+ *   auto   true  (default) text that would be hard to read on the wallpaper switches to dark/white by itself, per spot on the screen.
  *
  * How the boxes work: the page keeps its own CSS. This file looks for big
  * plain-coloured boxes (cards, panels — white/cream in Light, dark in Dark),
@@ -27,13 +28,13 @@
 (function () {
   if (window.LBLook) return;
   var KEY = 'lbLook', WKEY = 'lbLookWalls', MAX_WALLS = 3;
-  var DEF = { wall: 'off', alpha: 0, glass: false, icons: 'plain', text: 100 };
+  var DEF = { wall: 'off', alpha: 0, glass: false, icons: 'plain', text: 100, auto: true };
   var root = document.documentElement;
 
   function readSt() {
     var o = {};
     try { o = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
-    var s = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text };
+    var s = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text, auto: o.auto !== false };
     if (typeof o.wall === 'string') s.wall = o.wall;
     if (typeof o.alpha === 'number' && isFinite(o.alpha)) s.alpha = Math.max(0, Math.min(70, Math.round(o.alpha)));
     s.glass = o.glass === true;
@@ -138,7 +139,7 @@
     s.id = 'lb-look-css';
     s.setAttribute('data-lb-theme-skip', '');
     s.textContent = [
-      'html.lb-wall{background:linear-gradient(var(--lb-scrim,rgba(255,255,255,.28)),var(--lb-scrim,rgba(255,255,255,.28))),var(--lb-wallimg) center/cover no-repeat fixed!important}',
+      'html.lb-wall{background:linear-gradient(var(--lb-scrim,rgba(255,255,255,.28)),var(--lb-scrim,rgba(255,255,255,.28))) fixed,var(--lb-wallimg) center/cover no-repeat fixed!important}',
       'html.lb-wall body{background:transparent!important;background-image:none!important}',
       'html.lb-wall #app{background:transparent!important}',
       'html[data-lb-glass] #app .glass{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}',
@@ -235,6 +236,7 @@
     });
   }
   function releaseAll() {
+    textRestore();
     appVarsRelease();
     Array.prototype.forEach.call(document.querySelectorAll('[data-lblk]'), release);
     if (fixedCache) fixedCache = new WeakMap();
@@ -276,6 +278,132 @@
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   }
 
+
+  // ---------------- readable text on wallpapers ----------------
+  // With a wallpaper (and see-through boxes) the page's own text colour can land on a background it was never designed for
+  // (white text on a light wallpaper). For every piece of text on screen we work out what is really behind it (the boxes
+  // under it, then the wallpaper pixel at that spot) and, only when the contrast is poor, switch that text to dark or white.
+  var txtList = [], txtTimer = 0, txtObs = null, thumb = null, thumbUrl = '';
+  function lum(c) {
+    function ch(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
+  }
+  function ratio(a, b) { var l1 = lum(a), l2 = lum(b); if (l1 < l2) { var t = l1; l1 = l2; l2 = t; } return (l1 + 0.05) / (l2 + 0.05); }
+  function over(top, base) {
+    var a = top.a;
+    return { r: top.r * a + base.r * (1 - a), g: top.g * a + base.g * (1 - a), b: top.b * a + base.b * (1 - a), a: 1 };
+  }
+  function textRestore() {
+    txtList.forEach(function (it) {
+      var el = it.el;
+      el.style.removeProperty('color');
+      if (it.v) el.style.setProperty('color', it.v, it.p);
+      el.removeAttribute('data-lbtx');
+      if (!el.getAttribute('style')) el.removeAttribute('style');
+    });
+    txtList = [];
+  }
+  function loadThumb(cb) {
+    var url = nativeDark() ? null : wallUrl(st.wall);
+    if (!url) { thumb = null; thumbUrl = ''; return cb(false); }
+    if (thumb && thumbUrl === url) return cb(true);
+    var im = new Image();
+    im.onload = function () {
+      try {
+        var sw = 48, sh = Math.max(1, Math.round(48 * im.naturalHeight / Math.max(1, im.naturalWidth)));
+        var c = document.createElement('canvas'); c.width = sw; c.height = sh;
+        var x = c.getContext('2d'); x.drawImage(im, 0, 0, sw, sh);
+        thumb = { w: sw, h: sh, iw: im.naturalWidth, ih: im.naturalHeight, d: x.getImageData(0, 0, sw, sh).data };
+        thumbUrl = url; cb(true);
+      } catch (e) { thumb = null; cb(false); }
+    };
+    im.onerror = function () { thumb = null; cb(false); };
+    im.src = url;
+  }
+  function wallPixel(x, y) {
+    var base = { r: themeDark() ? 25 : 255, g: themeDark() ? 20 : 255, b: themeDark() ? 25 : 255, a: 1 };
+    if (!thumb) return base;
+    var vw = window.innerWidth, vh = window.innerHeight, k = Math.max(vw / thumb.iw, vh / thumb.ih);
+    var ox = (vw - thumb.iw * k) / 2, oy = (vh - thumb.ih * k) / 2;
+    var u = Math.min(0.999, Math.max(0, (x - ox) / k / thumb.iw)), v = Math.min(0.999, Math.max(0, (y - oy) / k / thumb.ih));
+    var i = (Math.floor(v * thumb.h) * thumb.w + Math.floor(u * thumb.w)) * 4;
+    var px = { r: thumb.d[i], g: thumb.d[i + 1], b: thumb.d[i + 2], a: 1 };
+    var sc = parseRgb(root.style.getPropertyValue('--lb-scrim').trim());
+    return sc ? over(sc, px) : px;
+  }
+  function textPass() {
+    txtTimer = 0;
+    if (!document.body) return;
+    pause(function () {
+      textRestore();
+      if (!st.auto || printingNow || nativeDark() || !root.classList.contains('lb-wall')) return;
+      var vw = window.innerWidth, vh = window.innerHeight, layerCache = new Map(), seen = new Set(), n = 0;
+      function layer(el) {
+        if (layerCache.has(el)) return layerCache.get(el);
+        var cs = getComputedStyle(el), c = parseRgb(cs.backgroundColor), res = { c: null, stop: false };
+        var bgi = cs.backgroundImage;
+        if (bgi && bgi !== 'none') {
+          if (/gradient\(/.test(bgi)) { var cols = bgi.match(/rgba?\([^)]*\)/g) || [], g = cols.length ? parseRgb(cols[0]) : null; if (g && g.a > 0 && (!c || c.a < g.a)) c = g; }
+          else if (/url\(/.test(bgi)) res.stop = true;      // a picture behind the text: leave this text alone
+        }
+        if (c && c.a > 0) res.c = c;
+        layerCache.set(el, res); return res;
+      }
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), node;
+      while ((node = w.nextNode()) && n < 2500) {
+        var el = node.parentElement;
+        if (!el || seen.has(el) || !/\S/.test(node.nodeValue)) continue;
+        seen.add(el);
+        if (/^(SCRIPT|STYLE|NOSCRIPT|OPTION|TEXTAREA|SELECT|INPUT|SVG|TITLE|TEXT|TSPAN)$/i.test(el.tagName)) continue;
+        if (el.closest(SKIP_SEL + ',[data-lb-text-skip]')) continue;
+        var r = el.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+        var cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || (parseFloat(cs.opacity) || 1) < 0.2) continue;
+        var tc = parseRgb(cs.color); if (!tc) continue;
+        n++;
+        var cx = Math.min(vw - 1, Math.max(0, r.left + r.width / 2)), cy = Math.min(vh - 1, Math.max(0, r.top + r.height / 2));
+        var chain = [], cur = el, stop = false, opaque = false;
+        while (cur && cur !== root) {
+          var L = layer(cur);
+          if (L.stop) { stop = true; break; }
+          if (L.c) { chain.push(L.c); if (L.c.a >= 0.97) { opaque = true; break; } }
+          cur = cur.parentElement;
+        }
+        if (stop) continue;
+        var bg = opaque ? { r: chain[chain.length - 1].r, g: chain[chain.length - 1].g, b: chain[chain.length - 1].b, a: 1 } : wallPixel(cx, cy);
+        for (var i = chain.length - (opaque ? 2 : 1); i >= 0; i--) bg = over(chain[i], bg);
+        var fg = tc.a < 1 ? over(tc, bg) : tc;
+        var cur1 = ratio(fg, bg);
+        if (cur1 >= 3.6) continue;
+        var dark = { r: 33, g: 22, b: 27, a: 1 }, light = { r: 255, g: 255, b: 255, a: 1 };
+        var rd = ratio(dark, bg), rl = ratio(light, bg);
+        var pick = rd >= rl ? dark : light, pr = Math.max(rd, rl);
+        if (pr < cur1 + 1.2) continue;
+        txtList.push({ el: el, v: el.style.getPropertyValue('color'), p: el.style.getPropertyPriority('color') });
+        el.style.setProperty('color', 'rgb(' + pick.r + ',' + pick.g + ',' + pick.b + ')', 'important');
+        el.setAttribute('data-lbtx', '');
+      }
+    });
+  }
+  function textSchedule() { if (!txtTimer) txtTimer = setTimeout(textPass, 220); }
+  function textStart() {
+    if (!st.auto || nativeDark() || !wallUrl(st.wall)) { textRestore(); thumb = null; return; }
+    loadThumb(function () { textSchedule(); });
+    if (!txtObs && window.MutationObserver && document.body) {
+      txtObs = new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var m = muts[i], t = m.target;
+          if (m.type === 'characterData') { textSchedule(); return; }
+          for (var j = 0; j < m.addedNodes.length; j++) { var a = m.addedNodes[j]; if (a.nodeType === 1 && a.hasAttribute && a.hasAttribute('data-lbtx')) continue; textSchedule(); return; }
+        }
+      });
+      txtObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+  }
+  window.addEventListener('scroll', function () { if (txtList.length || root.classList.contains('lb-wall')) textSchedule(); }, true);
+  window.addEventListener('resize', textSchedule);
+
   // ---------------- apply everything ----------------
   function applyWall() {
     var url = nativeDark() ? null : wallUrl(st.wall);
@@ -307,12 +435,13 @@
     css(); applyWall(); applyIcons(); applyText();
     if (st.glass && !nativeDark()) root.setAttribute('data-lb-glass', '1'); else root.removeAttribute('data-lb-glass');
     applyBoxes();
+    textStart();
   }
   function changed() {
     try { window.dispatchEvent(new CustomEvent('lb:look-changed', { detail: get() })); } catch (e) {}
   }
 
-  function get() { return { wall: st.wall, alpha: st.alpha, glass: st.glass, icons: st.icons, text: st.text }; }
+  function get() { return { wall: st.wall, alpha: st.alpha, glass: st.glass, icons: st.icons, text: st.text, auto: st.auto }; }
   function set(patch) {
     patch = patch || {};
     if (typeof patch.wall === 'string') st.wall = (patch.wall === 'off' || wallUrl(patch.wall)) ? patch.wall : 'off';
@@ -321,13 +450,14 @@
       st.glass = patch.glass;
       if (st.glass && st.alpha === 0 && typeof patch.alpha !== 'number') st.alpha = 35;   // glass needs something to see through
     }
+    if (typeof patch.auto === 'boolean') st.auto = patch.auto;
     if (typeof patch.text === 'number' && isFinite(patch.text)) st.text = Math.max(85, Math.min(140, Math.round(patch.text)));
     if (patch.icons === 'plain' || patch.icons === 'circle' || patch.icons === 'square') st.icons = patch.icons;
     // first wallpaper picked while boxes are solid → make them a little see-through so the wallpaper shows
     if (typeof patch.wall === 'string' && st.wall !== 'off' && st.alpha === 0 && typeof patch.alpha !== 'number') st.alpha = 25;
     save(); applyAll(); changed();
   }
-  function reset() { st = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text }; save(); applyAll(); changed(); }
+  function reset() { st = { wall: DEF.wall, alpha: DEF.alpha, glass: DEF.glass, icons: DEF.icons, text: DEF.text, auto: true }; save(); applyAll(); changed(); }
 
   // Add a wallpaper from a photo the person picks (shrunk so it fits on the device).
   function addWall(file) {
@@ -375,6 +505,7 @@
   }
 
   window.LBLook = {
+    _wallPixel: function (x, y) { return wallPixel(x, y); },
     get: get, set: set, reset: reset,
     presets: function () { return PRESETS.map(function (p) { return { id: p.id, name: p.name, uri: presetUri(p) }; }); },
     walls: readWalls, addWall: addWall, removeWall: removeWall,
@@ -399,5 +530,5 @@
     if (e.key === KEY || e.key === WKEY) { st = readSt(); applyAll(); changed(); }
   });
   window.addEventListener('beforeprint', function () { printingNow = true; applyText(); pause(releaseAll); });
-  window.addEventListener('afterprint', function () { printingNow = false; applyText(); applyBoxes(); });
+  window.addEventListener('afterprint', function () { printingNow = false; applyText(); applyBoxes(); textSchedule(); });
 })();
