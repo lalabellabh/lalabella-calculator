@@ -197,6 +197,7 @@
     <div class="choco-music-now" id="chocoMusicNow"></div>
   </div>
 </nav>
+<script src="shared/scanner.js"></script>
 <script src="shared/nav.js"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
@@ -215,7 +216,10 @@
       <div class="card">
         <div class="card-title">🌸 Search a Flower</div>
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Type a flower name…" autocomplete="off" />
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <input type="text" id="searchInput" placeholder="Type a flower name or item code…" autocomplete="off" style="flex:1;min-width:0;" />
+            <button type="button" id="scanBtn" title="Scan barcode" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:#2f2024;color:#fff;">📷</button>
+          </div>
           <div id="searchResults"></div>
         </div>
 
@@ -302,12 +306,19 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<div id="scannerModal" style="display:none;position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <video id="scannerVideo" autoplay playsinline muted style="width:100%;max-width:400px;border-radius:8px;"></video>
+  <div style="color:#fff;font-size:12px;margin-top:10px;text-align:center;">Point the camera at the flower's barcode</div>
+  <button type="button" id="closeScanBtn" style="margin-top:16px;background:#b0413e;color:#fff;border:0;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;">Cancel</button>
+</div>
+
 <script>
   const API_URL = LB_CONFIG.FLOWER_FAST_API;
 
   const fmtBD = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD';
 
   let CATALOG = [];
+  let CODE_TO_NAME = {};   // item code (lowercase) -> flower name, for scan / typed code
   let cart = [];       // { name, qty, rate }
   let extras = [];     // { desc, price }
   let selected = null;
@@ -316,6 +327,14 @@
     try{
       const items = lalabellaCheckResponse(await fetch(API_URL + '?action=getFlowerItems&_ts=' + Date.now()).then(r=>r.json()));
       const active = items.filter(it => String(it['Status']||'').trim() === 'Active');
+      CODE_TO_NAME = {};
+      const codesByName = {};
+      active.forEach(it => {
+        const nm = String(it['Flowers']||'').trim().toLowerCase(), cd = String(it['Item Code']||'').trim();
+        if(!nm || !cd) return;
+        CODE_TO_NAME[cd.toLowerCase()] = String(it['Flowers']).trim();
+        (codesByName[nm] = codesByName[nm] || []).push(cd.toLowerCase());
+      });
 
       // Legacy/Unknown (the master reference rate) takes priority when
       // a flower has both — Holland items now live in FlowerItem
@@ -333,6 +352,7 @@
         .map(it => ({ name: String(it['Flowers']||'').trim(), rate: Number(it['Rate']) || 0 }))
         .filter(it => it.name);
       CATALOG = CATALOG.concat(hollandOnly);
+      CATALOG.forEach(c => { c.codes = (codesByName[c.name.toLowerCase()] || []).join(' '); });
     }catch(e){
       console.error('[Lalabella] loadCatalog failed:', e.message);
     }
@@ -344,7 +364,7 @@
   searchInput.addEventListener('input', ()=>{
     const q = searchInput.value.trim().toLowerCase();
     if(!q){ searchResults.classList.remove('show'); return; }
-    const matches = CATALOG.filter(f => f.name.toLowerCase().includes(q)).slice(0, 10);
+    const matches = CATALOG.filter(f => f.name.toLowerCase().includes(q) || (f.codes||'').includes(q)).slice(0, 10);
     if(matches.length === 0){
       searchResults.innerHTML = '<div class="empty-note">No results found.</div>';
     } else {
@@ -372,6 +392,44 @@
 
   document.addEventListener('click', (e)=>{
     if(!e.target.closest('.search-box')) searchResults.classList.remove('show');
+  });
+
+  // ---------- Scan the flower's barcode (its Item Code) ----------
+  function pickByName(name){
+    const f = CATALOG.find(c => c.name.toLowerCase() === String(name).toLowerCase());
+    if(!f) return false;
+    selected = { name: f.name, rate: f.rate };
+    searchInput.value = f.name;
+    document.getElementById('rateInput').value = f.rate.toFixed(3);
+    document.getElementById('selectedName').textContent = 'Napili: ' + f.name;
+    searchResults.classList.remove('show');
+    document.getElementById('addBtn').disabled = false;
+    document.getElementById('qtyInput').focus();
+    return true;
+  }
+  function useScanned(raw){
+    const code = String(raw||'').trim().toLowerCase();
+    const nm = CODE_TO_NAME[code];
+    if(!nm || !pickByName(nm)) alert('No flower found for code: ' + raw);
+  }
+  searchInput.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    const q = searchInput.value.trim().toLowerCase();
+    if(CODE_TO_NAME[q]){ e.preventDefault(); useScanned(q); }
+  });
+  let scanStop = null;
+  function stopScanner(){
+    if(scanStop){ try{ scanStop(); }catch(e){} scanStop = null; }
+    document.getElementById('scannerModal').style.display = 'none';
+  }
+  document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
+  document.getElementById('scanBtn').addEventListener('click', async ()=>{
+    const modal = document.getElementById('scannerModal'), video = document.getElementById('scannerVideo');
+    if(typeof LBScan === 'undefined'){ alert('Scanner is not available. Please type the item code instead.'); return; }
+    modal.style.display = 'flex';
+    try{
+      scanStop = await LBScan.start(video, function(raw){ scanStop = null; stopScanner(); useScanned(raw); }, function(e){ alert(LBScan.message(e)); stopScanner(); });
+    }catch(e){ alert(LBScan.message(e)); stopScanner(); }
   });
 
   function renderCart(){
