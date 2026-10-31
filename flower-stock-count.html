@@ -184,6 +184,7 @@
   </div>
 </nav>
 <script src="shared/nav.js"></script>
+<script src="shared/flower-scan.js"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
@@ -444,7 +445,7 @@
         return `
         <div class="flower-row">
           <div class="flower-info">
-            <div class="flower-name">${b.flowerName}</div>
+            <div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(b.flowerName):''}${b.flowerName}</div>
             <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD <select class="unit-sel ${b.unit==='bunch'?'bunch':''}" data-idx="${idx}" ${isReadOnlyView?'disabled':''}><option value="pcs" ${b.unit==='pcs'?'selected':''}>pcs</option><option value="bunch" ${b.unit==='bunch'?'selected':''}>bunch</option></select>${b.unit==='bunch'?' <span class="spb-note" data-idx="'+idx+'">1 bunch = '+b.spb+' pcs ✎</span>':''}${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+sb.count+' pcs'+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
           </div>
           <div class="flower-inputs">
