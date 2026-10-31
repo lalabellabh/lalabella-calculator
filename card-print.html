@@ -55,7 +55,7 @@ body.hide-watermark .card-deco-leaf{display:none;}
 .delete-handle{display:none;position:absolute;width:22px;height:22px;right:-11px;top:-11px;background:#c0392b;border:2px solid white;border-radius:50%;cursor:pointer;touch-action:none;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;line-height:1;}
 .image-item.selected .delete-handle{display:flex;}
 .empty-tip{font-size:12px;color:#8b7b83;margin-top:8px;text-align:center}
-@media(max-width:600px){h1{font-size:34px}.stage{padding:8px 8px 40px;overflow-x:auto}.panel{margin-left:8px;margin-right:8px}.toolbar{justify-content:flex-start}.sub{font-size:12px}.top::before,.top::after{display:none}button,select,input{padding:11px 12px;font-size:15px}}
+@media(max-width:600px){h1{font-size:34px}.stage{padding:8px 8px 40px;overflow-x:auto;min-width:0;max-width:100%;justify-content:flex-start}.panel{margin-left:8px;margin-right:8px}.toolbar{justify-content:flex-start}.toolbar .group{flex-wrap:wrap;max-width:100%}.toolbar select,.toolbar input{max-width:100%;min-width:0}.sub{font-size:12px}.top::before,.top::after{display:none}button,select,input{padding:11px 12px;font-size:15px}}
 @media print{
  @page{size:auto;margin:0}
  html,body{margin:0!important;padding:0!important;background:#fff!important}
@@ -383,7 +383,7 @@ body::before{
 @media(max-width:760px){
   .message-workspace{display:flex!important;flex-direction:column!important;align-items:center!important;gap:16px!important;min-height:0!important;padding:0 8px!important;}
   .message-workspace .art-panel{position:relative!important;left:auto!important;top:auto!important;width:100%!important;max-width:360px!important;height:320px!important;}
-  .message-workspace .stage{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:100%!important;display:flex!important;justify-content:center!important;}
+  .message-workspace .stage{position:relative!important;left:auto!important;top:auto!important;transform:none!important;width:100%!important;display:flex!important;justify-content:center!important;justify-content:safe center!important;overflow-x:auto;}
   .message-workspace .notes-panel{position:relative!important;right:auto!important;top:auto!important;width:100%!important;}
   .message-workspace.notes-hidden .notes-panel{display:none!important;}
   .notes-teaser{display:none!important;}

@@ -156,7 +156,8 @@
   @media (max-width:600px){
     .fields{ grid-template-columns:1fr; }
     .items-head{ display:none; }
-    .item{ grid-template-columns:1fr 1fr; grid-template-areas:"name name" "qty unit" "calc remove"; }
+    .item{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"name name" "qty unit" "calc remove"; }
+    .item input{ min-width:0; width:100%; }
     .item .iname{ grid-area:name; }
     .item .qty{ grid-area:qty; }
     .item .unit{ grid-area:unit; }
