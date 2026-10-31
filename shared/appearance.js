@@ -6,7 +6,7 @@
  *   localStorage "lbLook"      = {wall, alpha, glass, icons}
  *   localStorage "lbLookWalls" = up to 3 wallpapers the person added (small JPEG data URLs)
  *
- *   wall   'off' | 'rose' | 'plum' | 'gold' | 'choco' | 'sage' | 'bloom' | 'u0'..'u2' (own photos)
+ *   wall   'off' | 'rose' | 'plum' | 'gold' | 'choco' | 'sage' | 'bloom' | seasonal ('christmas' 'valentines' 'bahrain' 'halloween' 'ramadan' 'eid' 'newyear') | 'u0'..'u2' (own photos)
  *   alpha  0..70  how see-through the white/dark boxes are (%)
  *   glass  true   frosted-glass blur behind the boxes
  *   icons  'plain' (as designed) | 'circle' | 'square'
@@ -67,6 +67,36 @@
   function grad(id, a, b, x2, y2) {
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="' + (x2 || 1) + '" y2="' + (y2 || 1) + '"><stop offset="0" stop-color="' + a + '"/><stop offset="1" stop-color="' + b + '"/></linearGradient>';
   }
+
+  // ---- small shapes for the seasonal wallpapers ----
+  function heart(cx, cy, sz, fill, op, rot) {
+    return '<path transform="translate(' + cx + ' ' + cy + ') rotate(' + (rot || 0) + ') scale(' + (sz / 60) + ')" d="M0,-18 C-12,-52 -64,-40 -58,-2 C-54,28 -14,46 0,64 C14,46 54,28 58,-2 C64,-40 12,-52 0,-18Z" fill="' + fill + '" opacity="' + op + '"/>';
+  }
+  function star(cx, cy, r, fill, op) {
+    var pts = [], k;
+    for (k = 0; k < 10; k++) { var a = Math.PI / 5 * k - Math.PI / 2, rr = k % 2 ? r * 0.45 : r; pts.push((cx + rr * Math.cos(a)).toFixed(1) + ',' + (cy + rr * Math.sin(a)).toFixed(1)); }
+    return '<polygon points="' + pts.join(' ') + '" fill="' + fill + '" opacity="' + op + '"/>';
+  }
+  function tree(cx, base, sc) {
+    var g = '<g transform="translate(' + cx + ' ' + base + ') scale(' + sc + ')" opacity=".9"><rect x="-10" y="-30" width="20" height="40" fill="#5b3a1e"/>';
+    g += '<polygon points="0,-210 -70,-110 70,-110" fill="#1f6b3f"/><polygon points="0,-160 -90,-60 90,-60" fill="#24814b"/><polygon points="0,-100 -110,-20 110,-20" fill="#2b9a58"/>';
+    g += '<circle cx="-30" cy="-70" r="7" fill="#ff5a6e"/><circle cx="35" cy="-40" r="7" fill="#ffd86b"/><circle cx="-5" cy="-130" r="6" fill="#ffd86b"/><polygon points="0,-232 6,-216 22,-216 9,-206 14,-190 0,-200 -14,-190 -9,-206 -22,-216 -6,-216" fill="#ffd86b"/></g>';
+    return g;
+  }
+  function bat(cx, cy, sc, op) {
+    return '<path transform="translate(' + cx + ' ' + cy + ') scale(' + sc + ')" d="M0,0 C-10,-12 -30,-14 -56,2 C-42,-4 -34,4 -28,16 C-18,6 -8,8 0,18 C8,8 18,6 28,16 C34,4 42,-4 56,2 C30,-14 10,-12 0,0Z" fill="#0b0414" opacity="' + op + '"/>';
+  }
+  function crescent(cx, cy, r, fill, op) {
+    return '<path transform="translate(' + cx + ' ' + cy + ')" d="M0,' + (-r) + ' A' + r + ',' + r + ' 0 1 0 0,' + r + ' A' + (r * 1.3) + ',' + (r * 1.3) + ' 0 0 1 0,' + (-r) + 'Z" fill="' + fill + '" opacity="' + op + '"/>';
+  }
+  function lantern(cx, top, sc) {
+    return '<g transform="translate(' + cx + ' ' + top + ') scale(' + sc + ')" opacity=".85"><line x1="0" y1="0" x2="0" y2="120" stroke="#f6d37a" stroke-width="3"/><rect x="-18" y="120" width="36" height="12" fill="#f6d37a"/><path d="M-30,132 L30,132 L40,215 L-40,215Z" fill="#e6a93f"/><path d="M-12,132 L12,132 L16,215 L-16,215Z" fill="#fff0b3" opacity=".6"/><rect x="-20" y="215" width="40" height="10" fill="#f6d37a"/></g>';
+  }
+  function burst(cx, cy, r, fill) {
+    var g = '', k;
+    for (k = 0; k < 16; k++) { var a = Math.PI * 2 / 16 * k; g += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + r * Math.cos(a)).toFixed(1) + '" y2="' + (cy + r * Math.sin(a)).toFixed(1) + '" stroke="' + fill + '" stroke-width="4" stroke-linecap="round" opacity=".55"/><circle cx="' + (cx + r * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * Math.sin(a)).toFixed(1) + '" r="6" fill="' + fill + '" opacity=".8"/>'; }
+    return g + '<circle cx="' + cx + '" cy="' + cy + '" r="10" fill="#fff" opacity=".9"/>';
+  }
   var BLUR = '<filter id="bl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="60"/></filter>';
   var PRESETS = [
     { id: 'rose', name: 'Rose Blush', svg: function () {
@@ -101,6 +131,57 @@
         flower(65, 65, 46, '#e58aa6', .55, 0, '#fff3f6') + flower(195, 195, 46, '#e58aa6', .55, 36, '#fff3f6') +
         '<circle cx="195" cy="65" r="5" fill="#e58aa6" opacity=".4"/><circle cx="65" cy="195" r="5" fill="#e58aa6" opacity=".4"/></pattern>';
       return wrap('<rect width="1600" height="1000" fill="#fdeef2"/><rect width="1600" height="1000" fill="url(#p)"/>', t);
+    } },
+    // ---- seasonal ----
+    { id: 'christmas', name: '🎄 Christmas', svg: function () {
+      var d = '', i;
+      for (i = 0; i < 90; i++) d += '<circle cx="' + ((i * 173) % 1600) + '" cy="' + ((i * 257) % 1000) + '" r="' + (2 + (i % 5)) + '" fill="#fff" opacity="' + (0.25 + (i % 4) * 0.12) + '"/>';
+      d += tree(240, 760, 1.5) + tree(1380, 800, 1.9) + tree(820, 840, 1.1);
+      d += star(1250, 150, 38, '#ffd86b', .85) + star(330, 170, 26, '#ffd86b', .7) + star(780, 90, 20, '#ffd86b', .6);
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/><g filter="url(#bl)"><circle cx="1300" cy="200" r="280" fill="#d8344f" opacity=".45"/><circle cx="260" cy="860" r="300" fill="#e6b84a" opacity=".22"/></g>' + d,
+        grad('g', '#103a27', '#7d1a2a') + BLUR);
+    } },
+    { id: 'valentines', name: '💖 Valentine\'s', svg: function () {
+      var d = '', i, cols = ['#fff', '#ffd1dc', '#ff9db5'];
+      for (i = 0; i < 26; i++) d += heart((i * 617 + 90) % 1560 + 20, (i * 389 + 40) % 940 + 20, 26 + (i % 5) * 16, cols[i % 3], 0.22 + (i % 4) * 0.08, ((i * 37) % 50) - 25);
+      d += heart(1250, 300, 170, '#fff', .22, 12) + heart(300, 720, 130, '#fff', .2, -14);
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/>' + d, grad('g', '#ff9db5', '#c8274f'));
+    } },
+    { id: 'bahrain', name: '🇧🇭 Bahrain National Day', svg: function () {
+      var path = 'M0,0 L470,0', y;
+      for (y = 0; y < 5; y++) path += ' L630,' + (y * 200 + 100) + ' L470,' + ((y + 1) * 200);
+      path += ' L0,1000 Z';
+      var d = '<path d="' + path + '" fill="#fff" opacity=".93"/>';
+      var dots = ''; for (var i = 0; i < 40; i++) dots += '<circle cx="' + (700 + (i * 211) % 880) + '" cy="' + ((i * 137) % 1000) + '" r="' + (2 + i % 4) + '" fill="#fff" opacity="' + (0.1 + (i % 4) * 0.05) + '"/>';
+      return wrap('<rect width="1600" height="1000" fill="#c8102e"/><rect width="1600" height="1000" fill="url(#g)"/>' + d + dots,
+        grad('g', '#e23a52', '#8e0a20'));
+    } },
+    { id: 'halloween', name: '🎃 Halloween', svg: function () {
+      var d = '', i;
+      d += '<circle cx="1230" cy="250" r="170" fill="#ffb347" opacity=".9"/><circle cx="1180" cy="210" r="30" fill="#e8923a" opacity=".5"/><circle cx="1290" cy="300" r="42" fill="#e8923a" opacity=".4"/>';
+      d += bat(1040, 200, 1.3, .8) + bat(1420, 120, 1, .7) + bat(1330, 470, 1.6, .75) + bat(260, 230, 1.4, .6) + bat(520, 120, .9, .55) + bat(150, 520, 1.1, .5);
+      for (i = 0; i < 60; i++) d += '<circle cx="' + ((i * 211) % 1600) + '" cy="' + ((i * 127) % 1000) + '" r="' + (1.5 + i % 3) + '" fill="#ffd9a0" opacity="' + (0.15 + (i % 4) * 0.08) + '"/>';
+      d += '<path d="M0,1000 L0,880 Q200,800 400,880 T800,860 T1200,890 T1600,850 L1600,1000Z" fill="#12061c" opacity=".7"/>';
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/>' + d, grad('g', '#1b0b2e', '#5a1f4d', 0, 1));
+    } },
+    { id: 'ramadan', name: '🌙 Ramadan', svg: function () {
+      var d = '<g filter="url(#bl)"><circle cx="1200" cy="230" r="300" fill="#e6b84a" opacity=".28"/></g>' + crescent(1200, 240, 130, '#f6d37a', .95);
+      d += star(1010, 170, 24, '#f6d37a', .9) + star(1400, 430, 18, '#f6d37a', .75) + star(240, 190, 20, '#f6d37a', .7) + star(560, 90, 14, '#f6d37a', .65);
+      for (var i = 0; i < 70; i++) d += '<circle cx="' + ((i * 233) % 1600) + '" cy="' + ((i * 151) % 1000) + '" r="' + (1 + i % 3) + '" fill="#fff" opacity="' + (0.15 + (i % 4) * 0.1) + '"/>';
+      d += lantern(260, 0, 1.2) + lantern(430, 0, .8) + lantern(1500, 0, 1);
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/>' + d, grad('g', '#0d1b3d', '#33266b', 0, 1) + BLUR);
+    } },
+    { id: 'eid', name: '✨ Eid', svg: function () {
+      var d = '<g filter="url(#bl)"><circle cx="300" cy="200" r="300" fill="#f6d37a" opacity=".3"/><circle cx="1350" cy="820" r="320" fill="#0c6b57" opacity=".4"/></g>';
+      d += crescent(1280, 230, 110, '#fff3c4', .95) + star(1100, 160, 22, '#fff3c4', .9) + star(1430, 420, 16, '#fff3c4', .75) + star(240, 640, 18, '#fff3c4', .6);
+      for (var i = 0; i < 80; i++) d += '<circle cx="' + ((i * 197) % 1600) + '" cy="' + ((i * 263) % 1000) + '" r="' + (2 + i % 4) + '" fill="#f6d37a" opacity="' + (0.15 + (i % 5) * 0.07) + '"/>';
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/>' + d, grad('g', '#0f6a58', '#073a4a') + BLUR);
+    } },
+    { id: 'newyear', name: '🎆 New Year', svg: function () {
+      var d = '', i, cols = ['#ffd86b', '#ff7aa8', '#7ad8ff', '#fff'];
+      for (i = 0; i < 110; i++) d += '<rect x="' + ((i * 241) % 1600) + '" y="' + ((i * 163) % 1000) + '" width="' + (6 + i % 6) + '" height="' + (12 + i % 8) + '" fill="' + cols[i % 4] + '" opacity="' + (0.25 + (i % 4) * 0.12) + '" transform="rotate(' + ((i * 47) % 180) + ' ' + ((i * 241) % 1600) + ' ' + ((i * 163) % 1000) + ')"/>';
+      d += burst(380, 280, 190, '#ffd86b') + burst(1250, 230, 150, '#ff7aa8') + burst(900, 560, 110, '#7ad8ff');
+      return wrap('<rect width="1600" height="1000" fill="url(#g)"/>' + d, grad('g', '#0b1230', '#2a1760'));
     } }
   ];
   var uriCache = {};
@@ -142,6 +223,11 @@
       'html.lb-wall{background:linear-gradient(var(--lb-scrim,rgba(255,255,255,.28)),var(--lb-scrim,rgba(255,255,255,.28))) fixed,var(--lb-wallimg) center/cover no-repeat fixed!important}',
       'html.lb-wall body{background:transparent!important;background-image:none!important}',
       'html.lb-wall #app{background:transparent!important}',
+      // the side menu (hamburger drawer) turns into frosted glass too, so the wallpaper shows through it
+      'html.lb-wall .choco-drawer,html[data-lb-glass] .choco-drawer,html.lb-wall .lbnav-drawer,html[data-lb-glass] .lbnav-drawer{background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(22px) saturate(1.5)!important;backdrop-filter:blur(22px) saturate(1.5)!important;border-right:1px solid rgba(255,255,255,.6)!important}',
+      'html.lb-wall .choco-drawer a,html[data-lb-glass] .choco-drawer a,html.lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,.42)!important}',
+      'html[data-lb-theme="dark"].lb-wall .choco-drawer,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer,html[data-lb-theme="dark"].lb-wall .lbnav-drawer,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer{background:rgba(22,15,20,.52)!important;border-right-color:rgba(255,255,255,.14)!important}',
+      'html[data-lb-theme="dark"].lb-wall .choco-drawer a,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer a,html[data-lb-theme="dark"].lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,.08)!important}',
       'html[data-lb-glass] #app .glass{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}',
       '[data-lbglass]{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}',
       'html[data-lb-icons="circle"] :is(' + ICONS_ALL + '){border-radius:50%!important;overflow:hidden}',
@@ -171,7 +257,8 @@
       if (fixedCache.has(cur)) { res = fixedCache.get(cur); break; }
       chain.push(cur);
       var pos = getComputedStyle(cur).position;
-      if (pos === 'fixed' || pos === 'sticky') { res = true; break; }
+      // an element that is itself sticky is skipped (see consider()), but cards INSIDE a sticky layout column are ordinary boxes
+      if (pos === 'fixed' || (pos === 'sticky' && cur === el)) { res = true; break; }
       cur = cur.parentElement;
     }
     chain.forEach(function (n) { fixedCache.set(n, res); });
