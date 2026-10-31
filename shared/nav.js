@@ -99,7 +99,32 @@
   function readCustom() {
     try { const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); return Array.isArray(c) ? c : []; } catch (e) { return []; }
   }
-  readCustom().forEach(c => { if (c && c.h && c.l && !QUICK.some(q => q[0] === c.h)) QUICK.push([c.h, c.i || '🔗', c.l, '', 'custom']); });
+  // c.s = the section it was made for (missing/'quick' = Quick Tools).
+  const CUSTOM_OTHER = [];   // your own shortcuts made for Chocolate/Flower/Item sections (not in QUICK)
+  readCustom().forEach(c => {
+    if (!c || !c.h || !c.l) return;
+    const it = [c.h, c.i || '🔗', c.l, '', 'custom'];
+    if (c.s && c.s !== 'quick') { if (!CUSTOM_OTHER.some(q => q[0] === c.h)) CUSTOM_OTHER.push(it); }
+    else if (!QUICK.some(q => q[0] === c.h)) QUICK.push(it);
+  });
+
+  // Other pages of the system that are not in any menu by default. Anyone can add them to any section
+  // (⚙️ Settings → Edit Menu → ＋ Add tools). 4th value 'admin' = only Admins see it.
+  const EXTRA = [
+    ['index.html', '🍫', 'Chocolate Home'],
+    ['flower-tools.html', '🌸', 'Flower Home'],
+    ['chatbox.html', '💬', 'Staff Chat'],
+    ['initial-stock.html', '📦', 'Initial Stock Entry'],
+    ['supply-log.html', '🚚', 'Supply Receiving Log'],
+    ['attendance-admin.html', '🗂️', 'Attendance Records', 'admin'],
+    ['schedule-admin.html', '📤', 'Upload New Schedule', 'admin'],
+    ['get-app.html', '📲', 'Get the App'],
+    ['get-driver-app.html', '🚗', 'Get Driver App'],
+    ['get-messenger-app.html', '💬', 'Get Messenger App'],
+    ['iphone.html', '🍎', 'Lalabella on iPhone'],
+    ['privacy-policy.html', '🔒', 'Privacy Policy'],
+    ['terms-of-use.html', '📄', 'Terms of Use']
+  ];
 
   // System / admin pages live in ⚙️ Settings now (keeps the menu short). Still reachable from there.
   const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html'];
@@ -155,6 +180,8 @@
   const REG = {};                               // href -> { item, module }
   Object.keys(MODULES).forEach(k => MODULES[k].items.forEach(i => { if (!REG[i[0]]) REG[i[0]] = { item: i, module: k }; }));
   QUICK.forEach(i => { if (!REG[i[0]]) REG[i[0]] = { item: i, module: null }; });
+  EXTRA.forEach(i => { if (!REG[i[0]]) REG[i[0]] = { item: i, module: null, grp: 'other' }; });
+  CUSTOM_OTHER.forEach(i => { if (!REG[i[0]]) REG[i[0]] = { item: i, module: null, grp: 'mine' }; });
 
   function readPrefs() {
     try { const p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); return p && typeof p === 'object' ? p : {}; }
@@ -533,7 +560,7 @@
   }
 
   // ---- ⚙️ Settings panel (Appearance + Edit Menu) ----
-  const SECTION_TITLES = { chocolate: 'Chocolate Tools', flower: 'Flower Tools', item: 'Item Inventory', quick: 'Quick Tools' };
+  const SECTION_TITLES = { chocolate: 'Chocolate Tools', flower: 'Flower Tools', item: 'Item Inventory', quick: 'Quick Tools', other: 'Other pages', mine: 'My own shortcuts' };
   let setTab = null, renaming = null, custErr = '', custDraft = { i: '', n: '', l: '' };
 
   function settingsStyle() {
@@ -674,10 +701,9 @@
       '<a class="lbset-link" href="' + esc(FROM_AWARE.indexOf(i[0]) !== -1 ? i[0] + '?from=' + encodeURIComponent(stem) : i[0]) + '"><span>' + i[1] + '</span><span class="lbset-lbl">' + esc(i[2]) + '</span><span aria-hidden="true">›</span></a>').join('') + '</div>';
 
     const modKey = moduleOf(page);
-    const tabs = [];
-    if (modKey && moduleAllowed(modKey)) tabs.push(modKey);
+    const tabs = ['chocolate', 'flower', 'item'].filter(moduleAllowed);
     tabs.push('quick');
-    if (tabs.indexOf(setTab) === -1) setTab = tabs[0];
+    if (tabs.indexOf(setTab) === -1) setTab = (modKey && tabs.indexOf(modKey) !== -1) ? modKey : 'quick';
 
     h += '<h4>Edit Menu</h4>';
     if (tabs.length > 1) h += '<div class="lbset-tabs">' + tabs.map(k =>
@@ -699,19 +725,19 @@
     }).join('') + '</div>';
 
     const inSection = list.map(x => x.item[0]);
-    const addable = Object.keys(REG).map(k => REG[k].item).filter(i => inSection.indexOf(i[0]) === -1 && itemAllowed(i) && SYS.indexOf(i[0]) === -1);
+    const addable = Object.keys(REG).map(k => REG[k].item).filter(i => inSection.indexOf(i[0]) === -1 && itemAllowed(i) && (setTab !== 'quick' || SYS.indexOf(i[0]) === -1));
     {
       const groups = {};
       const onPage = (setTab === 'quick' && modKey) ? arranged(modKey).filter(x => !x.hidden).map(x => x.item[0]) : [];  // already in this page's own section
-      addable.filter(i => onPage.indexOf(i[0]) === -1).forEach(i => { const m = REG[i[0]].module || 'quick'; (groups[m] = groups[m] || []).push(i); });
+      addable.filter(i => onPage.indexOf(i[0]) === -1).forEach(i => { const m = REG[i[0]].module || REG[i[0]].grp || 'quick'; (groups[m] = groups[m] || []).push(i); });
       if (Object.keys(groups).length) h += '<details class="lbset-pick"><summary>＋ Add tools as shortcuts (tick as many as you want)</summary>' +
         Object.keys(groups).map(m => '<div class="lbset-pg">' + esc(SECTION_TITLES[m] || m) + '</div>' + groups[m].map(i =>
           '<label class="lbset-pi"><input type="checkbox" data-pick="' + esc(i[0]) + '"><span>' + i[1] + ' ' + esc(i[2]) + '</span></label>').join('')).join('') +
         '<button type="button" class="lbset-pgo" data-addmany>Add ticked tools to ' + esc(SECTION_TITLES[setTab]) + '</button>' +
         '<div class="lbset-note">They show up in the menu right away. Then tap ✏️ to rename them.</div></details>';
     }
-    if (setTab === 'quick') {
-      h += '<div class="lbset-new"><b>＋ Add your own shortcut</b><div class="r"><input id="lbcIcon" maxlength="4" placeholder="🔗" aria-label="Icon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
+    {
+      h += '<div class="lbset-new"><b>＋ Add your own shortcut to ' + esc(SECTION_TITLES[setTab]) + '</b><div class="r"><input id="lbcIcon" maxlength="4" placeholder="🔗" aria-label="Icon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
         '<input id="lbcLink" maxlength="500" value="' + esc(custDraft.l) + '" placeholder="Page or link (e.g. notes.html or https://…)" aria-label="Link">' +
         (custErr ? '<div class="lbset-err">' + esc(custErr) + '</div>' : '') +
         '<button type="button" class="lbset-reset" style="padding:9px 14px;background:var(--s-acc-soft)" data-cadd>Add shortcut</button></div>';
@@ -739,13 +765,18 @@
     else if (/^[\w\-\/]+\.html?(\?[^\s]*)?$/i.test(href)) { /* page in this system */ }
     else if (/^[\w\-]+(\.[\w\-]+)+(\/\S*)?$/.test(href)) href = 'https://' + href;
     else custErr = 'Use a page like notes.html or a link starting with https://';
-    if (!custErr && QUICK.some(q => q[0] === href)) custErr = 'That link is already in the menu — use ✏️ to rename it.';
+    if (!custErr && REG[href]) custErr = 'That link is already in the menu — use ✏️ to rename it.';
     if (custErr) { drawSettings(); return; }
-    const c = readCustom(); c.push({ h: href, i: ico, l: name });
+    const c = readCustom(); c.push({ h: href, i: ico, l: name, s: setTab });
     try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (x) { custErr = 'Could not save on this device.'; drawSettings(); return; }
-    const it = [href, ico, name, '', 'custom']; QUICK.push(it); REG[href] = { item: it, module: null };
+    const it = [href, ico, name, '', 'custom'];
+    if (setTab === 'quick') QUICK.push(it); else CUSTOM_OTHER.push(it);
+    REG[href] = { item: it, module: null, grp: 'mine' };
     custDraft = { i: '', n: '', l: '' };
-    updatePrefs('quick', p => { p.order = p.order.filter(x => x !== href).concat(href); });
+    updatePrefs(setTab, p => {
+      if (setTab !== 'quick' && p.added.indexOf(href) === -1) p.added.push(href);
+      p.order = p.order.filter(x => x !== href).concat(href);
+    });
   }
 
   function onSettingsClick(e) {
@@ -773,8 +804,10 @@
       const h = t.dataset.cdel;
       try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(readCustom().filter(c => c.h !== h))); } catch (x) {}
       const q = QUICK.findIndex(z => z[0] === h); if (q !== -1) QUICK.splice(q, 1);
+      const o = CUSTOM_OTHER.findIndex(z => z[0] === h); if (o !== -1) CUSTOM_OTHER.splice(o, 1);
       delete REG[h];
-      updatePrefs('quick', p => { p.hidden = p.hidden.filter(x => x !== h); p.order = p.order.filter(x => x !== h); if (p.rename) delete p.rename[h]; });
+      updatePrefs(setTab, p => {
+        p.added = (p.added || []).filter(x => x !== h); p.hidden = p.hidden.filter(x => x !== h); p.order = p.order.filter(x => x !== h); if (p.rename) delete p.rename[h]; });
       return;
     }
     if (t.hasAttribute('data-cadd')) { addCustom(); return; }
