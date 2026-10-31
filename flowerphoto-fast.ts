@@ -1,5 +1,5 @@
 // LALABELLA FLOWER PHOTOS — photo per flower + "add a new flower" (Supabase Edge Function, verify_jwt OFF)
-// Admin only (role checked from the session token).
+// Admin only (role checked from the session token), except action `names` (read-only name + picture list for any logged-in user).
 // Actions: list | upload(flowerName,image) | remove(flowerName) | addFlower(flowerName,unit,stemsPerBunch,rate,[minStock],[image])
 // One photo per flower NAME: saved on every flower_item row with that name (all origins).
 // addFlower creates the working-rate row (origin Legacy/Unknown, rate Approved) so the flower shows up
@@ -148,6 +148,8 @@ Deno.serve(async (req) => {
     const p = await readParams(req);
     const me = await adminUser(p.token);
     if (!me) return json({ error: 'Unauthorized. Please log in again.' }, 401);
+    // Any logged-in staff may READ names + pictures (used for the thumbnails in Receiving / Stock Count / Transfer pick lists).
+    if (p.action === 'names') { const l = await list(); return json({ success: true, items: l.items.map((g: any) => ({ name: g.name, photo: g.photo })) }); }
     if (String(me.role || '') !== 'Admin') return json({ error: 'Only an Admin can manage flower photos.' }, 403);
     if (p.action === 'list') return json(await list());
     if (p.action === 'upload') return json(await upload(p));

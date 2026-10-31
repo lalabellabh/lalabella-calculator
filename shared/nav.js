@@ -72,6 +72,7 @@
       ['item-inventory.html', '📦', 'Item Inventory'],
       ['item-dashboard.html', '📊', 'Item Dashboard'],
       ['item-admin.html', '🔐', 'Item Admin', 'admin'],
+      ['item-photos.html', '🖼️', 'Item Photos', 'admin'],
       ['item-odoo-import.html', '📥', 'Odoo Price Import', 'admin']
     ]}
   };
@@ -1068,6 +1069,13 @@
     cp.src = 'shared/choc-photos.js';
     document.body.appendChild(cp);
   }
+
+  // Flower / Item pictures (thumbnail in pick lists, tap for big picture). See shared/flower-photos.js, shared/item-photos.js.
+  [['flower', 'LBFlowerPhotos', 'shared/flower-photos.js'], ['item', 'LBItemPhotos', 'shared/item-photos.js']].forEach(function (m) {
+    if (moduleOf(page) === m[0] && !window[m[1]] && !document.querySelector('script[src="' + m[2] + '"]')) {
+      const s = document.createElement('script'); s.src = m[2]; document.body.appendChild(s);
+    }
+  });
 
   // System "brain" (reminders + smart alerts) — loaded here once, same
   // one-file-change reasoning as the bubbles above. See shared/brain.js.
