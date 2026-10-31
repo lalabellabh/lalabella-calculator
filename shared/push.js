@@ -103,6 +103,7 @@
 
   function init() {
     if (!token() || !supported()) return;
+    try { if (localStorage.getItem('lbPushOff') === '1') return; } catch (e) {} // switched off in ⚙️ Settings → Notifications
     try { if (localStorage.getItem('lbNoPush') === '1') return; } catch (e) {} // iPhone shortcut icons: only the main icon registers for alerts
     var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
     var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -114,6 +115,55 @@
     setTimeout(function () { show('🔔 Get notified of new messages and orders?', 'Turn on', ask, true); }, 2500);
   }
 
-  window.LBPush = { subscribe: subscribe, off: off, enable: ask };
+  // ---- ⚙️ Settings → Notifications (per device) ----
+  function currentSub() {
+    if (!supported()) return Promise.resolve(null);
+    var wait = new Promise(function (r) { setTimeout(function () { r(null); }, 4000); });   // no service worker yet = treat as not subscribed
+    return Promise.race([navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }), wait]).catch(function () { return null; });
+  }
+  function isIOS_() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function status() {
+    var sup = supported(), standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+    var base = { supported: sup, perm: sup ? Notification.permission : 'unsupported', needsHomeScreen: !!(isIOS_() && !standalone), userOff: false, on: false, chat: true, orders: true };
+    try { base.userOff = localStorage.getItem('lbPushOff') === '1'; } catch (e) {}
+    if (!sup || base.needsHomeScreen) return Promise.resolve(base);
+    return currentSub().then(function (sub) {
+      if (!sub || base.userOff || base.perm !== 'granted' || !token()) return base;
+      return call({ action: 'getPrefs', token: token(), endpoint: sub.endpoint }).then(function (r) {
+        if (r && r.success && r.registered) { base.on = true; base.chat = r.chat !== false; base.orders = r.orders !== false; }
+        return base;
+      }).catch(function () { return base; });
+    });
+  }
+  function turnOn() {
+    try { localStorage.removeItem('lbPushOff'); } catch (e) {}
+    var go = function () { return subscribe(); };
+    if (!supported()) return Promise.resolve(false);
+    if (Notification.permission === 'granted') return go();
+    if (Notification.permission === 'denied') return Promise.resolve(false);
+    return Notification.requestPermission().then(function (perm) { return perm === 'granted' ? go() : false; });
+  }
+  function turnOff() {
+    try { localStorage.setItem('lbPushOff', '1'); } catch (e) {}
+    var t = token();
+    return currentSub().then(function (sub) {
+      if (!sub) return true;
+      var ep = sub.endpoint;
+      return (t ? call({ action: 'unsubscribe', token: t, endpoint: ep }).catch(function () {}) : Promise.resolve()).then(function () { return sub.unsubscribe().catch(function () {}); });
+    }).then(function () { try { localStorage.removeItem(EP_KEY); } catch (e) {} clearCreds(); return true; });
+  }
+  function setPrefs(chat, orders) {
+    var t = token();
+    return currentSub().then(function (sub) {
+      if (!sub || !t) return false;
+      var b = { action: 'setPrefs', token: t, endpoint: sub.endpoint };
+      if (typeof chat === 'boolean') b.chat = chat;
+      if (typeof orders === 'boolean') b.orders = orders;
+      return call(b).then(function (r) { return !!(r && r.success); });
+    }).catch(function () { return false; });
+  }
+  function sendTest() { return call({ action: 'test', token: token() }).then(function (r) { return !!(r && r.success); }).catch(function () { return false; }); }
+
+  window.LBPush = { subscribe: subscribe, off: off, enable: ask, status: status, turnOn: turnOn, turnOff: turnOff, setPrefs: setPrefs, sendTest: sendTest };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
