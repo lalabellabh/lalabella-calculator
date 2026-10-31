@@ -32,6 +32,8 @@ window.LB_CONFIG = Object.freeze({
   // slice #1. Every other Flower action still uses FLOWER_API above.
   FLOWER_FAST_API:  'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flower-fast',
   // Flower Admin: Fix an existing flower item (rename, unit, rate, min stock, active) — Admin only.
+  // Flower Photos page: photo per flower + add a new flower (Admin only).
+  FLOWER_PHOTO_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flowerphoto-fast',
   FLOWER_FIX_API:   'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flowerfix-fast',
   ITEM_API:         'https://script.google.com/macros/s/AKfycbwvypHTqixncjrdw1RUdUZEQ7u8xDZOhPCKtYK3w3BboXkBCNaxqFwfiaD7o7ZHsMY/exec',
   // Fast path (Supabase Edge Function) — full Item Inventory module.
