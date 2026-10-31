@@ -195,7 +195,7 @@ body{padding-bottom:0}
 .px-btn.danger{background:#fbeaea;color:#a12b20}
 .px-btn:disabled{opacity:.55;cursor:default}
 .px-msg{font-size:12px;color:#a12b20;margin:8px 0 0;min-height:0}
-.px-lightbox img{width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#111;display:block;margin-bottom:12px}
+.px-lightbox img{cursor:zoom-in;width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#111;display:block;margin-bottom:12px}
 
 /* Status viewer (full screen, always dark) */
 .pxv{position:fixed;inset:0;z-index:9700;background:#0d0d0f;color:#fff;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
@@ -1266,10 +1266,19 @@ document.getElementById('logoutBtn').addEventListener('click',logout);
     const slot = Number(pic.dataset.slot);
     const b = banners.find(x=>x.slot === slot); if(!b) return;
     const m = modal('<div class="px-lightbox"><h4>Gallery picture <button type="button" data-close aria-label="Close">✕</button></h4>' +
-      '<img src="' + esc(b.image) + '" alt=""></div>' +
+      '<img src="' + esc(b.image) + '" alt="" title="Click to view full size"></div>' +
+      '<div class="px-hint" style="font-size:12px;opacity:.65;margin:-4px 0 8px">Tap the picture to view it full size</div>' +
       '<div class="px-actions"><button type="button" class="px-btn danger" id="pxgDel">🗑 Remove</button>' +
       '<span style="display:flex;gap:8px"><button type="button" class="px-btn ghost" id="pxgAdj">✥ Adjust</button>' +
       '<button type="button" class="px-btn" id="pxgRep">🔄 Replace</button></span></div><div class="px-msg" id="pxgMsg"></div>');
+    m.el.querySelector('.px-lightbox img').onclick = ()=>{
+      const o = document.createElement('div');
+      o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+      o.innerHTML = '<img src="' + esc(b.image) + '" alt="" style="max-width:100vw;max-height:100vh;object-fit:contain"><button type="button" aria-label="Close" style="position:absolute;top:14px;right:18px;font-size:28px;color:#fff;background:none;border:0;cursor:pointer">✕</button>';
+      const close = ()=>{ o.remove(); document.removeEventListener('keydown', onKey, true); };
+      const onKey = ev=>{ if(ev.key === 'Escape'){ ev.stopPropagation(); close(); } };
+      o.onclick = close; document.addEventListener('keydown', onKey, true); document.body.appendChild(o);
+    };
     m.el.querySelector('#pxgAdj').onclick = ()=>{ const r = pic.getBoundingClientRect(); m.close(); openAdjust(slot, r.width / Math.max(1, r.height)); };
     m.el.querySelector('#pxgRep').onclick = async ()=>{
       const f = await pickFile(); if(!f) return;
