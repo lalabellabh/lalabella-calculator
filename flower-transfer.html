@@ -388,6 +388,12 @@
       return;
     }
 
+    if(!document.getElementById('fBy').value.trim()){
+      alert('Please enter your name in "Transferred By" before saving.');
+      document.getElementById('fBy').focus();
+      return;
+    }
+
     const btn = document.getElementById('saveBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';

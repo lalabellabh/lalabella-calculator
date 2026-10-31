@@ -592,6 +592,8 @@
     });
     if(toSave.length === 0){ alert('No Physical Count or Wastage entered yet.'); return; }
 
+    if(!document.getElementById('countedByInput').value.trim()){ alert('Please enter your name in "Counted By" before saving.'); document.getElementById('countedByInput').focus(); return; }
+
     const btn = document.getElementById('saveBtn');
     btn.disabled = true; btn.textContent = 'Saving…';
 
