@@ -14,6 +14,7 @@ window.LB_CONFIG = Object.freeze({
   // every page load: checkSession, login, register, logout, getPositions.
   // Everything else (profile photo, password change, User Management,
   // Team Status) still goes through AUTH_API above — unchanged.
+  SESSION_KEEP_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/sessionkeep-fast',
   AUTH_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/auth-fast',
   // Profile page extras (Team Status + Gallery pictures, saved as files in Storage). If a call to it fails with a server
   // error, profile.html automatically retries the same call on AUTH_FAST_API. To switch it off, delete this one line.

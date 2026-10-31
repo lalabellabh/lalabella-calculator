@@ -357,7 +357,7 @@ function rowHtml(u){
     <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(vis?['Visitor','Staff','Admin']:['Staff','Admin'],u.role)}</select></td>
     <td data-label="Branch"><select data-f="branch">${vis&&!u.branch?'<option value="">— Not set —</option>':''}${opt(branches,u.branch)}</select></td>
     <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(u.status==='Pending'?['Pending','Active','Inactive']:['Active','Inactive'],u.status)}</select></td>
-    <td data-label="Last login">${esc(fmt(u.lastLogin))}${u.failedAttempts?`<br><span class="muted">${u.failedAttempts} failed tr${u.failedAttempts===1?'y':'ies'}</span>`:''}</td>
+    <td data-label="Last login">${esc(u.lastLogin && new Date(u.lastLogin).getTime() > Date.now() ? 'Active (stays logged in)' : fmt(u.lastLogin))}${u.failedAttempts?`<br><span class="muted">${u.failedAttempts} failed tr${u.failedAttempts===1?'y':'ies'}</span>`:''}</td>
     <td data-label="Actions"><div class="actions">
       ${u.status==='Pending'?'<button class="primary" data-a="approve">Approve</button>':''}
       <button class="primary" data-a="save" disabled>Save</button>
