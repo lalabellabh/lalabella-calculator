@@ -509,8 +509,13 @@
   function renderMove(){
     const d = data; let h;
     if(ui.mvTab === 'tr'){
-      h = rows(d.recentTransfers, it => `<div class="row"><div class="nm">${esc(it.chocolateName)}<div class="mt">${esc(it.fromBranch)} → ${esc(it.toBranch)}</div></div>
-        <div class="rt">${esc(it.qty)}<div class="mt">${fmtDate(it.date)}</div></div></div>`, 'No transfers yet.');
+      const bsel = ui.branch;
+      h = rows(d.recentTransfers, it => {
+        const incoming = bsel !== 'All' && it.toBranch === bsel, outgoing = bsel !== 'All' && it.fromBranch === bsel;
+        const dir = incoming ? `⬇ Received from ${esc(it.fromBranch)}` : outgoing ? `⬆ Sent to ${esc(it.toBranch)}` : `${esc(it.fromBranch)} → ${esc(it.toBranch)}`;
+        return `<div class="row"><div class="nm">${esc(it.chocolateName)}<div class="mt">${dir} · by ${esc(it.by || '—')}</div></div>
+        <div class="rt">${incoming ? '+' : outgoing ? '−' : ''}${esc(it.qty)}<div class="mt">${fmtDate(it.date)}</div></div></div>`;
+      }, 'No transfers yet.');
     } else if(ui.mvTab === 'br' && ui.branch === 'All'){
       const bs = d.branchSummary || [], mxV = Math.max(...bs.map(b => Number(b.value)||0), 1);
       h = rows(bs, b => `<div style="padding:9px 2px;border-top:1px solid var(--line)">

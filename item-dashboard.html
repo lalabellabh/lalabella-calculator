@@ -358,7 +358,10 @@
       let badge, qty, meta, editable;
       if(isTransfer){
         badge = 'Transfer'; qty = h['Qty']; editable = false; // transfers aren't edited here — do a reverse transfer instead
-        meta = fmtDate(h['Date']) + ' · ' + h['From Branch'] + ' → ' + h['To Branch'] + (h['Transferred By'] ? ' · ' + h['Transferred By'] : '');
+        const sel = ui.branch, inc = sel !== 'All' && h['To Branch'] === sel, outg = sel !== 'All' && h['From Branch'] === sel;
+        const dirTxt = inc ? '⬇ Received from ' + h['From Branch'] : outg ? '⬆ Sent to ' + h['To Branch'] : h['From Branch'] + ' → ' + h['To Branch'];
+        meta = fmtDate(h['Date']) + ' · ' + dirTxt + (h['Transferred By'] ? ' · by ' + h['Transferred By'] : '');
+        if(inc) badge = 'Transfer in'; else if(outg) badge = 'Transfer out';
       } else {
         badge = isReceive ? 'In' : 'Out'; qty = isReceive ? h['Qty Received'] : h['Qty Released']; editable = true;
         const by = isReceive ? h['Received By'] : h['Released By'];
@@ -366,7 +369,7 @@
       }
       return `<div class="row" style="flex-direction:column;gap:0"><div style="display:flex;justify-content:space-between;gap:10px;width:100%">
           <div class="nm"><span class="hb ${h._type}">${badge}</span>${esc(h['Item Name'])}<div class="mt">${esc(meta)}</div></div>
-          <div class="rt ${(!isReceive && !isTransfer) ? 'neg' : ''}">${isTransfer ? '' : (isReceive ? '+' : '-')}${esc(qty)}</div></div>
+          <div class="rt ${(!isReceive && !isTransfer) ? 'neg' : ''}">${isTransfer ? ((ui.branch !== 'All' && h['To Branch'] === ui.branch) ? '+' : (ui.branch !== 'All' && h['From Branch'] === ui.branch) ? '-' : '') : (isReceive ? '+' : '-')}${esc(qty)}</div></div>
           <div class="hact">${editable ? `<button data-a="edit" data-i="${i}">✏️ Edit</button>` : ''}<button data-a="print" data-i="${i}">🖨️ Print</button><button data-a="wa" data-i="${i}">📤 WhatsApp</button></div></div>`;
     }).join('');
   }
