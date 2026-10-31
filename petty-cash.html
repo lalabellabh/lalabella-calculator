@@ -148,6 +148,19 @@
   }
   .txn-row:last-child{border-bottom:none;}
   .txn-main{font-size:12.5px;font-weight:600;}
+  .rc-btns{display:flex;gap:8px;margin-top:4px;}
+  .rc-btns label.rc-b{flex:1;margin:0;text-transform:none;text-align:center;padding:10px 0;background:#fdf1f0;border:1px solid #f0d9d9;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;color:#3a2530;}
+  .rc-prev{display:none;position:relative;margin-top:8px;width:max-content;max-width:100%;}
+  .rc-prev.show{display:block;}
+  .rc-prev img{max-width:100%;max-height:170px;border-radius:10px;border:1px solid #f0d9d9;display:block;}
+  .rc-prev button{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:#b3261e;color:#fff;font-size:13px;line-height:1;cursor:pointer;}
+  .rc-paste{display:none;margin-top:8px;padding:9px;border:1.5px dashed #f0d9d9;border-radius:10px;text-align:center;font-size:11.5px;color:#8a7078;cursor:text;background:#fdf1f0;outline:none;}
+  .rc-paste:focus{border-color:#c9506b;color:#9e2f4a;}
+  @media (hover:hover) and (pointer:fine){ .rc-paste{display:block;} }
+  .rc-thumb{width:34px;height:34px;object-fit:cover;border-radius:7px;border:1px solid #f0d9d9;cursor:zoom-in;flex:none;}
+  .rc-lb{position:fixed;inset:0;z-index:2147483000;background:rgba(20,8,12,.88);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:16px;cursor:zoom-out;}
+  .rc-lb img{max-width:96vw;max-height:84vh;border-radius:12px;background:#fff;}
+  .rc-lb div{color:#fff;font-size:14px;font-weight:600;text-align:center;}
   .txn-date{font-size:10px;color:var(--muted);margin-top:3px;}
   .txn-amt{font-weight:800;font-size:13px;white-space:nowrap;}
   .txn-amt.expense{color:var(--bad);}
@@ -426,6 +439,15 @@
       <input type="number" step="0.001" min="0.001" id="pcAmount" placeholder="0.000">
       <label>Your Name</label>
       <input type="text" id="pcEnteredBy" placeholder="Your name">
+      <label>Receipt / photo <span style="text-transform:none;">(optional — comes out in the report)</span></label>
+      <div class="rc-btns">
+        <label class="rc-b" for="pcPhotoCam">📷 Camera</label>
+        <label class="rc-b" for="pcPhotoFile">🖼️ Gallery</label>
+      </div>
+      <input type="file" id="pcPhotoCam" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="pcPhotoFile" accept="image/*" style="display:none;">
+      <div class="rc-paste" id="pcPhotoPaste" tabindex="0">📋 Click here, then Ctrl+V to paste a snip</div>
+      <div class="rc-prev" id="pcPhotoPrev"><img alt="Receipt"><button type="button" id="pcPhotoClear" aria-label="Remove photo">✕</button></div>
       <button class="save-btn" id="pcSaveBtn">Save Entry</button>
       <div class="msg" id="pcMsg"></div>
     </div>
@@ -491,7 +513,16 @@
     <label>Driver</label><input type="text" id="peDriver" maxlength="60">
   </div>
   <label>Amount (BD)</label><input type="number" step="0.001" min="0.001" id="peAmount">
-  <div style="display:flex;gap:8px;"><button class="save-btn" id="peSave">Save</button><button class="print-btn" id="peCancel" type="button">Cancel</button></div>
+  <label>Receipt / photo</label>
+  <div class="rc-btns">
+    <label class="rc-b" for="pePhotoCam">📷 Camera</label>
+    <label class="rc-b" for="pePhotoFile">🖼️ Gallery</label>
+  </div>
+  <input type="file" id="pePhotoCam" accept="image/*" capture="environment" style="display:none;">
+  <input type="file" id="pePhotoFile" accept="image/*" style="display:none;">
+  <div class="rc-paste" id="pePhotoPaste" tabindex="0">📋 Click here, then Ctrl+V to paste a snip</div>
+  <div class="rc-prev" id="pePhotoPrev"><img alt="Receipt"><button type="button" id="pePhotoClear" aria-label="Remove photo">✕</button></div>
+  <div style="display:flex;gap:8px;margin-top:10px;"><button class="save-btn" id="peSave">Save</button><button class="print-btn" id="peCancel" type="button">Cancel</button></div>
   <div class="msg" id="peMsg"></div>
 </div></div>
 <div id="printArea" style="display:none;"></div>
@@ -676,11 +707,13 @@ function renderPettyHistory(){
         <div class="txn-date">${fmtDate(t.date)} · ${esc(t.branch)} · ${esc(t.enteredBy)||'—'}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        ${t.photoUrl?`<img class="rc-thumb" src="${esc(t.photoUrl)}" data-photo="${esc(t.photoUrl)}" data-cap="${esc(t.purpose)} · ${esc(fmtDate(t.date))}" alt="Receipt" loading="lazy">`:''}
         <div class="txn-amt ${t.type}">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</div>
         <button class="edit-btn" data-id="${t.id}" title="Edit">✏️</button>
         <button class="delete-btn" data-id="${t.id}" title="Delete">🗑️</button>
       </div>
     </div>`).join('');
+  hist.querySelectorAll('.rc-thumb').forEach(im=>im.addEventListener('click',()=>rcOpenBig(im.dataset.photo,im.dataset.cap)));
   hist.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>deletePettyCashEntry(btn.dataset.id)));
   hist.querySelectorAll('.edit-btn').forEach(btn=>btn.addEventListener('click',()=>openPcEdit(btn.dataset.id)));
 }
@@ -700,19 +733,83 @@ document.getElementById('pcPrintBtn').addEventListener('click',()=>{
   const extra=[ty?(ty==='topup'?'Top-up only':'Expense only'):'',q?`Search: "${esc(q)}"`:''].filter(Boolean).join(' · ');
   const tt=pcTotals(list);
   const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}${carText(t)?'<br><small>'+esc(carText(t))+'</small>':''}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td></tr>`).join('');
+  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}${carText(t)?'<br><small>'+esc(carText(t))+'</small>':''}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td><td style="text-align:center;">${t.photoUrl?'<img src="'+esc(t.photoUrl)+'" style="max-height:46px;max-width:70px;border:1px solid #bbb;">':''}</td></tr>`).join('');
   document.getElementById('printArea').innerHTML=`
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash</h2>
     <p>${esc(branch)} · ${range}${extra?' · '+extra:''}</p>
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th><th style="text-align:center;">Receipt</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div style="text-align:right;margin-top:10px;font-size:13px;line-height:1.7;">
       Total Top-up: +${fmtBD(tt.top)}<br>Total Expense: −${fmtBD(tt.exp)}<br><b>Net: ${tt.net<0?'−':''}${fmtBD(Math.abs(tt.net))}</b>
     </div>
-    <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(new Date().toISOString().slice(0,10))} · ${list.length} entries</p>`;
-  window.print();
+    <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(new Date().toISOString().slice(0,10))} · ${list.length} entries</p>`+
+    (asc.some(t=>t.photoUrl)?`<div style="page-break-before:always;"><h3 style="font-family:'Fraunces',serif;">Receipts</h3><div style="display:flex;flex-wrap:wrap;gap:14px;">`+
+      asc.filter(t=>t.photoUrl).map(t=>`<div style="width:46%;break-inside:avoid;font-size:11.5px;"><img src="${esc(t.photoUrl)}" style="width:100%;max-height:330px;object-fit:contain;border:1px solid #bbb;"><div style="margin-top:3px;">${fmtDate(t.date)} · ${esc(t.purpose)} · ${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</div></div>`).join('')+`</div></div>`:'');
+  // wait for the receipt pictures to load, or they print as blanks
+  const pimgs=[...document.querySelectorAll('#printArea img')];
+  Promise.race([Promise.all(waitImgs(pimgs)),new Promise(r=>setTimeout(r,6000))]).then(()=>window.print());
+  function waitImgs(a){ return a.map(im=>im.complete?Promise.resolve():new Promise(r=>{im.onload=im.onerror=r;})); }
+});
+
+/* ---------- Receipt photos ---------- */
+function rcOpenBig(src,cap){
+  const o=document.createElement('div'); o.className='rc-lb';
+  o.innerHTML='<img alt=""><div></div>'; o.querySelector('img').src=src; o.querySelector('div').textContent=cap||'';
+  const close=()=>{ o.remove(); document.removeEventListener('keydown',k,true); };
+  const k=e=>{ if(e.key==='Escape'){ e.stopPropagation(); close(); } };
+  o.addEventListener('click',close); document.addEventListener('keydown',k,true); document.body.appendChild(o);
+}
+// shrink a picture to max 1280px JPEG so phone photos upload fast
+function rcCompress(file){
+  return new Promise((resolve,reject)=>{
+    const rd=new FileReader();
+    rd.onerror=reject;
+    rd.onload=e=>{
+      const im=new Image();
+      im.onerror=reject;
+      im.onload=()=>{
+        const M=1280, sc=Math.min(1,M/Math.max(im.width,im.height));
+        const c=document.createElement('canvas'); c.width=Math.round(im.width*sc); c.height=Math.round(im.height*sc);
+        const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height);
+        let out=c.toDataURL('image/jpeg',0.72); if(out.length>1500000) out=c.toDataURL('image/jpeg',0.5);
+        resolve(out);
+      };
+      im.src=e.target.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+// one picker per form ('pc' = add form, 'pe' = edit modal)
+const rcState={pc:{data:null},pe:{data:null,remove:false,old:''}};
+function rcShow(p,src){
+  const box=document.getElementById(p+'PhotoPrev');
+  if(src){ box.querySelector('img').src=src; box.classList.add('show'); } else { box.classList.remove('show'); box.querySelector('img').removeAttribute('src'); }
+}
+function rcReset(p,oldUrl){
+  rcState[p].data=null; rcState[p].remove=false; rcState[p].old=oldUrl||'';
+  ['Cam','File'].forEach(n=>{ const el=document.getElementById(p+'Photo'+n); if(el) el.value=''; });
+  rcShow(p,oldUrl||'');
+}
+async function rcPick(p,file){
+  if(!file) return;
+  try{ const d=await rcCompress(file); rcState[p].data=d; rcState[p].remove=false; rcShow(p,d); }
+  catch(e){ alert('Could not read this picture. Try another one.'); }
+}
+['pc','pe'].forEach(p=>{
+  document.getElementById(p+'PhotoCam').addEventListener('change',function(){ rcPick(p,this.files[0]); });
+  document.getElementById(p+'PhotoFile').addEventListener('change',function(){ rcPick(p,this.files[0]); });
+  document.getElementById(p+'PhotoPaste').addEventListener('paste',function(e){
+    const its=(e.clipboardData||window.clipboardData).items;
+    for(let i=0;i<its.length;i++){ if(its[i].type.indexOf('image')!==-1){ e.preventDefault(); rcPick(p,its[i].getAsFile()); break; } }
+  });
+  document.getElementById(p+'PhotoClear').addEventListener('click',function(){
+    if(rcState[p].data){ rcState[p].data=null; rcShow(p,rcState[p].old||''); }       // drop the new one, go back to the saved one
+    else if(p==='pe' && rcState[p].old){ rcState[p].remove=true; rcShow(p,''); }      // remove the saved photo on Save
+    ['Cam','File'].forEach(n=>{ document.getElementById(p+'Photo'+n).value=''; });
+  });
+  document.getElementById(p+'PhotoPrev').querySelector('img').addEventListener('click',function(){ if(this.src) rcOpenBig(this.src,''); });
 });
 
 let pcEditId=null;
@@ -725,6 +822,7 @@ function openPcEdit(id){
   document.getElementById('peCarPlate').value=t.carPlate||''; document.getElementById('peDriver').value=t.driver||'';
   fillPurposeUI('pe', t.purpose, t.type);
   document.getElementById('peAmount').value=t.amount;
+  rcReset('pe',t.photoUrl||'');
   const m=document.getElementById('peMsg'); m.className='msg'; m.textContent='';
   document.getElementById('pcEditModal').classList.add('open');
 }
@@ -793,6 +891,7 @@ document.getElementById('peSave').addEventListener('click',async()=>{
   btn.disabled=true; btn.textContent='Saving…';
   try{
     const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:petrolE?carPlate:'',driver:petrolE?driver:'',token:getToken()});
+    if(rcState.pe.data) params.set('photo',rcState.pe.data); else if(rcState.pe.remove) params.set('removePhoto','1');
     const res=await fetch(PETTYCASH_API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
     const data=await res.json();
     if(!data.success){ m.className='msg error'; m.textContent=data.error||'Failed to save.'; return; }
@@ -899,13 +998,16 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
     const params = new URLSearchParams({ action: 'addPettyCashEntry', branch, date, purpose, amount, type: pcType, enteredBy, carPlate, driver, token: getToken() });
-    const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
+    let res;
+    if(rcState.pc.data){ params.set('photo', rcState.pc.data); res = await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() }); }
+    else res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Entry'; return; }
     msg.textContent = 'Saved!'; msg.className = 'msg success';
     document.getElementById('pcRemarks').value = '';
     document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; syncPurposeUI('pc');
     document.getElementById('pcAmount').value = '';
+    rcReset('pc','');
     loadPettyCash();
   }catch(e){
     msg.textContent = 'Connection error.'; msg.className = 'msg error';

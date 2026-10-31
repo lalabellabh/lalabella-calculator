@@ -1,4 +1,7 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v8
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v9
+// v9 (Oct 2026): receipt photo per entry (photo_url, bucket petty-cash-photos). addPettyCashEntry takes `photo` (base64 data URL, POST) —
+//                the entry is NOT saved if the photo can't be stored. editPettyCashEntry (admin) can replace `photo` or `removePhoto=1`.
+//                getPettyCash returns photoUrl.
 // v8 (Oct 2026): car_plate + driver columns on petty_cash_transactions (for petrol entries) — saved on add/edit, returned by getPettyCash.
 // v7 (Oct 2026): setPettyCashBalance (ADMIN ONLY) — set the money currently inside the petty cash. Saved as a visible
 //                'Balance adjustment' entry (top-up or expense of the difference) so history and totals stay consistent.
@@ -78,6 +81,30 @@ const isAdmin = (u: any) => String(u && u.role || '').toLowerCase() === 'admin';
 const ADMIN_ONLY_MSG = 'Only an Admin can delete this. Please ask an Admin.';
 const ADMIN_ONLY_TARGET_MSG = 'Only an Admin can change the target amount. Please ask an Admin.';
 const ADMIN_ONLY_EDIT_MSG = 'Only an Admin can edit an entry. Please ask an Admin.';
+const PHOTO_BUCKET = 'petty-cash-photos';
+// Returns the public URL, or '' when the image is missing / not an image / too big (> 2.5 MB) / the upload failed.
+async function savePettyPhoto(base64Data: string): Promise<string> {
+  if (!base64Data) return '';
+  const i = base64Data.indexOf(',');
+  const meta = i !== -1 ? base64Data.slice(0, i) : '';
+  const clean = i !== -1 ? base64Data.slice(i + 1) : base64Data;
+  const m = meta.match(/data:([^;]+);/);
+  const contentType = m ? m[1] : 'image/jpeg';
+  if (!/^image\/(jpeg|png|webp)$/.test(contentType)) return '';
+  const ext = contentType.split('/')[1];
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(clean), c => c.charCodeAt(0)); } catch { return ''; }
+  if (!bytes.length || bytes.length > 2_500_000) return '';
+  const path = `pc-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const res = await fetch(`${SB_URL}/storage/v1/object/${PHOTO_BUCKET}/${path}`, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+    body: bytes,
+  });
+  if (!res.ok) { console.error('petty photo upload failed', res.status, (await res.text()).slice(0, 300)); return ''; }
+  return `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
+}
+
 function validDate(d: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
   const t = new Date(d + 'T00:00:00Z');
@@ -105,7 +132,7 @@ async function handleGetPettyCash(p: any) {
 
   return {
     balance, targetAmount,
-    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '' })),
+    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url || '' })),
   };
 }
 async function handleSetPettyCashTarget(p: any, user: any) {
@@ -130,8 +157,13 @@ async function handleAddPettyCashEntry(p: any) {
   if (!validDate(entryDate)) return { error: 'Invalid date.' };
   if (!purpose) return { error: 'Purpose is required.' };
   if (amount <= 0) return { error: 'Amount must be greater than zero.' };
-  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver }]);
-  return { success: true };
+  let photoUrl = '';
+  if (p.photo) {
+    photoUrl = await savePettyPhoto(String(p.photo));
+    if (!photoUrl) return { error: 'The photo could not be saved (too big or not a picture). Nothing was saved — please try again.' };
+  }
+  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver, photo_url: photoUrl || null }]);
+  return { success: true, photoUrl };
 }
 // Admin only: fix the date (back-date), purpose, amount or type of a saved entry.
 async function handleEditPettyCashEntry(p: any, user: any) {
@@ -158,6 +190,11 @@ async function handleEditPettyCashEntry(p: any, user: any) {
   if (p.carPlate !== undefined) fields.car_plate = String(p.carPlate).trim().slice(0, 30).toUpperCase();
   if (p.driver !== undefined) fields.driver = String(p.driver).trim().slice(0, 60);
   if (p.type !== undefined && p.type !== '') fields.entry_type = p.type === 'topup' ? 'topup' : 'expense';
+  if (p.photo) {
+    const url = await savePettyPhoto(String(p.photo));
+    if (!url) return { error: 'The photo could not be saved (too big or not a picture). Nothing was changed.' };
+    fields.photo_url = url;
+  } else if (String(p.removePhoto || '') === '1') fields.photo_url = null;
   if (!Object.keys(fields).length) return { success: true, unchanged: true };
   await sbPatch('petty_cash_transactions', `id=eq.${id}`, fields);
   return { success: true };
