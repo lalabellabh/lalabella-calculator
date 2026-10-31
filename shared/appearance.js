@@ -343,7 +343,7 @@
         var cs = getComputedStyle(el), c = parseRgb(cs.backgroundColor), res = { c: null, stop: false };
         var bgi = cs.backgroundImage;
         if (bgi && bgi !== 'none') {
-          if (/gradient\(/.test(bgi)) { var cols = bgi.match(/rgba?\([^)]*\)/g) || [], g = cols.length ? parseRgb(cols[0]) : null; if (g && g.a > 0 && (!c || c.a < g.a)) c = g; }
+          if (/gradient\(/.test(bgi)) { var li = bgi.lastIndexOf('gradient('), cols = bgi.slice(li).match(/rgba?\([^)]*\)/g) || [], g = cols.length ? parseRgb(cols[Math.floor(cols.length / 2)]) : null; if (g && g.a > 0 && (!c || c.a < g.a)) c = g; }
           else if (/url\(/.test(bgi)) res.stop = true;      // a picture behind the text: leave this text alone
         }
         if (c && c.a > 0) res.c = c;
