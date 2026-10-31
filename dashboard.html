@@ -261,6 +261,7 @@
           <button data-t="low" class="on">Low<span class="b" id="alLowN">0</span></button>
           <button data-t="near">Near expiry<span class="b" id="alNearN">0</span></button>
           <button data-t="exp">Expired<span class="b" id="alExpN">0</span></button>
+          <button data-t="apr">Approvals<span class="b" id="alAprN">0</span></button>
         </div>
       </div>
       <div class="scroll" id="alScroll"></div>
@@ -355,6 +356,7 @@
       if(seq !== loadSeq) return;
       if(fresh && fresh.error) throw new Error(fresh.error);
       data = fresh; loadingEl.style.display = 'none';
+      loadPending(branch);
       render(false);
       writeCache(branch, fresh);
       lastLoadedAt = Date.now();
@@ -366,6 +368,15 @@
       if(cached) setNote('Could not refresh — showing saved data from ' + timeStr(cached.t) + '. Tap Refresh to try again.');
       else { loadingEl.style.display = ''; loadingEl.textContent = 'Could not load dashboard data.'; }
     }finally{ if(seq === loadSeq) inFlight = false; }
+  }
+  let pendingList = [];
+  async function loadPending(branch){
+    try{
+      const r = await (await fetch(API_URL + '?action=getPendingApprovals&token=' + encodeURIComponent(window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || '') + '&_ts=' + Date.now(), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })).json();
+      if(!Array.isArray(r)) return;
+      pendingList = r.filter(x => branch === 'All' || String(x['Branch']).trim() === branch);
+      if(data){ document.getElementById('alAprN').textContent = fmtNum(pendingList.length); if(ui.alTab === 'apr') renderAlerts(); }
+    }catch(e){ console.error(e); }
   }
   const loadData = () => fetchData(true);
   function silentRefresh(){ if(document.hidden || inFlight) return; return fetchData(false); }
@@ -436,7 +447,7 @@
       kpi('📥',"Today's receiving", fmtBD(d.todayReceiving), 'this week ' + fmtBD(d.weekReceiving), 'var(--teal)') +
       kpi('📤',"Today's releases", fmtBD(d.todayReleases), 'this week ' + fmtBD(d.weekReleases), 'var(--sky)') +
       kpi('🔁',"Today's transfers", fmtNum(d.todayTransfers), 'this week ' + fmtNum(d.weekTransfers), 'var(--amber)') +
-      kpi('⏳','Pending approvals', fmtNum(d.pendingApprovalsCount), 'tap to open Stock Approval', 'var(--plum)', d.pendingApprovalsCount > 0 ? 'warn' : '').replace('<div class="kpi glass', '<div data-href="stock-approval.html" class="kpi click glass') +
+      kpi('⏳','Pending approvals', fmtNum(d.pendingApprovalsCount), 'tap to view', 'var(--plum)', d.pendingApprovalsCount > 0 ? 'warn' : '', 'apr') +
       kpi('⚠️','Near expiry / expired', fmtNum(d.nearExpiryCount) + ' / ' + fmtNum(d.expiredCount), 'tap to view', 'var(--bad)', expCls, d.expiredCount > 0 ? 'exp' : 'near') +
       kpi('📉','Low stock items', fmtNum(d.lowStockCount), 'tap to view', 'var(--gold)', d.lowStockCount > 0 ? 'warn' : '', 'low');
   }
@@ -493,8 +504,15 @@
     document.getElementById('alLowN').textContent = fmtNum(d.lowStockCount);
     document.getElementById('alNearN').textContent = fmtNum(d.nearExpiryCount);
     document.getElementById('alExpN').textContent = fmtNum(d.expiredCount);
+    document.getElementById('alAprN').textContent = fmtNum(pendingList.length || d.pendingApprovalsCount || 0);
     let h;
-    if(ui.alTab === 'low'){
+    if(ui.alTab === 'apr'){
+      h = rows(pendingList, it => {
+        const v = Number(it['Variance']) || 0;
+        return `<div class="row"><div class="nm">${esc(it['Chocolate Name'])}<div class="mt">${esc(it['Branch'])} · counted by ${esc(it['Counted By'] || '—')} · ${fmtDate(it['Count Date'])}</div></div>
+        <div class="rt"><span class="pill ${v < 0 ? 'bad' : 'warn'}">${v > 0 ? '+' : ''}${esc(v)}</span><div class="mt">${esc(it['System Stock'])} → ${esc(it['Physical Count'])}</div></div></div>`;
+      }, 'Nothing waiting for approval.') + '<a href="stock-approval.html" style="display:block;text-align:center;padding:10px;font-weight:600">Open Stock Approval →</a>';
+    } else if(ui.alTab === 'low'){
       h = rows(d.lowStockList, it => `<div class="row"><div class="nm">${esc(it.name)}<div class="mt">${esc(it.branch)}</div></div>
         <div class="rt">${esc(it.available)} / ${esc(it.min)}<div class="mt">need ${esc(it.deficit)} more</div></div></div>`, 'No low stock items right now.');
     } else if(ui.alTab === 'near'){
