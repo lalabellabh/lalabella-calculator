@@ -2182,7 +2182,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       const q = input.value.trim().toLowerCase();
       if(!q){ results.classList.remove('show'); return; }
       const matches = ITEMS.filter(it => String(it['Item Name']||'').toLowerCase().includes(q)).slice(0, 10);
-      results.innerHTML = matches.map(it => `<div class="search-result-item" data-name="${it['Item Name']}">${it['Item Name']} <span style="color:var(--ink-dim);">(${it['Qty']} ${it['Unit']||''})</span></div>`).join('');
+      results.innerHTML = matches.map(it => `<div class="search-result-item" data-name="${it['Item Name']}" style="display:flex;align-items:center;gap:10px;">${it['Photo Link (Drive)'] ? `<img src="${it['Photo Link (Drive)']}" alt="" referrerpolicy="no-referrer" loading="lazy" style="width:38px;height:38px;border-radius:9px;object-fit:cover;flex:none;" onerror="this.style.display='none'">` : ''}<span>${it['Item Name']} <span style="color:var(--ink-dim);">(${it['Qty']} ${it['Unit']||''})</span></span></div>`).join('');
       results.classList.toggle('show', matches.length > 0);
     });
     results.addEventListener('click', (e)=>{
@@ -2197,18 +2197,26 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     });
   }
 
+  function showStockHint(id, item, text){
+    const h = document.getElementById(id); if(!h) return;
+    h.textContent = '';
+    if(!item){ return; }
+    const ph = item['Photo Link (Drive)'] || '';
+    if(ph){ const im = document.createElement('img'); im.src = ph; im.alt = ''; im.referrerPolicy = 'no-referrer'; im.style.cssText = 'width:44px;height:44px;border-radius:10px;object-fit:cover;vertical-align:middle;margin-right:10px;'; im.onerror = ()=>im.remove(); h.appendChild(im); }
+    h.appendChild(document.createTextNode(text));
+  }
   setupItemSearch('receiveSearch', 'itemSearchResults', (name)=>{
     const item = ITEMS.find(it => it['Item Name'] === name);
-    document.getElementById('receiveCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+    showStockHint('receiveCurrentQty', item, 'Current stock: ' + item['Qty'] + ' ' + (item['Unit']||''));
   });
   setupItemSearch('releaseSearch', 'releaseSearchResults', (name)=>{
     const item = ITEMS.find(it => it['Item Name'] === name);
-    document.getElementById('releaseCurrentQty').textContent = item ? ('Current stock: ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+    showStockHint('releaseCurrentQty', item, 'Current stock: ' + item['Qty'] + ' ' + (item['Unit']||''));
   });
 
   setupItemSearch('transferSearch', 'transferSearchResults', (name)=>{
     const item = ITEMS.find(it => it['Item Name'] === name);
-    document.getElementById('transferCurrentQty').textContent = item ? ('Current stock at ' + currentBranch + ': ' + item['Qty'] + ' ' + (item['Unit']||'')) : '';
+    showStockHint('transferCurrentQty', item, 'Current stock at ' + currentBranch + ': ' + item['Qty'] + ' ' + (item['Unit']||''));
   });
 
   // ---------- Receiving ----------
@@ -2618,7 +2626,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     const match = findItemByCode(scannedCode);
     if(match){
       document.getElementById('receiveSearch').value = match['Item Name'];
-      document.getElementById('receiveCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      showStockHint('receiveCurrentQty', match, 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||''));
       document.getElementById('receiveQty').focus();
     } else {
       alert('No item matches Item Code: ' + scannedCode);
@@ -2629,7 +2637,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     const match = findItemByCode(scannedCode);
     if(match){
       document.getElementById('releaseSearch').value = match['Item Name'];
-      document.getElementById('releaseCurrentQty').textContent = 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||'');
+      showStockHint('releaseCurrentQty', match, 'Current stock: ' + match['Qty'] + ' ' + (match['Unit']||''));
       document.getElementById('releaseQty').focus();
     } else {
       alert('No item matches Item Code: ' + scannedCode);
@@ -2640,7 +2648,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     const match = findItemByCode(scannedCode);
     if(match){
       document.getElementById('transferSearch').value = match['Item Name'];
-      document.getElementById('transferCurrentQty').textContent = 'Current stock at ' + currentBranch + ': ' + match['Qty'] + ' ' + (match['Unit']||'');
+      showStockHint('transferCurrentQty', match, 'Current stock at ' + currentBranch + ': ' + match['Qty'] + ' ' + (match['Unit']||''));
       document.getElementById('transferQty').focus();
     } else {
       alert('No item matches Item Code: ' + scannedCode);

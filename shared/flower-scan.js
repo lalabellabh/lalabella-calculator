@@ -168,6 +168,7 @@
 
     // keep the picture card in step with the name box (picked from the list, typed, etc.)
     var nm = o.nameId ? byId(o.nameId) : null;
+    if (nm) nm.setAttribute('data-lbflw-nochip', '1');   // the card shows the picture, so no second one inside the box
     function follow() {
       if (!nm) return;
       var v = nm.value.trim(); if (!v) { card.classList.remove('show'); return; }

@@ -101,6 +101,7 @@
   function placeChip(p) {
     var name = valueName(p), ph = photos[norm(name)];
     var r = p.box.getBoundingClientRect();
+    if (p.box.hasAttribute('data-lbflw-nochip')) { p.chip.style.display = 'none'; restorePad(p); return; }
     var visible = ph && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight && p.box.offsetParent !== null;
     if (!visible) { p.chip.style.display = 'none'; if (!ph) restorePad(p); return; }
     var size = Math.max(24, Math.min(36, Math.round(r.height - 8)));
@@ -120,7 +121,7 @@
   }
   function renderDd(p) {
     var rows = ddRows(p); p.rows = rows; p.active = -1; p.dd.textContent = '';
-    if (!rows.length) { hideDd(p); return; }
+    if (!rows.length || (rows.length === 1 && norm(rows[0]) === norm(p.box.value) && p.box.hasAttribute('data-lbflw-nochip'))) { hideDd(p); return; }
     rows.forEach(function (n, i) {
       var r = el('div', 'r'); r.setAttribute('data-i', String(i));
       var ph = photos[norm(n)], thumb;
