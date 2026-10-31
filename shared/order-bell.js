@@ -12,6 +12,9 @@
   var API = CFG.ORDER_ASSIGN_FAST_API;
   if (!API) return;
   var POS_KEY = 'lbOrderBellPos';
+  var SHOP_API = CFG.SHOPIFY_ORDERS_API || API.replace('orderassign-fast', 'shopify-orders-fast');
+  var VOL_KEY = 'lbAlertVol';   // 0-100, set in ⚙️ Settings → New-order alert sound
+  function vol() { try { var v = parseInt(localStorage.getItem(VOL_KEY), 10); return isFinite(v) ? Math.max(0, Math.min(100, v)) : 80; } catch (e) { return 80; } }
 
   function token() {
     try { return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; } catch (e) { return ''; }
@@ -53,7 +56,7 @@
   toast.innerHTML = '<span style="font-size:20px">📦</span><div class="tt"></div><button class="x" type="button" aria-label="Close">✕</button>';
   document.body.appendChild(toast);
   var toastTimer = 0;
-  function hideToast() { toast.classList.remove('show'); clearTimeout(toastTimer); }
+  function hideToast() { toast.classList.remove('show'); clearTimeout(toastTimer); stopRing(); }
   function showToast(rows) {
     var one = rows.slice(0, 2).map(function (o) {
       return '<div><b style="display:inline;font-size:12.5px">' + esc(o.orderNo) + '</b> · ' +
@@ -61,8 +64,23 @@
     }).join('');
     var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
     toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New order to assign' : rows.length + ' new orders to assign') + '</b>' + one + more;
+    toast.firstChild.textContent = '📦';
     toast.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 14000);
+  }
+  // New order from Shopify: stays on screen and rings (loud, repeating) until someone taps it.
+  function showShopToast(rows) {
+    var one = rows.slice(0, 2).map(function (o) {
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.order_no) + '</b> · ' +
+        (o.branch ? '<span style="color:#2f7a4f;font-weight:700">➜ ' + esc(o.branch) + '</span>' : '<span style="color:#b2402e;font-weight:700">⚠ manual assign</span>') +
+        (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + '</div>';
+    }).join('');
+    var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
+    toast.firstChild.textContent = '🛍️';
+    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New Shopify order!' : rows.length + ' new Shopify orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    ringLoop();
   }
   toast.addEventListener('click', function (e) {
     if (e.target.closest('.x')) { hideToast(); return; }
@@ -144,17 +162,60 @@
     return '<div class="o"><b>' + esc(o.orderNo) + '</b>' +
       (o.address ? '<div style="font-size:11px;color:#8a7078;margin-top:2px;">' + esc(o.address) + '</div>' : '') + line + '</div>';
   }
-  function alarm() {
+  // ---- sound (volume from ⚙️ Settings; 0 = silent). Browsers only allow sound after one tap/click on the page. ----
+  var actx = null;
+  function audio() {
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [880, 1108, 880].forEach(function (f, i) {
-        var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.18;
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.18);
-      });
-    } catch (e) {}
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    } catch (e) { return null; }
   }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { audio(); }, { once: true, passive: true }); });
+  function beep() {
+    var v = vol(); if (!v) return;
+    var c = audio(); if (!c) return;
+    var peak = 0.03 + (v / 100) * 0.6;
+    [880, 1108, 880, 1108, 880].forEach(function (f, i) {
+      var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + i * 0.2;
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.2);
+    });
+  }
+  function alarm() { try { beep(); } catch (e) {} }
+  var loopT = 0;
+  function stopRing() { if (loopT) { clearInterval(loopT); loopT = 0; } }
+  function ringLoop() {
+    stopRing(); beep();
+    var n = 0;
+    loopT = setInterval(function () { if (++n >= 12 || !toast.classList.contains('show')) { stopRing(); return; } beep(); }, 3000);
+  }
+  window.lbAlertTest = function () { try { beep(); } catch (e) {} };
+
+  // ---- new Shopify orders (webhook -> shopify-orders-fast): works even when the Tampermonkey script is off ----
+  var SHOP_SEEN = 'lbobShopSeen';
+  function shopSeen() { try { var a = JSON.parse(localStorage.getItem(SHOP_SEEN) || 'null'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function pollShop() {
+    var t = token(); if (!t || !SHOP_API) return;
+    fetch(SHOP_API + '?action=getRecentOrders&token=' + encodeURIComponent(t) + '&_ts=' + Date.now())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || d.success === false || !Array.isArray(d.orders)) return;
+        var seen = shopSeen();
+        var fresh = d.orders.filter(function (o) {
+          return seen.indexOf(String(o.shopify_id)) === -1 && (Date.now() - new Date(o.received_at).getTime()) < 15 * 60000;
+        });
+        var all = seen.concat(d.orders.map(function (o) { return String(o.shopify_id); }));
+        var uniq = all.filter(function (v, i) { return all.indexOf(v) === i; });
+        try { localStorage.setItem(SHOP_SEEN, JSON.stringify(uniq.slice(-100))); } catch (e) {}
+        if (fresh.length) showShopToast(fresh);
+      })
+      .catch(function () {});
+  }
+  pollShop();
+  setInterval(pollShop, 10000);
+
   var lastCount = null;
   function refresh() {
     var t = token();
