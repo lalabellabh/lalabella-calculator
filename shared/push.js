@@ -124,13 +124,13 @@
   function isIOS_() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
   function status() {
     var sup = supported(), standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-    var base = { supported: sup, perm: sup ? Notification.permission : 'unsupported', needsHomeScreen: !!(isIOS_() && !standalone), userOff: false, on: false, chat: true, orders: true };
+    var base = { supported: sup, perm: sup ? Notification.permission : 'unsupported', needsHomeScreen: !!(isIOS_() && !standalone), userOff: false, on: false, chat: true, orders: true, approvals: true };
     try { base.userOff = localStorage.getItem('lbPushOff') === '1'; } catch (e) {}
     if (!sup || base.needsHomeScreen) return Promise.resolve(base);
     return currentSub().then(function (sub) {
       if (!sub || base.userOff || base.perm !== 'granted' || !token()) return base;
       return call({ action: 'getPrefs', token: token(), endpoint: sub.endpoint }).then(function (r) {
-        if (r && r.success && r.registered) { base.on = true; base.chat = r.chat !== false; base.orders = r.orders !== false; }
+        if (r && r.success && r.registered) { base.on = true; base.chat = r.chat !== false; base.orders = r.orders !== false; base.approvals = r.approvals !== false; }
         return base;
       }).catch(function () { return base; });
     });
@@ -152,13 +152,14 @@
       return (t ? call({ action: 'unsubscribe', token: t, endpoint: ep }).catch(function () {}) : Promise.resolve()).then(function () { return sub.unsubscribe().catch(function () {}); });
     }).then(function () { try { localStorage.removeItem(EP_KEY); } catch (e) {} clearCreds(); return true; });
   }
-  function setPrefs(chat, orders) {
+  function setPrefs(chat, orders, approvals) {
     var t = token();
     return currentSub().then(function (sub) {
       if (!sub || !t) return false;
       var b = { action: 'setPrefs', token: t, endpoint: sub.endpoint };
       if (typeof chat === 'boolean') b.chat = chat;
       if (typeof orders === 'boolean') b.orders = orders;
+      if (typeof approvals === 'boolean') b.approvals = approvals;
       return call(b).then(function (r) { return !!(r && r.success); });
     }).catch(function () { return false; });
   }

@@ -1049,6 +1049,18 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       (o.address ? '<div style="font-size:11px;color:#8a7078;margin-top:2px;">' + esc(o.address) + '</div>' : '') + line + '</div>';
   }
 
+  // Flower rate changes waiting for approval (only Admins get them from the server).
+  function bellApprHtml(rows){
+    if(!rows.length) return '';
+    var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+    return '<div class="lala-bell-order" style="background:#fff7f8;border-radius:8px;padding:8px"><b>🌸 ' + rows.length + ' rate approval' + (rows.length > 1 ? 's' : '') + ' waiting</b>' +
+      rows.slice(0, 5).map(function(r){
+        return '<div style="font-size:12px;margin-top:3px">' + esc(r.flower) + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
+      }).join('') + (rows.length > 5 ? '<div style="font-size:11px;color:#8a7078">+ ' + (rows.length - 5) + ' more</div>' : '') +
+      '<a href="flower-dashboard.html" style="display:block;text-align:center;margin-top:6px;padding:6px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12px;font-weight:700">Review approvals</a></div>';
+  }
+  var lastAppr = null;
+
   function refresh(){
     // Only poll while an actual session exists — this widget's backend
     // (Order Assignment) requires a valid token like every other
@@ -1067,19 +1079,20 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
       .then(data => {
         const count = Number(data.count) || 0;
         const ordersDetail = Array.isArray(data.ordersDetail) ? data.ordersDetail : [];
+        const apRows = Array.isArray(data.approvalsDetail) ? data.approvalsDetail : [], ap = Number(data.pendingApprovals) || 0;
 
-        if(count > 0){ badge.textContent = String(count); badge.classList.add('show'); }
+        if(count + ap > 0){ badge.textContent = String(count + ap); badge.classList.add('show'); }
         else{ badge.classList.remove('show'); }
 
-        if(lastCount !== null && count > lastCount){
+        if((lastCount !== null && count > lastCount) || (lastAppr !== null && ap > lastAppr)){
           playAlarm();
           btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring');
         }
-        lastCount = count;
+        lastCount = count; lastAppr = ap;
 
-        list.innerHTML = ordersDetail.length
+        list.innerHTML = bellApprHtml(apRows) + (ordersDetail.length
           ? ordersDetail.map(bellOrderHtml).join('')
-          : '<div class="lala-bell-empty">No unassigned orders right now.</div>';
+          : '<div class="lala-bell-empty">No unassigned orders right now.</div>');
       })
       .catch(()=>{});
   }
