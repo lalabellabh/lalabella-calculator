@@ -185,6 +185,30 @@
     setTimeout(()=>{ window.location.href = 'index.html'; }, 2500);
   }
 
+
+  // STAY LOGGED IN — the session lives in localStorage (shared by every tab and the installed app) and is
+  // quietly extended while the app is in use, so a new tab or a later visit never asks to log in again.
+  // Only Logout (or a login on another device) ends it.
+  function stayLoggedIn_(tok, user) {
+    try {
+      localStorage.setItem('lalabellaToken', tok);
+      if (user) localStorage.setItem('lalabellaUser', JSON.stringify(user));
+      const last = Number(localStorage.getItem('lbKeepAt')) || 0;
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      localStorage.setItem('lbKeepAt', String(Date.now()));
+      if (LB_CONFIG.SESSION_KEEP_API) {
+        originalFetch(LB_CONFIG.SESSION_KEEP_API + '?token=' + encodeURIComponent(tok), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } }).catch(() => {});
+      }
+    } catch (e) {}
+  }
+  // Logged out in another tab? This tab follows right away.
+  window.addEventListener('storage', function (e) {
+    if (e.key === 'lalabellaToken' && !e.newValue) {
+      ['lalabellaToken', 'lalabellaUser', 'lalabellaVerifiedToken', 'lalabellaVerifiedAt'].forEach(k => sessionStorage.removeItem(k));
+      window.location.href = 'index.html';
+    }
+  });
+
   // Accept a token from this tab's own session, OR a "Remember me"
   // token saved in localStorage from a previous visit/page.
   const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
@@ -235,6 +259,7 @@
     window.LALABELLA_TOKEN = token;
     window.LALABELLA_USER = JSON.parse(cachedUserStr);
     document.documentElement.style.visibility = '';
+    stayLoggedIn_(token, window.LALABELLA_USER);
   } else {
   verifyTokenWithRetry(token, 1)
     .then(data => {
@@ -254,6 +279,7 @@
       sessionStorage.setItem('lalabellaVerifiedToken', token);
       sessionStorage.setItem('lalabellaVerifiedAt', String(Date.now()));
       document.documentElement.style.visibility = '';
+      stayLoggedIn_(token, data.user);
     })
     .catch(() => {
       // Network hiccup — don't lock the user out over a temporary
