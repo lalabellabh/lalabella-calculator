@@ -1855,6 +1855,10 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   document.addEventListener('keydown', e => { if(e.key === 'Escape'){ if(document.getElementById('cropModal').style.display === 'flex') closeCropper(); else if(document.getElementById('editItemModal').style.display === 'flex') closeEditItem(); } });
   document.getElementById('eiPhotoFile').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
   document.getElementById('eiPhotoCamera').addEventListener('change', function(){ eiHandleFile(this.files[0]); });
+  // Snip-paste boxes only make sense on web (mouse) devices, hide on phones/tablets
+  if(!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)){
+    ['eiPaste','addItemPastezone'].forEach(function(id){ var el = document.getElementById(id); if(el) el.style.display = 'none'; });
+  }
   document.getElementById('eiPaste').addEventListener('paste', function(e){
     const items = (e.clipboardData || window.clipboardData).items;
     for(let i = 0; i < items.length; i++){
