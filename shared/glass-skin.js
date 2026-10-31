@@ -11,7 +11,16 @@
     'initial-stock': { cols: 'minmax(0,1fr) minmax(0,1fr)' },
     'chocolate-arrangements': { cols: 'minmax(0,.9fr) minmax(0,1.1fr)', stack: [['.scan-hero', '#scanResultCard', '#arrName'], 1], place: { '#arrGrid': ['2', '2'] } },
     'chocolate-barcode': { cols: 'minmax(0,.55fr) minmax(0,1.45fr)', place: { '.cb-left': ['1', '2'], '.cb-right': ['2', '2'] } },
-    'chocolate-admin': { cols: 'minmax(0,1fr)' }
+    'chocolate-admin': { cols: 'minmax(0,1fr)' },
+    'flower-receiving': { cols: 'minmax(0,1.2fr) minmax(0,1fr)', col: ['.col-main', '.col-side'], place: { '.col-main': ['1'], '.col-side': ['2'] } },
+    'flower-stock-count': { cols: 'minmax(0,1.2fr) minmax(0,1fr)', col: ['.col-main', '.col-side'], place: { '.col-main': ['1'], '.col-side': ['2'] } },
+    'flower-transfer': { cols: 'minmax(0,1fr) minmax(0,1fr)', col: ['.col-main', '.col-side'], place: { '.col-main': ['1'], '.col-side': ['2'] } },
+    'flower-catalog': { cols: 'minmax(0,1fr)' },
+    'flower-arrangements': { cols: 'minmax(0,.9fr) minmax(0,1.1fr)', stack: [['.scan-hero', '#scanResultCard', '#formCard'], 1], place: { '#arrGrid': ['2'] } },
+    'flower-barcode': { cols: 'minmax(0,1fr) minmax(0,1fr)' },
+    'item-inventory': { cols: '210px minmax(0,1fr)', place: { '#desktopToolNav': ['1'] } },
+    'flower-admin': { cols: 'minmax(0,1fr)' },
+    'item-admin': { cols: 'minmax(0,1fr)' }
   };
   function go() {
     var b = document.body; if (!b || b.hasAttribute('data-skin')) return;
@@ -28,12 +37,15 @@
     else { var h1 = w.querySelector(':scope > h1'), sb = w.querySelector(':scope > p.sub'); var hh = document.createElement('header'); if (h1) hh.appendChild(h1); if (sb) hh.appendChild(sb); left.appendChild(hh); }
     top.appendChild(left);
     var sp = document.createElement('div'); sp.className = 'gt-sp'; top.appendChild(sp);
-    var tabs = w.querySelector('.branch-tabs, #tabs.tabs'); if (tabs) top.appendChild(tabs);
+    var tabs = w.querySelector('.branch-tabs, .tabs'); if (tabs) top.appendChild(tabs);
     var ref = w.querySelector('.refresh-link'); if (ref) top.appendChild(ref);
-    var back = w.querySelector('.back-link'), tb = w.querySelector(':scope > .topbar');
-    var href = (back && back.getAttribute('href')) || (tb && tb.querySelector('a') && tb.querySelector('a').getAttribute('href')) || 'index.html';
-    var a = document.createElement('a'); a.className = 'gt-back'; a.href = href; a.textContent = '← Back to Tools'; top.appendChild(a);
-    if (back) back.style.display = 'none'; if (tb) tb.style.display = 'none';
+    var backs = [].slice.call(w.querySelectorAll('.back-link')), tb = w.querySelector(':scope > .topbar');
+    if (backs.length) backs.forEach(function (bl) { bl.classList.add('gt-back'); top.appendChild(bl); });
+    else {
+      var href = (tb && tb.querySelector('a') && tb.querySelector('a').getAttribute('href')) || 'index.html';
+      var a = document.createElement('a'); a.className = 'gt-back'; a.href = href; a.textContent = '← Back to Tools'; top.appendChild(a);
+    }
+    if (tb) tb.style.display = 'none';
     w.insertBefore(top, w.firstChild);
     // stack several boxes into one scrolling column
     if (cfg.stack) {
