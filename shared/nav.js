@@ -122,6 +122,7 @@
     ['get-driver-app.html', '🚗', 'Get Driver App'],
     ['get-messenger-app.html', '💬', 'Get Messenger App'],
     ['iphone.html', '🍎', 'Lalabella on iPhone'],
+    ['desktop.html', '💻', 'Install on PC / Mac'],
     ['privacy-policy.html', '🔒', 'Privacy Policy'],
     ['terms-of-use.html', '📄', 'Terms of Use']
   ];
