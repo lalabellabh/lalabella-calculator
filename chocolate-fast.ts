@@ -652,13 +652,15 @@ async function getDashboardData(selBranch: string) {
   let lastReleaseRow: any = null, lastReleaseDate: Date | null = null, lastTransferRow: any = null, lastTransferDate: Date | null = null;
   const recentTransfers: any[] = [];
   relData.forEach((row: any) => {
-    const branch = row.branch; if (!inBranch(branch)) return;
+    const branch = row.branch;
     const type = String(row.transaction_type || '').trim();
+    // A transfer belongs to BOTH branches: the one that sent it and the one that received it.
+    if (!(inBranch(branch) || (type === 'Transfer' && inBranch(row.to_branch)))) return;
     const rDate = row.release_date ? new Date(row.release_date) : null;
     const total = Number(row.total) || 0;
     if (type === 'Transfer') {
       if (rDate && !isNaN(rDate.getTime())) { if (isSameDay(rDate, today)) todayTransfers++; if (inRange(rDate, weekStart, weekEnd)) weekTransfers++; if (!lastTransferDate || rDate > lastTransferDate) { lastTransferDate = rDate; lastTransferRow = row; } }
-      recentTransfers.push({ date: row.release_date, fromBranch: branch, toBranch: row.to_branch, chocolateName: row.chocolate_name, qty: row.qty_release });
+      recentTransfers.push({ date: row.release_date, fromBranch: branch, toBranch: row.to_branch, chocolateName: row.chocolate_name, qty: row.qty_release, unit: row.unit, by: row.prepared_by, releaseNo: row.release_no });
     } else {
       if (rDate && !isNaN(rDate.getTime())) { if (isSameDay(rDate, today)) todayReleases += total; if (inRange(rDate, weekStart, weekEnd)) weekReleases += total; if (!lastReleaseDate || rDate > lastReleaseDate) { lastReleaseDate = rDate; lastReleaseRow = row; } }
     }

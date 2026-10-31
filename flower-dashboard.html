@@ -126,6 +126,7 @@
       <div class="ph"><h2>📋 Activity</h2>
         <div class="tabs" id="mvTabs">
           <button data-t="rcv" class="on">Recent receiving</button>
+          <button data-t="tr">Transfers</button>
           <button data-t="hist">Rate changes</button>
           <button data-t="br">Branches</button>
         </div>
@@ -171,7 +172,7 @@
 
   /* ---------- state that survives re-renders ---------- */
   const ui = { branch:'All', alTab:'low', mvTab:'rcv', q:'', queue:{}, approver:'' };
-  let data = null, rateHistory = [], distinctCount = null;
+  let data = null, rateHistory = [], transfers = [], distinctCount = null;
 
   function keepScroll(ids, fn){
     const pos = {};
@@ -203,7 +204,7 @@
     const cachedExtra = readCache('extra');
     if(cachedDash){
       try{
-        if(cachedExtra){ rateHistory = cachedExtra.v.rateHistory || []; distinctCount = cachedExtra.v.count; }
+        if(cachedExtra){ rateHistory = cachedExtra.v.rateHistory || []; transfers = cachedExtra.v.transfers || []; distinctCount = cachedExtra.v.count; }
         data = cachedDash.v; loadingEl.style.display = 'none'; render();
         setNote('Showing saved data from ' + timeStr(cachedDash.t) + ' · updating…');
       }catch(e){ cachedDash = null; data = null; }
@@ -214,11 +215,13 @@
     const extras = Promise.all([
       fetch(API_URL + '?action=getRateChangeHistory&_ts=' + t).then(r=>r.json()).catch(()=>[]),
       fetch(API_URL + '?action=getHollandTracking&_ts=' + t).then(r=>r.json()).catch(()=>[]),
-      fetch(API_URL + '?action=getFlowerItems&_ts=' + t).then(r=>r.json()).catch(()=>[])
-    ]).then(([h, ho, it])=>{
+      fetch(API_URL + '?action=getFlowerItems&_ts=' + t).then(r=>r.json()).catch(()=>[]),
+      fetch(API_URL + '?action=getTransferHistoryList&branch=All&_ts=' + t, { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } }).then(r=>r.json()).catch(()=>null)
+    ]).then(([h, ho, it, tr])=>{
       if(seq !== loadSeq) return;
       applyExtras(h, ho, it);
-      writeCache('extra', { rateHistory, count: distinctCount });
+      if(Array.isArray(tr)) transfers = tr;
+      writeCache('extra', { rateHistory, transfers, count: distinctCount });
       if(data) render();
     });
 
@@ -408,7 +411,21 @@
 
   function renderActivity(){
     let h;
-    if(ui.mvTab === 'hist'){
+    if(ui.mvTab === 'tr'){
+      // Newest first. With one branch selected, show what that branch SENT and what it RECEIVED.
+      const b = ui.branch;
+      const list = (transfers || []).filter(t => b === 'All' || t['From Branch'] === b || t['To Branch'] === b)
+        .slice().sort((x, y) => new Date(y.Date) - new Date(x.Date) || String(y['Transfer No.']).localeCompare(String(x['Transfer No.'])));
+      h = rows(list, t => {
+        const incoming = b !== 'All' && t['To Branch'] === b, outgoing = b !== 'All' && t['From Branch'] === b;
+        const head = incoming ? `<span class="pill ok">⬇ Received from ${esc(t['From Branch'])}</span>`
+          : outgoing ? `<span class="pill warn">⬆ Sent to ${esc(t['To Branch'])}</span>`
+          : `<span class="pill ok">${esc(t['From Branch'])} → ${esc(t['To Branch'])}</span>`;
+        return `<div class="row"><div class="nm">${esc(t.Flower)} · ${esc(fmtNum(t.Qty))} ${head}
+          <div class="mt">${fmtDate(t.Date)} · ${esc(t['Transfer No.'] || '')} · by ${esc(t['Transferred By'] || '—')}${t.Remarks ? ' · ' + esc(t.Remarks) : ''}</div></div>
+          <div class="rt">${incoming ? '+' : outgoing ? '−' : ''}${esc(fmtNum(t.Qty))}</div></div>`;
+      }, 'No transfers yet.');
+    } else if(ui.mvTab === 'hist'){
       h = rows(rateHistory, x => `<div class="row"><div class="nm">${esc(x.Flower)} <span class="mt">(${esc(x.Origin || 'N/A')})</span>
         <div class="mt">${fmtDate(x.Date)} · ${fmtBD(x.OldRate)} → ${fmtBD(x.NewRate)} · ni ${esc(x.ApprovedBy || '—')}</div></div>
         <div class="rt"><span class="pill ${x.Status === 'Approved' ? 'ok' : 'bad'}">${esc(x.Status)}</span></div></div>`, 'No processed rate changes yet.');
