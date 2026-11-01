@@ -15,7 +15,7 @@ const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SECRET = Deno.env.get('SHOPIFY_WEBHOOK_SECRET') || '';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const KEEP_DAYS = 30;
-const SHOP_DOMAIN = (Deno.env.get('SHOPIFY_STORE_DOMAIN') || '').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+const SHOP_DOMAIN = (Deno.env.get('SHOPIFY_STORE_DOMAIN') || 'lalabellabh.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 const ABANDON_MIN = 45;   // a checkout with a phone/email that is still not an order after this long = abandoned
 
 const CORS = {

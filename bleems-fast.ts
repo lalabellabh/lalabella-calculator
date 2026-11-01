@@ -122,28 +122,32 @@ async function pushAlert(orders: { orderNo: string; branch: string; address: str
 
 
 // Small pictures: getItems gives every item's `pic`; saved by item_number so each order can show its first item.
-async function refreshItemPics(token: string) {
-  const last = await rest('GET', 'bleems_item_pics?select=updated_at&order=updated_at.desc&limit=1');
-  if (last && last[0] && Date.now() - new Date(last[0].updated_at).getTime() < 3600000) return;
-  const all: any[] = [];
-  for (let page = 1; page <= 10; page++) {
-    const r = await bleems('getItems', page === 1 ? { lang: 'en' } : { page, lang: 'en' }, token);
-    const arr: any[] = r && Array.isArray(r.data) ? r.data : [];
-    if (page === 1 && !arr.length) await rest('POST', 'bleems_raw', [{ kind: 'getItems-empty', ref: '', payload: r }]);
-    all.push(...arr);
-    if (!(r && r.pagination && r.pagination.has_next)) break;
-  }
-  const rows = all.filter((i) => i && i.item_number && i.pic).map((i) => ({ item_number: String(i.item_number), item_name: clip(i.flower_name, 120), pic: String(i.pic), updated_at: new Date().toISOString() }));
-  if (!rows.length) await rest('POST', 'bleems_raw', [{ kind: 'getItems-norows', ref: String(all.length), payload: all.slice(0, 2) }]);
-  for (let i = 0; i < rows.length; i += 200) await rest('POST', 'bleems_item_pics?on_conflict=item_number', rows.slice(i, i + 200), 'resolution=merge-duplicates,return=minimal');
+// Bleems' getItems has NO picture field, so the small picture comes from the Shopify product with the same name
+// (same shop). Public storefront list: https://<store>/products.json  (domain default lalabellabh.com)
+async function shopPics(): Promise<Record<string, string>> {
+  const domain = (Deno.env.get('SHOPIFY_STORE_DOMAIN') || 'lalabellabh.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const map: Record<string, string> = {};
+  try {
+    const r = await fetch(`https://${domain}/products.json?limit=250`, { signal: AbortSignal.timeout(6000) });
+    const j = await r.json();
+    (j.products || []).forEach((pr: any) => {
+      const im = pr.images && pr.images[0] && pr.images[0].src;
+      if (im && pr.title) map[String(pr.title).toLowerCase().trim()] = String(im).replace(/(\.[a-z]+)(\?|$)/i, '_150x150$1$2');
+    });
+  } catch (e) { console.error('shop pics', e); }
+  return map;
 }
-
+function picFor(map: Record<string, string>, name: string): string {
+  const n = String(name || '').toLowerCase().trim();
+  if (!n) return '';
+  if (map[n]) return map[n];
+  for (const k in map) { if (k.length >= 4 && n.length >= 4 && (k.indexOf(n) !== -1 || n.indexOf(k) !== -1)) return map[k]; }
+  return '';
+}
 async function sync(days: number, backfill: boolean) {
   if (!API_KEY || !SECRET) return { success: false, error: 'BLEEMS_API_KEY / BLEEMS_SECRET_KEY secret is not set yet.' };
   const token = await getToken();
-  try { await refreshItemPics(token); } catch (e) { console.error('item pics', e); }
-  const picRows: any[] = (await rest('GET', 'bleems_item_pics?select=item_number,pic&limit=3000')) || [];
-  const pics: Record<string, string> = {}; picRows.forEach((r) => { pics[r.item_number] = r.pic; });
+  const pics = await shopPics();
   let seen = 0, added = 0, changed = 0;
   const toAlert: { orderNo: string; branch: string; address: string }[] = [];
   for (let off = 0; off < days; off++) {
@@ -159,7 +163,7 @@ async function sync(days: number, backfill: boolean) {
         const it0 = items[0] || {};
         const addr = clip([it0.house_number && 'House ' + it0.house_number, it0.building_number && 'Bldg ' + it0.building_number, it0.street, it0.avenue, it0.block && 'Block ' + it0.block, it0.area, it0.hospital_name, it0.extra_details].filter(Boolean).join(', '), 250);
         const status = clip(o.order_status, 30);
-        const thumb = pics[String(it0.item_number || '')] || '';
+        const thumb = picFor(pics, it0.item_name);
         const existing = await rest('GET', `bleems_orders?select=id,status,thumb&order_id=eq.${encodeURIComponent(oid)}&limit=1`);
         if (existing && existing.length) {
           const patch: Record<string, unknown> = {};
