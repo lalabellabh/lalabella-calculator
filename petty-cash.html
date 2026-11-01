@@ -918,7 +918,7 @@ async function loadCashCounts(){
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="print-btn" data-id="${c.id}">🖨️ Print</button>
           ${c.sentToQalali
-            ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span>`
+            ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span><button class="delete-btn" data-id="${c.id}" data-sent="1" title="Delete (Admin)">🗑️</button>`
             : `<button class="send-btn" data-id="${c.id}">Send to Qalali</button><button class="delete-btn" data-id="${c.id}" title="Delete">🗑️</button>`}
         </div>
       </div>
@@ -927,7 +927,7 @@ async function loadCashCounts(){
       btn.addEventListener('click', ()=> markSent(btn.dataset.id, btn));
     });
     hist.querySelectorAll('.delete-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=> deleteCashCount(btn.dataset.id));
+      btn.addEventListener('click', ()=> deleteCashCount(btn.dataset.id, btn.dataset.sent === '1'));
     });
     hist.querySelectorAll('.print-btn').forEach(btn=>{
       btn.addEventListener('click', ()=> printCashCount(btn.dataset.id));
@@ -938,8 +938,8 @@ async function loadCashCounts(){
 }
 loadCashCounts();
 
-async function deleteCashCount(id){
-  if(!confirm('Are you sure you want to delete this cash count?')) return;
+async function deleteCashCount(id, wasSent){
+  if(!confirm(wasSent ? 'This cash count was already SENT to Qalali. Delete it anyway? This cannot be undone.' : 'Are you sure you want to delete this cash count?')) return;
   try{
     const params = new URLSearchParams({ action: 'deleteCashCount', id, token: getToken() });
     const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
