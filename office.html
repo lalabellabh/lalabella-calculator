@@ -209,12 +209,23 @@
   $('floor').addEventListener('click', function(e){ var b = e.target.closest('.desk'); if(b) open(b.getAttribute('data-k')); });
 
   var busy = false;
+
+  // The server says the 15-minute password unlock ran out: clear the remembered unlock and reload ONCE so the password box shows;
+  // then keep retrying quietly until the person has unlocked.
+  function reauthFix(){
+    try{
+      var last = Number(sessionStorage.getItem('lbReauthTry') || 0);
+      if(Date.now() - last > 30000){ sessionStorage.setItem('lbReauthTry', String(Date.now())); sessionStorage.removeItem('lbAdminUnlock'); location.reload(); return true; }
+    }catch(e){}
+    return false;
+  }
   async function load(){
     if(busy) return; busy = true;
     try{
       var res = await fetch(API, { method:'POST', body: new URLSearchParams({ action:'office', token: token() }) });
       var d = await res.json();
       if(!d.success){
+        if(d.reauth){ if(reauthFix()) return; $('deckBox').textContent = 'Enter your password in the box to unlock…'; setTimeout(load, 4000); return; }
         if(/access/i.test(d.error || '')){ $('floor').style.display = 'none'; $('denied').style.display = 'block'; }
         else $('deckBox').textContent = d.error || 'Could not load.';
         return;

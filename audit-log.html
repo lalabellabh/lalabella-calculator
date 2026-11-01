@@ -93,8 +93,20 @@
 
   async function call(params){
     var res = await fetch(API, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) });
-    return res.json();
+    var d = await res.json();
+    if(d && d.reauth && reauthFix()) return new Promise(function(){});
+    return d;
   }
+  // The server says the 15-minute password unlock ran out: clear the remembered unlock and reload ONCE so the password box shows;
+  // then keep retrying quietly until the person has unlocked.
+  function reauthFix(){
+    try{
+      var last = Number(sessionStorage.getItem('lbReauthTry') || 0);
+      if(Date.now() - last > 30000){ sessionStorage.setItem('lbReauthTry', String(Date.now())); sessionStorage.removeItem('lbAdminUnlock'); location.reload(); return true; }
+    }catch(e){}
+    return false;
+  }
+
   function fmt(v){ if(v == null) return '—'; if(typeof v === 'object') return JSON.stringify(v); return String(v); }
   function when(a){ try{ return new Date(a).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }catch(e){ return a; } }
   function name(d){ d = d || {}; return d.flower_name || d.chocolate_name || d.item_name || d.name || d.title || d.username || d.full_name || ''; }
@@ -188,7 +200,7 @@
   });
   // ---------- backups ----------
   var BK = LB_CONFIG.BACKUP_API.replace('backup-fast', 'autobackup-fast');
-  async function bcall(params){ var res = await fetch(BK, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) }); return res.json(); }
+  async function bcall(params){ var res = await fetch(BK, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) }); var d = await res.json(); if(d && d.reauth && reauthFix()) return new Promise(function(){}); return d; }
   function kb(n){ return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
   async function loadBk(){
     try{
