@@ -93,6 +93,7 @@
     ['user-admin.html', '👥', 'User Management', 'admin'],
     ['brain.html', '🧠', 'Brain Vault', 'admin'],
     ['system-health.html', '🩺', 'System Health', 'admin'],
+    ['audit-log.html', '🕘', 'Activity History', 'admin'],
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
 
@@ -130,7 +131,7 @@
   ];
 
   // System / admin pages live in ⚙️ Settings now (keeps the menu short). Still reachable from there.
-  const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html'];
+  const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html', 'audit-log.html'];
 
   // Pages that show a "Back" link based on ?from=<page they came from>.
   const FROM_AWARE = ['notes.html', 'order-form.html', 'card-print.html', 'branch-config.html',

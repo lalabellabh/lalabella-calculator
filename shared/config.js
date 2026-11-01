@@ -60,6 +60,8 @@ window.LB_CONFIG = Object.freeze({
   // System Health page (admin only, read-only report).
   HEALTH_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/health-fast',
   BACKUP_API:       'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/backup-fast',
+  // Activity History (audit log) — Admin with User Management access only.
+  AUDIT_API:        'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/audit-fast',
   // Attendance (time in / break / time out with GPS + fingerprint).
   ATTENDANCE_API:   'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/attendance-fast',
   // Delivery tracking (admin assigns an order to a driver, driver's phone sends GPS, admin sees the map).

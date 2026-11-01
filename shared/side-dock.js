@@ -34,7 +34,7 @@
     ['schedule.html', '📆', 'Duty Schedule'], ['attendance.html', '🕒', 'Attendance'], ['profile.html', '👤', 'My Profile'],
     ['petty-cash.html', '💰', 'Petty Cash'], ['notes.html', '📝', 'Notes'], ['order-form.html', '🧾', 'Order Form'],
     ['card-print.html', '💌', 'Card Print'], ['nova-command-center.html', '🎙️', 'NOVA'], ['chatbox.html', '💬', 'Full Chat'],
-    ['user-admin.html', '👥', 'User Management'], ['brain.html', '🧠', 'Brain Vault'], ['system-health.html', '🩺', 'System Health']
+    ['user-admin.html', '👥', 'User Management'], ['brain.html', '🧠', 'Brain Vault'], ['system-health.html', '🩺', 'System Health'], ['audit-log.html', '🕘', 'Activity History']
   ];
   var BUILTIN = [
     { id: 'lbcb-btn', icon: '💬', label: 'Chat', badge: 'lbcb-badge' },
