@@ -25,7 +25,17 @@
     for (var i = 0; i < APPS.length; i++) if (APPS[i].re.test(h)) return APPS[i];
     return null;
   }
+  function note(txt) {
+    try {
+      var d = document.createElement('div');
+      d.textContent = txt;
+      d.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:2147483647;background:rgba(40,20,25,.88);color:#fff;font:600 13px sans-serif;padding:10px 16px;border-radius:20px;';
+      document.body.appendChild(d);
+      setTimeout(function () { d.remove(); }, 2500);
+    } catch (e) { }
+  }
   function open(app) {
+    note('Opening ' + (app.scheme === 'lalabellamsg' ? 'Messenger' : 'Driver') + '…');
     var fb = location.origin + '/' + app.fallback;
     location.href = 'intent://open#Intent;scheme=' + app.scheme + ';package=' + app.pkg + ';S.browser_fallback_url=' + encodeURIComponent(fb) + ';end';
   }
