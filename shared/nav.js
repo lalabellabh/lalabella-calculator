@@ -1030,6 +1030,13 @@
     document.body.appendChild(au);
   }
 
+  // Android app: Staff Chat / Messages opens the Messenger app (or its download page). See shared/messenger-link.js.
+  if (!window.LBMessengerLink && !document.querySelector('script[src="shared/messenger-link.js"]')) {
+    const ml = document.createElement('script');
+    ml.src = 'shared/messenger-link.js';
+    document.body.appendChild(ml);
+  }
+
   // Installable app (PWA): service worker + install button. See shared/pwa.js.
   if (!window.LBPwa && !document.querySelector('script[src="shared/pwa.js"]')) {
     const pw = document.createElement('script');
