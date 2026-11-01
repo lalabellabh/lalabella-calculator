@@ -23,10 +23,10 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-async function rest(method: string, path: string, body?: unknown) {
+async function rest(method: string, path: string, body?: unknown, prefer = 'return=minimal') {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     method,
-    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: prefer },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
@@ -120,9 +120,30 @@ async function pushAlert(orders: { orderNo: string; branch: string; address: str
   });
 }
 
+
+// Small pictures: getItems gives every item's `pic`; saved by item_number so each order can show its first item.
+async function refreshItemPics(token: string) {
+  const last = await rest('GET', 'bleems_item_pics?select=updated_at&order=updated_at.desc&limit=1');
+  if (last && last[0] && Date.now() - new Date(last[0].updated_at).getTime() < 3600000) return;
+  const all: any[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await bleems('getItems', page === 1 ? { lang: 'en' } : { page, lang: 'en' }, token);
+    const arr: any[] = r && Array.isArray(r.data) ? r.data : [];
+    if (page === 1 && !arr.length) await rest('POST', 'bleems_raw', [{ kind: 'getItems-empty', ref: '', payload: r }]);
+    all.push(...arr);
+    if (!(r && r.pagination && r.pagination.has_next)) break;
+  }
+  const rows = all.filter((i) => i && i.item_number && i.pic).map((i) => ({ item_number: String(i.item_number), item_name: clip(i.flower_name, 120), pic: String(i.pic), updated_at: new Date().toISOString() }));
+  if (!rows.length) await rest('POST', 'bleems_raw', [{ kind: 'getItems-norows', ref: String(all.length), payload: all.slice(0, 2) }]);
+  for (let i = 0; i < rows.length; i += 200) await rest('POST', 'bleems_item_pics?on_conflict=item_number', rows.slice(i, i + 200), 'resolution=merge-duplicates,return=minimal');
+}
+
 async function sync(days: number, backfill: boolean) {
   if (!API_KEY || !SECRET) return { success: false, error: 'BLEEMS_API_KEY / BLEEMS_SECRET_KEY secret is not set yet.' };
   const token = await getToken();
+  try { await refreshItemPics(token); } catch (e) { console.error('item pics', e); }
+  const picRows: any[] = (await rest('GET', 'bleems_item_pics?select=item_number,pic&limit=3000')) || [];
+  const pics: Record<string, string> = {}; picRows.forEach((r) => { pics[r.item_number] = r.pic; });
   let seen = 0, added = 0, changed = 0;
   const toAlert: { orderNo: string; branch: string; address: string }[] = [];
   for (let off = 0; off < days; off++) {
@@ -138,9 +159,13 @@ async function sync(days: number, backfill: boolean) {
         const it0 = items[0] || {};
         const addr = clip([it0.house_number && 'House ' + it0.house_number, it0.building_number && 'Bldg ' + it0.building_number, it0.street, it0.avenue, it0.block && 'Block ' + it0.block, it0.area, it0.hospital_name, it0.extra_details].filter(Boolean).join(', '), 250);
         const status = clip(o.order_status, 30);
-        const existing = await rest('GET', `bleems_orders?select=id,status&order_id=eq.${encodeURIComponent(oid)}&limit=1`);
+        const thumb = pics[String(it0.item_number || '')] || '';
+        const existing = await rest('GET', `bleems_orders?select=id,status,thumb&order_id=eq.${encodeURIComponent(oid)}&limit=1`);
         if (existing && existing.length) {
-          if (existing[0].status !== status) { await rest('PATCH', `bleems_orders?id=eq.${existing[0].id}`, { status }); changed++; }
+          const patch: Record<string, unknown> = {};
+          if (existing[0].status !== status) patch.status = status;
+          if (!existing[0].thumb && thumb) patch.thumb = thumb;
+          if (Object.keys(patch).length) { await rest('PATCH', `bleems_orders?id=eq.${existing[0].id}`, patch); changed++; }
           continue;
         }
         const br = await pickBranch(addr);
@@ -152,7 +177,7 @@ async function sync(days: number, backfill: boolean) {
           items: clip(items.map((i: any) => `${i.quantity || 1}× ${i.item_name || ''}`).join(' · '), 300),
           delivery_date: clip(it0.delivery_date, 20), delivery_time: clip(it0.delivery_time, 30),
           delivery_type: clip(it0.location_type, 30), card_message: clip(it0.card_message, 400),
-          payment_method: clip(o.payment_method, 30), status, branch: br.name, branch_source: br.source,
+          payment_method: clip(o.payment_method, 30), thumb, status, branch: br.name, branch_source: br.source,
           alerted: backfill || /completed|cancel/i.test(status), raw: o,
         };
         await rest('POST', 'bleems_orders', [row]);

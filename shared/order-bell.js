@@ -93,17 +93,39 @@
 
   // New order from Shopify: stays on screen and rings (loud, repeating) until someone taps it.
   function showShopToast(rows) {
+    var bl = rows.every(function (o) { return o.source === 'bleems'; }), sh = rows.every(function (o) { return o.source !== 'bleems'; });
+    var src = bl ? 'Bleems' : (sh ? 'Shopify' : 'online');
     var one = rows.slice(0, 2).map(function (o) {
-      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.order_no) + '</b> · ' +
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.order_no) + '</b>' + (o.source === 'bleems' && !bl ? ' <span style="color:#8a7078">(Bleems)</span>' : '') + ' · ' +
         (o.branch ? '<span style="color:#2f7a4f;font-weight:700">➜ ' + esc(o.branch) + '</span>' : '<span style="color:#b2402e;font-weight:700">⚠ manual assign</span>') +
         (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + '</div>';
     }).join('');
     var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
-    toast.firstChild.textContent = '🛍️'; toast.removeAttribute('data-go');
-    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New Shopify order!' : rows.length + ' new Shopify orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
+    var pic = rows[0] && rows[0].thumb && /^https:\/\//.test(rows[0].thumb) ? rows[0].thumb : '';
+    if (pic) toast.firstChild.innerHTML = '<img alt="" src="' + esc(pic) + '" style="width:46px;height:46px;border-radius:10px;object-fit:cover;display:block">';
+    else toast.firstChild.textContent = '🛍️';
+    toast.removeAttribute('data-go');
+    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New ' + src + ' order!' : rows.length + ' new ' + src + ' orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
     toast.classList.add('show');
     clearTimeout(toastTimer);
     ringLoop();
+  }
+  // a customer started checkout, left a phone/email, and never finished: a quiet notice (no alarm sound), logged in shopify_checkouts
+  var AB_SEEN = 'lbobAbSeen';
+  function abSeen() { try { var a = JSON.parse(localStorage.getItem(AB_SEEN) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
+  function showAbandonToast(rows) {
+    var one = rows.slice(0, 2).map(function (o) {
+      var who = o.customer || o.phone || o.email || 'Customer';
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(who) + '</b>' + (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + (o.phone ? ' · ' + esc(o.phone) : '') + '<div style="color:#8a7078;font-size:11.5px">' + esc(o.items || '') + '</div></div>';
+    }).join('');
+    var pic = rows[0] && rows[0].thumb && /^https:\/\//.test(rows[0].thumb) ? rows[0].thumb : '';
+    if (pic) toast.firstChild.innerHTML = '<img alt="" src="' + esc(pic) + '" style="width:46px;height:46px;border-radius:10px;object-fit:cover;display:block">';
+    else toast.firstChild.textContent = '🛒';
+    toast.removeAttribute('data-go');
+    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'Abandoned checkout' : rows.length + ' abandoned checkouts') + '</b>' + one + (rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '') + '<div style="color:#8a7078;margin-top:2px">Follow up with the customer? Tap to close</div>';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { hideToast(); }, 20000);
   }
   toast.addEventListener('click', function (e) {
     if (e.target.closest('.x')) { hideToast(); return; }
@@ -234,6 +256,14 @@
         var uniq = all.filter(function (v, i) { return all.indexOf(v) === i; });
         try { localStorage.setItem(SHOP_SEEN, JSON.stringify(uniq.slice(-100))); } catch (e) {}
         if (fresh.length) showShopToast(fresh);
+        else if (Array.isArray(d.abandoned)) {
+          var ab = abSeen(), keys = d.abandoned.map(function (x) { return String(x.token); });
+          if (ab !== null) {
+            var fa = d.abandoned.filter(function (x) { return ab.indexOf(String(x.token)) === -1 && (Date.now() - new Date(x.updated_at).getTime()) < 3 * 3600000; });
+            if (fa.length) showAbandonToast(fa);
+          }
+          try { localStorage.setItem(AB_SEEN, JSON.stringify(keys.concat(ab || []).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).slice(0, 100))); } catch (e) {}
+        }
       })
       .catch(function () {});
   }
