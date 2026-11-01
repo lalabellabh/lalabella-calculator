@@ -437,9 +437,9 @@
         <div class="bar teal"><i style="width:${Math.max(0,Math.min(100,(Number(b.inventoryValue)||0)/mx*100))}%"></i></div>
         <div style="color:var(--dim);font-size:11px;margin-top:4px">Low stock ${fmtNum(b.lowStockItems)} · budget ${fmtBD(b.actualThisWeek)} of ${fmtBD(b.weeklyBudget)}</div></div>`, 'No branch data.');
     } else {
-      h = rows(data.recentReceiving, e => `<div class="row"><div class="nm">${esc(e.Flower || '—')} <span class="mt">(${esc(e.Origin || 'N/A')})</span>
+      h = rows(data.recentReceiving, e => `<div class="row"><div class="nm">${esc(e.Flower || '—')} ${e.Type === 'Supply' ? '<span class="mt">(🧰 Supply)</span>' : '<span class="mt">(' + esc(e.Origin || 'N/A') + ')</span>'}
         <div class="mt">${fmtDate(e.Date)} · ${esc(e.Branch || '')} · Qty ${esc(e.Qty)} ${esc(e.Unit || '')}</div>
-        <div class="mt">Supplier: ${esc(e.Supplier || '—')} · Received by: ${esc(e['Received By'] || '—')}</div></div>
+        <div class="mt">Supplier: ${esc(e.Supplier || '—')}${e.Invoice ? ' · Inv ' + esc(e.Invoice) : ''} · Received by: ${esc(e['Received By'] || '—')}</div></div>
         <div class="rt">${fmtBD(e.Subtotal)}</div></div>`, 'No flower receiving logged yet.');
     }
     document.getElementById('mvScroll').innerHTML = h;
