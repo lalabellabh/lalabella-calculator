@@ -30,7 +30,13 @@
     location.href = 'intent://open#Intent;scheme=' + app.scheme + ';package=' + app.pkg + ';S.browser_fallback_url=' + encodeURIComponent(fb) + ';end';
   }
   document.addEventListener('click', function (e) {
-    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    var t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    // the floating chat bubble / dock Chat button (in-page mini chat): in the app it opens Messenger instead
+    if (t.closest('#lbcb-btn') && !/chatbox\.html$/i.test(location.pathname)) {
+      e.preventDefault(); e.stopPropagation(); open(APPS[0]); return;
+    }
+    var a = t.closest('a[href]');
     if (!a) return;
     var app = pick(a);
     if (!app) return;
