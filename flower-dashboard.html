@@ -381,7 +381,7 @@
         <div class="t" style="margin:0"><span>Remaining</span><b>${fmtBD(b.remaining)}</b></div></div>
       <div class="sect">This week</div>
       <div class="kv"><span>Purchased</span><b>${fmtNum(q.purchasedThisWeek)}</b></div>
-      <div class="kv"><span>🧰 Supplies bought</span><b>${supplyRows ? fmtNum(supWeek.length) : '…'}</b></div>
+      <div class="kv"><span>🎀 Supplies bought</span><b>${supplyRows ? fmtNum(supWeek.length) : '…'}</b></div>
       ${supWeek.length ? `<div class="kv"><span style="color:var(--dim);font-size:11px">${supNames}${supWeek.length > 4 ? ' …' : ''}</span><b>${fmtBD(supCost)}</b></div>` : ''}
       <div class="kv"><span>Used</span><b>${fmtNum(q.usedThisWeek)}</b></div>
       <div class="kv"><span>Used cost</span><b>${fmtBD(q.usedCostThisWeek)}</b></div>
@@ -446,7 +446,7 @@
         const head = incoming ? `<span class="pill ok">⬇ Received from ${esc(t['From Branch'])}</span>`
           : outgoing ? `<span class="pill warn">⬆ Sent to ${esc(t['To Branch'])}</span>`
           : `<span class="pill ok">${esc(t['From Branch'])} → ${esc(t['To Branch'])}</span>`;
-        return `<div class="row"><div class="nm">${supplyNameSet.has(String(t.Flower || '').trim().toLowerCase()) ? '🧰 ' : ''}${esc(t.Flower)} · ${esc(fmtNum(t.Qty))} ${head}
+        return `<div class="row"><div class="nm">${supplyNameSet.has(String(t.Flower || '').trim().toLowerCase()) ? '🎀 ' : ''}${esc(t.Flower)} · ${esc(fmtNum(t.Qty))} ${head}
           <div class="mt">${fmtDate(t.Date)} · ${esc(t['Transfer No.'] || '')} · by ${esc(t['Transferred By'] || '—')}${t.Remarks ? ' · ' + esc(t.Remarks) : ''}</div></div>
           <div class="rt">${incoming ? '+' : outgoing ? '−' : ''}${esc(fmtNum(t.Qty))}</div></div>`;
       }, 'No transfers yet.');
@@ -457,7 +457,7 @@
         const list = supplyRows.filter(x => b === 'All' || x.Branch === b).slice().sort((x, y) => new Date(y.Date) - new Date(x.Date));
         const total = list.reduce((a, x) => a + (Number(x.Subtotal) || 0) + (Number(x.Tax) || 0), 0);
         h = (list.length ? `<div class="mt" style="padding:6px 10px">${list.length} supply purchases · total ${fmtBD(total)} incl. VAT</div>` : '') +
-          rows(list.slice(0, 60), x => `<div class="row"><div class="nm">${esc(x.Flower || '—')} <span class="mt">(🧰 Supply)</span>
+          rows(list.slice(0, 60), x => `<div class="row"><div class="nm">${esc(x.Flower || '—')} <span class="mt">(🎀 Supply)</span>
             <div class="mt">${fmtDate(x.Date)} · ${esc(x.Branch || '')} · Qty ${esc(x.Qty)} ${esc(x.Unit || '')}</div>
             <div class="mt">Supplier: ${esc(x.Supplier || '—')}${x['Invoice No'] ? ' · Inv ' + esc(x['Invoice No']) : ''} · Received by: ${esc(x['Received By'] || '—')}</div></div>
             <div class="rt">${fmtBD((Number(x.Subtotal) || 0) + (Number(x.Tax) || 0))}</div></div>`, 'No supplies bought yet.');
@@ -474,7 +474,7 @@
         <div class="bar teal"><i style="width:${Math.max(0,Math.min(100,(Number(b.inventoryValue)||0)/mx*100))}%"></i></div>
         <div style="color:var(--dim);font-size:11px;margin-top:4px">Low stock ${fmtNum(b.lowStockItems)} · budget ${fmtBD(b.actualThisWeek)} of ${fmtBD(b.weeklyBudget)}</div></div>`, 'No branch data.');
     } else {
-      h = rows(data.recentReceiving, e => `<div class="row"><div class="nm">${esc(e.Flower || '—')} ${e.Type === 'Supply' ? '<span class="mt">(🧰 Supply)</span>' : '<span class="mt">(' + esc(e.Origin || 'N/A') + ')</span>'}
+      h = rows(data.recentReceiving, e => `<div class="row"><div class="nm">${esc(e.Flower || '—')} ${e.Type === 'Supply' ? '<span class="mt">(🎀 Supply)</span>' : '<span class="mt">(' + esc(e.Origin || 'N/A') + ')</span>'}
         <div class="mt">${fmtDate(e.Date)} · ${esc(e.Branch || '')} · Qty ${esc(e.Qty)} ${esc(e.Unit || '')}</div>
         <div class="mt">Supplier: ${esc(e.Supplier || '—')}${e.Invoice ? ' · Inv ' + esc(e.Invoice) : ''} · Received by: ${esc(e['Received By'] || '—')}</div></div>
         <div class="rt">${fmtBD(e.Subtotal)}</div></div>`, 'No flower receiving logged yet.');

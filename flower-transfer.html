@@ -75,6 +75,9 @@
     .col-main{ flex:1.3; display:flex; flex-direction:column; gap:16px; }
     .col-side{ flex:1; display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
   }
+  .type-toggle{ display:grid; grid-template-columns:1fr 1fr; gap:6px; background:rgba(255,255,255,.35); padding:4px; border-radius:12px; margin:14px 0 12px; }
+  .type-btn{ padding:10px 0; text-align:center; background:transparent; border:none; font-weight:600; font-size:13px; color:#6b4a52; cursor:pointer; border-radius:9px; transition:all .2s ease; }
+  .type-btn.active{ background:#fff; color:#9e2f4a; box-shadow:0 2px 8px rgba(158,47,74,0.15); }
 </style>
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
@@ -196,10 +199,15 @@
           </div>
         </div>
 
-        <label>Flower Name</label>
+        <div class="type-toggle" id="typeToggle">
+          <button type="button" class="type-btn active" data-type="Flower">🌸 Flower</button>
+          <button type="button" class="type-btn" data-type="Supply">🎀 Supply</button>
+        </div>
+
+        <label id="fNameLabel">Flower Name</label>
         <input type="text" id="fFlower" list="flowerList" placeholder="e.g. Rose" />
         <datalist id="flowerList"></datalist>
-        <div id="supplyNote" style="display:none;font-size:12px;color:#f1d38c;margin-top:6px;">🧰 Supply item — will be logged as a transfer between branches (no flower rate).</div>
+        <div id="supplyNote" style="display:none;font-size:12px;color:#9e2f4a;margin-top:6px;">🎀 Supply — logged as a transfer between branches (no flower rate).</div>
 
         <div class="grid-2">
           <div>
@@ -270,8 +278,7 @@
     const box = document.getElementById('previewBox');
     const name = document.getElementById('fFlower').value.trim();
     const match = Object.keys(flowerLegacyRates).find(n => n.toLowerCase() === name.toLowerCase());
-    if(!match){ box.style.display = 'none'; const sn = document.getElementById('supplyNote'); if(sn) sn.style.display = isSupplyName(name) ? 'block' : 'none'; return; }
-    { const sn = document.getElementById('supplyNote'); if(sn) sn.style.display = 'none'; }
+    if(currentType === 'Supply' || !match){ box.style.display = 'none'; return; }
     const rate = flowerLegacyRates[match];
     const qty = parseFloat(document.getElementById('fQty').value) || 0;
     box.style.display = 'block';
@@ -280,7 +287,24 @@
   }
   ['fFlower','fQty'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
 
-  let supplyNames = new Set();
+  let supplyNames = new Set(), flowerOptionsHtml = '', supplyOptionsHtml = '', currentType = 'Flower';
+  // Flower / Supply switch (same idea as Receiving): changes the name list, the label and hides the flower item-code scanner for supplies.
+  function applyType(){
+    const sup = currentType === 'Supply';
+    document.getElementById('flowerList').innerHTML = sup ? supplyOptionsHtml : flowerOptionsHtml;
+    document.getElementById('fNameLabel').textContent = sup ? 'Supply Name' : 'Flower Name';
+    document.getElementById('fFlower').placeholder = sup ? 'e.g. Oasis Foam, Ribbon' : 'e.g. Rose';
+    document.querySelectorAll('.lbfs').forEach(el => { el.style.display = sup ? 'none' : ''; });
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === currentType));
+    const sn = document.getElementById('supplyNote'); if(sn) sn.style.display = sup ? 'block' : 'none';
+    if(sup) document.getElementById('previewBox').style.display = 'none';
+  }
+  document.getElementById('typeToggle').addEventListener('click', e => {
+    const b = e.target.closest('.type-btn'); if(!b || b.dataset.type === currentType) return;
+    currentType = b.dataset.type;
+    document.getElementById('fFlower').value = '';
+    applyType();
+  });
   const isSupplyName = n => [...supplyNames].some(x => x.toLowerCase() === String(n || '').trim().toLowerCase());
   async function loadFlowerNames(){
     const t = Date.now();
@@ -313,7 +337,9 @@
         if(!(name in flowerLegacyRates)) flowerLegacyRates[name] = Number(it.Rate) || 0;
       });
 
-    document.getElementById('flowerList').innerHTML = [...names, ...hollandNames].map(n => `<option value="${n}"></option>`).join('') + [...supplyNames].map(n => `<option value="${n}" label="🧰 Supply"></option>`).join('');
+    flowerOptionsHtml = [...names, ...hollandNames].map(n => `<option value="${n}"></option>`).join('');
+    supplyOptionsHtml = [...supplyNames].map(n => `<option value="${n}"></option>`).join('');
+    applyType();
   }
 
   async function loadStaff(){
@@ -394,6 +420,14 @@
       alert('Please fill in Flower Name and a Quantity greater than 0.');
       return;
     }
+    if(currentType === 'Supply' && !isSupplyName(flowerName)){
+      alert('Please choose a supply from the list (add new supplies in Receiving first).');
+      return;
+    }
+    if(currentType === 'Flower' && isSupplyName(flowerName)){
+      alert('That is a supply item — switch to the Supply tab.');
+      return;
+    }
     if(fromBranch === toBranch){
       alert('From and To Branch cannot be the same.');
       return;
@@ -423,7 +457,7 @@
       if(result.error){
         alert(result.error);
       } else {
-        alert('Transfer logged! ' + result.transferNo + (isSupplyName(flowerName) ? ' · 🧰 Supply' : ' · Value: ' + fmtBD(result.value)));
+        alert('Transfer logged! ' + result.transferNo + (currentType === 'Supply' ? ' · 🎀 Supply' : ' · Value: ' + fmtBD(result.value)));
         document.getElementById('fFlower').value = '';
         document.getElementById('fQty').value = '';
         document.getElementById('fRemarks').value = '';
