@@ -80,12 +80,12 @@
     try { beep(); } catch (e) {}
   }
   function apprHtml(rows) {
-    if (!rows.length) return '';
+    var cr = rows.filter(function(r){return r.kind==='choc';}); rows = rows.filter(function(r){return r.kind!=='choc';}); var chocHtml = cr.length ? '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px;margin-top:6px"><b>🍫 ' + cr[0].n + ' chocolate stock approval' + (cr[0].n > 1 ? 's' : '') + ' waiting</b><a href="stock-approval.html" style="display:block;text-align:center;margin-top:6px;padding:6px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12px;font-weight:700">Review stock counts</a></div>' : ''; if(!rows.length) return chocHtml;
     return '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px"><b>🌸 ' + rows.length + ' rate approval' + (rows.length > 1 ? 's' : '') + ' waiting</b>' +
       rows.slice(0, 5).map(function (r) {
         return '<div style="font-size:12px;margin-top:3px">' + esc(r.flower) + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
       }).join('') + (rows.length > 5 ? '<div style="font-size:11px;color:#8a7078">+ ' + (rows.length - 5) + ' more</div>' : '') +
-      '<a href="flower-dashboard.html" style="margin-top:6px;padding:6px 0">Review approvals</a></div>';
+      '<a href="flower-dashboard.html" style="margin-top:6px;padding:6px 0">Review approvals</a></div>' + chocHtml;
   }
   var APPR_KEY = 'lbobAppr';   // last approval count this browser tab saw (so moving between pages does not pop up again)
   function apprSeen() { try { var v = sessionStorage.getItem(APPR_KEY); return v === null ? null : parseInt(v, 10); } catch (e) { return null; } }
@@ -284,7 +284,6 @@
         var shown = n + ap;
         if (shown > 0) { badge.textContent = String(shown); badge.classList.add('show'); } else badge.classList.remove('show');
         var seenAp = apprSeen();
-        if (seenAp !== null && ap > seenAp) showApprToast(ap, apRows);
         apprSave(ap);
         if (lastCount !== null && n > lastCount && !own) { alarm(); btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
         lastCount = n;
