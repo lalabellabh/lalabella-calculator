@@ -1,6 +1,8 @@
 /**
  * LALABELLA BUG HISTORY — tiny error reporter (loaded by shared/config.js on every page).
  * Sends JS errors, unhandled promise errors and FAILED server calls (5xx / no connection) to errlog-fast.
+ * A "did not answer" is only sent when the page stayed open and visible and a re-check 4 s later also fails
+ * (closing the page, locking the phone or switching Wi-Fi/data is not a bug).
  * You read them in Activity History -> Errors (admin with User Management access only).
  * Never breaks a page: everything is wrapped in try/catch, max 6 reports per page load, no passwords/tokens in the text.
  */
@@ -22,6 +24,11 @@
     }
     var origFetch = window.fetch ? window.fetch.bind(window) : null;
     if (!origFetch) return;
+    var leaving = false, lastHidden = 0;
+    window.addEventListener('pagehide', function () { leaving = true; });
+    window.addEventListener('beforeunload', function () { leaving = true; });
+    window.addEventListener('pageshow', function () { leaving = false; });
+    document.addEventListener('visibilitychange', function () { lastHidden = Date.now(); });
 
     window.addEventListener('error', function (ev) {
       try {
@@ -50,8 +57,17 @@
       try {
         if (url.indexOf('.supabase.co/functions/v1/') > -1 && url.indexOf('errlog-fast') < 0) {
           var fn = url.split('/functions/v1/')[1].split('?')[0];
+          var t0 = Date.now();
           p.then(function (res) { if (res && res.status >= 500) report('api', fn + ' answered ' + res.status, ''); }, function (err) {
-            if (navigator.onLine !== false && !(err && err.name === 'AbortError')) report('api', fn + ' did not answer', err && err.message || '');
+            // "Failed to fetch" is usually the phone, not the server: page closed / app went to background / Wi-Fi <-> data switch.
+            // Only report it when the page was open and visible the whole time AND a quick re-check a few seconds later also fails.
+            if (navigator.onLine === false || (err && err.name === 'AbortError') || leaving || document.hidden || lastHidden >= t0 - 1500) return;
+            var msg = err && err.message || '';
+            setTimeout(function () {
+              if (leaving || document.hidden || navigator.onLine === false || lastHidden >= t0 - 1500) return;
+              origFetch(url.split('?')[0], { method: 'OPTIONS' }).then(function () { /* server is fine — it was a short network hiccup */ },
+                function () { if (!leaving && !document.hidden && navigator.onLine !== false) report('api', fn + ' did not answer', msg + ' (re-checked after 4 s: still no answer)'); });
+            }, 4000);
           });
         }
       } catch (e) {}
