@@ -351,6 +351,11 @@
       wrap.style.background = EFFECTS[st.eff].tint || '';
       wrap.style.display = st.eff === 'off' ? 'none' : '';
       card.classList.toggle('lbfx-dark', !!EFFECTS[st.eff].dark);
+      // dark effect = white text; keep the wallpaper text-color pass (appearance.js) away from this card
+      if (EFFECTS[st.eff].dark) {
+        card.setAttribute('data-lb-text-skip', '');
+        card.querySelectorAll('[data-lbtx]').forEach(function (e) { e.style.removeProperty('color'); e.removeAttribute('data-lbtx'); });
+      } else card.removeAttribute('data-lb-text-skip');
       size();
       st.ctx.clearRect(0, 0, st.w, st.h);
       loop();

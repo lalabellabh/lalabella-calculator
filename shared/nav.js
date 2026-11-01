@@ -290,7 +290,7 @@
   function weatherHtml() {
     const p1 = wxPick('lbWxP1', 'bh'), p2 = wxPick('lbWxP2', 'spl');
     let hid = false; try { hid = localStorage.getItem('lbWxHide') === '1'; } catch (e) {}
-    return '<div class="lb-menu-weather' + (hid ? ' lbw-hid' : '') + '"><button type="button" class="lbw-tg" aria-label="Hide or show weather"><span class="wxs"></span><span class="lbw-sum"></span><span class="lbw-chev">⌃</span></button><div class="lbw-wrap"><div class="lbw-body"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
+    return '<div class="lb-menu-weather' + (hid ? ' lbw-hid' : '') + '"><button type="button" class="lbw-tg" data-lb-text-skip aria-label="Hide or show weather"><span class="wxs"></span><span class="lbw-sum"></span><span class="lbw-chev">⌃</span></button><div class="lbw-wrap"><div class="lbw-body"><div class="lbw-place"><span class="lbw-pl">' + WX_PLACES[p1].f + ' <span class="lbw-pn">' + WX_PLACES[p1].n + '</span> ▾</span><select class="lbw-sel" data-k="lbWxP1" aria-label="Change place">' + wxOpts(p1) + '</select></div>' +
       '<div class="lbw-row"><span class="lbw-ico"></span>' +
       '<span class="lbw-main"><span class="lbw-temp"><b class="lbw-t">--</b><span class="lbw-u"><i data-u="c" class="on">°C</i><em>|</em><i data-u="f">°F</i></span></span>' +
       '<span class="lbw-feels">Feels like --</span></span>' +
