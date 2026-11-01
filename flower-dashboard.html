@@ -173,7 +173,7 @@
 
   /* ---------- state that survives re-renders ---------- */
   const ui = { branch:'All', alTab:'low', mvTab:'rcv', q:'', queue:{}, approver:'' };
-  let data = null, rateHistory = [], transfers = [], distinctCount = null, supplyRows = null, supplyLoading = false;
+  let data = null, rateHistory = [], transfers = [], distinctCount = null, supplyRows = null, supplyLoading = false, supplyNameSet = new Set();
 
   function keepScroll(ids, fn){
     const pos = {};
@@ -426,6 +426,7 @@
   function loadSupplies(force){
     if(supplyLoading || (supplyRows && !force)) return;
     supplyLoading = true;
+    fetch(API_URL + '?action=getSupplyItems&_ts=' + Date.now(), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } }).then(r => r.json()).then(l => { supplyNameSet = new Set((Array.isArray(l) ? l : []).map(x => String(x['Supply Name'] || '').trim().toLowerCase()).filter(Boolean)); if(ui.mvTab === 'tr') renderActivity(); }).catch(() => {});
     fetch(API_URL + '?action=getEntries&_ts=' + Date.now(), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })
       .then(r => r.json())
       .then(list => { supplyRows = Array.isArray(list) ? list.filter(x => /^SUP/i.test(String(x['Item Code'] || ''))) : []; })
@@ -445,7 +446,7 @@
         const head = incoming ? `<span class="pill ok">⬇ Received from ${esc(t['From Branch'])}</span>`
           : outgoing ? `<span class="pill warn">⬆ Sent to ${esc(t['To Branch'])}</span>`
           : `<span class="pill ok">${esc(t['From Branch'])} → ${esc(t['To Branch'])}</span>`;
-        return `<div class="row"><div class="nm">${esc(t.Flower)} · ${esc(fmtNum(t.Qty))} ${head}
+        return `<div class="row"><div class="nm">${supplyNameSet.has(String(t.Flower || '').trim().toLowerCase()) ? '🧰 ' : ''}${esc(t.Flower)} · ${esc(fmtNum(t.Qty))} ${head}
           <div class="mt">${fmtDate(t.Date)} · ${esc(t['Transfer No.'] || '')} · by ${esc(t['Transferred By'] || '—')}${t.Remarks ? ' · ' + esc(t.Remarks) : ''}</div></div>
           <div class="rt">${incoming ? '+' : outgoing ? '−' : ''}${esc(fmtNum(t.Qty))}</div></div>`;
       }, 'No transfers yet.');

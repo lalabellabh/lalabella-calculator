@@ -199,6 +199,7 @@
         <label>Flower Name</label>
         <input type="text" id="fFlower" list="flowerList" placeholder="e.g. Rose" />
         <datalist id="flowerList"></datalist>
+        <div id="supplyNote" style="display:none;font-size:12px;color:#f1d38c;margin-top:6px;">🧰 Supply item — will be logged as a transfer between branches (no flower rate).</div>
 
         <div class="grid-2">
           <div>
@@ -269,7 +270,8 @@
     const box = document.getElementById('previewBox');
     const name = document.getElementById('fFlower').value.trim();
     const match = Object.keys(flowerLegacyRates).find(n => n.toLowerCase() === name.toLowerCase());
-    if(!match){ box.style.display = 'none'; return; }
+    if(!match){ box.style.display = 'none'; const sn = document.getElementById('supplyNote'); if(sn) sn.style.display = isSupplyName(name) ? 'block' : 'none'; return; }
+    { const sn = document.getElementById('supplyNote'); if(sn) sn.style.display = 'none'; }
     const rate = flowerLegacyRates[match];
     const qty = parseFloat(document.getElementById('fQty').value) || 0;
     box.style.display = 'block';
@@ -278,12 +280,17 @@
   }
   ['fFlower','fQty'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
 
+  let supplyNames = new Set();
+  const isSupplyName = n => [...supplyNames].some(x => x.toLowerCase() === String(n || '').trim().toLowerCase());
   async function loadFlowerNames(){
     const t = Date.now();
-    const [names, items] = await Promise.all([
+    const [names, items, supplies] = await Promise.all([
       fetch(API_URL + '?action=getFlowerTransferList&_ts=' + t).then(r=>r.json()).catch(()=>[]),
-      fetch(API_URL + '?action=getFlowerItems&_ts=' + t).then(r=>r.json()).catch(()=>[])
+      fetch(API_URL + '?action=getFlowerItems&_ts=' + t).then(r=>r.json()).catch(()=>[]),
+      fetch(API_URL + '?action=getSupplyItems&_ts=' + t).then(r=>r.json()).catch(()=>[])
     ]);
+    // Supplies (Oasis foam, ribbon...) can be transferred between branches too — logged here, no rate/value.
+    supplyNames = new Set((Array.isArray(supplies) ? supplies : []).filter(x => String(x.Status || 'Active') !== 'Inactive').map(x => String(x['Supply Name'] || '').trim()).filter(Boolean));
     flowerLegacyRates = {};
     items.forEach(it => {
       if((it.Origin||'').trim() === 'Legacy/Unknown'){
@@ -306,7 +313,7 @@
         if(!(name in flowerLegacyRates)) flowerLegacyRates[name] = Number(it.Rate) || 0;
       });
 
-    document.getElementById('flowerList').innerHTML = [...names, ...hollandNames].map(n => `<option value="${n}"></option>`).join('');
+    document.getElementById('flowerList').innerHTML = [...names, ...hollandNames].map(n => `<option value="${n}"></option>`).join('') + [...supplyNames].map(n => `<option value="${n}" label="🧰 Supply"></option>`).join('');
   }
 
   async function loadStaff(){
@@ -416,7 +423,7 @@
       if(result.error){
         alert(result.error);
       } else {
-        alert('Transfer logged! ' + result.transferNo + ' · Value: ' + fmtBD(result.value));
+        alert('Transfer logged! ' + result.transferNo + (isSupplyName(flowerName) ? ' · 🧰 Supply' : ' · Value: ' + fmtBD(result.value)));
         document.getElementById('fFlower').value = '';
         document.getElementById('fQty').value = '';
         document.getElementById('fRemarks').value = '';
