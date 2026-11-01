@@ -685,6 +685,19 @@
 
     h += lookHtml();
 
+    // Season theme (Undas / Christmas): look + menu sounds, per device. See shared/season.js
+    { const S = window.lbSeason;
+      if (S) {
+        const cur = S.get(), act = S.active(), sv = S.vol();
+        const opts = [['auto', '📅 Auto']].concat(S.themes().map(t => [t.id, t.label]));
+        h += '<h4>Season theme</h4><div class="lbset-seg lbset-seg2">' + opts.map(o => '<button type="button" data-season="' + o[0] + '" class="' + (cur === o[0] ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</div>' +
+          '<div class="lbset-note">Now: <b>' + (S.themes().filter(t => t.id === act)[0] || {}).label + '</b>' + (cur === 'auto' ? ' (Auto: Undas Oct 28 – Nov 3, Christmas Dec 1 – Jan 6, Default the rest of the year)' : '') + '. A holiday theme adds animations and its own sounds when you open the ☰ menu and tap inside it. Default keeps the normal piano sounds.</div>' +
+          '<div class="lbset-seg lbset-seg2" style="margin-top:8px"><button type="button" data-seasonanim="on" class="' + (S.anim() ? 'on' : '') + '">✨ Animation on</button><button type="button" data-seasonanim="off" class="' + (S.anim() ? '' : 'on') + '">Off</button></div>' +
+          '<div class="lbset-rl" style="margin-top:8px"><span>Theme sound</span><span id="lbsetSeaVal">' + (sv ? sv + '%' : 'Silent') + '</span></div>' +
+          '<input class="lbset-range" type="range" min="0" max="100" step="5" value="' + sv + '" data-seasonvol aria-label="Theme sound volume">' +
+          '<button type="button" class="lbset-reset" style="margin-top:8px" data-seasontest>🎵 Test theme sound</button>';
+      } }
+
     // Side dock on/off
     const dockOn = !dockOff_();
     h += '<h4>Side Dock</h4><div class="lbset-seg lbset-seg2">' +
@@ -823,6 +836,9 @@
     const t = e.target.closest('button,input');
     if (!t) return;
     if (t.type === 'range' || t.type === 'file') return;
+    if (t.dataset.season) { window.lbSeason.set(t.dataset.season); drawSettings(); window.lbSeason.play('open'); return; }
+    if (t.dataset.seasonanim) { window.lbSeason.setAnim(t.dataset.seasonanim === 'on'); drawSettings(); return; }
+    if (t.hasAttribute('data-seasontest')) { if (!window.lbSeason.play('open')) alert('Default theme uses the normal sounds. Pick Undas or Christmas to hear a theme sound.'); return; }
     if (t.dataset.wall) { lookErr = ''; window.LBLook.set({ wall: t.dataset.wall }); drawSettings(); return; }
     if (t.dataset.wallx) { if (!confirm('Remove this photo?')) return; lookErr = ''; window.LBLook.removeWall(parseInt(t.dataset.wallx, 10)); drawSettings(); return; }
     if (t.dataset.glass) { window.LBLook.set({ glass: t.dataset.glass === 'on' }); drawSettings(); return; }
@@ -937,6 +953,11 @@
         const lb = document.getElementById('lbsetVolVal'); if (lb) lb.textContent = v ? v + '%' : 'Silent';
         return;
       }
+      if (e.target.hasAttribute && e.target.hasAttribute('data-seasonvol')) {
+        const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)); window.lbSeason.setVol(v);
+        const lb = document.getElementById('lbsetSeaVal'); if (lb) lb.textContent = v ? v + '%' : 'Silent';
+        return;
+      }
       if (e.target.hasAttribute && e.target.hasAttribute('data-alpha')) {
         const v = parseInt(e.target.value, 10) || 0;
         window.LBLook.set({ alpha: v });
@@ -945,6 +966,7 @@
     });
     back.querySelector('.lbset').addEventListener('change', e => {
       if (e.target.hasAttribute && e.target.hasAttribute('data-alertvol')) { if (window.lbAlertTest) window.lbAlertTest(); return; }
+      if (e.target.hasAttribute && e.target.hasAttribute('data-seasonvol')) { window.lbSeason.play('click'); return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { window.LBLook.set({ text: parseInt(e.target.value, 10) || 100 }); return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-wallfile')) {
         const f = e.target.files && e.target.files[0];

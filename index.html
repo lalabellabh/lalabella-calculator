@@ -561,6 +561,7 @@ let hoverAudioCtx = null;
 const PIANO_SCALE = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
 let scaleIndex = 0;
 function playHoverNote(){
+  if(window.lbSeason && window.lbSeason.take('hover')) return; // holiday theme plays its own song note
   try{
     if(!hoverAudioCtx) hoverAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = hoverAudioCtx;

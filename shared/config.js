@@ -81,5 +81,8 @@ window.LB_CONFIG = Object.freeze({
     var cs = document.currentScript, base = cs && cs.src ? cs.src.replace(/config\.js(\?.*)?$/, '') : 'shared/';
     var s = document.createElement('script'); s.src = base + 'error-report.js'; s.async = true;
     (document.head || document.documentElement).appendChild(s);
+    // Season themes (Undas / Christmas look + menu sounds), see shared/season.js
+    var t = document.createElement('script'); t.src = base + 'season.js'; t.async = true;
+    (document.head || document.documentElement).appendChild(t);
   } catch (e) {}
 })();
