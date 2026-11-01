@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Lalabella — Emergency Viewer</title>
+<style>
+  :root{--rose:#c9506b;--rose-dark:#9e2f4a;--ink:#2f2024;--muted:#8a7078;--line:#efdfde}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#fdf1f0}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:20px;margin:0 0 4px} p{color:var(--muted);font-size:13px;line-height:1.5;margin:4px 0 12px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .warn{background:#fff6e5;border-color:#f0d8a4;color:#6b4d0f;font-size:13px}
+  .drop{border:2px dashed var(--rose);border-radius:14px;padding:26px;text-align:center;cursor:pointer;background:#fff}
+  .drop.over{background:#fbe6ea}
+  input,select{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;max-width:100%}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .bar input{flex:1;min-width:140px}
+  button{font:inherit;font-weight:700;font-size:13px;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--rose),var(--rose-dark))}
+  button.g{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .q{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .tw{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+  table{border-collapse:collapse;font-size:12.5px;width:100%}
+  th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+  th{position:sticky;top:0;background:#fbf5f4;font-size:12px}
+  .meta{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+  #app{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛟 Lalabella Emergency Viewer</h1>
+  <p>Use this when the system is down. It works without the internet-based system: open your saved backup file and look up stock, rates, items and records. Read-only. Nothing is uploaded anywhere — the file is read inside your own browser.</p>
+  <div class="box warn">Get the file from <b>Activity History → Backups → Download</b> (while the system is up), and keep a copy on your computer/phone. Files look like <b>lalabella-2026-11-01.json.gz</b>.</div>
+  <div class="drop" id="drop">📂 Tap to choose your backup file<br><span style="font-size:12px;color:var(--muted)">(.json.gz or .json) — or drop it here</span><input type="file" id="file" accept=".gz,.json,application/json,application/gzip" hidden></div>
+  <div id="msg" class="meta" style="margin-top:10px"></div>
+  <div id="app">
+    <div class="box">
+      <div class="meta" id="info"></div>
+      <div class="q" id="quick"></div>
+      <div class="bar"><select id="tbl"></select><input id="q" type="search" placeholder="Search in this table…"><button class="g" id="csv">⬇ CSV</button><button class="g" id="print">🖨 Print</button></div>
+      <div class="meta" id="count"></div>
+      <div class="tw"><table id="t"></table></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var data = null, cur = '', $ = function(i){ return document.getElementById(i); };
+  var HIDE = /pass|hash|token|secret|key|p256|auth$|endpoint/i;
+  var QUICK = [['flower_item','🌸 Flower items & rates'],['flower_database','🌸 Flower stock records'],['chocolate_item_list','🍫 Chocolate items'],['chocolate_database','🍫 Chocolate stock'],['item_inventory','📦 Item inventory'],['petty_cash_transactions','💰 Petty cash'],['users','👥 Staff'],['deliveries','🚚 Deliveries'],['shopify_orders','🛍 Shopify orders'],['bleems_orders','🎁 Bleems orders'],['duty_schedule','📆 Duty schedule']];
+  function esc(t){ return String(t == null ? '' : t).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+  function msg(t, bad){ $('msg').textContent = t; $('msg').style.color = bad ? '#c0392b' : ''; }
+  async function readFile(f){
+    msg('Reading…');
+    try{
+      var buf = await f.arrayBuffer(), text;
+      var u8 = new Uint8Array(buf);
+      if(u8[0] === 0x1f && u8[1] === 0x8b){
+        if(!('DecompressionStream' in window)) throw new Error('This browser cannot open .gz files. Use a recent Chrome, Edge, Safari or Firefox.');
+        var ds = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+        text = await new Response(ds).text();
+      } else text = new TextDecoder().decode(u8);
+      data = JSON.parse(text);
+      if(!data || !data.tables) throw new Error('This is not a Lalabella backup file.');
+      start();
+    }catch(e){ msg('Could not open the file: ' + (e.message || e), true); }
+  }
+  function cols(rows){ var s = {}, o = []; rows.slice(0, 200).forEach(function(r){ Object.keys(r).forEach(function(k){ if(!s[k] && !HIDE.test(k)){ s[k] = 1; o.push(k); } }); }); return o; }
+  function start(){
+    msg('');
+    $('app').style.display = 'block';
+    var names = Object.keys(data.tables).sort();
+    $('info').textContent = 'Backup made ' + new Date(data.exportedAt).toLocaleString() + ' · ' + names.length + ' tables · ' + (data.rowsTotal || '') + ' rows';
+    $('tbl').innerHTML = names.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + ' (' + data.tables[n].length + ')</option>'; }).join('');
+    $('quick').innerHTML = QUICK.filter(function(x){ return data.tables[x[0]]; }).map(function(x){ return '<button class="g" data-t="' + x[0] + '">' + x[1] + '</button>'; }).join('');
+    show(data.tables.flower_item ? 'flower_item' : names[0]);
+  }
+  function show(n){
+    cur = n; $('tbl').value = n; render();
+  }
+  function render(){
+    var rows = data.tables[cur] || [], q = $('q').value.trim().toLowerCase(), c = cols(rows);
+    var f = q ? rows.filter(function(r){ return c.some(function(k){ return String(r[k] == null ? '' : r[k]).toLowerCase().indexOf(q) > -1; }); }) : rows;
+    $('count').textContent = f.length + ' of ' + rows.length + ' rows' + (f.length > 500 ? ' (showing the first 500 — use search)' : '');
+    $('t').innerHTML = '<thead><tr>' + c.map(function(k){ return '<th>' + esc(k) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      f.slice(0, 500).map(function(r){ return '<tr>' + c.map(function(k){ var v = r[k]; if(v && typeof v === 'object') v = JSON.stringify(v); return '<td title="' + esc(v) + '">' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
+  }
+  function csv(){
+    var rows = data.tables[cur] || [], c = cols(rows), q = $('q').value.trim().toLowerCase();
+    var f = q ? rows.filter(function(r){ return c.some(function(k){ return String(r[k] == null ? '' : r[k]).toLowerCase().indexOf(q) > -1; }); }) : rows;
+    var out = [c.join(',')].concat(f.map(function(r){ return c.map(function(k){ var v = r[k]; if(v && typeof v === 'object') v = JSON.stringify(v); v = v == null ? '' : String(v); return '"' + v.replace(/"/g, '""') + '"'; }).join(','); })).join('\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + out], { type: 'text/csv' })); a.download = cur + '.csv'; a.click();
+  }
+  var drop = $('drop'), file = $('file');
+  drop.addEventListener('click', function(){ file.click(); });
+  file.addEventListener('change', function(){ if(file.files[0]) readFile(file.files[0]); });
+  ['dragover','dragenter'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function(e){ var f = e.dataTransfer.files[0]; if(f) readFile(f); });
+  $('tbl').addEventListener('change', function(){ show(this.value); });
+  $('q').addEventListener('input', render);
+  $('quick').addEventListener('click', function(e){ var b = e.target.closest('button[data-t]'); if(b) show(b.getAttribute('data-t')); });
+  $('csv').addEventListener('click', csv);
+  $('print').addEventListener('click', function(){ window.print(); });
+})();
+</script>
+</body>
+</html>

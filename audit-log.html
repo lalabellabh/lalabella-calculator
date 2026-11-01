@@ -39,6 +39,15 @@
   .act{margin-top:8px}
   .msg{font-size:12.5px;color:var(--muted);text-align:center;padding:18px}
   .denied{display:none;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
+  .tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 16px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .tab.on{background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;border-color:transparent}
+  .tab .n{background:var(--bad);color:#fff;border-radius:99px;font-size:10.5px;padding:1px 6px;margin-left:4px}
+  .row.js,.row.promise,.row.api,.row.load{border-left-color:var(--bad)}
+  .hits{background:#fbf5f4;border-radius:99px;padding:1px 8px;font-size:11px;color:var(--muted)}
+  .bk{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px}
+  .bk .sp{flex:1}
+  .good{color:var(--ok);font-weight:700} .badc{color:var(--bad);font-weight:700}
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1520;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;display:none;max-width:90vw}
 </style>
 </head>
@@ -47,6 +56,8 @@
   <div class="head"><h1>🕘 Activity History</h1><div class="sp"></div><a href="user-admin.html" class="btn ghost" style="text-decoration:none">← User Management</a></div>
   <div class="denied" id="denied"><b>No access</b><p style="color:var(--muted);font-size:13px">Activity History is only for the Admin who has User Management access.</p></div>
   <div id="app">
+    <div class="tabs"><button class="tab on" data-p="pChanges">🕘 Changes</button><button class="tab" data-p="pErrors">🐞 Errors <span class="n" id="errN" style="display:none"></span></button><button class="tab" data-p="pBackups">💾 Backups</button></div>
+    <div id="pChanges">
     <div class="bar">
       <select id="fTable"><option value="">All tables</option></select>
       <select id="fOp"><option value="">All actions</option><option value="INSERT">Added</option><option value="UPDATE">Changed</option><option value="DELETE">Deleted</option></select>
@@ -56,6 +67,16 @@
     </div>
     <div id="list"><div class="msg">Loading…</div></div>
     <div style="text-align:center;margin-top:10px"><button class="btn ghost" id="more" style="display:none">Load older</button></div>
+    </div>
+    <div id="pErrors" style="display:none">
+      <div class="bar"><input class="q" id="eQ" type="search" placeholder="Search page, user or message"><button class="btn" id="eGo">Search</button><button class="btn ghost" id="eClear">Clear all</button></div>
+      <div id="eList"><div class="msg">Loading…</div></div>
+      <div style="text-align:center;margin-top:10px"><button class="btn ghost" id="eMore" style="display:none">Load older</button></div>
+    </div>
+    <div id="pBackups" style="display:none">
+      <div class="bar" style="align-items:center"><span style="font-size:13px;color:var(--muted);flex:1">A copy of the whole database is saved every night (Bahrain 2:00 AM). The newest 14 are kept. Keep a downloaded copy on your computer too — the Emergency page (emergency.html) opens it when the system is down.</span><button class="btn" id="bNow">Back up now</button></div>
+      <div id="bList"><div class="msg">Loading…</div></div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -124,6 +145,73 @@
     if(d && d.success) $('fTable').insertAdjacentHTML('beforeend', (d.tables || []).map(function(x){ return '<option value="' + esc(x.t) + '">' + esc(x.t) + ' (' + x.n + ')</option>'; }).join(''));
   }).catch(function(){});
   load(false);
+
+  // ---------- tabs ----------
+  var loaded = {};
+  document.querySelector('.tabs').addEventListener('click', function(e){
+    var b = e.target.closest('.tab'); if(!b) return;
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.toggle('on', x === b); });
+    ['pChanges','pErrors','pBackups'].forEach(function(id){ $(id).style.display = id === b.getAttribute('data-p') ? '' : 'none'; });
+    var p = b.getAttribute('data-p');
+    if(p === 'pErrors' && !loaded.e){ loaded.e = 1; loadErr(false); }
+    if(p === 'pBackups'){ loadBk(); }
+  });
+  // ---------- errors ----------
+  var eLast = null, eBusy = false;
+  var KIND = { js:'JS error', promise:'Promise error', api:'Server call failed', load:'File failed to load' };
+  function errRow(r){
+    return '<div class="row ' + esc(r.kind) + '"><div class="top"><span class="tag" style="background:var(--bad)">' + esc(KIND[r.kind] || r.kind) + '</span><span class="tbl">' + esc(r.page) + '</span>' +
+      (r.username ? '<span style="color:var(--muted)">' + esc(r.username) + '</span>' : '') + (r.hits > 1 ? '<span class="hits">×' + r.hits + '</span>' : '') + '<span class="when">' + esc(when(r.at)) + '</span></div>' +
+      '<div class="sum"><b>' + esc(r.message) + '</b></div>' +
+      ((r.detail || r.ua) ? '<details><summary>Details</summary><pre>' + esc((r.detail || '') + (r.ua ? '\n\n' + r.ua : '')) + '</pre></details>' : '') + '</div>';
+  }
+  async function loadErr(more){
+    if(eBusy) return; eBusy = true;
+    if(!more){ $('eList').innerHTML = '<div class="msg">Loading…</div>'; eLast = null; }
+    try{
+      var d = await call({ action:'errors', q:$('eQ').value.trim(), before: more && eLast ? eLast : '', limit: 50 });
+      if(!d.success){ $('eList').innerHTML = '<div class="msg">' + esc(d.error || 'Could not load.') + '</div>'; return; }
+      var rows = d.rows || [], html = rows.map(errRow).join('');
+      if(more) $('eList').insertAdjacentHTML('beforeend', html); else $('eList').innerHTML = html || '<div class="msg">No errors recorded. 🎉</div>';
+      if(rows.length) eLast = rows[rows.length - 1].id;
+      $('eMore').style.display = rows.length >= 50 ? '' : 'none';
+      var n = $('errN'); if(d.last24h){ n.textContent = d.last24h; n.style.display = ''; } else n.style.display = 'none';
+    }catch(e){ $('eList').innerHTML = '<div class="msg">Could not reach the server.</div>'; }
+    finally{ eBusy = false; }
+  }
+  $('eGo').addEventListener('click', function(){ loadErr(false); });
+  $('eQ').addEventListener('keydown', function(e){ if(e.key === 'Enter') loadErr(false); });
+  $('eMore').addEventListener('click', function(){ loadErr(true); });
+  $('eClear').addEventListener('click', async function(){
+    if(!confirm('Clear the whole error list?')) return;
+    var d = await call({ action:'clearErrors' }); toast(d.success ? 'Cleared.' : (d.error || 'Failed')); if(d.success) loadErr(false);
+  });
+  // ---------- backups ----------
+  var BK = LB_CONFIG.BACKUP_API.replace('backup-fast', 'autobackup-fast');
+  async function bcall(params){ var res = await fetch(BK, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) }); return res.json(); }
+  function kb(n){ return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  async function loadBk(){
+    try{
+      var d = await bcall({ action:'list' });
+      if(!d.success){ $('bList').innerHTML = '<div class="msg">' + esc(d.error || 'Could not load.') + '</div>'; return; }
+      var last = (d.runs || [])[0];
+      var html = last ? '<div class="bk">Last run: <b>' + esc(when(last.at)) + '</b> <span class="' + (last.ok ? 'good' : 'badc') + '">' + (last.ok ? '✔ OK' : '✖ FAILED — ' + esc(last.error || '')) + '</span></div>' : '<div class="msg">No backup yet.</div>';
+      html += (d.files || []).map(function(f){ return '<div class="bk"><b>' + esc(f.name) + '</b><span style="color:var(--muted)">' + kb(f.size) + '</span><span class="sp"></span><button class="btn ghost" data-f="' + esc(f.name) + '">⬇ Download</button></div>'; }).join('');
+      $('bList').innerHTML = html;
+    }catch(e){ $('bList').innerHTML = '<div class="msg">Could not reach the server.</div>'; }
+  }
+  $('bList').addEventListener('click', async function(e){
+    var b = e.target.closest('button[data-f]'); if(!b) return; b.disabled = true;
+    try{ var d = await bcall({ action:'sign', file: b.getAttribute('data-f') }); if(d.success) location.href = d.url; else toast('⚠ ' + (d.error || 'Failed')); }catch(err){ toast('⚠ Could not reach the server.'); }
+    b.disabled = false;
+  });
+  $('bNow').addEventListener('click', async function(){
+    var b = this; b.disabled = true; b.textContent = 'Backing up…';
+    try{ var d = await bcall({ action:'runNow' }); toast(d.success ? '✅ Backup saved (' + kb(d.bytes) + ', ' + d.rows + ' rows)' : '⚠ ' + (d.error || 'Failed')); loadBk(); }catch(err){ toast('⚠ Could not reach the server.'); }
+    b.disabled = false; b.textContent = 'Back up now';
+  });
+  // error count badge on first load
+  call({ action:'errors', limit:1 }).then(function(d){ if(d && d.success && d.last24h){ var n = $('errN'); n.textContent = d.last24h; n.style.display = ''; } }).catch(function(){});
 })();
 </script>
 </body>
