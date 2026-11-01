@@ -152,6 +152,8 @@ Deno.serve(async (req) => {
       }
 
       if (p.action === 'approvalNotify') {
+        // SILENT: approvals only show in the in-app bell, never as a phone push.
+        return json({ success: true, sent: 0, silent: true });
         const items = (Array.isArray(p.items) ? p.items : []).slice(0, 20);
         if (!items.length) return json({ success: true, sent: 0 });
         const subs = await subsFor(null, 0, 'approvals');
