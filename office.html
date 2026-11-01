@@ -41,7 +41,7 @@
   .zone{position:absolute;border-radius:10px;border:2px dashed #ffffff22;box-shadow:inset 0 calc(.8*var(--u)) 0 #ffffff0d,0 calc(.7*var(--u)) 0 #00000040}
   .zone b{position:absolute;left:6px;top:4px;max-width:calc(100% - 10px);overflow:hidden;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:.06em;opacity:.85;white-space:nowrap}
   .z-front{background:#1b4b4a55;color:#7ff0e0}.z-writers{background:#4a347055;color:#d6b7ff}.z-records{background:#5a3e2255;color:#ffcf8a}.z-hr{background:#6a2a5255;color:#ffa6d2}
-  .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
+  .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-deliv{background:#1d4a4466;color:#7ff0c8}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
   .it{position:absolute;transform:translate(-50%,-50%) scale(var(--sc,1));pointer-events:none;filter:drop-shadow(0 calc(1.3*var(--u)) calc(.9*var(--u)) #00000080)}
   .chair{width:calc(8*var(--u));height:calc(9*var(--u));background:linear-gradient(90deg,#2a2f52,#3d4577 45%,#2a2f52);border-radius:calc(2*var(--u)) calc(2*var(--u)) 2px 2px;box-shadow:inset 0 calc(-1*var(--u)) 0 #1b1f3a}
   .floor::before{content:'';position:absolute;inset:0;background:linear-gradient(#00000070,#00000000 14%),radial-gradient(120% 60% at 50% 110%,#00000055,transparent 60%);pointer-events:none}
@@ -77,6 +77,14 @@
   .pp.type .fig{animation:bob .5s steps(2) infinite}
   .pp.panic .fig{animation:shake .3s linear infinite}
   .pp.mop .mopx{display:block}
+  .pp .boxc{display:none;position:absolute;left:50%;top:44%;width:calc(5*var(--u));height:calc(4*var(--u));transform:translateX(-50%);background:#c8925a;border:calc(.5*var(--u)) solid #8a5a30;border-radius:1px;box-shadow:inset 0 calc(1.2*var(--u)) 0 #e0b07a}
+  .pp.carry .boxc{display:block}
+  .pp.out{opacity:0}
+  .tv{width:calc(13*var(--u));height:calc(8*var(--u));background:#0b2a24;border:calc(.8*var(--u)) solid #2b2f3d;border-radius:2px;background-image:linear-gradient(#ffffff10 1px,transparent 1px),linear-gradient(90deg,#ffffff10 1px,transparent 1px);background-size:calc(2*var(--u)) calc(2*var(--u))}
+  .tv i{position:absolute;width:calc(1.2*var(--u));height:calc(1.2*var(--u));border-radius:50%;background:#ff5a5a;box-shadow:0 0 6px #ff5a5a;animation:blink .8s infinite}
+  .tv i.hm{background:#7ff0c8;box-shadow:0 0 6px #7ff0c8;animation:none}
+  .door{width:calc(14*var(--u));height:calc(3*var(--u));background:#0f0b1f;border-radius:3px 3px 0 0;box-shadow:inset 0 calc(.6*var(--u)) 0 #3c3366}
+  .door b{position:absolute;left:50%;top:calc(-3.6*var(--u));transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:6px;color:#0b2a24;background:#5be29a;padding:2px 4px;border-radius:2px}
   .mopx{display:none;position:absolute;right:calc(-3*var(--u));bottom:0;width:calc(1*var(--u));height:calc(11*var(--u));background:#c9a26a;transform:rotate(14deg);transform-origin:bottom}
   .mopx::after{content:'';position:absolute;left:calc(-1.5*var(--u));bottom:calc(-1*var(--u));width:calc(4*var(--u));height:calc(1.6*var(--u));background:#e8e8e8;border-radius:2px}
   .pp .dot{position:absolute;left:50%;top:calc(-4.5*var(--u));width:calc(2*var(--u));height:calc(2*var(--u));border-radius:50%;transform:translateX(-50%);background:var(--ok);box-shadow:0 0 6px currentColor}
@@ -219,8 +227,8 @@
   var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320',tie:'#7a3f12'},
     watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a',s:'#c99a74'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1,tie:'#9e2f4a'},
     archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
-    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'} };
-  var KEYS = ['boss','dispatcher','scribe','auditor','hr','timekeeper','watcher','doctor','archivist','janitor'];
+    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'} };
+  var KEYS = ['boss','dispatcher','scribe','auditor','hr','timekeeper','delivery','driver','watcher','doctor','archivist','janitor'];
 
   // ---------- helpers ----------
   function TL(){ try{ return (window.__lbLang || 'en') === 'tl'; }catch(e){ return false; } }
@@ -277,6 +285,15 @@
     EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? L(late + ' late today', late + ' ang late ngayon') : (inT ? L(inT + ' of ' + (H.staff || 0) + ' staff clocked in', inT + ' sa ' + (H.staff || 0) + ' staff ang naka-in') : L('No clock-ins yet today', 'Wala pang nag-time in ngayon')),
       now:'Checks who came in late today (after the grace minutes) and which staff have an approved event / exemption today.', out:(late ? 'Late today: ' + nm(H.late_names) : 'Nobody late today') + ' · Approved events today: ' + evn + ' · Active staff: ' + (H.staff || 0),
       tools:['Attendance logs','Attendance events','Attendance page'], never:NEVER_ALL.concat(['Marks anyone absent, late or excused by itself','Edits time-in records']) };
+    var DV = S.delivery || {}, onw = Number(DV.on_way) || 0, asg = Number(DV.assigned) || 0, dlt = Number(DV.delivered_today) || 0, stale = Number(DV.gps_stale) || 0, lng = Number(DV.long_trip) || 0;
+    EMP.delivery = { name:'Della', role:L('Delivery Monitor', 'Taga-monitor ng Delivery'), st: (stale || lng) ? 'warn' : (onw || asg) ? 'working' : 'ok',
+      say: stale ? L(stale + ' driver GPS not updating', stale + ' driver walang GPS update') : lng ? L(lng + ' delivery taking long', lng + ' delivery na matagal na') : onw ? L(onw + ' on the way', onw + ' nasa daan') : asg ? L(asg + ' ready to go', asg + ' handa nang ihatid') : L(dlt + ' delivered today', dlt + ' na-deliver ngayon'),
+      now:'Watches the Delivery Map: deliveries waiting for a driver, on the way, delivered today, and drivers whose GPS stopped updating.',
+      out:'Assigned (not left yet): ' + asg + ' · On the way: ' + onw + ((DV.on_way_drivers || []).length ? ' (' + DV.on_way_drivers.slice(0, 4).join(', ') + ')' : '') + ' · Delivered today: ' + dlt + ' · GPS not updating 10+ min: ' + stale + ' · On the road 90+ min: ' + lng + ' · Active drivers: ' + (DV.drivers || 0),
+      tools:['Delivery Map','Driver app GPS'], never:NEVER_ALL.concat(['Assigns or cancels a delivery','Calls or messages a driver']) };
+    EMP.driver = { name:'Dodong', role:L('Driver', 'Driver'), st: onw ? 'working' : 'ok', say: onw ? L('On my way! 🛵', 'Alis na po! 🛵') : asg ? L('Box ready 📦', 'Handa na ang box 📦') : L('Waiting for orders', 'Naghihintay ng order'),
+      now:'Shows the drivers on the road: when a delivery is On the way he goes out the door with the box, and comes back when it is delivered.', out:'On the way now: ' + onw + ' · Ready to go: ' + asg + ' · Delivered today: ' + dlt,
+      tools:['Delivery Map'], never:NEVER_ALL };
     EMP.timekeeper = { name:'Tiko', role:'Timekeeper', st: (noOut || blk >= 5) ? 'warn' : (wk ? 'working' : 'ok'), say: noOut ? L(noOut + ' forgot to clock out yesterday', noOut + ' ang hindi nag-time out kahapon') : (blk ? L(blk + ' blocked clock-in' + (blk > 1 ? 's' : '') + ' today', blk + ' na-block na time in ngayon') : L(wk + ' working · ' + brk + ' on break', wk + ' nagtatrabaho · ' + brk + ' naka-break')),
       now:'Watches the time clock: who is in, who is on break, who forgot to clock out yesterday, and clock-ins blocked for being outside the shop radius.',
       out:'In today: ' + inT + ' · Working now: ' + wk + ' · On break: ' + brk + ' · Blocked (outside shop): ' + blk + (noOut ? ' · No clock-out yesterday: ' + nm(H.no_out_names) : '') + ' · Last punch ' + ago(H.last_at),
@@ -306,6 +323,7 @@
       '<li><span class="k">' + L('Changes (24 h)', 'Pagbabago (24 oras)') + '</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">history</a></li>' +
       '<li><span class="k">' + L('Attendance today', 'Attendance ngayon') + '</span>' + (Number(H.in_today) || 0) + ' in · ' + (Number(H.late_today) ? '<span class="amb">' + H.late_today + ' late</span>' : '0 late') + ' · ' + (Number(H.no_out_yday) ? '<span class="amb">' + H.no_out_yday + ' no clock-out yesterday</span>' : 'all clocked out yesterday') + '</li>' +
       '<li><span class="k">' + L('Approvals waiting', 'Approvals') + '</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">' + L('none', 'wala') + '</span>') + '</li>' +
+      '<li><span class="k">' + L('Deliveries', 'Deliveries') + '</span>' + (Number((S.delivery || {}).on_way) || 0) + L(' on the way', ' nasa daan') + ' · ' + (Number((S.delivery || {}).assigned) || 0) + L(' ready', ' handa') + ' · ' + (Number((S.delivery || {}).delivered_today) || 0) + L(' delivered today', ' na-deliver ngayon') + (Number((S.delivery || {}).gps_stale) ? ' · <span class="amb">' + S.delivery.gps_stale + ' GPS</span>' : '') + ' — <a href="delivery-admin.html">' + L('map', 'mapa') + '</a></li>' +
       '<li><span class="k">' + L('Orders to assign', 'Orders na i-assign') + '</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">' + L('none', 'wala') + '</span>') + '</li>';
     var ai = S.ai;
     if(ai && ai.summary){
@@ -316,7 +334,8 @@
         return '<div class="aif ' + esc(x.severity || 'ok') + '"><b>' + esc(x.title) + '</b><div>' + esc(x.detail) + '</div>' + (x.next ? '<div class="nx">➜ ' + esc(x.next) + '</div>' : '') + '</div>'; }).join('');
     }
     $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-    mapInit(); paintSky(); KEYS.forEach(function(k){ var p = P[k]; if(p){ p.el.className = p.el.className.replace(/\bst-\w+/g, '') + ' st-' + EMP[k].st; } });
+    mapInit(); paintSky(); try{ var tvn = Math.min(6, Number((S.delivery || {}).on_way) || 0), tvh = '<i class="hm" style="left:15%;top:60%"></i>'; for(var q = 0; q < tvn; q++) tvh += '<i style="left:' + (30 + q * 11) + '%;top:' + (20 + (q * 37) % 55) + '%;animation-delay:' + (q * .2) + 's"></i>'; $('dtv').innerHTML = tvh; }catch(e){}
+    KEYS.forEach(function(k){ var p = P[k]; if(p){ p.el.className = p.el.className.replace(/\bst-\w+/g, '') + ' st-' + EMP[k].st; } });
   }
 
   // ---------- city skyline in the windows (Bahrain time: day / sunset / night) ----------
@@ -349,13 +368,13 @@
   }
 
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
-  var DESK = { dispatcher:[9,44], scribe:[23,44], auditor:[37,44], hr:[53,44], timekeeper:[66,44], boss:[88,42], watcher:[9,82], doctor:[23,82], archivist:[40,82] };
-  var SPOT = { boss:[84,52], coffee:[77,73], cooler:[85,73], sofa:[91,88], closet:[59,86], aisle:58 };
+  var DESK = { dispatcher:[9,44], scribe:[23,44], auditor:[37,44], hr:[53,44], timekeeper:[66,44], boss:[88,42], watcher:[9,82], doctor:[23,82], archivist:[40,82], delivery:[57,82] };
+  var SPOT = { boss:[84,52], coffee:[77,73], cooler:[85,73], sofa:[91,88], closet:[72,90], driverHome:[64.5,91], door:[60,101], aisle:58 };
   var ZONES = [['front','FRONT OFFICE',2,25,15,33],['writers','WRITERS',16,25,14,33],['records','RECORDS',30,25,14,33],['hr','HR · ATTENDANCE',46,25,27,33],['boss','BOSS',75,25,23,33],
-    ['qa','QA DESK',2,63,30,34],['vault','VAULT',33,63,18,34],['util','UTILITY',52,63,15,34],['kitchen','PANTRY',69,63,29,34]];
+    ['qa','QA DESK',2,63,30,34],['vault','VAULT',33,63,18,34],['deliv','DELIVERY',52,63,16,34],['kitchen','PANTRY',69,63,29,34]];
   var P = {}, inited = false, MAP;
   function depth(y){ return (.8 + .32 * Math.max(0, Math.min(1, (y - 25) / 72))).toFixed(3); }
-  function seat(k){ var d = DESK[k]; return d ? [d[0], d[1] - 2.5] : SPOT.closet; }
+  function seat(k){ var d = DESK[k]; return d ? [d[0], d[1] - 2.5] : k === 'driver' ? SPOT.driverHome : SPOT.closet; }
   function front(k){ var d = DESK[k] || SPOT.closet; return [d[0] + (k === 'boss' ? -6 : 4), d[1] + 8]; }
   function mapInit(){
     if(inited) return; inited = true; MAP = $('map');
@@ -367,10 +386,11 @@
     Object.keys(DESK).forEach(function(k){ if(k === 'archivist') return; var d = DESK[k]; h += '<div class="it dk' + (k === 'boss' ? ' big' : '') + '" id="dk_' + k + '" data-y="' + d[1] + '" style="left:' + d[0] + '%;top:' + d[1] + '%">' + (k === 'boss' ? '<span class="np">BOSS</span>' : '') + '</div>'; });
     h += '<div class="it dk" id="dk_archivist" data-y="82" style="left:40%;top:82%"></div><div class="it rack" data-y="80" style="left:47.5%;top:76%"><i style="top:20%"></i><i style="top:45%;animation-delay:.3s"></i><i style="top:70%;animation-delay:.6s"></i></div>';
     h += '<div class="it shelf" data-y="34" style="left:44%;top:31%"></div><div class="it coffee" data-y="70" style="left:76%;top:68%"></div><div class="it cooler" data-y="70" style="left:85%;top:67%"></div>';
-    h += '<div class="it sofa" data-y="92" style="left:90%;top:92%"></div><div class="it bucket" data-y="88" style="left:62%;top:88%"></div>';
+    h += '<div class="it sofa" data-y="92" style="left:90%;top:92%"></div><div class="it bucket" data-y="92" style="left:75%;top:93%"></div>';
+    h += '<div class="it tv" id="dtv" data-y="72" style="left:63%;top:71%"></div><div class="it door" data-y="99" style="left:60%;top:98.6%"><b>EXIT</b></div>';
     [[3.5,30],[73,31],[3,92],[31,92],[96.5,70]].forEach(function(p){ h += '<div class="it plant" data-y="' + p[1] + '" style="left:' + p[0] + '%;top:' + p[1] + '%"></div>'; });
     KEYS.forEach(function(k){ var s = seat(k);
-      h += '<div class="pp" id="pp_' + k + '" data-k="' + k + '" style="left:' + s[0] + '%;top:' + s[1] + '%"><div class="bub"></div><div class="dot"></div><div class="shd"></div><div class="fig"><div class="fa">' + sprite(LOOK[k], 0) + '</div><div class="fb">' + sprite(LOOK[k], 1) + '</div>' + (k === 'janitor' ? '<div class="mopx"></div>' : '') + '</div><div class="nt">' + esc(EMP[k].name) + '</div></div>'; });
+      h += '<div class="pp" id="pp_' + k + '" data-k="' + k + '" style="left:' + s[0] + '%;top:' + s[1] + '%"><div class="bub"></div><div class="dot"></div><div class="shd"></div><div class="fig"><div class="fa">' + sprite(LOOK[k], 0) + '</div><div class="fb">' + sprite(LOOK[k], 1) + '</div>' + (k === 'janitor' ? '<div class="mopx"></div>' : '') + (k === 'driver' ? '<div class="boxc"></div>' : '') + '</div><div class="nt">' + esc(EMP[k].name) + '</div></div>'; });
     MAP.innerHTML = h;
     document.querySelectorAll('.it').forEach(function(el){ var y = Number(el.getAttribute('data-y')); el.style.zIndex = Math.round(y * 10) + 6; el.style.setProperty('--sc', depth(y)); });
     KEYS.forEach(function(k){ var el = $('pp_' + k), s = seat(k); P[k] = { k:k, el:el, bub:el.querySelector('.bub'), x:s[0], y:s[1], t:0 }; el.style.zIndex = Math.round(s[1] * 10); el.style.setProperty('--sc', depth(s[1])); });
@@ -381,7 +401,7 @@
   }
 
   // ---------- sounds (made by the browser, no audio files, free) ----------
-  var VOICE = { boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160 };
+  var VOICE = { delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160 };
   var SND = { vol:50, mode:'words', sfx:true, alarm:true, lang:'en', on:false };
   try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
   window.__lbLang = SND.lang;
@@ -481,7 +501,7 @@
     return new Promise(function(res){
       var W = MAP.clientWidth, Hh = MAP.clientHeight, dist = Math.hypot((x - p.x) * W / 100, (y - p.y) * Hh / 100), dur = Math.max(.15, dist / speed);
       if(Math.abs(x - p.x) > .3) p.el.classList.toggle('left', x < p.x);
-      p.el.style.transition = 'left ' + dur + 's linear, top ' + dur + 's linear';
+      p.el.style.transition = 'left ' + dur + 's linear, top ' + dur + 's linear, opacity .6s';
       p.el.style.left = x + '%'; p.el.style.top = y + '%'; p.x = x; p.y = y;
       var steps = Math.floor(dur / .17); for(var i = 0; i < steps; i++) setTimeout(function(){ tick(p.k, 380 + Math.random() * 80, .035, .04); }, i * 170);
       setTimeout(res, dur * 1000 + 30);
@@ -516,6 +536,22 @@
         else if(r < .8){ var t2 = pick(KEYS.filter(function(x){ return x !== 'boss' && x !== 'janitor'; })); await go(k, front(t2)); say(k, pick(TL() ? ['Galing 👍','Kumusta?','Ayos ah!','Tuloy lang 💪'] : ['Good job 👍','How are you?','Nice work!','Keep going 💪']), 2400); await wait(2600); }
         else if(r < .9){ await go(k, SPOT.coffee); say(k, '☕', 2000); await wait(3000); }
         await sitWork(k, 5000 + Math.random() * 6000, Math.random() < .3);
+      }
+      else if(k === 'driver'){
+        var DV2 = (S && S.delivery) || {}, onw2 = Number(DV2.on_way) || 0, asg2 = Number(DV2.assigned) || 0, me = P[k];
+        if(onw2 > 0){
+          await go(k, SPOT.driverHome); me.el.classList.add('carry'); say(k, '📦', 1400); await wait(1200);
+          if(P.delivery) say('delivery', L('Drive safe! 🛵', 'Ingat sa daan! 🛵'), 2200);
+          await go(k, [SPOT.door[0], 95]); say(k, short(EMP[k].say), 2000); await wait(1500);
+          await go(k, SPOT.door); me.el.classList.add('out'); await wait(14000 + Math.random() * 16000);
+          me.el.classList.remove('carry'); me.el.classList.remove('out'); await wait(500);
+          await go(k, [SPOT.door[0], 94]); say(k, L('Delivered ✅', 'Na-deliver na ✅'), 2400); await wait(1800);
+          await go(k, SPOT.driverHome);
+        } else if(asg2 > 0){ await go(k, SPOT.driverHome); me.el.classList.add('carry'); say(k, short(EMP[k].say), 2600); await wait(5000); }
+        else { me.el.classList.remove('carry');
+          if(r < .4){ await go(k, [SPOT.coffee[0] + (Math.random() - .5) * 4, SPOT.coffee[1] + 2]); say(k, '☕', 1800); await wait(3000); }
+          else if(r < .6){ await go(k, front('delivery')); say(k, L('Any orders?', 'May order na ba?'), 2200); await wait(1800); say('delivery', L('Not yet 😄', 'Wala pa 😄'), 1800); await wait(1500); }
+          await go(k, SPOT.driverHome); await wait(4000 + Math.random() * 4000); }
       }
       else if(k === 'janitor'){
         if(st === 'alert' || st === 'warn'){ await go(k, SPOT.boss, st === 'alert'); say(k, short(e.say), 3500, st === 'alert' ? 'red' : 'amb'); await wait(3500); }
