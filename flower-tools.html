@@ -2293,6 +2293,7 @@ function renderCarousel(animate=true){
 
 let toolsAudioCtx = null;
 function playToolTone(freq1, freq2){
+  if(window.lbSeason && window.lbSeason.take('hover')) return; 
   try{
     if(!toolsAudioCtx) toolsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     [freq1, freq2].forEach((freq, i)=>{
@@ -2330,6 +2331,7 @@ function playHeartbeat(){
 }
 
 function playPianoTone(){
+  if(window.lbSeason && window.lbSeason.take('hover')) return; 
   try{
     if(!toolsAudioCtx) toolsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const notes=[523.25, 659.25, 783.99];

@@ -2387,6 +2387,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
   let itemAudioCtx = null;
   let lastPianoAt = 0;
   function playPianoTone(force=false){
+    if(window.lbSeason && window.lbSeason.take('hover')) return; 
     try{
       const nowMs = performance.now();
       if(!force && nowMs - lastPianoAt < 90) return;
