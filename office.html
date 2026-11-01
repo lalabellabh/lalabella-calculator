@@ -89,6 +89,21 @@
   .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
   .legend .sp{flex:1}
   .xland{display:none;position:absolute;right:10px;top:10px;z-index:9999}
+  .snd{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .sndb{width:42px;height:42px;border-radius:50%;border:1px solid #4f63b8;background:#171230ee;color:#fff;font-size:19px;cursor:pointer;box-shadow:0 6px 18px #0008;display:flex;align-items:center;justify-content:center}
+  .sndb.nudge{animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 #4fb3ffaa}70%{box-shadow:0 0 0 12px #4fb3ff00}100%{box-shadow:0 0 0 0 #4fb3ff00}}
+  .sndp{display:none;width:190px;background:#150f2bf2;border:1px solid #4a3d7a;border-radius:14px;padding:12px;box-shadow:0 12px 30px #000a;font-size:12px}
+  .snd.open .sndp{display:block}
+  .sndp h4{margin:0 0 8px;font-family:'Press Start 2P',monospace;font-size:8px;color:#8fd9ff;letter-spacing:.05em}
+  .sndp label{display:block;color:var(--muted);font-size:11px;margin:8px 0 4px}
+  .sndp input[type=range]{width:100%;accent-color:#4fb3ff}
+  .seg{display:flex;gap:4px}
+  .seg button{flex:1;border:1px solid var(--line);background:#0d0a1a;color:var(--ink);border-radius:8px;padding:6px 2px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+  .seg button.on{background:#2a4a8a;border-color:#4f8ee0}
+  .tg{display:flex;align-items:center;justify-content:space-between;margin-top:9px;color:var(--ink)}
+  .tg input{width:18px;height:18px;accent-color:#4fb3ff}
+  .sndhint{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.35}
 
   /* ---------- side panels ---------- */
   .side{display:flex;flex-direction:column;gap:12px}
@@ -152,6 +167,13 @@
   <div class="main" id="mainBox">
     <section class="ow" id="ow">
       <button class="pill xland" id="xland">✕ Exit</button>
+      <div class="snd" id="snd"><button class="sndb nudge" id="sndBtn" title="Sound">🔇</button>
+        <div class="sndp"><h4>🔊 SOUND</h4>
+          <label>Volume <b id="volTxt">50%</b></label><input type="range" id="vol" min="0" max="100" step="5" value="50">
+          <label>Voices</label><div class="seg" id="vmode"><button data-m="talk">🗣️ Talk</button><button data-m="bee">🐝 Bee</button><button data-m="off">Off</button></div>
+          <div class="tg"><span>⌨️ Typing &amp; steps</span><input type="checkbox" id="sfx" checked></div>
+          <div class="tg"><span>🔔 Alarm on problem</span><input type="checkbox" id="alm" checked></div>
+          <div class="sndhint">Each worker has their own voice. Sound only plays while this page is open.</div></div></div>
       <div class="map" id="map"></div>
       <div class="legend"><span><i style="background:var(--work)"></i>Working</span><span><i style="background:var(--ok)"></i>All good</span><span><i style="background:var(--warn)"></i>Check</span><span><i style="background:var(--bad)"></i>Problem</span><span class="sp"></span><span id="phase"></span></div>
     </section>
@@ -341,14 +363,78 @@
     KEYS.forEach(function(k, i){ setTimeout(function(){ think(k); }, 600 + i * 450); });
   }
 
+  // ---------- sounds (made by the browser, no audio files, free) ----------
+  var VOICE = { boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160 };
+  var SND = { vol:50, mode:'talk', sfx:true, alarm:true, on:false };
+  try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
+  var AC = null, MASTER = null;
+  function saveSnd(){ try{ localStorage.setItem('lbOfficeSound', JSON.stringify({ vol:SND.vol, mode:SND.mode, sfx:SND.sfx, alarm:SND.alarm })); }catch(e){} }
+  function audioOn(){
+    try{
+      if(!AC){ var C = window.AudioContext || window.webkitAudioContext; if(!C) return false; AC = new C(); MASTER = AC.createGain(); MASTER.connect(AC.destination); }
+      if(AC.state === 'suspended') AC.resume();
+      MASTER.gain.value = Math.pow(SND.vol / 100, 1.6) * .9; SND.on = true; return true;
+    }catch(e){ return false; }
+  }
+  function canPlay(){ return SND.on && AC && SND.vol > 0 && !document.hidden; }
+  function panFor(k){ var p = P[k]; return p ? Math.max(-.8, Math.min(.8, (p.x - 50) / 55)) : 0; }
+  function out(k){ var g = AC.createGain(); if(AC.createStereoPanner){ var pn = AC.createStereoPanner(); pn.pan.value = panFor(k); g.connect(pn); pn.connect(MASTER); } else g.connect(MASTER); return g; }
+  function voice(k, text, tone){
+    if(!canPlay() || SND.mode === 'off') return;
+    var t0 = AC.currentTime + .02, base = (VOICE[k] || 250) * (tone === 'red' ? 1.18 : 1), clean = String(text || '').replace(/[^A-Za-z0-9 ]/g, ''), n = Math.max(2, Math.min(14, Math.ceil(clean.length / 3) || 2)), dst = out(k);
+    if(SND.mode === 'bee'){
+      var o = AC.createOscillator(), lfo = AC.createOscillator(), lg = AC.createGain(), f = AC.createBiquadFilter(), g = AC.createGain(), dur = n * .09;
+      o.type = 'sawtooth'; o.frequency.value = base * .9; lfo.frequency.value = 28; lg.gain.value = base * .06; lfo.connect(lg); lg.connect(o.frequency);
+      f.type = 'bandpass'; f.frequency.value = base * 3; f.Q.value = 1.2; o.connect(f); f.connect(g); g.connect(dst);
+      g.gain.setValueAtTime(0, t0); for(var i = 0; i < n; i++){ var ti = t0 + i * .09; g.gain.linearRampToValueAtTime(.22 + Math.random() * .12, ti + .02); g.gain.linearRampToValueAtTime(.08, ti + .08); }
+      g.gain.linearRampToValueAtTime(0, t0 + dur + .05); o.start(t0); lfo.start(t0); o.stop(t0 + dur + .08); lfo.stop(t0 + dur + .08); return;
+    }
+    for(var j = 0; j < n; j++){
+      var tj = t0 + j * (.075 + Math.random() * .03), o2 = AC.createOscillator(), g2 = AC.createGain(), fr = base * (.82 + Math.random() * .5) * (j === n - 1 && /\?$/.test(text) ? 1.25 : 1);
+      o2.type = j % 3 === 0 ? 'triangle' : 'square'; o2.frequency.setValueAtTime(fr, tj); o2.frequency.linearRampToValueAtTime(fr * (Math.random() < .5 ? .9 : 1.08), tj + .06);
+      g2.gain.setValueAtTime(0, tj); g2.gain.linearRampToValueAtTime(o2.type === 'square' ? .07 : .16, tj + .008); g2.gain.exponentialRampToValueAtTime(.001, tj + .07);
+      o2.connect(g2); g2.connect(dst); o2.start(tj); o2.stop(tj + .08);
+    }
+  }
+  var NOISE = null;
+  function noiseBuf(){ if(NOISE) return NOISE; var b = AC.createBuffer(1, AC.sampleRate * .05, AC.sampleRate), d = b.getChannelData(0); for(var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return NOISE = b; }
+  function tick(k, freq, vol, len){
+    if(!canPlay() || !SND.sfx) return;
+    var s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime;
+    s.buffer = noiseBuf(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 3; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + (len || .03));
+    s.connect(f); f.connect(g); g.connect(out(k)); s.start(t); s.stop(t + (len || .03) + .01);
+  }
+  function alarmBeep(){
+    if(!canPlay() || !SND.alarm) return;
+    [0, .18].forEach(function(d){ var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + d; o.type = 'triangle'; o.frequency.setValueAtTime(880, t); o.frequency.linearRampToValueAtTime(660, t + .14);
+      g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.18, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + .16); o.connect(g); g.connect(MASTER); o.start(t); o.stop(t + .17); });
+  }
+  function sndUi(){
+    $('vol').value = SND.vol; $('volTxt').textContent = SND.vol + '%';
+    document.querySelectorAll('#vmode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-m') === SND.mode); });
+    $('sfx').checked = SND.sfx; $('alm').checked = SND.alarm;
+    $('sndBtn').textContent = !SND.on || SND.vol === 0 ? '🔇' : SND.vol < 40 ? '🔉' : '🔊';
+    $('sndBtn').classList.toggle('nudge', !SND.on);
+  }
+  $('sndBtn').addEventListener('click', function(e){ e.stopPropagation(); var first = !SND.on; audioOn(); if(first){ if(SND.vol === 0) SND.vol = 50; audioOn(); voice('boss', 'Hello team!'); } if(first) $('snd').classList.add('open'); else $('snd').classList.toggle('open'); sndUi(); });
+  $('snd').addEventListener('click', function(e){ e.stopPropagation(); });
+  $('vol').addEventListener('input', function(){ SND.vol = Number(this.value); audioOn(); sndUi(); saveSnd(); });
+  $('vol').addEventListener('change', function(){ voice('hr', 'test'); });
+  $('vmode').addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; SND.mode = b.getAttribute('data-m'); audioOn(); sndUi(); saveSnd(); voice('dispatcher', 'Hello boss'); });
+  $('sfx').addEventListener('change', function(){ SND.sfx = this.checked; sndUi(); saveSnd(); });
+  $('alm').addEventListener('change', function(){ SND.alarm = this.checked; sndUi(); saveSnd(); });
+  document.addEventListener('click', function(){ $('snd').classList.remove('open'); });
+  sndUi();
+
   // ---------- walking ----------
-  function say(k, text, ms, tone){ var p = P[k]; if(!p || !text) return; clearTimeout(p.bt); p.bub.textContent = text; p.bub.className = 'bub on' + (tone ? ' ' + tone : ''); p.bt = setTimeout(function(){ p.bub.className = 'bub'; }, ms || 3000); }
+  function say(k, text, ms, tone){ var p = P[k]; if(!p || !text) return; clearTimeout(p.bt); p.bub.textContent = text; p.bub.className = 'bub on' + (tone ? ' ' + tone : ''); p.bt = setTimeout(function(){ p.bub.className = 'bub'; }, ms || 3000);  voice(k, text, tone); if(tone === 'red' && k !== 'boss') alarmBeep(); }
   function leg(p, x, y, speed){
     return new Promise(function(res){
       var W = MAP.clientWidth, Hh = MAP.clientHeight, dist = Math.hypot((x - p.x) * W / 100, (y - p.y) * Hh / 100), dur = Math.max(.15, dist / speed);
       if(Math.abs(x - p.x) > .3) p.el.classList.toggle('left', x < p.x);
       p.el.style.transition = 'left ' + dur + 's linear, top ' + dur + 's linear';
       p.el.style.left = x + '%'; p.el.style.top = y + '%'; p.x = x; p.y = y;
+      var steps = Math.floor(dur / .17); for(var i = 0; i < steps; i++) setTimeout(function(){ tick(p.k, 380 + Math.random() * 80, .035, .04); }, i * 170);
       setTimeout(res, dur * 1000 + 30);
     });
   }
@@ -368,7 +454,8 @@
     var p = P[k], s = seat(k); if(Math.abs(p.x - s[0]) > .5 || Math.abs(p.y - s[1]) > .5) await go(k, s);
     p.el.classList.remove('left'); p.el.classList.add('type'); scr(k, true);
     if(talk) setTimeout(function(){ say(k, short(EMP[k].say), 3200); }, 400 + Math.random() * 1500);
-    await wait(ms); p.el.classList.remove('type'); scr(k, false);
+    var ty = setInterval(function(){ if(Math.random() < .35) tick(k, 2400 + Math.random() * 1600, .03, .025); }, 120);
+    await wait(ms); clearInterval(ty); p.el.classList.remove('type'); scr(k, false);
   }
   async function think(k){
     try{
