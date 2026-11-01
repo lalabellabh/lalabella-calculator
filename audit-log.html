@@ -5,7 +5,7 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
-<script src="shared/admin-gate.js" data-title="Activity History"></script>
+<script src="shared/admin-gate.js" data-title="Activity History" data-strict></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lalabella — Activity History</title>
@@ -94,7 +94,7 @@
   async function call(params){
     var res = await fetch(API, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) });
     var d = await res.json();
-    if(d && d.reauth && reauthFix()) return new Promise(function(){});
+    if(d && d.reauth){ try{ window.lbAdminRelock && window.lbAdminRelock(); }catch(e){} window.addEventListener('lbadminunlocked', function(){ location.reload(); }, { once:true }); return new Promise(function(){}); }
     return d;
   }
   // The server says the 15-minute password unlock ran out: clear the remembered unlock and reload ONCE so the password box shows;
