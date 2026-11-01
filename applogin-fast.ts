@@ -5,12 +5,12 @@
 // Fix: the Messenger logs in HERE. Password + lockout + rate limits are still checked by the real auth-fast.
 // If the account already had a still-valid session, that same token is put back and returned, so the apps share
 // it. Logging in on a NEW device through the website (auth-fast) still replaces it, as before.
-// The session is also pushed ~13 days ahead (same trick as sessionkeep-fast), so it lasts until Logout.
+// The session is also pushed ~1 year ahead (same trick as sessionkeep-fast), so it lasts until Logout.
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const EXTEND_DAYS = 13;
+const EXTEND_DAYS = 365;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'content-type, apikey, authorization, x-client-info',

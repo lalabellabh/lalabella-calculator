@@ -1,14 +1,14 @@
 // LALABELLA STAY-LOGGED-IN — keeps a still-valid session alive (Supabase Edge Function, verify_jwt OFF)
 // Called quietly by auth-guard.js while someone is using the app. If the token is valid (not logged out,
 // account active, not expired), the session window is pushed forward so the person stays logged in until
-// they press Logout or stay away ~2 weeks. Every backend checks `now - token_created > 24h`, so a
+// they press Logout or stay away ~1 year. Every backend checks `now - token_created > 24h`, so a
 // token_created a few days in the future simply means "still valid" there — no other function needs a change.
 // Logout (auth-fast) clears the token, so a logged-out session can never be kept alive.
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const EXTEND_DAYS = 13;
+const EXTEND_DAYS = 365;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'content-type, apikey, authorization, x-client-info',
