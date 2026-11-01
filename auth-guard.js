@@ -299,11 +299,12 @@
       wasHidden = true;
     } else if (wasHidden) {
       wasHidden = false;
-      const t = sessionStorage.getItem('lalabellaToken');
+      // Token may live only in localStorage (tab restored, app reopened): that is still a valid login.
+      const t = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
       if (!t) { goToLogin(); return; }
-      fastAuthFetch('?action=checkSession&token=' + encodeURIComponent(t))
-        .then(r => r.json())
-        .then(data => { if (!data.valid) goToLogin(); })
+      // Only a CONFIRMED invalid session (checked twice, with a retry) sends the person to login.
+      verifyTokenWithRetry(t, 1)
+        .then(data => { if (data && data.valid === false) { goToLogin(); } else if (data && data.valid) { sessionStorage.setItem('lalabellaToken', t); } })
         .catch(() => {});
     }
   });
