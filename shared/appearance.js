@@ -427,6 +427,10 @@
     txtTimer = 0;
     if (!document.body) return;
     pause(function () {
+      // remember what each piece of text was switched to last time: it keeps that colour while it is still readable
+      // (stops text flipping black <-> white when it moves over the wallpaper while scrolling)
+      var prevPick = new Map();
+      txtList.forEach(function (it) { if (it.el.hasAttribute('data-lbtx')) prevPick.set(it.el, it.el.style.getPropertyValue('color')); });
       textRestore();
       if (!st.auto || printingNow || nativeDark() || !root.classList.contains('lb-wall')) return;
       var vw = window.innerWidth, vh = window.innerHeight, layerCache = new Map(), seen = new Set(), n = 0;
@@ -467,6 +471,13 @@
         for (var i = chain.length - (opaque ? 2 : 1); i >= 0; i--) bg = over(chain[i], bg);
         var fg = tc.a < 1 ? over(tc, bg) : tc;
         var cur1 = ratio(fg, bg);
+        var pp = prevPick.get(el), ppc = pp ? parseRgb(pp) : null;
+        if (ppc && cur1 < 4.5 && ratio(ppc, bg) >= 3.2) {   // keep the colour it already had (hysteresis)
+          txtList.push({ el: el, v: el.style.getPropertyValue('color'), p: el.style.getPropertyPriority('color') });
+          el.style.setProperty('color', pp, 'important');
+          el.setAttribute('data-lbtx', '');
+          continue;
+        }
         if (cur1 >= 3.6) continue;
         var dark = { r: 33, g: 22, b: 27, a: 1 }, light = { r: 255, g: 255, b: 255, a: 1 };
         var rd = ratio(dark, bg), rl = ratio(light, bg);
@@ -479,6 +490,9 @@
     });
   }
   function textSchedule() { if (!txtTimer) txtTimer = setTimeout(textPass, 220); }
+  // while scrolling, wait until the scrolling has stopped before looking at the colours again (no flicker while moving)
+  var scrollTimer = 0;
+  function textScrollSchedule() { clearTimeout(scrollTimer); scrollTimer = setTimeout(function () { clearTimeout(txtTimer); txtTimer = 0; textSchedule(); }, 450); }
   function textStart() {
     if (!st.auto || nativeDark() || !wallUrl(st.wall)) { textRestore(); thumb = null; return; }
     loadThumb(function () { textSchedule(); });
@@ -493,7 +507,7 @@
       txtObs.observe(document.body, { childList: true, subtree: true, characterData: true });
     }
   }
-  window.addEventListener('scroll', function () { if (txtList.length || root.classList.contains('lb-wall')) textSchedule(); }, true);
+  window.addEventListener('scroll', function () { if (txtList.length || root.classList.contains('lb-wall')) textScrollSchedule(); }, true);
   window.addEventListener('resize', textSchedule);
 
   // ---------------- apply everything ----------------
