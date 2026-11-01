@@ -250,8 +250,8 @@
     if(pending.length > 0){
       megaphone.classList.add('alert');
       if(!alarmInterval){
-        // silent: visual megaphone only (no siren)
-        alarmInterval = 1;
+        playSoftSiren();
+        alarmInterval = setInterval(playSoftSiren, 4500);
       }
     } else {
       megaphone.classList.remove('alert');
