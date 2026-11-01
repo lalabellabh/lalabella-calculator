@@ -643,10 +643,27 @@
   document.addEventListener('fullscreenchange', function(){ if(!document.fullscreenElement && document.body.classList.contains('land')) document.body.classList.remove('land'); });
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ $('sheet').classList.remove('on'); if(document.body.classList.contains('land')) land(false); } });
 
+  var NOW_TL = {
+    boss:'Binabasa ang lahat ng desk at gumagawa ng daily report. Report lang — ikaw pa rin ang magdedesisyon.',
+    dispatcher:'Nag-sync ng Bleems (bawat 3 min) at Shopify checkouts (bawat 10 min), at binibilang ang orders na wala pang branch.',
+    shopify:'Kinokolekta ang bawat bagong order galing sa Shopify website (dumarating via webhook) at dinadala ang report kay Boss.',
+    bleems:'Kinokolekta ang orders galing Bleems (sync bawat 3 minuto) at dinadala ang report kay Boss.',
+    abandoned:'Binabantayan ang Shopify checkouts na sinimulan pero hindi binayaran (naiwang cart), at kung alin ang naging totoong order.',
+    scribe:'Binabasa ang bagong GitHub changes bawat 30 minuto at isinusulat sa Brain Vault change log.',
+    auditor:'Nire-record ang bawat add, edit at delete sa main tables para ma-trace at ma-undo ang mali.',
+    hr:'Tinitingnan kung sino ang late ngayon (lampas sa grace minutes) at sino ang may approved event / exemption ngayon.',
+    timekeeper:'Binabantayan ang time clock: sino ang naka-in, naka-break, hindi nag-time out kahapon, at na-block dahil wala sa shop.',
+    delivery:'Binabantayan ang Delivery Map: naghihintay ng driver, nasa daan, na-deliver ngayon, at driver na hindi nag-a-update ang GPS.',
+    driver:'Ipinapakita ang driver sa daan: lumalabas ng pinto na may box habang may On the way, bumabalik pag na-deliver na.',
+    watcher:'Nakikinig sa bawat page para sa JavaScript errors at pumalyang server calls.',
+    doctor:'Tinitingnan ang laki ng database, connections, at kung naka-on at gumagana ang bawat scheduled job.',
+    archivist:'Nagse-save ng buong kopya ng database gabi-gabi ng 2:00 AM at itinatabi ang pinakabagong 14.',
+    janitor:'Inililipat ang lumang duty-schedule rows sa archive gabi-gabi para mabilis ang live schedule.'
+  };
   function open(k){
     var e = EMP[k]; if(!e) return;
     $('card').innerHTML = '<button class="xx" id="xx">' + L('Close', 'Isara') + '</button><h3>' + esc(e.name) + '</h3><div class="rl">' + esc(e.role) + ' · <b style="color:var(--' + (e.st === 'alert' ? 'bad' : e.st === 'warn' ? 'warn' : e.st === 'working' ? 'work' : 'ok') + ')">' + LBL[e.st] + '</b></div>' +
-      '<div class="row"><b>' + L('What I do', 'Trabaho ko') + '</b>' + esc(e.now) + '</div><div class="row"><b>' + L('Latest', 'Pinakabago') + '</b>' + esc(e.out) + '</div><div class="row"><b>' + L('Tools', 'Gamit') + '</b>' + e.tools.map(esc).join(' · ') + '</div>' +
+      '<div class="row"><b>' + L('What I do', 'Trabaho ko') + '</b>' + esc(TL() && NOW_TL[k] ? NOW_TL[k] : e.now) + '</div><div class="row"><b>' + L('Latest', 'Pinakabago') + '</b>' + esc(e.out) + '</div><div class="row"><b>' + L('Tools', 'Gamit') + '</b>' + e.tools.map(esc).join(' · ') + '</div>' +
       '<div class="row"><b>' + L('Never', 'Hindi ginagawa') + '</b><ul class="never" style="margin:0;padding-left:18px">' + e.never.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
     $('sheet').classList.add('on'); $('xx').onclick = function(){ $('sheet').classList.remove('on'); };
   }
