@@ -3,7 +3,7 @@ plugins {
 }
 
 // Version people see. Bump this and versionCode together for every release.
-def appVer = '1.1.1'
+def appVer = '1.1.2'
 
 android {
     namespace 'com.mysystemlla.driver'
@@ -13,7 +13,7 @@ android {
         applicationId 'com.mysystemlla.driver'
         minSdk 24
         targetSdk 34
-        versionCode 3
+        versionCode 4
         versionName appVer
     }
 
