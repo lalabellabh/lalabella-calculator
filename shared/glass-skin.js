@@ -19,7 +19,7 @@
     'flower-arrangements': { cols: 'minmax(0,.9fr) minmax(0,1.1fr)', stack: [['.scan-hero', '#scanResultCard', '#formCard'], 1], place: { '#arrGrid': ['2'] } },
     'flower-barcode': { cols: 'minmax(0,1fr) minmax(0,1fr)' },
     'item-inventory': { cols: '210px minmax(0,1fr)', place: { '#desktopToolNav': ['1'] } },
-    'flower-admin': { cols: 'minmax(0,1fr)' },
+    'flower-admin': { cols: 'minmax(270px,.85fr) minmax(0,1.3fr) minmax(0,.85fr)' },
     'item-admin': { cols: 'minmax(0,1fr)' }
   };
   function go() {
