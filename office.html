@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<script src="shared/admin-gate.js" data-title="AI Office"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — AI Office</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0d0a1a;--ink:#f1ecff;--muted:#9a90b8;--line:#2c2447;--ok:#5be29a;--work:#4fb3ff;--warn:#ffc24f;--bad:#ff6b6b}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(120% 80% at 50% 0%,#1d1535 0%,var(--bg) 60%) fixed !important;background-color:var(--bg) !important;color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh}
+  body::before,body::after{display:none !important}
+  html,html:root.lb-wall{background:#0d0a1a !important;background-color:#0d0a1a !important;background-image:radial-gradient(120% 80% at 50% 0%,#1d1535 0%,#0d0a1a 60%) !important;background-attachment:fixed !important}
+  body{background:transparent !important}
+  .stage{max-width:1180px;margin:0 auto;padding:14px 16px 40px}
+  .head{display:flex;align-items:center;gap:12px;padding-left:54px;min-height:44px;flex-wrap:wrap}
+  .head h1{font-family:'Press Start 2P',monospace;font-size:13px;margin:0;letter-spacing:.04em;line-height:1.5}
+  .head .sp{flex:1}
+  .upd{font-size:12px;color:var(--muted) !important}
+  .head h1{color:#f1ecff !important}
+  .sub{color:#9a90b8 !important}
+  .pill{font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:#171230;color:var(--ink);cursor:pointer;font-family:inherit}
+  .sub{font-size:12.5px;color:var(--muted);margin:6px 0 14px}
+  .floor{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .room{position:relative;border-radius:18px;padding:30px 12px 12px;border:1px solid var(--line);min-height:150px;display:flex;gap:10px;flex-wrap:wrap;align-content:flex-start;overflow:hidden}
+  .room .lbl{position:absolute;top:8px;left:12px;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.06em;opacity:.8}
+  .r-front{background:linear-gradient(135deg,#143a3a,#0f2428);color:#7ff0e0}
+  .r-writers{background:linear-gradient(135deg,#3a2a52,#241a38);color:#d6b7ff}
+  .r-records{background:linear-gradient(135deg,#4a3320,#2c2014);color:#ffcf8a}
+  .r-qa{background:linear-gradient(135deg,#4d1f36,#2b1322);color:#ff9fc4}
+  .r-vault{background:linear-gradient(135deg,#1c2f4d,#121d33);color:#9cc8ff}
+  .r-util{background:linear-gradient(135deg,#27402a,#17261a);color:#a9f0a0}
+  .r-deck{background:radial-gradient(circle at 50% 40%,#2a4a6d,#14243b 70%);color:#8fd9ff;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+  .desk{width:132px;background:#0d0a1ae0;border:1px solid var(--line);border-radius:12px;padding:8px 8px 9px;cursor:pointer;color:var(--ink);text-align:center;position:relative;transition:transform .15s,border-color .15s;font:inherit}
+  .desk:hover{transform:translateY(-3px);border-color:#5d4f95}
+  .desk .av{height:62px;display:flex;align-items:flex-end;justify-content:center}
+  .desk svg{width:48px;height:60px;image-rendering:pixelated;shape-rendering:crispEdges}
+  .desk.working svg,.desk.ok svg{animation:bob 1.6s steps(2) infinite}
+  .desk.alert{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad),0 0 18px #ff6b6b66}
+  .desk.alert svg{animation:shake .35s linear infinite}
+  .desk.warn{border-color:var(--warn)}
+  @keyframes bob{50%{transform:translateY(-3px)}}
+  @keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+  .nm{font-weight:700;font-size:13px;margin-top:4px}
+  .rl{font-size:10.5px;color:var(--muted)}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:.06em;margin-top:5px;padding:2px 8px;border-radius:99px;background:#1b1535}
+  .chip i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;animation:blink 1.4s infinite}
+  .working .chip{color:var(--work)} .ok .chip{color:var(--ok)} .warn .chip{color:var(--warn)} .alert .chip{color:var(--bad)}
+  @keyframes blink{50%{opacity:.25}}
+  .say{font-size:11px;color:#cfc6ea;margin-top:6px;line-height:1.35;min-height:30px}
+  .deck-box{background:#0d0a1ad0;border:1px solid #38527a;border-radius:14px;padding:10px 12px;width:100%;text-align:left;margin-top:8px;font-size:12.5px;line-height:1.55}
+  .deck-box b{color:#fff}
+  .boss{width:150px}
+  .report{grid-column:span 2;border-radius:18px;border:1px solid var(--line);background:#150f2b;padding:14px 16px;position:relative}
+  .report h2{font-family:'Press Start 2P',monospace;font-size:10px;margin:0 0 10px;color:#8fd9ff;letter-spacing:.05em}
+  .report ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:13px}
+  .report li span.k{color:var(--muted);display:inline-block;min-width:150px}
+  .report a{color:#8fd9ff}
+  .good{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700} .amb{color:var(--warn);font-weight:700}
+  .sheet{position:fixed;inset:0;background:#000a;display:none;align-items:flex-end;justify-content:center;z-index:60}
+  .sheet.on{display:flex}
+  .card{background:#150f2b;border:1px solid #4a3d7a;border-radius:18px 18px 0 0;padding:16px 18px 22px;width:min(560px,100%);max-height:80vh;overflow:auto}
+  .card h3{margin:0 0 2px;font-size:17px} .card .rl{margin-bottom:10px}
+  .card .row{font-size:13px;margin:8px 0;line-height:1.5} .card .row b{display:block;font-size:10.5px;letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px}
+  .never li{color:#ffb0b0;font-size:12.5px;margin:3px 0}
+  .xx{float:right;border:0;background:#2a2150;color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;font:inherit;font-weight:700}
+  .denied{display:none;text-align:center;padding:40px 10px;color:var(--muted)}
+  @media (max-width:900px){.floor{grid-template-columns:1fr}.report{grid-column:auto}.room{min-height:0}.card{border-radius:18px}.sheet{align-items:center}}
+</style>
+</head>
+<body>
+<div class="stage" data-lb-text-skip>
+  <div class="head"><h1>🏢 AI OFFICE</h1><div class="sp"></div><span class="upd" id="upd"></span><button class="pill" id="ref">↻ Refresh</button><a class="pill" href="audit-log.html" style="text-decoration:none">🕘 Activity History</a></div>
+  <div class="sub">Your system's workers, at their desks. Free: they are scheduled jobs that read your own data — no paid AI. The Boss only reports; nobody here changes data on their own. Tap a desk for details.</div>
+  <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for the Admin who has User Management access.</p></div>
+  <div class="floor" id="floor">
+    <div class="room r-front"><div class="lbl">FRONT OFFICE</div><div id="d_dispatcher"></div></div>
+    <div class="room r-writers"><div class="lbl">WRITERS' ROOM</div><div id="d_scribe"></div></div>
+    <div class="room r-records"><div class="lbl">RECORDS</div><div id="d_auditor"></div></div>
+    <div class="room r-qa"><div class="lbl">QA DESK</div><div id="d_watcher"></div><div id="d_doctor"></div></div>
+    <div class="room r-deck"><div class="lbl" style="left:0;right:0;text-align:center">COMMAND DECK</div><div id="d_boss" style="margin-top:6px"></div><div class="deck-box" id="deckBox">Loading…</div></div>
+    <div class="room r-vault"><div class="lbl">THE VAULT</div><div id="d_archivist"></div></div>
+    <div class="room r-util"><div class="lbl">UTILITY</div><div id="d_janitor"></div></div>
+    <div class="report"><h2>DAILY REPORT — FROM THE BOSS</h2><ul id="report"><li>Loading…</li></ul></div>
+  </div>
+</div>
+<div class="sheet" id="sheet"><div class="card" id="card"></div></div>
+<script src="shared/nav.js" data-standalone data-shift=".head"></script>
+<script>
+(function(){
+  var API = LB_CONFIG.AUDIT_API, $ = function(i){ return document.getElementById(i); }, S = null, EMP = {};
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
+  if(u.canManageUsers === false){ $('floor').style.display = 'none'; $('denied').style.display = 'block'; return; }
+
+  // ---------- pixel people ----------
+  var BMP = ['..HHHH..','.HHHHHH.','.SESSES.','..SSSS..','.BBBBBB.','SBBBBBBS','.BBBBBB.','..PPPP..','..P..P..','.SS..SS.'];
+  function sprite(c){
+    var map = { H:c.h, S:'#f2c9a0', E:'#1b1535', B:c.b, P:c.p }, out = '';
+    BMP.forEach(function(row, y){ for(var x = 0; x < 8; x++){ var ch = row[x]; if(ch !== '.') out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + map[ch] + '"/>'; } });
+    if(c.crown) out += '<rect x="2" y="-1" width="4" height="1" fill="#ffd24a"/><rect x="2" y="-2" width="1" height="1" fill="#ffd24a"/><rect x="5" y="-2" width="1" height="1" fill="#ffd24a"/>';
+    return '<svg viewBox="0 -2 8 12" xmlns="http://www.w3.org/2000/svg">' + out + '</svg>';
+  }
+  var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320'},
+    watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1},
+    archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c'} };
+
+  // ---------- helpers ----------
+  function ago(t){ if(!t) return 'never'; var s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
+    if(s < 90) return 'just now'; if(s < 5400) return Math.round(s / 60) + ' min ago'; if(s < 172800) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' days ago'; }
+  function age(t){ return t ? (Date.now() - new Date(t).getTime()) / 1000 : Infinity; }
+  function job(n){ return (S.jobs || []).filter(function(j){ return j.name === n; })[0]; }
+  function jobState(j, every){
+    if(!j) return ['warn', 'Job not found'];
+    if(!j.active) return ['warn', 'Switched off'];
+    if(j.last_status && j.last_status !== 'succeeded') return ['alert', 'Last run failed'];
+    if(!j.last_start) return ['ok', 'Waiting for its first run'];
+    if(age(j.last_start) > every * 2.5) return ['warn', 'Late — last run ' + ago(j.last_start)];
+    return [age(j.last_start) < 100 ? 'working' : 'ok', 'Last run ' + ago(j.last_start)];
+  }
+  var LBL = { working:'WORKING', ok:'ALL GOOD', warn:'CHECK', alert:'PROBLEM' };
+  var NEVER_ALL = ['Uses paid AI (everything here is free)', 'Changes or deletes your data by itself', 'Posts, sends or spends anything'];
+
+  function compute(){
+    var bl = jobState(job('bleems-sync'), 180), sh = jobState(job('shopify-abandoned-sweep'), 600);
+    var unassigned = S.orders ? Number(S.orders.unassigned) || 0 : 0;
+    var dis = bl[0] === 'alert' || sh[0] === 'alert' ? 'alert' : (bl[0] === 'warn' || sh[0] === 'warn' || unassigned > 0) ? 'warn' : (bl[0] === 'working' || sh[0] === 'working') ? 'working' : 'ok';
+    EMP.dispatcher = { name:'Dino', role:'Dispatcher', st:dis, say: unassigned ? unassigned + ' order' + (unassigned > 1 ? 's' : '') + ' waiting to assign' : 'Orders synced · ' + ago((job('bleems-sync') || {}).last_start),
+      now:'Syncing Bleems (every 3 min) and Shopify checkouts (every 10 min), and counting orders that still need a branch.',
+      out:'Bleems: ' + bl[1] + ' · Shopify: ' + sh[1] + ' · Unassigned orders: ' + unassigned, tools:['bleems-sync job','shopify-abandoned-sweep job','Order bell'], never:NEVER_ALL.concat(['Assigns an order to a branch without a person']) };
+    var sc = jobState(job('brain-autolog'), 1800);
+    EMP.scribe = { name:'Sage', role:'Scribe', st:sc[0], say:'Brain updated · ' + ago((job('brain-autolog') || {}).last_start),
+      now:'Reads new GitHub changes every 30 minutes and writes them into the Brain Vault change log.', out:sc[1], tools:['brain-autolog job','Brain Vault'], never:NEVER_ALL.concat(['Edits the Fix log or notes (Claude/you do that)']) };
+    var A = S.audit || {}, del = Number(A.deletes24h) || 0;
+    EMP.auditor = { name:'Ada', role:'Auditor', st: del >= 10 ? 'warn' : (age(A.last_at) < 120 ? 'working' : 'ok'), say:(A.last24h || 0) + ' changes logged today' + (del ? ' · ' + del + ' deleted' : ''),
+      now:'Records every add, edit and delete in the main tables so mistakes can be traced and undone.', out:'Last 24 h: ' + (A.last24h || 0) + ' changes, ' + del + ' deletions · Last entry ' + ago(A.last_at) + ' · ' + (A.total || 0) + ' in total',
+      tools:['audit.log trigger','Activity History (put it back / undo)'], never:NEVER_ALL.concat(['Erases the history (it cannot be edited)']) };
+    var E = S.errors || {}, n = Number(E.last24h) || 0;
+    EMP.watcher = { name:'Wanda', role:'Watcher', st: n >= 10 ? 'alert' : n > 0 ? 'warn' : 'ok', say: n ? n + ' error' + (n > 1 ? 's' : '') + ' in 24 h' : 'No errors in 24 h',
+      now:'Listens on every page for JavaScript errors and failed server calls.', out: n ? 'Latest: “' + (E.last_msg || '') + '” on ' + (E.last_page || '?') + ' · ' + ago(E.last_at) : 'Quiet. Nothing broken in the last 24 hours.',
+      tools:['error-report.js','errlog-fast','Activity History → Errors'], never:NEVER_ALL.concat(['Fixes bugs by itself (it only reports them)']) };
+    var D = S.db || {}, mb = (Number(D.bytes) || 0) / 1048576, pct = mb / 500 * 100, cpct = D.max_conns ? D.conns / D.max_conns * 100 : 0;
+    var jobsBad = (S.jobs || []).filter(function(j){ return !j.active || (j.last_status && j.last_status !== 'succeeded'); });
+    EMP.doctor = { name:'Dr. Dre', role:'Doctor', st: jobsBad.length || pct >= 90 || cpct >= 90 ? 'alert' : (pct >= 70 || cpct >= 70) ? 'warn' : 'ok', say:'DB ' + mb.toFixed(0) + ' MB of 500 · ' + (D.conns || '?') + '/' + (D.max_conns || '?') + ' connections',
+      now:'Checks database size, connections and that every scheduled job is on and succeeding.', out:'Database ' + mb.toFixed(1) + ' MB (' + pct.toFixed(1) + '% of the free 500 MB) · Connections ' + (D.conns || '?') + ' of ' + (D.max_conns || '?') + (jobsBad.length ? ' · Problem jobs: ' + jobsBad.map(function(j){ return j.name; }).join(', ') : ' · All scheduled jobs OK'),
+      tools:['System Health page','lb_health'], never:NEVER_ALL };
+    var B = S.backup || {};
+    EMP.archivist = { name:'Archie', role:'Archivist', st: !B.last_at ? 'warn' : !B.ok ? 'alert' : age(B.last_at) > 30 * 3600 ? 'warn' : 'ok', say: B.last_at ? (B.ok ? 'Backup saved ' : 'BACKUP FAILED ') + ago(B.last_at) : 'No backup yet',
+      now:'Saves a full copy of the database every night at 2:00 AM and keeps the newest 14.', out: B.last_at ? 'Last backup ' + ago(B.last_at) + ' · ' + (B.ok ? ((B.rows || 0) + ' rows, ' + Math.round((B.bytes || 0) / 1024) + ' KB') : 'FAILED: ' + (B.error || '')) : 'Waiting for the first nightly run.',
+      tools:['autobackup-fast','Activity History → Backups','emergency.html'], never:NEVER_ALL.concat(['Sends your data outside Supabase']) };
+    var jn = jobState(job('duty-schedule-monthly-cleanup'), 86400);
+    EMP.janitor = { name:'Jun', role:'Janitor', st:jn[0], say:'Schedule cleaned · ' + ago((job('duty-schedule-monthly-cleanup') || {}).last_start),
+      now:'Moves old duty-schedule rows to the archive every night so the live schedule stays fast.', out:jn[1], tools:['duty-schedule-monthly-cleanup job'], never:NEVER_ALL.concat(['Deletes anything that is not old schedule rows']) };
+    var order = ['alert','warn','working','ok'], all = Object.keys(EMP).map(function(k){ return EMP[k].st; });
+    var worst = all.indexOf('alert') > -1 ? 'alert' : all.indexOf('warn') > -1 ? 'warn' : 'ok';
+    var ap = S.approvals || {}, apn = (Number(ap.rate) || 0) + (Number(ap.choc) || 0);
+    EMP.boss = { name:'BOSS', role:'Chief of Staff', st: worst === 'ok' ? 'working' : worst, say: worst === 'ok' ? 'All desks are fine' : 'Someone needs attention',
+      now:'Reads every desk, then writes the daily report. Reports only — decisions stay with you.', out:'See the daily report below.', tools:['All desks','Daily report'], never:['Posts, sends or spends without your approval','Does the specialists\' jobs itself','Invents results (only real numbers from your system)','Uses paid AI'] };
+    return { worst:worst, ap:ap, apn:apn, unassigned:unassigned };
+  }
+
+  function desk(k){
+    var e = EMP[k]; if(!e) return '';
+    return '<button class="desk ' + e.st + (k === 'boss' ? ' boss' : '') + '" data-k="' + k + '"><div class="av">' + sprite(LOOK[k]) + '</div><div class="nm">' + esc(e.name) + '</div><div class="rl">' + esc(e.role) + '</div><div class="chip"><i></i>' + LBL[e.st] + '</div><div class="say">' + esc(e.say) + '</div></button>';
+  }
+  function render(){
+    var r = compute();
+    ['dispatcher','scribe','auditor','watcher','doctor','boss','archivist','janitor'].forEach(function(k){ $('d_' + k).innerHTML = desk(k); });
+    var n = Object.keys(EMP).length - 1, issues = Object.keys(EMP).filter(function(k){ return k !== 'boss' && (EMP[k].st === 'warn' || EMP[k].st === 'alert'); });
+    $('deckBox').innerHTML = (r.worst === 'ok' ? '<b class="good">✔ All ' + n + ' workers are fine.</b>' : '<b class="' + (r.worst === 'alert' ? 'bad' : 'amb') + '">' + issues.length + ' desk' + (issues.length > 1 ? 's need' : ' needs') + ' attention: ' + issues.map(function(k){ return EMP[k].name; }).join(', ') + '</b>') +
+      '<br>Approvals waiting: <b>' + r.apn + '</b> · Online now: <b>' + (S.online || 0) + '</b> of ' + (S.staff || 0) + ' staff';
+    var A = S.audit || {}, E = S.errors || {}, B = S.backup || {}, ap = r.ap;
+    $('report').innerHTML =
+      '<li><span class="k">Overall</span>' + (r.worst === 'ok' ? '<span class="good">All good</span>' : r.worst === 'warn' ? '<span class="amb">Some things to check</span>' : '<span class="bad">Problem — see red desk</span>') + '</li>' +
+      '<li><span class="k">Errors (24 h)</span>' + (Number(E.last24h) ? '<span class="amb">' + E.last24h + '</span> — <a href="audit-log.html">open Errors</a>' : '<span class="good">none</span>') + '</li>' +
+      '<li><span class="k">Last backup</span>' + (B.last_at ? (B.ok ? '<span class="good">OK</span> · ' : '<span class="bad">FAILED</span> · ') + ago(B.last_at) : '<span class="amb">none yet</span>') + '</li>' +
+      '<li><span class="k">Changes logged (24 h)</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">Activity History</a></li>' +
+      '<li><span class="k">Approvals waiting</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate stock</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">none</span>') + '</li>' +
+      '<li><span class="k">Orders to assign</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">none</span>') + '</li>' +
+      '<li><span class="k">Staff online</span>' + (S.online || 0) + ' of ' + (S.staff || 0) + '</li>';
+    $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  }
+  function open(k){
+    var e = EMP[k]; if(!e) return;
+    $('card').innerHTML = '<button class="xx" id="xx">Close</button><h3>' + esc(e.name) + '</h3><div class="rl">' + esc(e.role) + ' · <b style="color:var(--' + (e.st === 'alert' ? 'bad' : e.st === 'warn' ? 'warn' : e.st === 'working' ? 'work' : 'ok') + ')">' + LBL[e.st] + '</b></div>' +
+      '<div class="row"><b>What I do</b>' + esc(e.now) + '</div><div class="row"><b>Latest</b>' + esc(e.out) + '</div><div class="row"><b>Tools</b>' + e.tools.map(esc).join(' · ') + '</div>' +
+      '<div class="row"><b>Never</b><ul class="never" style="margin:0;padding-left:18px">' + e.never.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    $('sheet').classList.add('on'); $('xx').onclick = function(){ $('sheet').classList.remove('on'); };
+  }
+  $('sheet').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
+  $('floor').addEventListener('click', function(e){ var b = e.target.closest('.desk'); if(b) open(b.getAttribute('data-k')); });
+
+  var busy = false;
+  async function load(){
+    if(busy) return; busy = true;
+    try{
+      var res = await fetch(API, { method:'POST', body: new URLSearchParams({ action:'office', token: token() }) });
+      var d = await res.json();
+      if(!d.success){
+        if(/access/i.test(d.error || '')){ $('floor').style.display = 'none'; $('denied').style.display = 'block'; }
+        else $('deckBox').textContent = d.error || 'Could not load.';
+        return;
+      }
+      S = d.status; render();
+    }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; }
+    finally{ busy = false; }
+  }
+  $('ref').addEventListener('click', load);
+  load();
+  setInterval(function(){ if(!document.hidden) load(); }, 30000);
+})();
+</script>
+</body>
+</html>
