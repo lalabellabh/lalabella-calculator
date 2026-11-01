@@ -195,6 +195,24 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
+    <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;margin-bottom:6px;">📋 Flower List &amp; Company Rates</div>
+    <p style="font-size:12.5px;color:var(--ink-dim);margin:0 0 10px;">Everything in the catalog with its company rate. Tap a row to edit or delete it below.</p>
+    <div class="fields">
+      <div class="field"><label>Show</label>
+        <select id="catOrigin"><option value="orig">Original list (Legacy/Unknown)</option><option value="holland">Holland</option><option value="other">Added later (other origins)</option><option value="all">All</option></select></div>
+      <div class="field"><label>Search</label><input id="catSearch" placeholder="Flower name or code" autocomplete="off"></div>
+    </div>
+    <div id="catCount" style="font-size:11.5px;color:var(--ink-dim);margin:2px 0 6px;"></div>
+    <div style="max-height:380px;overflow:auto;border-radius:10px;">
+      <table id="catTable" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead><tr style="text-align:left;position:sticky;top:0;background:rgba(255,255,255,.92);">
+          <th style="padding:6px 8px;">Flower</th><th style="padding:6px 8px;">Origin</th><th style="padding:6px 8px;">Unit</th><th style="padding:6px 8px;text-align:right;">Company rate</th><th style="padding:6px 8px;">Code</th></tr></thead>
+        <tbody id="catBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
     <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;margin-bottom:6px;">✏️ Fix an Existing Flower Item</div>
     <p style="font-size:12.5px;color:var(--ink-dim);margin:0 0 12px;">Search a flower already in the catalog to correct its name, unit, stems per bunch, rate or min stock, or to switch it off (Inactive). Origin and Item Code cannot be changed here.</p>
     <div class="fields">
@@ -214,6 +232,8 @@
         <select id="fixStatus" disabled><option>Active</option><option>Inactive</option></select></div>
     </div>
     <button class="btn flower" id="fixSaveBtn" disabled>Save Changes</button>
+    <button class="btn" id="fixDelBtn" disabled style="margin-top:8px;width:100%;background:#fff;color:#b3261e;border:1.5px solid #b3261e;">🗑 Delete this item</button>
+    <div style="font-size:11.5px;color:var(--ink-dim);margin-top:4px;">Delete works only for items that have no records yet. Original-list items can only be set to Inactive.</div>
     <div class="result" id="fixResult"></div>
   </div>
 </div>
@@ -417,11 +437,12 @@ function fixLoad(){
     const dl = document.getElementById('fixList');
     dl.innerHTML = '';
     fixItems.forEach(it => { const o = document.createElement('option'); o.value = fixLabel(it); dl.appendChild(o); });
+    catRender();
   }).catch(()=>{});
 }
 fixLoad();
 function fixSetEnabled(on){
-  ['fixName','fixUnit','fixStems','fixRate','fixMin','fixStatus','fixSaveBtn'].forEach(id => document.getElementById(id).disabled = !on);
+  ['fixName','fixUnit','fixStems','fixRate','fixMin','fixStatus','fixSaveBtn','fixDelBtn'].forEach(id => document.getElementById(id).disabled = !on);
 }
 function fixSelectUnit(v){
   const sel = document.getElementById('fixUnit');
@@ -476,6 +497,58 @@ document.getElementById('fixSaveBtn').addEventListener('click', async function()
     btn.disabled = false; btn.textContent = 'Save Changes';
     fail('Could not reach the server. Check your connection.');
   }
+});
+
+// ---------- Catalog list with company rates ----------
+const catEsc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function catRender(){
+  const mode = document.getElementById('catOrigin').value;
+  const q = document.getElementById('catSearch').value.trim().toLowerCase();
+  const rows = fixItems.filter(it => {
+    const o = it['Origin'] || '';
+    if(mode === 'orig' && o !== 'Legacy/Unknown') return false;
+    if(mode === 'holland' && o !== 'Holland') return false;
+    if(mode === 'other' && (o === 'Legacy/Unknown' || o === 'Holland')) return false;
+    if(q && !((it['Flowers']||'') + ' ' + (it['Item Code']||'')).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b) => String(a['Flowers']||'').localeCompare(String(b['Flowers']||'')));
+  document.getElementById('catCount').textContent = rows.length + ' item' + (rows.length === 1 ? '' : 's');
+  document.getElementById('catBody').innerHTML = rows.map(it => {
+    const r = Number(it['Rate']);
+    return '<tr data-code="' + catEsc(it['Item Code']) + '" style="cursor:pointer;border-top:1px solid rgba(128,128,128,.18);' + (it['Status']==='Inactive' ? 'opacity:.55;' : '') + '">' +
+      '<td style="padding:7px 8px;font-weight:600;">' + catEsc(it['Flowers']) + (it['Status']==='Inactive' ? ' <small>(Inactive)</small>' : '') + '</td>' +
+      '<td style="padding:7px 8px;">' + catEsc(it['Origin'] || '—') + '</td>' +
+      '<td style="padding:7px 8px;">' + catEsc(it['Unit'] || '') + '</td>' +
+      '<td style="padding:7px 8px;text-align:right;font-weight:700;">' + (isFinite(r) && it['Rate'] !== '' && it['Rate'] != null ? r.toFixed(3) : '—') + '</td>' +
+      '<td style="padding:7px 8px;font-size:11px;">' + catEsc(it['Item Code']) + '</td></tr>';
+  }).join('');
+}
+document.getElementById('catOrigin').addEventListener('change', catRender);
+document.getElementById('catSearch').addEventListener('input', catRender);
+document.getElementById('catBody').addEventListener('click', function(e){
+  const tr = e.target.closest('tr[data-code]'); if(!tr) return;
+  const it = fixItems.find(x => x['Item Code'] === tr.getAttribute('data-code')); if(!it) return;
+  const inp = document.getElementById('fixSearch');
+  inp.value = fixLabel(it); inp.dispatchEvent(new Event('input'));
+  inp.scrollIntoView({behavior:'smooth', block:'center'});
+});
+
+// ---------- Delete an item ----------
+document.getElementById('fixDelBtn').addEventListener('click', async function(){
+  const box = document.getElementById('fixResult'), btn = this;
+  if(!fixCurrent) return;
+  const nm = fixCurrent['Flowers'] || fixCurrent['Item Code'];
+  if(!confirm('Delete "' + nm + '" (' + fixCurrent['Item Code'] + ') from the catalog? This cannot be undone.')) return;
+  btn.disabled = true; box.className = 'result';
+  try{
+    const res = await (await fetch(FLOWER_FIX_API, { method: 'POST', body: new URLSearchParams({ action: 'deleteFlowerItem', itemCode: fixCurrent['Item Code'] }) })).json();
+    if(res.error || !res.success){ btn.disabled = false; box.className = 'result err'; box.textContent = res.error || 'Could not delete.'; return; }
+    box.className = 'result ok'; box.textContent = '✓ Deleted — ' + nm;
+    fixCurrent = null; document.getElementById('fixSearch').value = ''; document.getElementById('fixInfo').textContent = '';
+    ['fixName','fixStems','fixRate','fixMin'].forEach(id => document.getElementById(id).value = '');
+    fixSetEnabled(false);
+    await fixLoad();
+  }catch(e){ btn.disabled = false; box.className = 'result err'; box.textContent = 'Could not reach the server. Check your connection.'; }
 });
 
 </script>

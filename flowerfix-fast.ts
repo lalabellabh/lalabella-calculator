@@ -7,6 +7,10 @@
 //       tables that only carry the NAME are updated only when no other flower item shares the old name
 //       (otherwise a `warning` is returned and they are left alone, so nothing is mixed up).
 //     - origin is not editable here on purpose (the Legacy/Unknown master logic depends on it).
+//   deleteFlowerItem  itemCode
+//     - removes ONE item from the catalog, only if nothing has ever been recorded for it
+//       (receiving, stock, rate history, transfers, arrangements, Holland tracking).
+//     - items of the original Legacy/Unknown list can never be deleted (set them Inactive instead).
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -106,6 +110,31 @@ async function updateFlowerItem(p: Record<string, any>) {
   return { success: true, itemCode, renamed, warning: warning.trim() || undefined };
 }
 
+async function deleteFlowerItem(p: Record<string, any>) {
+  const itemCode = String(p.itemCode || '').trim();
+  if (!itemCode) return { error: 'Item code is required.' };
+  const rows = await sb('GET', `flower_item?select=*&item_code=eq.${enc(itemCode)}&limit=1`);
+  if (!rows.length) return { error: 'Flower item not found: ' + itemCode };
+  const cur = rows[0];
+  if (String(cur.origin || '') === 'Legacy/Unknown') return { error: 'This item is part of the original flower list and cannot be deleted. Set it to Inactive instead.' };
+  const used: string[] = [];
+  for (const t of ['flower_database', 'flower_stock_history', 'flower_rate_change_history']) {
+    const r = await sb('GET', `${t}?select=item_code&item_code=eq.${enc(itemCode)}&limit=1`);
+    if (r.length) used.push(t);
+  }
+  const name = String(cur.flower_name || '');
+  const shared = await sb('GET', `flower_item?select=item_code&flower_name=eq.${enc(name)}&item_code=neq.${enc(itemCode)}&limit=1`);
+  if (!shared.length) {
+    for (const t of ['flower_transfer_history', 'flower_arrangement_items', 'flower_arrangement_fulfillments', 'flower_holland_tracking']) {
+      const r = await sb('GET', `${t}?select=flower_name&flower_name=eq.${enc(name)}&limit=1`);
+      if (r.length) used.push(t);
+    }
+  }
+  if (used.length) return { error: `"${name}" already has records (${used.join(', ')}), so it cannot be deleted. Set it to Inactive instead.` };
+  await sb('DELETE', `flower_item?item_code=eq.${enc(itemCode)}`);
+  return { success: true, deleted: itemCode, name };
+}
+
 async function readParams(req: Request): Promise<Record<string, any>> {
   if (req.method === 'GET') return Object.fromEntries(new URL(req.url).searchParams.entries());
   const ct = req.headers.get('content-type') || '';
@@ -121,6 +150,7 @@ Deno.serve(async (req) => {
     if (!me) return json({ error: 'Unauthorized. Please log in again.' }, 401);
     if (String(me.role || '') !== 'Admin') return json({ error: 'Only an Admin can edit flower items.' }, 403);
     if (p.action === 'updateFlowerItem') return json(await updateFlowerItem(p));
+    if (p.action === 'deleteFlowerItem') return json(await deleteFlowerItem(p));
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {
     console.error('[flowerfix-fast]', err);
