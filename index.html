@@ -1282,7 +1282,7 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
     const btn = document.getElementById('loginBtn');
     btn.disabled = true; btn.textContent = 'Logging in…';
 
-    fetch(AUTH_API_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), AUTH_OPTS)
+    fetch(AUTH_API_URL.replace('auth-fast', 'applogin-fast') + '?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), AUTH_OPTS)  /* same session on every device until Logout */
       .then(r => r.json())
       .then(data => {
         btn.disabled = false; btn.textContent = 'Login';
