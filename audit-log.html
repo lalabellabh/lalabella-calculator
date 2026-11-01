@@ -49,6 +49,9 @@
   .bk .sp{flex:1}
   .good{color:var(--ok);font-weight:700} .badc{color:var(--bad);font-weight:700}
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1520;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;display:none;max-width:90vw}
+  .kv{display:inline-block;margin:3px 6px 0 0;padding:2px 8px;border-radius:8px;background:rgba(158,47,74,.08);font-size:12.5px;word-break:break-word}
+  .kv i{font-style:normal;opacity:.65;margin-right:3px}
+  .sum pre,.row pre{white-space:pre-wrap;word-break:break-all}
 </style>
 </head>
 <body>
@@ -107,20 +110,40 @@
     return false;
   }
 
-  function fmt(v){ if(v == null) return '—'; if(typeof v === 'object') return JSON.stringify(v); return String(v); }
+  var ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+  function fmt(v){
+    if(v == null || v === '') return '—';
+    if(typeof v === 'object') v = JSON.stringify(v);
+    v = String(v);
+    if(ISO.test(v)){ try{ return new Date(v).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){} }
+    return v.length > 70 ? v.slice(0, 68) + '…' : v;
+  }
   function when(a){ try{ return new Date(a).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }catch(e){ return a; } }
-  function name(d){ d = d || {}; return d.flower_name || d.chocolate_name || d.item_name || d.name || d.title || d.username || d.full_name || ''; }
+  function name(d){ d = d || {}; return d.flower_name || d.chocolate_name || d.item_name || d.name || d.title || d.username || d.full_name || d.order_no || d.or_number || d.customer || ''; }
+  function nice(t){ t = String(t || ''); return t.replace(/_/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
+  function shortPk(p){ p = String(p == null ? '' : p); return p.length > 14 ? p.slice(0, 8) + '…' : p; }
+  var SKIP = /^(id|.*_id|thumb|pic|photo|image|img|raw|payload|recover_url|map_url|url|created_at|updated_at|fetched_at|last_seen|.*_url)$/i;
+  function fields(d){
+    d = d || {}; var nm = name(d), out = [];
+    Object.keys(d).forEach(function(k){
+      var v = d[k]; if(out.length >= 5 || SKIP.test(k) || v == null || v === '' || v === nm) return;
+      if(typeof v === 'object' && !Array.isArray(v)) return;
+      if(typeof v === 'string' && /^https?:\/\//.test(v)) return;
+      out.push('<span class="kv"><i>' + esc(nice(k)) + '</i> ' + esc(fmt(v)) + '</span>');
+    });
+    return out.join(' ');
+  }
   function row(r){
     var s = '';
     if(r.op === 'UPDATE'){
-      s = (r.changed || []).slice(0, 8).map(function(c){ return '<b>' + esc(c) + '</b>: <span class="old">' + esc(fmt((r.old_data||{})[c])) + '</span> ➜ <span class="new">' + esc(fmt((r.new_data||{})[c])) + '</span>'; }).join('<br>');
+      s = (r.changed || []).slice(0, 8).map(function(c){ return '<b>' + esc(nice(c)) + '</b>: <span class="old">' + esc(fmt((r.old_data||{})[c])) + '</span> ➜ <span class="new">' + esc(fmt((r.new_data||{})[c])) + '</span>'; }).join('<br>');
     } else {
       var d = r.op === 'DELETE' ? r.old_data : r.new_data;
-      s = (name(d) ? '<b>' + esc(name(d)) + '</b> · ' : '') + esc(JSON.stringify(d || {}).slice(0, 160));
+      s = (name(d) ? '<b>' + esc(name(d)) + '</b> ' : '') + fields(d);
     }
     var canUndo = r.op === 'DELETE' || r.op === 'UPDATE';
     var data = JSON.stringify({ old: r.old_data, new: r.new_data }, null, 1);
-    return '<div class="row ' + r.op + '"><div class="top"><span class="tag ' + r.op + '">' + ({INSERT:'ADDED',UPDATE:'CHANGED',DELETE:'DELETED'}[r.op] || r.op) + '</span><span class="tbl">' + esc(r.table_name) + '</span><span style="color:var(--muted)">#' + esc(r.pk) + '</span><span class="when">' + esc(when(r.at)) + '</span></div>' +
+    return '<div class="row ' + r.op + '"><div class="top"><span class="tag ' + r.op + '">' + ({INSERT:'ADDED',UPDATE:'CHANGED',DELETE:'DELETED'}[r.op] || r.op) + '</span><span class="tbl" title="' + esc(r.table_name) + '">' + esc(nice(r.table_name)) + '</span><span style="color:var(--muted)" title="' + esc(r.pk) + '">#' + esc(shortPk(r.pk)) + '</span><span class="when">' + esc(when(r.at)) + '</span></div>' +
       '<div class="sum">' + s + '</div><details><summary>Full details</summary><pre>' + esc(data) + '</pre></details>' +
       (canUndo ? '<div class="act"><button class="btn ghost" data-id="' + r.id + '" data-op="' + r.op + '">' + (r.op === 'DELETE' ? '↩ Put it back' : '↩ Undo this change') + '</button></div>' : '') + '</div>';
   }
