@@ -38,16 +38,20 @@
   .win::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent calc(50% - 2px),#0f0b1f calc(50% - 2px),#0f0b1f calc(50% + 2px),transparent calc(50% + 2px)),linear-gradient(115deg,#ffffff14 0 18%,transparent 18% 30%,#ffffff0d 30% 36%,transparent 36%)}
   .clock{position:absolute;top:22%;font-family:'Press Start 2P',monospace;font-size:9px;color:#7ff0e0;background:#0f0b1f;border:2px solid #3c3366;border-radius:6px;padding:5px 6px;transform:translateX(-50%)}
   .floor{position:absolute;left:0;right:0;top:22%;bottom:0;background-color:#3a2c4a;background-image:linear-gradient(45deg,#3f3050 25%,transparent 25%,transparent 75%,#3f3050 75%),linear-gradient(45deg,#3f3050 25%,transparent 25%,transparent 75%,#3f3050 75%);background-size:28px 28px;background-position:0 0,14px 14px}
-  .zone{position:absolute;border-radius:10px;border:2px dashed #ffffff22}
+  .zone{position:absolute;border-radius:10px;border:2px dashed #ffffff22;box-shadow:inset 0 calc(.8*var(--u)) 0 #ffffff0d,0 calc(.7*var(--u)) 0 #00000040}
   .zone b{position:absolute;left:6px;top:4px;max-width:calc(100% - 10px);overflow:hidden;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:.06em;opacity:.85;white-space:nowrap}
   .z-front{background:#1b4b4a55;color:#7ff0e0}.z-writers{background:#4a347055;color:#d6b7ff}.z-records{background:#5a3e2255;color:#ffcf8a}.z-hr{background:#6a2a5255;color:#ffa6d2}
   .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
-  .it{position:absolute;transform:translate(-50%,-50%);pointer-events:none}
-  .dk{width:calc(15*var(--u));height:calc(7*var(--u));background:#8a5a3a;border-radius:2px;box-shadow:inset 0 calc(-2*var(--u)) 0 #6b4429,0 calc(1*var(--u)) 0 #2a1a10}
+  .it{position:absolute;transform:translate(-50%,-50%) scale(var(--sc,1));pointer-events:none;filter:drop-shadow(0 calc(1.3*var(--u)) calc(.9*var(--u)) #00000080)}
+  .chair{width:calc(8*var(--u));height:calc(9*var(--u));background:linear-gradient(90deg,#2a2f52,#3d4577 45%,#2a2f52);border-radius:calc(2*var(--u)) calc(2*var(--u)) 2px 2px;box-shadow:inset 0 calc(-1*var(--u)) 0 #1b1f3a}
+  .floor::before{content:'';position:absolute;inset:0;background:linear-gradient(#00000070,#00000000 14%),radial-gradient(120% 60% at 50% 110%,#00000055,transparent 60%);pointer-events:none}
+  .floor .lightp{position:absolute;top:0;height:46%;transform:skewX(-14deg);background:linear-gradient(var(--lc,#fff3),transparent);pointer-events:none}
+  .wall::after{content:'';position:absolute;left:0;right:0;bottom:0;height:calc(2.4*var(--u));background:linear-gradient(#3b3170,#18132e)}
+  .dk{width:calc(15*var(--u));height:calc(7*var(--u));background:linear-gradient(#b47c52 0 48%,#7a4e30 48% 100%);border-radius:2px;box-shadow:inset 0 calc(-.6*var(--u)) 0 #5a3820,0 calc(.8*var(--u)) 0 #2a1a10,calc(-5*var(--u)) calc(2.4*var(--u)) 0 calc(-4.3*var(--u)) #3a2414,calc(5*var(--u)) calc(2.4*var(--u)) 0 calc(-4.3*var(--u)) #3a2414}
   .dk::before{content:'';position:absolute;right:calc(.5*var(--u));top:calc(-4.5*var(--u));width:calc(5*var(--u));height:calc(4*var(--u));background:#1d1b2e;border:calc(.7*var(--u)) solid #44405e;border-radius:2px}
   .dk::after{content:'';position:absolute;right:calc(2*var(--u));top:calc(-1.2*var(--u));width:calc(2*var(--u));height:calc(1.2*var(--u));background:#44405e}
   .dk.on::before{background:#4fb3ff;box-shadow:0 0 calc(4*var(--u)) #4fb3ffaa}
-  .dk.big{width:calc(22*var(--u));background:#6b3a2a;box-shadow:inset 0 calc(-2*var(--u)) 0 #4e2a1e,0 calc(1*var(--u)) 0 #2a1a10}
+  .dk.big{width:calc(22*var(--u));background:linear-gradient(#8e4f38 0 48%,#5a2f20 48%);box-shadow:inset 0 calc(-2*var(--u)) 0 #4e2a1e,0 calc(1*var(--u)) 0 #2a1a10}
   .dk .np{position:absolute;right:calc(1*var(--u));top:calc(.6*var(--u));font-family:'Press Start 2P',monospace;font-size:6px;color:#ffd24a}
   .rack{width:calc(9*var(--u));height:calc(18*var(--u));background:#1a2238;border:calc(.7*var(--u)) solid #3c4a6e;border-radius:2px;background-image:repeating-linear-gradient(#1a2238 0 calc(2*var(--u)),#2a3658 calc(2*var(--u)) calc(2.6*var(--u)))}
   .rack i{position:absolute;width:calc(1*var(--u));height:calc(1*var(--u));background:var(--ok);left:calc(1.5*var(--u));animation:blink 1s steps(2) infinite}
@@ -61,8 +65,10 @@
   .bucket{width:calc(5*var(--u));height:calc(4*var(--u));background:#4a7ad0;border-radius:0 0 3px 3px}
   .shelf{width:calc(14*var(--u));height:calc(12*var(--u));background:#5a3e22;border-radius:2px;background-image:linear-gradient(90deg,#c9506b 0 12%,#4fb3ff 12% 22%,#ffc24f 22% 34%,transparent 34% 44%,#5be29a 44% 56%,#d6b7ff 56% 70%,transparent 70%);background-size:100% 33%;background-repeat:repeat-y;box-shadow:inset 0 0 0 calc(.8*var(--u)) #3a2814}
 
-  .pp{position:absolute;width:calc(8*var(--u));height:calc(12*var(--u));transform:translate(-50%,-100%);cursor:pointer;will-change:left,top}
+  .pp{position:absolute;width:calc(8*var(--u));height:calc(12*var(--u));transform:translate(-50%,-100%) scale(var(--sc,1));transform-origin:50% 100%;cursor:pointer;will-change:left,top}
   .pp .fig{position:absolute;inset:0}
+  .pp .shd{position:absolute;left:50%;bottom:calc(-1.1*var(--u));width:calc(9*var(--u));height:calc(2.6*var(--u));transform:translateX(-50%);background:radial-gradient(closest-side,#000a,#0000);pointer-events:none}
+  .pp.type .shd,.pp.panic .shd{opacity:0}
   .pp svg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;shape-rendering:crispEdges}
   .pp .fb{opacity:0}
   .pp.walk .fa{animation:fa .34s steps(1) infinite}.pp.walk .fb{animation:fb .34s steps(1) infinite}
@@ -89,17 +95,18 @@
   .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
   .legend .sp{flex:1}
   .xland{display:none;position:absolute;right:10px;top:10px;z-index:9999}
-  .snd{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .snd{position:absolute;right:10px;top:24%;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
   .sndb{width:42px;height:42px;border-radius:50%;border:1px solid #4f63b8;background:#171230ee;color:#fff;font-size:19px;cursor:pointer;box-shadow:0 6px 18px #0008;display:flex;align-items:center;justify-content:center}
   .sndb.nudge{animation:pulse 1.4s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 #4fb3ffaa}70%{box-shadow:0 0 0 12px #4fb3ff00}100%{box-shadow:0 0 0 0 #4fb3ff00}}
-  .sndp{display:none;width:190px;background:#150f2bf2;border:1px solid #4a3d7a;border-radius:14px;padding:12px;box-shadow:0 12px 30px #000a;font-size:12px}
+  .sndp{display:none;width:224px;max-height:62vh;overflow:auto;background:#150f2bf2;border:1px solid #4a3d7a;border-radius:14px;padding:12px;box-shadow:0 12px 30px #000a;font-size:12px}
   .snd.open .sndp{display:block}
   .sndp h4{margin:0 0 8px;font-family:'Press Start 2P',monospace;font-size:8px;color:#8fd9ff;letter-spacing:.05em}
   .sndp label{display:block;color:var(--muted);font-size:11px;margin:8px 0 4px}
   .sndp input[type=range]{width:100%;accent-color:#4fb3ff}
   .seg{display:flex;gap:4px}
   .seg button{flex:1;border:1px solid var(--line);background:#0d0a1a;color:var(--ink);border-radius:8px;padding:6px 2px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.seg2{display:grid;grid-template-columns:1fr 1fr}
   .seg button.on{background:#2a4a8a;border-color:#4f8ee0}
   .tg{display:flex;align-items:center;justify-content:space-between;margin-top:9px;color:var(--ink)}
   .tg input{width:18px;height:18px;accent-color:#4fb3ff}
@@ -123,7 +130,7 @@
   .chip{font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:99px;background:#1b1535;white-space:nowrap}
   .st-working .chip{color:var(--work)}.st-ok .chip{color:var(--ok)}.st-warn .chip{color:var(--warn)}.st-alert .chip{color:var(--bad)}
   .report{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:12.5px}
-  .report li span.k{color:var(--muted);display:inline-block;min-width:130px}
+  .report li span.k{color:var(--muted);display:inline-block;min-width:130px;margin-right:8px}
   .panel a{color:#8fd9ff}
   .aif{background:#0d0a1ae0;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:8px 11px;margin-top:7px;font-size:12.5px;line-height:1.5}
   .aif.warn{border-left-color:var(--warn)}.aif.alert{border-left-color:var(--bad)}.aif.ok{border-left-color:var(--ok)}
@@ -161,27 +168,28 @@
 </head>
 <body>
 <div class="app" data-lb-text-skip>
-  <div class="head"><h1>🏢 AI OFFICE</h1><span class="tag">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
-    <button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref">↻ Refresh</button><a class="pill" href="audit-log.html">🕘 Activity History</a></div>
+  <div class="head"><h1>🏢 AI OFFICE</h1><span class="tag" data-tl="Mga worker ng system mo — libreng scheduled jobs na nagbabasa ng sarili mong data. Pindutin ang kahit sino para sa detalye.">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
+    <button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref" data-tl="↻ I-refresh">↻ Refresh</button><a class="pill" href="audit-log.html" data-tl="🕘 History">🕘 Activity History</a></div>
   <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for the Admin who has User Management access.</p></div>
   <div class="main" id="mainBox">
     <section class="ow" id="ow">
-      <button class="pill xland" id="xland">✕ Exit</button>
+      <button class="pill xland" id="xland" data-tl="✕ Lumabas">✕ Exit</button>
       <div class="snd" id="snd"><button class="sndb nudge" id="sndBtn" title="Sound">🔇</button>
-        <div class="sndp"><h4>🔊 SOUND</h4>
-          <label>Volume <b id="volTxt">50%</b></label><input type="range" id="vol" min="0" max="100" step="5" value="50">
-          <label>Voices</label><div class="seg" id="vmode"><button data-m="talk">🗣️ Talk</button><button data-m="bee">🐝 Bee</button><button data-m="off">Off</button></div>
-          <div class="tg"><span>⌨️ Typing &amp; steps</span><input type="checkbox" id="sfx" checked></div>
-          <div class="tg"><span>🔔 Alarm on problem</span><input type="checkbox" id="alm" checked></div>
-          <div class="sndhint">Each worker has their own voice. Sound only plays while this page is open.</div></div></div>
+        <div class="sndp"><h4 data-tl="🔊 TUNOG">🔊 SOUND</h4>
+          <label><span data-tl="🌐 Wika (salita at sulat)">🌐 Language (speech &amp; text)</span></label><div class="seg" id="lmode"><button data-l="en">English</button><button data-l="tl">Tagalog</button></div>
+          <label><span data-tl="Lakas">Volume</span> <b id="volTxt">50%</b></label><input type="range" id="vol" min="0" max="100" step="5" value="50">
+          <label><span data-tl="Boses">Voices</span></label><div class="seg seg2" id="vmode"><button data-m="words" data-tl="🗣️ Salita">🗣️ Words</button><button data-m="talk">💬 Babble</button><button data-m="bee" data-tl="🐝 Bubuyog">🐝 Bee</button><button data-m="off">Off</button></div>
+          <div class="tg"><span data-tl="⌨️ Typing at yabag">⌨️ Typing &amp; steps</span><input type="checkbox" id="sfx" checked></div>
+          <div class="tg"><span data-tl="🔔 Alarm pag may problema">🔔 Alarm on problem</span><input type="checkbox" id="alm" checked></div>
+          <div class="sndhint" id="sndHint" data-tl="May sariling boses ang bawat worker. Tumutunog lang habang bukas ang page.">Each worker has their own voice. Sound only plays while this page is open.</div></div></div>
       <div class="map" id="map"></div>
-      <div class="legend"><span><i style="background:var(--work)"></i>Working</span><span><i style="background:var(--ok)"></i>All good</span><span><i style="background:var(--warn)"></i>Check</span><span><i style="background:var(--bad)"></i>Problem</span><span class="sp"></span><span id="phase"></span></div>
+      <div class="legend"><span><i style="background:var(--work)"></i><span data-tl="Nagtatrabaho">Working</span></span><span><i style="background:var(--ok)"></i><span data-tl="Ayos">All good</span></span><span><i style="background:var(--warn)"></i><span data-tl="Tingnan">Check</span></span><span><i style="background:var(--bad)"></i><span data-tl="Problema">Problem</span></span><span class="sp"></span><span id="phase"></span></div>
     </section>
     <aside class="side">
       <div class="panel deck" id="deckBox">Loading…</div>
       <div class="panel"><h2>👥 TEAM <span class="w" id="teamW"></span></h2><div class="roster" id="roster"></div></div>
-      <div class="panel"><h2>📋 DAILY REPORT</h2><ul class="report" id="report"><li>Loading…</li></ul></div>
-      <div class="panel" id="aiCard"><h2>🧠 BOSS'S AI NOTE <span class="w" id="aiWhen"></span></h2><div id="aiBody" style="font-size:13px;line-height:1.55;color:var(--muted)">No AI note yet. The Boss reviews your system once a day (7:41 AM Bahrain) and leaves a note here.</div></div>
+      <div class="panel"><h2><span data-tl="📋 ULAT NGAYONG ARAW">📋 DAILY REPORT</span></h2><ul class="report" id="report"><li>Loading…</li></ul></div>
+      <div class="panel" id="aiCard"><h2><span data-tl="🧠 AI NOTE NI BOSS">🧠 BOSS'S AI NOTE</span> <span class="w" id="aiWhen"></span></h2><div id="aiBody" style="font-size:13px;line-height:1.55;color:var(--muted)"><span data-tl="Wala pang AI note. Araw-araw (7:41 AM Bahrain) nire-review ng Boss ang system at nag-iiwan ng note dito.">No AI note yet. The Boss reviews your system once a day (7:41 AM Bahrain) and leaves a note here.</span></div></div>
     </aside>
   </div>
 </div>
@@ -201,6 +209,8 @@
   function sprite(c, f){
     var map = { H:c.h, S:c.s || '#f2c9a0', E:'#1b1535', B:c.b, P:c.p }, out = '';
     BODY.concat(LEGS[f || 0]).forEach(function(row, y){ for(var x = 0; x < 8; x++){ var ch = row[x]; if(ch !== '.') out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + map[ch] + '"/>'; } });
+    BODY.concat(LEGS[f || 0]).forEach(function(row, y){ var a = -1, b = -1; for(var x = 0; x < 8; x++) if(row[x] !== '.'){ if(a < 0) a = x; b = x; }
+      if(a >= 0 && b > a){ out += '<rect x="' + b + '" y="' + y + '" width="1" height="1" fill="#000" opacity=".26"/><rect x="' + a + '" y="' + y + '" width="1" height="1" fill="#fff" opacity=".16"/>'; } });
     if(c.crown) out += '<rect x="2" y="-1" width="4" height="1" fill="#ffd24a"/><rect x="2" y="-2" width="1" height="1" fill="#ffd24a"/><rect x="5" y="-2" width="1" height="1" fill="#ffd24a"/>';
     if(c.tie) out += '<rect x="3" y="4" width="2" height="1" fill="' + c.tie + '"/><rect x="3" y="5" width="2" height="1" fill="' + c.tie + '"/>';
     if(c.cap) out += '<rect x="1" y="0" width="7" height="1" fill="' + c.cap + '"/><rect x="2" y="-1" width="4" height="1" fill="' + c.cap + '"/>';
@@ -213,7 +223,10 @@
   var KEYS = ['boss','dispatcher','scribe','auditor','hr','timekeeper','watcher','doctor','archivist','janitor'];
 
   // ---------- helpers ----------
-  function ago(t){ if(!t) return 'never'; var s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
+  function TL(){ try{ return (window.__lbLang || 'en') === 'tl'; }catch(e){ return false; } }
+  function L(en, tl){ return TL() ? tl : en; }
+  function ago(t){ if(!t) return L('never', 'hindi pa'); var s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
+    if(TL()){ if(s < 90) return 'ngayon lang'; if(s < 5400) return Math.round(s / 60) + ' min na'; if(s < 172800) return Math.round(s / 3600) + ' oras na'; return Math.round(s / 86400) + ' araw na'; }
     if(s < 90) return 'just now'; if(s < 5400) return Math.round(s / 60) + ' min ago'; if(s < 172800) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' days ago'; }
   function age(t){ return t ? (Date.now() - new Date(t).getTime()) / 1000 : Infinity; }
   function job(n){ return (S.jobs || []).filter(function(j){ return j.name === n; })[0]; }
@@ -225,52 +238,53 @@
     if(age(j.last_start) > every * 2.5) return ['warn', 'Late — last run ' + ago(j.last_start)];
     return [age(j.last_start) < 100 ? 'working' : 'ok', 'Last run ' + ago(j.last_start)];
   }
-  var LBL = { working:'WORKING', ok:'ALL GOOD', warn:'CHECK', alert:'PROBLEM' };
+  var LBL_EN = { working:'WORKING', ok:'ALL GOOD', warn:'CHECK', alert:'PROBLEM' }, LBL_TL = { working:'NAGTATRABAHO', ok:'AYOS', warn:'TINGNAN', alert:'PROBLEMA' };
+  var LBL = new Proxy({}, { get:function(o, k){ return (TL() ? LBL_TL : LBL_EN)[k]; } });
   var NEVER_ALL = ['Uses paid AI (everything here is free)', 'Changes or deletes your data by itself', 'Posts, sends or spends anything'];
 
   function compute(){
     var bl = jobState(job('bleems-sync'), 180), sh = jobState(job('shopify-abandoned-sweep'), 600);
     var unassigned = S.orders ? Number(S.orders.unassigned) || 0 : 0;
     var dis = bl[0] === 'alert' || sh[0] === 'alert' ? 'alert' : (bl[0] === 'warn' || sh[0] === 'warn' || unassigned > 0) ? 'warn' : (bl[0] === 'working' || sh[0] === 'working') ? 'working' : 'ok';
-    EMP.dispatcher = { name:'Dino', role:'Dispatcher', st:dis, say: unassigned ? unassigned + ' order' + (unassigned > 1 ? 's' : '') + ' waiting to assign' : 'Orders synced · ' + ago((job('bleems-sync') || {}).last_start),
+    EMP.dispatcher = { name:'Dino', role:'Dispatcher', st:dis, say: unassigned ? L(unassigned + ' order' + (unassigned > 1 ? 's' : '') + ' waiting to assign', unassigned + ' order na hindi pa naka-assign') : L('Orders synced · ', 'Synced ang orders · ') + ago((job('bleems-sync') || {}).last_start),
       now:'Syncing Bleems (every 3 min) and Shopify checkouts (every 10 min), and counting orders that still need a branch.',
       out:'Bleems: ' + bl[1] + ' · Shopify: ' + sh[1] + ' · Unassigned orders: ' + unassigned, tools:['bleems-sync job','shopify-abandoned-sweep job','Order bell'], never:NEVER_ALL.concat(['Assigns an order to a branch without a person']) };
     var sc = jobState(job('brain-autolog'), 1800);
-    EMP.scribe = { name:'Sage', role:'Scribe', st:sc[0], say:'Brain updated · ' + ago((job('brain-autolog') || {}).last_start),
+    EMP.scribe = { name:'Sage', role:'Scribe', st:sc[0], say:L('Brain updated · ', 'Na-update ang brain · ') + ago((job('brain-autolog') || {}).last_start),
       now:'Reads new GitHub changes every 30 minutes and writes them into the Brain Vault change log.', out:sc[1], tools:['brain-autolog job','Brain Vault'], never:NEVER_ALL.concat(['Edits the Fix log or notes (Claude/you do that)']) };
     var A = S.audit || {}, del = Number(A.deletes24h) || 0;
-    EMP.auditor = { name:'Ada', role:'Auditor', st: del >= 10 ? 'warn' : (age(A.last_at) < 120 ? 'working' : 'ok'), say:(A.last24h || 0) + ' changes logged today' + (del ? ' · ' + del + ' deleted' : ''),
+    EMP.auditor = { name:'Ada', role:'Auditor', st: del >= 10 ? 'warn' : (age(A.last_at) < 120 ? 'working' : 'ok'), say:(A.last24h || 0) + L(' changes logged today', ' pagbabago ngayon') + (del ? ' · ' + del + L(' deleted', ' binura') : ''),
       now:'Records every add, edit and delete in the main tables so mistakes can be traced and undone.', out:'Last 24 h: ' + (A.last24h || 0) + ' changes, ' + del + ' deletions · Last entry ' + ago(A.last_at) + ' · ' + (A.total || 0) + ' in total',
       tools:['audit.log trigger','Activity History (put it back / undo)'], never:NEVER_ALL.concat(['Erases the history (it cannot be edited)']) };
     var E = S.errors || {}, n = Number(E.last24h) || 0;
-    EMP.watcher = { name:'Wanda', role:'Watcher', st: n >= 10 ? 'alert' : n > 0 ? 'warn' : 'ok', say: n ? n + ' error' + (n > 1 ? 's' : '') + ' in 24 h' : 'No errors in 24 h',
+    EMP.watcher = { name:'Wanda', role:'Watcher', st: n >= 10 ? 'alert' : n > 0 ? 'warn' : 'ok', say: n ? L(n + ' error' + (n > 1 ? 's' : '') + ' in 24 h', n + ' error sa 24 oras') : L('No errors in 24 h', 'Walang error sa 24 oras'),
       now:'Listens on every page for JavaScript errors and failed server calls.', out: n ? 'Latest: “' + (E.last_msg || '') + '” on ' + (E.last_page || '?') + ' · ' + ago(E.last_at) : 'Quiet. Nothing broken in the last 24 hours.',
       tools:['error-report.js','errlog-fast','Activity History → Errors'], never:NEVER_ALL.concat(['Fixes bugs by itself (it only reports them)']) };
     var D = S.db || {}, mb = (Number(D.bytes) || 0) / 1048576, pct = mb / 500 * 100, cpct = D.max_conns ? D.conns / D.max_conns * 100 : 0;
     var jobsBad = (S.jobs || []).filter(function(j){ return !j.active || (j.last_status && j.last_status !== 'succeeded'); });
-    EMP.doctor = { name:'Dr. Dre', role:'Doctor', st: jobsBad.length || pct >= 90 || cpct >= 90 ? 'alert' : (pct >= 70 || cpct >= 70) ? 'warn' : 'ok', say:'DB ' + mb.toFixed(0) + ' MB of 500 · ' + (D.conns || '?') + '/' + (D.max_conns || '?') + ' connections',
+    EMP.doctor = { name:'Dr. Dre', role:'Doctor', st: jobsBad.length || pct >= 90 || cpct >= 90 ? 'alert' : (pct >= 70 || cpct >= 70) ? 'warn' : 'ok', say:'DB ' + mb.toFixed(0) + L(' MB of 500 · ', ' MB sa 500 · ') + (D.conns || '?') + '/' + (D.max_conns || '?') + ' connections',
       now:'Checks database size, connections and that every scheduled job is on and succeeding.', out:'Database ' + mb.toFixed(1) + ' MB (' + pct.toFixed(1) + '% of the free 500 MB) · Connections ' + (D.conns || '?') + ' of ' + (D.max_conns || '?') + (jobsBad.length ? ' · Problem jobs: ' + jobsBad.map(function(j){ return j.name; }).join(', ') : ' · All scheduled jobs OK'),
       tools:['System Health page','lb_health'], never:NEVER_ALL };
     var B = S.backup || {};
-    EMP.archivist = { name:'Archie', role:'Archivist', st: !B.last_at ? 'warn' : !B.ok ? 'alert' : age(B.last_at) > 30 * 3600 ? 'warn' : 'ok', say: B.last_at ? (B.ok ? 'Backup saved ' : 'BACKUP FAILED ') + ago(B.last_at) : 'No backup yet',
+    EMP.archivist = { name:'Archie', role:'Archivist', st: !B.last_at ? 'warn' : !B.ok ? 'alert' : age(B.last_at) > 30 * 3600 ? 'warn' : 'ok', say: B.last_at ? (B.ok ? L('Backup saved ', 'Na-backup ') : L('BACKUP FAILED ', 'PUMALYA ANG BACKUP ')) + ago(B.last_at) : TL() ? 'Wala pang backup' : 'No backup yet',
       now:'Saves a full copy of the database every night at 2:00 AM and keeps the newest 14.', out: B.last_at ? 'Last backup ' + ago(B.last_at) + ' · ' + (B.ok ? ((B.rows || 0) + ' rows, ' + Math.round((B.bytes || 0) / 1024) + ' KB') : 'FAILED: ' + (B.error || '')) : 'Waiting for the first nightly run.',
       tools:['autobackup-fast','Activity History → Backups','emergency.html'], never:NEVER_ALL.concat(['Sends your data outside Supabase']) };
     var jn = jobState(job('duty-schedule-monthly-cleanup'), 86400);
-    EMP.janitor = { name:'Jun', role:'Janitor', st:jn[0], say:'Schedule cleaned · ' + ago((job('duty-schedule-monthly-cleanup') || {}).last_start),
+    EMP.janitor = { name:'Jun', role:'Janitor', st:jn[0], say:L('Schedule cleaned · ', 'Nalinis ang schedule · ') + ago((job('duty-schedule-monthly-cleanup') || {}).last_start),
       now:'Moves old duty-schedule rows to the archive every night so the live schedule stays fast.', out:jn[1], tools:['duty-schedule-monthly-cleanup job'], never:NEVER_ALL.concat(['Deletes anything that is not old schedule rows']) };
     var H = S.hr || {}, late = Number(H.late_today) || 0, noOut = Number(H.no_out_yday) || 0, blk = Number(H.blocked_today) || 0, inT = Number(H.in_today) || 0, brk = Number(H.on_break) || 0, wk = Number(H.working_now) || 0, evn = Number(H.events_today) || 0;
     var nm = function(a){ return (a || []).slice(0, 4).join(', '); };
-    EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? late + ' late today' : (inT ? inT + ' of ' + (H.staff || 0) + ' staff clocked in' : 'No clock-ins yet today'),
+    EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? L(late + ' late today', late + ' ang late ngayon') : (inT ? L(inT + ' of ' + (H.staff || 0) + ' staff clocked in', inT + ' sa ' + (H.staff || 0) + ' staff ang naka-in') : L('No clock-ins yet today', 'Wala pang nag-time in ngayon')),
       now:'Checks who came in late today (after the grace minutes) and which staff have an approved event / exemption today.', out:(late ? 'Late today: ' + nm(H.late_names) : 'Nobody late today') + ' · Approved events today: ' + evn + ' · Active staff: ' + (H.staff || 0),
       tools:['Attendance logs','Attendance events','Attendance page'], never:NEVER_ALL.concat(['Marks anyone absent, late or excused by itself','Edits time-in records']) };
-    EMP.timekeeper = { name:'Tiko', role:'Timekeeper', st: (noOut || blk >= 5) ? 'warn' : (wk ? 'working' : 'ok'), say: noOut ? noOut + ' forgot to clock out yesterday' : (blk ? blk + ' blocked clock-in' + (blk > 1 ? 's' : '') + ' today' : wk + ' working · ' + brk + ' on break'),
+    EMP.timekeeper = { name:'Tiko', role:'Timekeeper', st: (noOut || blk >= 5) ? 'warn' : (wk ? 'working' : 'ok'), say: noOut ? L(noOut + ' forgot to clock out yesterday', noOut + ' ang hindi nag-time out kahapon') : (blk ? L(blk + ' blocked clock-in' + (blk > 1 ? 's' : '') + ' today', blk + ' na-block na time in ngayon') : L(wk + ' working · ' + brk + ' on break', wk + ' nagtatrabaho · ' + brk + ' naka-break')),
       now:'Watches the time clock: who is in, who is on break, who forgot to clock out yesterday, and clock-ins blocked for being outside the shop radius.',
       out:'In today: ' + inT + ' · Working now: ' + wk + ' · On break: ' + brk + ' · Blocked (outside shop): ' + blk + (noOut ? ' · No clock-out yesterday: ' + nm(H.no_out_names) : '') + ' · Last punch ' + ago(H.last_at),
       tools:['Attendance logs (GPS / fingerprint)'], never:NEVER_ALL.concat(['Clocks anyone in or out','Changes the shop radius or grace time']) };
     var order = ['alert','warn','working','ok'], all = Object.keys(EMP).map(function(k){ return EMP[k].st; });
     var worst = all.indexOf('alert') > -1 ? 'alert' : all.indexOf('warn') > -1 ? 'warn' : 'ok';
     var ap = S.approvals || {}, apn = (Number(ap.rate) || 0) + (Number(ap.choc) || 0);
-    EMP.boss = { name:'BOSS', role:'Chief of Staff', st: worst === 'ok' ? 'working' : worst, say: worst === 'ok' ? 'All desks are fine' : 'Someone needs attention',
+    EMP.boss = { name:'BOSS', role:'Chief of Staff', st: worst === 'ok' ? 'working' : worst, say: worst === 'ok' ? L('All desks are fine', 'Ayos lahat ng desk') : L('Someone needs attention', 'May kailangang tingnan'),
       now:'Reads every desk, then writes the daily report. Reports only — decisions stay with you.', out:'See the daily report below.', tools:['All desks','Daily report'], never:['Posts, sends or spends without your approval','Does the specialists\' jobs itself','Invents results (only real numbers from your system)','Uses paid AI'] };
     return { worst:worst, ap:ap, apn:apn, unassigned:unassigned, H:H };
   }
@@ -279,20 +293,20 @@
     var r = compute();
     var n = KEYS.length - 1, issues = KEYS.filter(function(k){ return k !== 'boss' && (EMP[k].st === 'warn' || EMP[k].st === 'alert'); });
     $('deckBox').innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:9px;color:#8fd9ff;margin-bottom:8px">👑 COMMAND DECK</div>' +
-      (r.worst === 'ok' ? '<b class="good">✔ All ' + n + ' workers are fine.</b>' : '<b class="' + (r.worst === 'alert' ? 'bad' : 'amb') + '">' + issues.length + ' desk' + (issues.length > 1 ? 's need' : ' needs') + ' attention: ' + issues.map(function(k){ return EMP[k].name; }).join(', ') + '</b>') +
-      '<br>Approvals waiting: <b>' + r.apn + '</b> · Online now: <b>' + (S.online || 0) + '</b> of ' + (S.staff || 0) + ' staff';
-    $('teamW').textContent = KEYS.length + ' workers';
+      (r.worst === 'ok' ? '<b class="good">✔ ' + L('All ' + n + ' workers are fine.', 'Ayos ang lahat ng ' + n + ' worker.') + '</b>' : '<b class="' + (r.worst === 'alert' ? 'bad' : 'amb') + '">' + issues.length + L(' desk' + (issues.length > 1 ? 's need' : ' needs') + ' attention: ', ' desk ang kailangang tingnan: ') + issues.map(function(k){ return EMP[k].name; }).join(', ') + '</b>') +
+      '<br>' + L('Approvals waiting: ', 'Naghihintay ng approval: ') + '<b>' + r.apn + '</b> · ' + L('Online now: ', 'Online ngayon: ') + '<b>' + (S.online || 0) + '</b> ' + L('of', 'sa') + ' ' + (S.staff || 0) + ' staff';
+    $('teamW').textContent = KEYS.length + L(' workers', ' na worker');
     $('roster').innerHTML = KEYS.map(function(k){ var e = EMP[k];
       return '<button class="rw st-' + e.st + '" data-k="' + k + '">' + sprite(LOOK[k], 0) + '<div class="t"><div class="n">' + esc(e.name) + ' <span>' + esc(e.role) + '</span></div><div class="s">' + esc(e.say) + '</div></div><span class="chip">' + LBL[e.st] + '</span></button>'; }).join('');
     var A = S.audit || {}, E = S.errors || {}, B = S.backup || {}, ap = r.ap, H = r.H || {};
     $('report').innerHTML =
-      '<li><span class="k">Overall</span>' + (r.worst === 'ok' ? '<span class="good">All good</span>' : r.worst === 'warn' ? '<span class="amb">Some things to check</span>' : '<span class="bad">Problem — see red person</span>') + '</li>' +
-      '<li><span class="k">Errors (24 h)</span>' + (Number(E.last24h) ? '<span class="amb">' + E.last24h + '</span> — <a href="audit-log.html">open Errors</a>' : '<span class="good">none</span>') + '</li>' +
-      '<li><span class="k">Last backup</span>' + (B.last_at ? (B.ok ? '<span class="good">OK</span> · ' : '<span class="bad">FAILED</span> · ') + ago(B.last_at) : '<span class="amb">none yet</span>') + '</li>' +
-      '<li><span class="k">Changes (24 h)</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">history</a></li>' +
-      '<li><span class="k">Attendance today</span>' + (Number(H.in_today) || 0) + ' in · ' + (Number(H.late_today) ? '<span class="amb">' + H.late_today + ' late</span>' : '0 late') + ' · ' + (Number(H.no_out_yday) ? '<span class="amb">' + H.no_out_yday + ' no clock-out yesterday</span>' : 'all clocked out yesterday') + '</li>' +
-      '<li><span class="k">Approvals waiting</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">none</span>') + '</li>' +
-      '<li><span class="k">Orders to assign</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">none</span>') + '</li>';
+      '<li><span class="k">' + L('Overall', 'Kabuuan') + '</span>' + (r.worst === 'ok' ? '<span class="good">' + L('All good', 'Ayos lahat') + '</span>' : r.worst === 'warn' ? '<span class="amb">' + L('Some things to check', 'May titingnan') + '</span>' : '<span class="bad">' + L('Problem — see red person', 'May problema — tingnan ang pula') + '</span>') + '</li>' +
+      '<li><span class="k">' + L('Errors (24 h)', 'Errors (24 oras)') + '</span>' + (Number(E.last24h) ? '<span class="amb">' + E.last24h + '</span> — <a href="audit-log.html">open Errors</a>' : '<span class="good">' + L('none', 'wala') + '</span>') + '</li>' +
+      '<li><span class="k">' + L('Last backup', 'Huling backup') + '</span>' + (B.last_at ? (B.ok ? '<span class="good">OK</span> · ' : '<span class="bad">FAILED</span> · ') + ago(B.last_at) : '<span class="amb">none yet</span>') + '</li>' +
+      '<li><span class="k">' + L('Changes (24 h)', 'Pagbabago (24 oras)') + '</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">history</a></li>' +
+      '<li><span class="k">' + L('Attendance today', 'Attendance ngayon') + '</span>' + (Number(H.in_today) || 0) + ' in · ' + (Number(H.late_today) ? '<span class="amb">' + H.late_today + ' late</span>' : '0 late') + ' · ' + (Number(H.no_out_yday) ? '<span class="amb">' + H.no_out_yday + ' no clock-out yesterday</span>' : 'all clocked out yesterday') + '</li>' +
+      '<li><span class="k">' + L('Approvals waiting', 'Approvals') + '</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">' + L('none', 'wala') + '</span>') + '</li>' +
+      '<li><span class="k">' + L('Orders to assign', 'Orders na i-assign') + '</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">' + L('none', 'wala') + '</span>') + '</li>';
     var ai = S.ai;
     if(ai && ai.summary){
       var f = Array.isArray(ai.findings) ? ai.findings : [];
@@ -302,7 +316,7 @@
         return '<div class="aif ' + esc(x.severity || 'ok') + '"><b>' + esc(x.title) + '</b><div>' + esc(x.detail) + '</div>' + (x.next ? '<div class="nx">➜ ' + esc(x.next) + '</div>' : '') + '</div>'; }).join('');
     }
     $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-    mapInit(); KEYS.forEach(function(k){ var p = P[k]; if(p){ p.el.className = p.el.className.replace(/\bst-\w+/g, '') + ' st-' + EMP[k].st; } });
+    mapInit(); paintSky(); KEYS.forEach(function(k){ var p = P[k]; if(p){ p.el.className = p.el.className.replace(/\bst-\w+/g, '') + ' st-' + EMP[k].st; } });
   }
 
   // ---------- city skyline in the windows (Bahrain time: day / sunset / night) ----------
@@ -328,9 +342,10 @@
   function paintSky(){
     var ph = 'day';
     document.querySelectorAll('.win').forEach(function(w, i){ var s = skySvg(i); w.innerHTML = s.svg; ph = s.ph; });
+    if(MAP) MAP.style.setProperty('--lc', { day:'#fff6d433', dawn:'#ffc89a26', sunset:'#ff9a6a2e', night:'#7fa8ff14' }[ph]);
     var d = new Date(Date.now() + 3 * 3600000), hh = d.getUTCHours(), mm = d.getUTCMinutes();
     if($('clk')) $('clk').textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
-    $('phase').textContent = { day:'☀️ Daytime in Manama', dawn:'🌅 Sunrise in Manama', sunset:'🌇 Sunset in Manama', night:'🌃 Night in Manama' }[ph] + ' · tap a person for details';
+    $('phase').textContent = (TL() ? { day:'☀️ Umaga sa Manama', dawn:'🌅 Pagsikat ng araw sa Manama', sunset:'🌇 Paglubog ng araw sa Manama', night:'🌃 Gabi sa Manama' } : { day:'☀️ Daytime in Manama', dawn:'🌅 Sunrise in Manama', sunset:'🌇 Sunset in Manama', night:'🌃 Night in Manama' })[ph] + L(' · tap a person for details', ' · pindutin ang tao para sa detalye');
   }
 
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
@@ -339,36 +354,39 @@
   var ZONES = [['front','FRONT OFFICE',2,25,15,33],['writers','WRITERS',16,25,14,33],['records','RECORDS',30,25,14,33],['hr','HR · ATTENDANCE',46,25,27,33],['boss','BOSS',75,25,23,33],
     ['qa','QA DESK',2,63,30,34],['vault','VAULT',33,63,18,34],['util','UTILITY',52,63,15,34],['kitchen','PANTRY',69,63,29,34]];
   var P = {}, inited = false, MAP;
+  function depth(y){ return (.8 + .32 * Math.max(0, Math.min(1, (y - 25) / 72))).toFixed(3); }
   function seat(k){ var d = DESK[k]; return d ? [d[0], d[1] - 2.5] : SPOT.closet; }
   function front(k){ var d = DESK[k] || SPOT.closet; return [d[0] + (k === 'boss' ? -6 : 4), d[1] + 8]; }
   function mapInit(){
     if(inited) return; inited = true; MAP = $('map');
     var h = '<div class="wall">';
     [[4,20],[27,20],[50,20],[73,20]].forEach(function(w){ h += '<div class="win" style="left:' + w[0] + '%;width:' + w[1] + '%"></div>'; });
-    h += '<div class="clock" id="clk" style="left:97%;top:30%"></div></div><div class="floor"></div>';
+    h += '<div class="clock" id="clk" style="left:97%;top:30%"></div></div><div class="floor">' + [4,27,50,73].map(function(x){ return '<div class="lightp" style="left:' + (x + 3) + '%;width:' + 18 + '%"></div>'; }).join('') + '</div>';
     ZONES.forEach(function(z){ h += '<div class="zone z-' + z[0] + '" style="left:' + z[2] + '%;top:' + z[3] + '%;width:' + z[4] + '%;height:' + z[5] + '%"><b>' + z[1] + '</b></div>'; });
+    Object.keys(DESK).forEach(function(k){ var d0 = DESK[k]; h += '<div class="it chair" data-y="' + (d0[1] - 4.2) + '" style="left:' + d0[0] + '%;top:' + (d0[1] - 6) + '%"></div>'; });
     Object.keys(DESK).forEach(function(k){ if(k === 'archivist') return; var d = DESK[k]; h += '<div class="it dk' + (k === 'boss' ? ' big' : '') + '" id="dk_' + k + '" data-y="' + d[1] + '" style="left:' + d[0] + '%;top:' + d[1] + '%">' + (k === 'boss' ? '<span class="np">BOSS</span>' : '') + '</div>'; });
     h += '<div class="it dk" id="dk_archivist" data-y="82" style="left:40%;top:82%"></div><div class="it rack" data-y="80" style="left:47.5%;top:76%"><i style="top:20%"></i><i style="top:45%;animation-delay:.3s"></i><i style="top:70%;animation-delay:.6s"></i></div>';
     h += '<div class="it shelf" data-y="34" style="left:44%;top:31%"></div><div class="it coffee" data-y="70" style="left:76%;top:68%"></div><div class="it cooler" data-y="70" style="left:85%;top:67%"></div>';
     h += '<div class="it sofa" data-y="92" style="left:90%;top:92%"></div><div class="it bucket" data-y="88" style="left:62%;top:88%"></div>';
     [[3.5,30],[73,31],[3,92],[31,92],[96.5,70]].forEach(function(p){ h += '<div class="it plant" data-y="' + p[1] + '" style="left:' + p[0] + '%;top:' + p[1] + '%"></div>'; });
     KEYS.forEach(function(k){ var s = seat(k);
-      h += '<div class="pp" id="pp_' + k + '" data-k="' + k + '" style="left:' + s[0] + '%;top:' + s[1] + '%"><div class="bub"></div><div class="dot"></div><div class="fig"><div class="fa">' + sprite(LOOK[k], 0) + '</div><div class="fb">' + sprite(LOOK[k], 1) + '</div>' + (k === 'janitor' ? '<div class="mopx"></div>' : '') + '</div><div class="nt">' + esc(EMP[k].name) + '</div></div>'; });
+      h += '<div class="pp" id="pp_' + k + '" data-k="' + k + '" style="left:' + s[0] + '%;top:' + s[1] + '%"><div class="bub"></div><div class="dot"></div><div class="shd"></div><div class="fig"><div class="fa">' + sprite(LOOK[k], 0) + '</div><div class="fb">' + sprite(LOOK[k], 1) + '</div>' + (k === 'janitor' ? '<div class="mopx"></div>' : '') + '</div><div class="nt">' + esc(EMP[k].name) + '</div></div>'; });
     MAP.innerHTML = h;
-    document.querySelectorAll('.it').forEach(function(el){ el.style.zIndex = Math.round(Number(el.getAttribute('data-y')) * 10) + 6; });
-    KEYS.forEach(function(k){ var el = $('pp_' + k), s = seat(k); P[k] = { k:k, el:el, bub:el.querySelector('.bub'), x:s[0], y:s[1], t:0 }; el.style.zIndex = Math.round(s[1] * 10); });
+    document.querySelectorAll('.it').forEach(function(el){ var y = Number(el.getAttribute('data-y')); el.style.zIndex = Math.round(y * 10) + 6; el.style.setProperty('--sc', depth(y)); });
+    KEYS.forEach(function(k){ var el = $('pp_' + k), s = seat(k); P[k] = { k:k, el:el, bub:el.querySelector('.bub'), x:s[0], y:s[1], t:0 }; el.style.zIndex = Math.round(s[1] * 10); el.style.setProperty('--sc', depth(s[1])); });
     MAP.addEventListener('click', function(e){ var b = e.target.closest('.pp'); if(b) open(b.getAttribute('data-k')); });
     paintSky(); setInterval(paintSky, 60000);
-    setInterval(function(){ KEYS.forEach(function(k){ var p = P[k]; if(p.walking){ var y = (p.el.offsetTop / MAP.clientHeight) * 100; p.el.style.zIndex = Math.round(y * 10); } }); }, 120);
+    setInterval(function(){ KEYS.forEach(function(k){ var p = P[k]; if(p.walking){ var y = (p.el.offsetTop / MAP.clientHeight) * 100; p.el.style.zIndex = Math.round(y * 10); p.el.style.setProperty('--sc', depth(y)); } }); }, 120);
     KEYS.forEach(function(k, i){ setTimeout(function(){ think(k); }, 600 + i * 450); });
   }
 
   // ---------- sounds (made by the browser, no audio files, free) ----------
   var VOICE = { boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160 };
-  var SND = { vol:50, mode:'talk', sfx:true, alarm:true, on:false };
+  var SND = { vol:50, mode:'words', sfx:true, alarm:true, lang:'en', on:false };
   try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
+  window.__lbLang = SND.lang;
   var AC = null, MASTER = null;
-  function saveSnd(){ try{ localStorage.setItem('lbOfficeSound', JSON.stringify({ vol:SND.vol, mode:SND.mode, sfx:SND.sfx, alarm:SND.alarm })); }catch(e){} }
+  function saveSnd(){ try{ localStorage.setItem('lbOfficeSound', JSON.stringify({ vol:SND.vol, mode:SND.mode, sfx:SND.sfx, alarm:SND.alarm, lang:SND.lang })); }catch(e){} }
   function audioOn(){
     try{
       if(!AC){ var C = window.AudioContext || window.webkitAudioContext; if(!C) return false; AC = new C(); MASTER = AC.createGain(); MASTER.connect(AC.destination); }
@@ -379,8 +397,29 @@
   function canPlay(){ return SND.on && AC && SND.vol > 0 && !document.hidden; }
   function panFor(k){ var p = P[k]; return p ? Math.max(-.8, Math.min(.8, (p.x - 50) / 55)) : 0; }
   function out(k){ var g = AC.createGain(); if(AC.createStereoPanner){ var pn = AC.createStereoPanner(); pn.pan.value = panFor(k); g.connect(pn); pn.connect(MASTER); } else g.connect(MASTER); return g; }
+  // real words: the browser's own free text-to-speech (voices depend on the phone / computer)
+  var VLIST = [];
+  function loadVoices(){ try{ VLIST = window.speechSynthesis ? speechSynthesis.getVoices() : []; }catch(e){ VLIST = []; } }
+  loadVoices(); try{ if(window.speechSynthesis) speechSynthesis.onvoiceschanged = function(){ loadVoices(); sndUi(); }; }catch(e){}
+  function langVoices(){ var re = SND.lang === 'tl' ? /^(fil|tl)/i : /^en/i; return VLIST.filter(function(v){ return re.test(v.lang || ''); }); }
+  var lastSpeak = 0;
+  function speakWords(k, text, tone){
+    if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+    var clean = String(text || '').replace(/[^\p{L}\p{N}\s,.?!'%-]/gu, ' ').replace(/·/g, ',').replace(/\s+/g, ' ').trim();
+    if(!/\p{L}/u.test(clean)) return false;
+    var pool = langVoices(); if(!pool.length) return false;
+    if(speechSynthesis.speaking && Date.now() - lastSpeak < 2500) return false;
+    try{
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(clean), idx = KEYS.indexOf(k);
+      u.voice = pool[(idx < 0 ? 0 : idx) % pool.length]; u.lang = u.voice.lang;
+      u.pitch = Math.max(.1, Math.min(2, .45 + ((VOICE[k] || 250) - 110) / 210)); u.rate = tone === 'red' ? 1.15 : 1.02; u.volume = Math.min(1, SND.vol / 100);
+      speechSynthesis.speak(u); lastSpeak = Date.now(); return true;
+    }catch(e){ return false; }
+  }
   function voice(k, text, tone){
     if(!canPlay() || SND.mode === 'off') return;
+    if(SND.mode === 'words' && speakWords(k, text, tone)) return;
     var t0 = AC.currentTime + .02, base = (VOICE[k] || 250) * (tone === 'red' ? 1.18 : 1), clean = String(text || '').replace(/[^A-Za-z0-9 ]/g, ''), n = Math.max(2, Math.min(14, Math.ceil(clean.length / 3) || 2)), dst = out(k);
     if(SND.mode === 'bee'){
       var o = AC.createOscillator(), lfo = AC.createOscillator(), lg = AC.createGain(), f = AC.createBiquadFilter(), g = AC.createGain(), dur = n * .09;
@@ -411,20 +450,30 @@
   }
   function sndUi(){
     $('vol').value = SND.vol; $('volTxt').textContent = SND.vol + '%';
+    document.querySelectorAll('#lmode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-l') === SND.lang); });
+    if(SND.mode === 'words' && VLIST.length && !langVoices().length) $('sndHint').textContent = L('No ' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' voice on this device — using babble instead. Text is still in your language.', 'Walang ' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' na boses sa device na ito — babble muna ang tunog. Naka-' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' pa rin ang sulat.');
+    else $('sndHint').textContent = L('Each worker has their own voice. Sound only plays while this page is open.', 'May sariling boses ang bawat worker. Tumutunog lang habang bukas ang page.');
     document.querySelectorAll('#vmode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-m') === SND.mode); });
     $('sfx').checked = SND.sfx; $('alm').checked = SND.alarm;
     $('sndBtn').textContent = !SND.on || SND.vol === 0 ? '🔇' : SND.vol < 40 ? '🔉' : '🔊';
     $('sndBtn').classList.toggle('nudge', !SND.on);
   }
-  $('sndBtn').addEventListener('click', function(e){ e.stopPropagation(); var first = !SND.on; audioOn(); if(first){ if(SND.vol === 0) SND.vol = 50; audioOn(); voice('boss', 'Hello team!'); } if(first) $('snd').classList.add('open'); else $('snd').classList.toggle('open'); sndUi(); });
+  $('sndBtn').addEventListener('click', function(e){ e.stopPropagation(); var first = !SND.on; audioOn(); if(first){ if(SND.vol === 0) SND.vol = 50; audioOn(); voice('boss', L('Hello team!', 'Kumusta, team!')); } if(first) $('snd').classList.add('open'); else $('snd').classList.toggle('open'); sndUi(); });
   $('snd').addEventListener('click', function(e){ e.stopPropagation(); });
   $('vol').addEventListener('input', function(){ SND.vol = Number(this.value); audioOn(); sndUi(); saveSnd(); });
-  $('vol').addEventListener('change', function(){ voice('hr', 'test'); });
-  $('vmode').addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; SND.mode = b.getAttribute('data-m'); audioOn(); sndUi(); saveSnd(); voice('dispatcher', 'Hello boss'); });
+  $('vol').addEventListener('change', function(){ voice('hr', L('Is this loud enough?', 'Ayos na ba ang lakas?')); });
+  $('vmode').addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; SND.mode = b.getAttribute('data-m'); audioOn(); sndUi(); saveSnd(); voice('dispatcher', L('Hello boss!', 'Hello po, boss!')); });
+  function applyLang(){
+    window.__lbLang = SND.lang; document.documentElement.lang = SND.lang === 'tl' ? 'fil' : 'en';
+    document.querySelectorAll('[data-tl]').forEach(function(el){ if(el.getAttribute('data-en') === null) el.setAttribute('data-en', el.innerHTML); el.innerHTML = SND.lang === 'tl' ? el.getAttribute('data-tl') : el.getAttribute('data-en'); });
+    if(S) render(); else paintSkyTxt();
+  }
+  function paintSkyTxt(){ try{ paintSky(); }catch(e){} }
+  $('lmode').addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; SND.lang = b.getAttribute('data-l'); saveSnd(); applyLang(); sndUi(); audioOn(); voice('hr', L('Hello everyone!', 'Kumusta kayong lahat!')); });
   $('sfx').addEventListener('change', function(){ SND.sfx = this.checked; sndUi(); saveSnd(); });
   $('alm').addEventListener('change', function(){ SND.alarm = this.checked; sndUi(); saveSnd(); });
   document.addEventListener('click', function(){ $('snd').classList.remove('open'); });
-  sndUi();
+  sndUi(); if(SND.lang !== 'en') applyLang();
 
   // ---------- walking ----------
   function say(k, text, ms, tone){ var p = P[k]; if(!p || !text) return; clearTimeout(p.bt); p.bub.textContent = text; p.bub.className = 'bub on' + (tone ? ' ' + tone : ''); p.bt = setTimeout(function(){ p.bub.className = 'bub'; }, ms || 3000);  voice(k, text, tone); if(tone === 'red' && k !== 'boss') alarmBeep(); }
@@ -444,7 +493,7 @@
     var jit = (Math.random() - .5) * 3;
     if(Math.abs(p.y - to[1]) > 3 || (p.y < ay && to[1] < ay && Math.abs(p.x - to[0]) > 3)){ await leg(p, p.x, ay + jit, sp); await leg(p, to[0], ay + jit, sp); }
     await leg(p, to[0], to[1], sp);
-    p.el.classList.remove('walk'); p.walking = false; p.el.style.zIndex = Math.round(to[1] * 10);
+    p.el.classList.remove('walk'); p.walking = false; p.el.style.zIndex = Math.round(to[1] * 10); p.el.style.setProperty('--sc', depth(to[1]));
   }
   function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
   function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
@@ -463,15 +512,15 @@
       if(document.hidden){ await wait(4000); }
       else if(k === 'boss'){
         var bad = KEYS.filter(function(x){ return x !== 'boss' && EMP[x] && (EMP[x].st === 'alert' || EMP[x].st === 'warn'); });
-        if(bad.length && r < .55){ var t = pick(bad); await go(k, front(t)); say(k, EMP[t].st === 'alert' ? 'Ano nangyari, ' + EMP[t].name + '?' : 'Check natin \'yan', 2600, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(1200); say(t, short(EMP[t].say), 3000, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(2600); }
-        else if(r < .8){ var t2 = pick(KEYS.filter(function(x){ return x !== 'boss' && x !== 'janitor'; })); await go(k, front(t2)); say(k, pick(['Good job 👍','Kumusta?','Nice work!','Tuloy lang 💪']), 2400); await wait(2600); }
+        if(bad.length && r < .55){ var t = pick(bad); await go(k, front(t)); say(k, EMP[t].st === 'alert' ? L('What happened, ' + EMP[t].name + '?', 'Ano nangyari, ' + EMP[t].name + '?') : L('Let\'s check that', 'Check natin \'yan'), 2600, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(1200); say(t, short(EMP[t].say), 3000, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(2600); }
+        else if(r < .8){ var t2 = pick(KEYS.filter(function(x){ return x !== 'boss' && x !== 'janitor'; })); await go(k, front(t2)); say(k, pick(TL() ? ['Galing 👍','Kumusta?','Ayos ah!','Tuloy lang 💪'] : ['Good job 👍','How are you?','Nice work!','Keep going 💪']), 2400); await wait(2600); }
         else if(r < .9){ await go(k, SPOT.coffee); say(k, '☕', 2000); await wait(3000); }
         await sitWork(k, 5000 + Math.random() * 6000, Math.random() < .3);
       }
       else if(k === 'janitor'){
         if(st === 'alert' || st === 'warn'){ await go(k, SPOT.boss, st === 'alert'); say(k, short(e.say), 3500, st === 'alert' ? 'red' : 'amb'); await wait(3500); }
         if(r < .75){ P[k].el.classList.add('mop'); var spots = [[10 + Math.random() * 60, 56 + Math.random() * 6], [20 + Math.random() * 70, 88 + Math.random() * 6], [10 + Math.random() * 80, 58]];
-          for(var i = 0; i < 2; i++){ await go(k, pick(spots)); if(Math.random() < .3) say(k, pick(['🧹','✨ Malinis na','🧽']), 1800); await wait(900); } P[k].el.classList.remove('mop'); }
+          for(var i = 0; i < 2; i++){ await go(k, pick(spots)); if(Math.random() < .3) say(k, pick(TL() ? ['🧹','✨ Malinis na','Linis muna'] : ['🧹','✨ All clean','Cleaning up']), 1800); await wait(900); } P[k].el.classList.remove('mop'); }
         await go(k, SPOT.closet); await wait(2500 + Math.random() * 3000);
       }
       else if(st === 'alert'){
@@ -487,8 +536,8 @@
         if(r < .5) await sitWork(k, 5000 + Math.random() * 7000, Math.random() < .25);
         else if(r < .66){ await go(k, [SPOT.coffee[0] + (Math.random() - .5) * 4, SPOT.coffee[1] + 2]); say(k, '☕', 1800); await wait(2800); }
         else if(r < .78){ await go(k, [SPOT.cooler[0] + (Math.random() - .5) * 3, SPOT.cooler[1] + 2]); say(k, '💧', 1800); await wait(2600); }
-        else if(r < .9){ var o = pick(KEYS.filter(function(x){ return x !== k && x !== 'janitor'; })); await go(k, front(o)); say(k, '💬', 2200); await wait(2000); say(o, pick(['😄','👍','Sige!','Haha']), 1800); await wait(1600); }
-        else { await go(k, [SPOT.sofa[0] + (Math.random() - .5) * 8, SPOT.sofa[1] - 3]); say(k, pick(['😌','Break muna','🎵']), 2000); await wait(4000); }
+        else if(r < .9){ var o = pick(KEYS.filter(function(x){ return x !== k && x !== 'janitor'; })); await go(k, front(o)); say(k, pick(TL() ? ['Kumain ka na?','Uy, kumusta?','Ang init ngayon!','Kape tayo?'] : ['Had lunch yet?','Hey, how are you?','So hot today!','Coffee later?']), 2400); await wait(2200); say(o, pick(TL() ? ['Oo naman 😄','Ayos lang!','Sige!','Haha, tara'] : ['Yes 😄','All good!','Sure!','Haha, let\'s go']), 2000); await wait(1600); }
+        else { await go(k, [SPOT.sofa[0] + (Math.random() - .5) * 8, SPOT.sofa[1] - 3]); say(k, pick(TL() ? ['😌','Break muna','Pahinga lang'] : ['😌','Quick break','Just resting']), 2000); await wait(4000); }
       }
     }catch(err){ await wait(3000); }
     setTimeout(function(){ think(k); }, 300 + Math.random() * 900);
@@ -509,9 +558,9 @@
 
   function open(k){
     var e = EMP[k]; if(!e) return;
-    $('card').innerHTML = '<button class="xx" id="xx">Close</button><h3>' + esc(e.name) + '</h3><div class="rl">' + esc(e.role) + ' · <b style="color:var(--' + (e.st === 'alert' ? 'bad' : e.st === 'warn' ? 'warn' : e.st === 'working' ? 'work' : 'ok') + ')">' + LBL[e.st] + '</b></div>' +
-      '<div class="row"><b>What I do</b>' + esc(e.now) + '</div><div class="row"><b>Latest</b>' + esc(e.out) + '</div><div class="row"><b>Tools</b>' + e.tools.map(esc).join(' · ') + '</div>' +
-      '<div class="row"><b>Never</b><ul class="never" style="margin:0;padding-left:18px">' + e.never.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    $('card').innerHTML = '<button class="xx" id="xx">' + L('Close', 'Isara') + '</button><h3>' + esc(e.name) + '</h3><div class="rl">' + esc(e.role) + ' · <b style="color:var(--' + (e.st === 'alert' ? 'bad' : e.st === 'warn' ? 'warn' : e.st === 'working' ? 'work' : 'ok') + ')">' + LBL[e.st] + '</b></div>' +
+      '<div class="row"><b>' + L('What I do', 'Trabaho ko') + '</b>' + esc(e.now) + '</div><div class="row"><b>' + L('Latest', 'Pinakabago') + '</b>' + esc(e.out) + '</div><div class="row"><b>' + L('Tools', 'Gamit') + '</b>' + e.tools.map(esc).join(' · ') + '</div>' +
+      '<div class="row"><b>' + L('Never', 'Hindi ginagawa') + '</b><ul class="never" style="margin:0;padding-left:18px">' + e.never.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
     $('sheet').classList.add('on'); $('xx').onclick = function(){ $('sheet').classList.remove('on'); };
   }
   $('sheet').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
