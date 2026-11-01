@@ -446,25 +446,41 @@
   var VLIST = [];
   function loadVoices(){ try{ VLIST = window.speechSynthesis ? speechSynthesis.getVoices() : []; }catch(e){ VLIST = []; } }
   loadVoices(); try{ if(window.speechSynthesis) speechSynthesis.onvoiceschanged = function(){ loadVoices(); sndUi(); }; }catch(e){}
-  function langVoices(){ var re = SND.lang === 'tl' ? /^(fil|tl)/i : /^en/i; return VLIST.filter(function(v){ return re.test(v.lang || ''); }); }
-  var lastSpeak = 0;
-  function speakWords(k, text, tone){
+  // Auto-picks the best free voice on this device: "Natural"/"Neural"/"Online" (Edge), "Google" (Chrome/Android), "Premium"/"Enhanced" (Apple)
+  function vScore(v){ var n = (v.name || '') + ' ' + (v.voiceURI || ''), sc = 0;
+    if(/natural|neural/i.test(n)) sc += 60; if(/online/i.test(n)) sc += 25; if(/google/i.test(n)) sc += 45; if(/premium|enhanced|siri/i.test(n)) sc += 35;
+    if(/compact|espeak|robot/i.test(n)) sc -= 40;
+    if(SND.lang === 'tl' ? /^fil-PH/i.test(v.lang) : /^en-(US|GB)/i.test(v.lang)) sc += 8;
+    return sc; }
+  function langVoices(){ var re = SND.lang === 'tl' ? /^(fil|tl)/i : /^en/i;
+    return VLIST.filter(function(v){ return re.test(v.lang || ''); }).sort(function(x, y){ return vScore(y) - vScore(x); }); }
+  function bestVoices(){ var pool = langVoices(); if(!pool.length) return []; var top = vScore(pool[0]);
+    return pool.filter(function(v){ return vScore(v) >= top - 10; }).slice(0, 4); }
+  function speechText(t){
+    t = String(t || '').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, ' ');
+    t = t.replace(/·/g, ', ').replace(/#\s?(\d+)/g, (TL() ? 'numero ' : 'number ') + '$1').replace(/\bDB\b/g, 'database').replace(/\bBD\s?(\d+(?:\.\d+)?)/g, '$1 dinar').replace(/\bMB\b/g, 'megabytes')
+      .replace(/\b24 h\b/g, TL() ? '24 oras' : '24 hours').replace(/\bGPS\b/g, 'G P S').replace(/(\d+)\/(\d+)/g, '$1 ' + (TL() ? 'sa' : 'of') + ' $2').replace(/\bmin\b/g, TL() ? 'minuto' : 'minutes')
+      .replace(/^[!?]\s*/, '').replace(/…/g, '').replace(/[^\p{L}\p{N}\s,.?!'%-]/gu, ' ').replace(/\s+/g, ' ').trim();
+    return t;
+  }
+  var lastSpeak = 0, usedVoice = '';
+  function speakWords(k, text, tone, force){
     if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
-    var clean = String(text || '').replace(/[^\p{L}\p{N}\s,.?!'%-]/gu, ' ').replace(/·/g, ',').replace(/\s+/g, ' ').trim();
-    if(!/\p{L}/u.test(clean)) return false;
-    var pool = langVoices(); if(!pool.length) return false;
-    if(speechSynthesis.speaking && Date.now() - lastSpeak < 2500) return false;
+    var clean = speechText(text);
+    if(!/\p{L}{2,}/u.test(clean)) return false;
+    var pool = bestVoices(); if(!pool.length) return false;
+    if(speechSynthesis.speaking || speechSynthesis.pending){ if(!force) return false; speechSynthesis.cancel(); }   // never cut someone mid-sentence
     try{
-      speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(clean), idx = KEYS.indexOf(k);
-      u.voice = pool[(idx < 0 ? 0 : idx) % pool.length]; u.lang = u.voice.lang;
-      u.pitch = Math.max(.1, Math.min(2, .45 + ((VOICE[k] || 250) - 110) / 210)); u.rate = tone === 'red' ? 1.15 : 1.02; u.volume = Math.min(1, SND.vol / 100);
+      var u = new SpeechSynthesisUtterance(clean), idx = Math.max(0, KEYS.indexOf(k));
+      u.voice = pool[idx % pool.length]; u.lang = u.voice.lang; usedVoice = u.voice.name;
+      var v = VOICE[k] || 250; u.pitch = Math.max(.85, Math.min(1.2, .85 + (v - 120) / 900));   // small, natural differences only
+      u.rate = SND.lang === 'tl' ? .95 : .98; u.volume = Math.min(1, SND.vol / 100);
       speechSynthesis.speak(u); lastSpeak = Date.now(); return true;
     }catch(e){ return false; }
   }
   function voice(k, text, tone){
     if(!canPlay() || SND.mode === 'off') return;
-    if(SND.mode === 'words' && speakWords(k, text, tone)) return;
+    if(SND.mode === 'words' && speakWords(k, text, tone, k === '_test')) return;
     var t0 = AC.currentTime + .02, base = (VOICE[k] || 250) * (tone === 'red' ? 1.18 : 1), clean = String(text || '').replace(/[^A-Za-z0-9 ]/g, ''), n = Math.max(2, Math.min(14, Math.ceil(clean.length / 3) || 2)), dst = out(k);
     if(SND.mode === 'bee'){
       var o = AC.createOscillator(), lfo = AC.createOscillator(), lg = AC.createGain(), f = AC.createBiquadFilter(), g = AC.createGain(), dur = n * .09;
@@ -497,7 +513,7 @@
     $('vol').value = SND.vol; $('volTxt').textContent = SND.vol + '%';
     document.querySelectorAll('#lmode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-l') === SND.lang); });
     if(SND.mode === 'words' && VLIST.length && !langVoices().length) $('sndHint').textContent = L('No ' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' voice on this device — using babble instead. Text is still in your language.', 'Walang ' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' na boses sa device na ito — babble muna ang tunog. Naka-' + (SND.lang === 'tl' ? 'Tagalog' : 'English') + ' pa rin ang sulat.');
-    else $('sndHint').textContent = L('Each worker has their own voice. Sound only plays while this page is open.', 'May sariling boses ang bawat worker. Tumutunog lang habang bukas ang page.');
+    else $('sndHint').textContent = L('Each worker has their own voice. Sound only plays while this page is open.', 'May sariling boses ang bawat worker. Tumutunog lang habang bukas ang page.') + (SND.mode === 'words' && bestVoices().length ? ' ' + L('Voice: ', 'Boses: ') + bestVoices()[0].name : '');
     document.querySelectorAll('#vmode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-m') === SND.mode); });
     $('sfx').checked = SND.sfx; $('alm').checked = SND.alarm;
     $('sndBtn').textContent = !SND.on || SND.vol === 0 ? '🔇' : SND.vol < 40 ? '🔉' : '🔊';
