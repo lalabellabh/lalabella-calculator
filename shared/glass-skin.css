@@ -54,6 +54,9 @@ body[data-skin] .wrap .branch-tab.active{ background:linear-gradient(135deg,var(
 body[data-skin] .wrap .refresh-link{ margin:0; border:1px solid var(--glass-brd); background:var(--glass-strong); color:var(--ink); border-radius:12px; font:600 12px 'Space Grotesk',sans-serif; padding:9px 14px; }
 body[data-skin] .wrap .refresh-link:hover{ border-color:var(--gold); color:var(--gold); }
 
+/* the ☰ menu button (shared/nav.js) sits centred inside the top bar instead of hanging over its corner */
+body[data-skin] .lbnav-btn{ top:19px; left:26px; }
+
 /* boxes */
 body[data-skin] .wrap .card, body[data-skin] .wrap .panel{
   background:var(--glass); border:1px solid var(--glass-brd); border-radius:18px; box-shadow:var(--gshadow); color:var(--ink);
