@@ -74,3 +74,12 @@ window.LB_CONFIG = Object.freeze({
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_nGSHoJFQvFB1_DarkVr4rQ_3E-d_R42',
   CHAT_API:         'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chat'
 });
+
+// Bug History: load the small error reporter on every page (never blocks the page).
+(function () {
+  try {
+    var cs = document.currentScript, base = cs && cs.src ? cs.src.replace(/config\.js(\?.*)?$/, '') : 'shared/';
+    var s = document.createElement('script'); s.src = base + 'error-report.js'; s.async = true;
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) {}
+})();
