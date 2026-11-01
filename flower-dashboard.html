@@ -127,6 +127,7 @@
         <div class="tabs" id="mvTabs">
           <button data-t="rcv" class="on">Recent receiving</button>
           <button data-t="tr">Transfers</button>
+          <button data-t="sup">Supplies</button>
           <button data-t="hist">Rate changes</button>
           <button data-t="br">Branches</button>
         </div>
@@ -172,7 +173,7 @@
 
   /* ---------- state that survives re-renders ---------- */
   const ui = { branch:'All', alTab:'low', mvTab:'rcv', q:'', queue:{}, approver:'' };
-  let data = null, rateHistory = [], transfers = [], distinctCount = null;
+  let data = null, rateHistory = [], transfers = [], distinctCount = null, supplyRows = null, supplyLoading = false;
 
   function keepScroll(ids, fn){
     const pos = {};
@@ -211,6 +212,7 @@
     }
     if(!cachedDash){ loadingEl.style.display = ''; loadingEl.textContent = 'Loading…'; setNote(''); }
 
+    loadSupplies(true);
     const t = Date.now();
     const extras = Promise.all([
       fetch(API_URL + '?action=getRateChangeHistory&_ts=' + t).then(r=>r.json()).catch(()=>[]),
@@ -260,7 +262,7 @@
     const b = e.target.closest('button'); if(!b) return; ui.alTab = b.dataset.t; renderAlerts(); syncTabs();
   });
   document.getElementById('mvTabs').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return; ui.mvTab = b.dataset.t; renderActivity(); syncTabs();
+    const b = e.target.closest('button'); if(!b) return; ui.mvTab = b.dataset.t; if(ui.mvTab === 'sup') loadSupplies(); renderActivity(); syncTabs();
   });
   document.getElementById('stSearch').addEventListener('input', function(){ ui.q = this.value.trim().toLowerCase(); renderStock(); });
   document.getElementById('kpis').addEventListener('click', e=>{
@@ -366,11 +368,21 @@
     const s = data.topSummary || {}, b = s.weeklyBudget || {}, q = data.quickStats || {}, la = data.lastActivity || {};
     const pct = Math.min(100, b.percentUsed || 0), over = (b.actual || 0) > (b.weeklyLimit || 0);
     const p = la.lastPurchase, c = la.lastStockCount, t = la.lastTransfer;
+    // Supplies bought this week (Sun-Sat, Bahrain) in the selected branch(es): count + cost incl. VAT, and the last one
+    const bh = new Date(Date.now() + 3 * 3600 * 1000), ws = new Date(Date.UTC(bh.getUTCFullYear(), bh.getUTCMonth(), bh.getUTCDate() - bh.getUTCDay()));
+    const wsStr = ws.toISOString().slice(0, 10), weStr = new Date(ws.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+    const supAll = (supplyRows || []).filter(x => ui.branch === 'All' || x.Branch === ui.branch);
+    const supWeek = supAll.filter(x => { const d = String(x.Date || '').slice(0, 10); return d >= wsStr && d <= weStr; });
+    const supCost = supWeek.reduce((a, x) => a + (Number(x.Subtotal) || 0) + (Number(x.Tax) || 0), 0);
+    const supLast = supAll.slice().sort((x, y) => String(y.Date).localeCompare(String(x.Date)))[0];
+    const supNames = supWeek.map(x => esc(x.Flower) + ' ' + esc(x.Qty)).slice(0, 4).join(', ');
     let h = `<div class="wk"><div><div class="t"><span>${fmtBD(b.actual)} of ${fmtBD(b.weeklyLimit)}</span><span class="pill ${statusCls(b.status)}">${esc(b.status || '—')} · ${b.percentUsed || 0}%</span></div>
         <div class="bar ${over ? '' : 'ok'}"><i style="width:${pct}%"></i></div></div>
         <div class="t" style="margin:0"><span>Remaining</span><b>${fmtBD(b.remaining)}</b></div></div>
       <div class="sect">This week</div>
       <div class="kv"><span>Purchased</span><b>${fmtNum(q.purchasedThisWeek)}</b></div>
+      <div class="kv"><span>🧰 Supplies bought</span><b>${supplyRows ? fmtNum(supWeek.length) : '…'}</b></div>
+      ${supWeek.length ? `<div class="kv"><span style="color:var(--dim);font-size:11px">${supNames}${supWeek.length > 4 ? ' …' : ''}</span><b>${fmtBD(supCost)}</b></div>` : ''}
       <div class="kv"><span>Used</span><b>${fmtNum(q.usedThisWeek)}</b></div>
       <div class="kv"><span>Used cost</span><b>${fmtBD(q.usedCostThisWeek)}</b></div>
       <div class="kv"><span>Wasted</span><b>${fmtNum(q.wastedThisWeek)}</b></div>
@@ -378,6 +390,7 @@
       <div class="kv"><span>Transfers</span><b>${fmtNum(q.transferredThisWeek)}</b></div>
       <div class="sect">Last activity</div>
       <div class="row"><div class="nm">Last purchase</div><div class="rt">${p ? esc(p.Flower) + ' · Qty ' + esc(p.Qty) + ' · ' + esc(p.Supplier || '—') + ' · ' + fmtDate(p.Date) : '<span style="color:var(--dim)">No purchases yet</span>'}</div></div>
+      <div class="row"><div class="nm">Last supply</div><div class="rt">${supLast ? esc(supLast.Flower) + ' · Qty ' + esc(supLast.Qty) + ' · ' + esc(supLast.Supplier || '—') + ' · ' + fmtDate(supLast.Date) : '<span style="color:var(--dim)">' + (supplyRows ? 'No supplies yet' : 'Loading…') + '</span>'}</div></div>
       <div class="row"><div class="nm">Last stock count</div><div class="rt">${c ? esc(c.Branch) + ' · ' + fmtDate(c.Date) + ' · Count ' + fmtNum(c.TotalPhysicalCount) : '<span style="color:var(--dim)">No stock count yet</span>'}</div></div>
       <div class="row"><div class="nm">Last transfer</div><div class="rt">${t ? esc(t.Flower) + ' · ' + esc(t.Qty) + ' · ' + esc(t.From) + ' → ' + esc(t.To) + ' · ' + fmtDate(t.Date) : '<span style="color:var(--dim)">No transfers yet</span>'}</div></div>`;
     document.getElementById('ovScroll').innerHTML = h;
@@ -409,6 +422,17 @@
     document.getElementById('alScroll').innerHTML = h;
   }
 
+  // Supplies bought (Oasis foam, ribbon, ...): rows saved by Receiving with an item code SUP......
+  function loadSupplies(force){
+    if(supplyLoading || (supplyRows && !force)) return;
+    supplyLoading = true;
+    fetch(API_URL + '?action=getEntries&_ts=' + Date.now(), { headers: { apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })
+      .then(r => r.json())
+      .then(list => { supplyRows = Array.isArray(list) ? list.filter(x => /^SUP/i.test(String(x['Item Code'] || ''))) : []; })
+      .catch(() => { supplyRows = []; })
+      .finally(() => { supplyLoading = false; if(ui.mvTab === 'sup') renderActivity(); if(data) renderOverview(); });
+  }
+
   function renderActivity(){
     let h;
     if(ui.mvTab === 'tr'){
@@ -425,6 +449,18 @@
           <div class="mt">${fmtDate(t.Date)} · ${esc(t['Transfer No.'] || '')} · by ${esc(t['Transferred By'] || '—')}${t.Remarks ? ' · ' + esc(t.Remarks) : ''}</div></div>
           <div class="rt">${incoming ? '+' : outgoing ? '−' : ''}${esc(fmtNum(t.Qty))}</div></div>`;
       }, 'No transfers yet.');
+    } else if(ui.mvTab === 'sup'){
+      if(!supplyRows){ h = '<div class="mt" style="padding:14px">Loading supplies…</div>'; }
+      else {
+        const b = ui.branch;
+        const list = supplyRows.filter(x => b === 'All' || x.Branch === b).slice().sort((x, y) => new Date(y.Date) - new Date(x.Date));
+        const total = list.reduce((a, x) => a + (Number(x.Subtotal) || 0) + (Number(x.Tax) || 0), 0);
+        h = (list.length ? `<div class="mt" style="padding:6px 10px">${list.length} supply purchases · total ${fmtBD(total)} incl. VAT</div>` : '') +
+          rows(list.slice(0, 60), x => `<div class="row"><div class="nm">${esc(x.Flower || '—')} <span class="mt">(🧰 Supply)</span>
+            <div class="mt">${fmtDate(x.Date)} · ${esc(x.Branch || '')} · Qty ${esc(x.Qty)} ${esc(x.Unit || '')}</div>
+            <div class="mt">Supplier: ${esc(x.Supplier || '—')}${x['Invoice No'] ? ' · Inv ' + esc(x['Invoice No']) : ''} · Received by: ${esc(x['Received By'] || '—')}</div></div>
+            <div class="rt">${fmtBD((Number(x.Subtotal) || 0) + (Number(x.Tax) || 0))}</div></div>`, 'No supplies bought yet.');
+      }
     } else if(ui.mvTab === 'hist'){
       h = rows(rateHistory, x => `<div class="row"><div class="nm">${esc(x.Flower)} <span class="mt">(${esc(x.Origin || 'N/A')})</span>
         <div class="mt">${fmtDate(x.Date)} · ${fmtBD(x.OldRate)} → ${fmtBD(x.NewRate)} · ni ${esc(x.ApprovedBy || '—')}</div></div>
