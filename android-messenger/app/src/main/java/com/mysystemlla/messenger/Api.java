@@ -84,7 +84,7 @@ final class Api {
         JSONObject r;
         if (v.optBoolean("success") && v.optString("token").length() > 0) { r = v; visitor = true; }
         else if (v.optBoolean("net") || !v.optBoolean("notVisitor")) return v;   // no internet, pending approval, wrong visitor password...
-        else r = http("GET", BASE + "auth-fast?action=login&username=" + enc(user) + "&password=" + enc(pass), null);
+        else r = http("GET", BASE + "applogin-fast?username=" + enc(user) + "&password=" + enc(pass), null);   // same session as the website/main app (no more kicking each other out)
         if (r.optBoolean("success") && r.optString("token").length() > 0) {
             JSONObject u = r.optJSONObject("user");
             String name = user;
@@ -116,6 +116,16 @@ final class Api {
         }
     }
 
+    /** Quietly pushes the session forward (sessionkeep-fast) at most every 30 minutes, so it lasts until Logout. */
+    private static void keepAlive(Context c, String tk) {
+        try {
+            long now = System.currentTimeMillis();
+            if (tk.length() == 0 || now - Store.sp(c).getLong("keepAt", 0) < 30 * 60 * 1000L) return;
+            Store.sp(c).edit().putLong("keepAt", now).apply();
+            new Thread(() -> http("GET", BASE + "sessionkeep-fast?token=" + enc(tk), null)).start();
+        } catch (Exception ignored) { }
+    }
+
     /** chat function: POST {action, token, ...}. */
     static JSONObject chat(Context c, JSONObject body) {
         for (int tries = 0; tries < 2; tries++) {
@@ -123,6 +133,7 @@ final class Api {
             try { body.put("token", tk); } catch (Exception ignored) { }
             JSONObject r = http("POST", BASE + "chat", body.toString());
             if (tries == 0 && expired(r) && relogin(c, tk)) continue;
+            if (r.optBoolean("success")) keepAlive(c, tk);
             return r;
         }
         return fail("Please log in again.", false);

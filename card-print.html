@@ -59,6 +59,8 @@ body.hide-watermark .card-deco-leaf{display:none;}
 @media print{
  @page{size:auto;margin:0}
  html,body{margin:0!important;padding:0!important;background:#fff!important}
+ /* page decorations (faint rings on body::before, floating leaves) are NOT part of the card - never print them, so Background = White prints plain white */
+ body::before,body::after,.art-leaf{display:none!important;content:none!important;background:none!important}
  .top,.panel,.empty-tip{display:none!important}
  .art-panel,.notes-panel,.notes-teaser{display:none!important}
  .choco-nav-toggle,.choco-nav-backdrop,.choco-drawer{display:none!important}
