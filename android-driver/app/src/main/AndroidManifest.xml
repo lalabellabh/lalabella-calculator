@@ -29,6 +29,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- opened from the main Lalabella app / website: lalabelladriver://open (Chrome needs BROWSABLE for this) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="lalabelladriver" android:host="open" />
+            </intent-filter>
         </activity>
 
         <service
