@@ -103,6 +103,9 @@ Deno.serve(async (req) => {
       console.log('[audit-fast] errors cleared by', me.username);
       return json({ success: true });
     }
+    if (p.action === 'office') {
+      return json({ success: true, status: await rest('POST', 'rpc/office_status', {}) });
+    }
     return json({ success: false, error: 'Unknown action' }, 400);
   } catch (err) {
     console.error('[audit-fast]', err);
