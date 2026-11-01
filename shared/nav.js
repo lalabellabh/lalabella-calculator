@@ -1031,9 +1031,9 @@
   }
 
   // Android app: Staff Chat / Messages opens the Messenger app (or its download page). See shared/messenger-link.js.
-  if (!window.LBMessengerLink && !document.querySelector('script[src="shared/messenger-link.js"]')) {
+  if (!window.LBMessengerLink && !document.querySelector('script[src^="shared/messenger-link.js"]')) {
     const ml = document.createElement('script');
-    ml.src = 'shared/messenger-link.js';
+    ml.src = 'shared/messenger-link.js?v=2';
     document.body.appendChild(ml);
   }
 
