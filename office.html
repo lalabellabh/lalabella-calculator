@@ -61,6 +61,9 @@
   .report ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:13px}
   .report li span.k{color:var(--muted);display:inline-block;min-width:150px}
   .report a{color:#8fd9ff}
+  .aif{background:#0d0a1ae0;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:9px 12px;margin-top:8px}
+  .aif.warn{border-left-color:var(--warn)} .aif.alert{border-left-color:var(--bad)} .aif.ok{border-left-color:var(--ok)}
+  .aif b{color:#fff} .aif .nx{color:#8fd9ff;font-size:12.5px;margin-top:3px}
   .good{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700} .amb{color:var(--warn);font-weight:700}
   .sheet{position:fixed;inset:0;background:#000a;display:none;align-items:flex-end;justify-content:center;z-index:60}
   .sheet.on{display:flex}
@@ -87,6 +90,7 @@
     <div class="room r-vault"><div class="lbl">THE VAULT</div><div id="d_archivist"></div></div>
     <div class="room r-util"><div class="lbl">UTILITY</div><div id="d_janitor"></div></div>
     <div class="report"><h2>DAILY REPORT — FROM THE BOSS</h2><ul id="report"><li>Loading…</li></ul></div>
+    <div class="report ai" id="aiCard" style="grid-column:1/-1"><h2>🧠 BOSS'S AI NOTE <span id="aiWhen" style="font-family:inherit;color:var(--muted);font-size:11px;letter-spacing:0"></span></h2><div id="aiBody" style="font-size:13.5px;line-height:1.55;color:var(--muted)">No AI note yet. The Boss reviews your system once a day (7:41 AM Bahrain) and leaves a note here.</div></div>
   </div>
 </div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
@@ -184,6 +188,14 @@
       '<li><span class="k">Approvals waiting</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate stock</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">none</span>') + '</li>' +
       '<li><span class="k">Orders to assign</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">none</span>') + '</li>' +
       '<li><span class="k">Staff online</span>' + (S.online || 0) + ' of ' + (S.staff || 0) + '</li>';
+    var ai = S.ai;
+    if(ai && ai.summary){
+      var f = Array.isArray(ai.findings) ? ai.findings : [];
+      $('aiWhen').textContent = ' · ' + ago(ai.at) + ' · ' + (ai.author || 'Boss');
+      $('aiBody').style.color = '#e6e0f7';
+      $('aiBody').innerHTML = '<div class="aif ' + esc(ai.severity) + '"><b>' + esc(ai.summary) + '</b></div>' + f.slice(0, 5).map(function(x){
+        return '<div class="aif ' + esc(x.severity || 'ok') + '"><b>' + esc(x.title) + '</b><div>' + esc(x.detail) + '</div>' + (x.next ? '<div class="nx">➜ ' + esc(x.next) + '</div>' : '') + '</div>'; }).join('');
+    }
     $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   }
   function open(k){
