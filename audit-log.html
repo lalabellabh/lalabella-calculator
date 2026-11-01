@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<script src="shared/admin-gate.js" data-title="Activity History"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lalabella — Activity History</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rose:#c9506b;--rose-dark:#9e2f4a;--ink:#2f2024;--muted:#8a7078;--line:#efdfde;--ok:#3d7a4f;--bad:#c0392b;--warn:#b07d2b}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',system-ui,sans-serif;color:var(--ink)}
+  body{min-height:100vh}
+  .stage{max-width:1200px;margin:0 auto;padding:14px 16px 40px}
+  .head{display:flex;align-items:center;gap:12px;padding-left:54px;min-height:44px;margin-bottom:10px}
+  .head h1{font-family:'Fraunces',serif;font-size:21px;margin:0}
+  .head .sp{flex:1}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+  .bar select,.bar input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fffdfc;min-width:0}
+  .bar input.q{flex:1;min-width:160px}
+  .btn{border:0;border-radius:10px;padding:9px 15px;font-weight:700;font-size:12.5px;cursor:pointer;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-family:inherit}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn:disabled{opacity:.55;cursor:default}
+  .row{background:#fff;border:1px solid var(--line);border-left:5px solid var(--muted);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .row.INSERT{border-left-color:var(--ok)} .row.UPDATE{border-left-color:var(--warn)} .row.DELETE{border-left-color:var(--bad)}
+  .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px}
+  .tag{font-weight:700;font-size:11px;padding:2px 8px;border-radius:99px;color:#fff}
+  .tag.INSERT{background:var(--ok)} .tag.UPDATE{background:var(--warn)} .tag.DELETE{background:var(--bad)}
+  .tbl{font-weight:700}
+  .when{color:var(--muted);margin-left:auto;font-size:12px}
+  .sum{font-size:12.5px;margin-top:6px;line-height:1.5;word-break:break-word}
+  .old{color:var(--bad);text-decoration:line-through} .new{color:var(--ok);font-weight:600}
+  details{margin-top:6px} summary{cursor:pointer;font-size:12px;color:var(--muted)}
+  pre{background:#fbf5f4;border-radius:8px;padding:8px;font-size:11.5px;overflow:auto;max-height:260px;margin:6px 0 0;white-space:pre-wrap;word-break:break-word}
+  .act{margin-top:8px}
+  .msg{font-size:12.5px;color:var(--muted);text-align:center;padding:18px}
+  .denied{display:none;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1520;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;display:none;max-width:90vw}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="head"><h1>🕘 Activity History</h1><div class="sp"></div><a href="user-admin.html" class="btn ghost" style="text-decoration:none">← User Management</a></div>
+  <div class="denied" id="denied"><b>No access</b><p style="color:var(--muted);font-size:13px">Activity History is only for the Admin who has User Management access.</p></div>
+  <div id="app">
+    <div class="bar">
+      <select id="fTable"><option value="">All tables</option></select>
+      <select id="fOp"><option value="">All actions</option><option value="INSERT">Added</option><option value="UPDATE">Changed</option><option value="DELETE">Deleted</option></select>
+      <input class="q" id="fQ" type="search" placeholder="Search a name, code or value (e.g. S-rose, FLW-00012)">
+      <input id="fFrom" type="date" title="From"><input id="fTo" type="date" title="To">
+      <button class="btn" id="go">Search</button>
+    </div>
+    <div id="list"><div class="msg">Loading…</div></div>
+    <div style="text-align:center;margin-top:10px"><button class="btn ghost" id="more" style="display:none">Load older</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="shared/nav.js" data-standalone data-shift=".head"></script>
+<script>
+(function(){
+  var API = LB_CONFIG.AUDIT_API, last = null, busy = false;
+  var $ = function(i){ return document.getElementById(i); };
+  function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function toast(m){ var t = $('toast'); t.textContent = m; t.style.display = 'block'; setTimeout(function(){ t.style.display = 'none'; }, 3500); }
+  var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
+  if(u.canManageUsers === false){ $('app').style.display = 'none'; $('denied').style.display = 'block'; return; }
+
+  async function call(params){
+    var res = await fetch(API, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) });
+    return res.json();
+  }
+  function fmt(v){ if(v == null) return '—'; if(typeof v === 'object') return JSON.stringify(v); return String(v); }
+  function when(a){ try{ return new Date(a).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }catch(e){ return a; } }
+  function name(d){ d = d || {}; return d.flower_name || d.chocolate_name || d.item_name || d.name || d.title || d.username || d.full_name || ''; }
+  function row(r){
+    var s = '';
+    if(r.op === 'UPDATE'){
+      s = (r.changed || []).slice(0, 8).map(function(c){ return '<b>' + esc(c) + '</b>: <span class="old">' + esc(fmt((r.old_data||{})[c])) + '</span> ➜ <span class="new">' + esc(fmt((r.new_data||{})[c])) + '</span>'; }).join('<br>');
+    } else {
+      var d = r.op === 'DELETE' ? r.old_data : r.new_data;
+      s = (name(d) ? '<b>' + esc(name(d)) + '</b> · ' : '') + esc(JSON.stringify(d || {}).slice(0, 160));
+    }
+    var canUndo = r.op === 'DELETE' || r.op === 'UPDATE';
+    var data = JSON.stringify({ old: r.old_data, new: r.new_data }, null, 1);
+    return '<div class="row ' + r.op + '"><div class="top"><span class="tag ' + r.op + '">' + ({INSERT:'ADDED',UPDATE:'CHANGED',DELETE:'DELETED'}[r.op] || r.op) + '</span><span class="tbl">' + esc(r.table_name) + '</span><span style="color:var(--muted)">#' + esc(r.pk) + '</span><span class="when">' + esc(when(r.at)) + '</span></div>' +
+      '<div class="sum">' + s + '</div><details><summary>Full details</summary><pre>' + esc(data) + '</pre></details>' +
+      (canUndo ? '<div class="act"><button class="btn ghost" data-id="' + r.id + '" data-op="' + r.op + '">' + (r.op === 'DELETE' ? '↩ Put it back' : '↩ Undo this change') + '</button></div>' : '') + '</div>';
+  }
+  async function load(more){
+    if(busy) return; busy = true;
+    if(!more){ $('list').innerHTML = '<div class="msg">Loading…</div>'; last = null; }
+    var f = $('fFrom').value, t = $('fTo').value;
+    try{
+      var d = await call({ action:'list', table:$('fTable').value, op:$('fOp').value, q:$('fQ').value.trim(), from: f ? f + 'T00:00:00+03:00' : '', to: t ? new Date(new Date(t + 'T00:00:00+03:00').getTime() + 86400000).toISOString() : '', before: more && last ? last : '', limit: 50 });
+      if(!d.success){ $('list').innerHTML = '<div class="msg">' + esc(d.error || 'Could not load.') + '</div>'; if(/access/i.test(d.error || '')){ $('app').style.display='none'; $('denied').style.display='block'; } return; }
+      var rows = d.rows || [];
+      var html = rows.map(row).join('');
+      if(more) $('list').insertAdjacentHTML('beforeend', html); else $('list').innerHTML = html || '<div class="msg">No activity found.</div>';
+      if(rows.length) last = rows[rows.length - 1].id;
+      $('more').style.display = rows.length >= 50 ? '' : 'none';
+    }catch(e){ $('list').innerHTML = '<div class="msg">Could not reach the server. Try again.</div>'; }
+    finally{ busy = false; }
+  }
+  $('list').addEventListener('click', async function(e){
+    var b = e.target.closest('button[data-id]'); if(!b) return;
+    var del = b.getAttribute('data-op') === 'DELETE';
+    if(!confirm(del ? 'Put this deleted item back?' : 'Undo this change and restore the old values?')) return;
+    b.disabled = true;
+    try{
+      var d = await call({ action:'restore', id: b.getAttribute('data-id') });
+      toast(d.success ? '✅ Done — ' + (d.message || 'restored') : '⚠ ' + (d.error || 'Failed'));
+      if(d.success) load(false); else b.disabled = false;
+    }catch(err){ toast('⚠ Could not reach the server.'); b.disabled = false; }
+  });
+  $('go').addEventListener('click', function(){ load(false); });
+  $('fQ').addEventListener('keydown', function(e){ if(e.key === 'Enter') load(false); });
+  $('more').addEventListener('click', function(){ load(true); });
+  call({ action:'tables' }).then(function(d){
+    if(d && d.success) $('fTable').insertAdjacentHTML('beforeend', (d.tables || []).map(function(x){ return '<option value="' + esc(x.t) + '">' + esc(x.t) + ' (' + x.n + ')</option>'; }).join(''));
+  }).catch(function(){});
+  load(false);
+})();
+</script>
+</body>
+</html>
