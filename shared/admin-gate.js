@@ -14,6 +14,9 @@
 (function () {
   const me = document.currentScript;
   const title = (me && me.getAttribute('data-title')) || 'Admin';
+  // data-strict: adminPing never checks the 15-min unlock, so on strict pages the password box is only
+  // removed after a real adminUnlock; the page itself calls window.lbAdminRelock() when the server says reauth.
+  const strict = !!(me && me.hasAttribute('data-strict'));
 
   const css = document.createElement('style');
   css.textContent = [
@@ -73,6 +76,7 @@
   }
   function unlock() {
     markUnlocked();
+    try { window.dispatchEvent(new Event('lbadminunlocked')); } catch (e) {}
     document.documentElement.classList.remove('lbgate-locked');
     if (gate) { gate.remove(); gate = null; }
   }
@@ -104,6 +108,7 @@
     setTimeout(() => pw.focus(), 50);
   }
 
+  window.lbAdminRelock = function () { if (!gate) relock(); };  // don't redraw while the person is typing
   async function start() {
     const u = user();
     if (u.role && String(u.role).toLowerCase() !== 'admin') { showDenied(); return; }
@@ -111,6 +116,7 @@
     // Unlocked a moment ago on another admin page → open right away.
     // Otherwise show the password box immediately (no waiting on a slow server).
     if (optimistic) unlock(); else showPassword();
+    if (strict) return;
     try {
       const d = await call({ action: 'adminPing' });
       if (d.success) { if (!optimistic) unlock(); else markUnlocked(); return; }
