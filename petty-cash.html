@@ -976,12 +976,24 @@ async function printCashCount(id){
   // computed from whatever's cached, since the dropdown up top might
   // currently be showing a different branch entirely. This keeps the
   // printed remaining-balance accurate regardless of what's selected.
-  let currentBalance = null;
+  let currentBalance = null, freshTxns = null;
   try{
     const res = await fetch(PETTYCASH_API_URL + '?action=getPettyCash&branch=' + encodeURIComponent(c.branch) + '&token=' + encodeURIComponent(getToken()));
     const data = await res.json();
-    if(!data.error) currentBalance = data.balance;
+    if(!data.error){ currentBalance = data.balance; freshTxns = data.transactions || null; }
   }catch(e){}
+
+  // Receipt pictures of the petty cash entries on the SAME day as this count.
+  // They are placed in the empty space to the right of the cash count table, sized to fit it.
+  // (Fresh list from the server: the picture links are short-lived.)
+  const BOXH = 150;   // px, about the height of the denomination table
+  const dayKey = fmtDate(c.date);
+  const shots = (freshTxns || pettyTxns).filter(t => t.branch === c.branch && t.photoUrl && fmtDate(t.date) === dayKey).slice(0, 4);
+  const cols = shots.length > 1 ? 2 : 1, cellH = shots.length > 2 ? Math.floor((BOXH - 4) / 2) : BOXH;
+  const shotsHtml = shots.length ? `
+    <div style="flex:1;min-width:0;height:${BOXH}px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px;align-content:start;">
+      ${shots.map(t => `<div style="height:${cellH}px;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;"><img src="${esc(t.photoUrl)}" alt="Receipt" style="max-width:100%;max-height:100%;object-fit:contain;"></div>`).join('')}
+    </div>` : '';
 
   const balanceHtml = currentBalance !== null
     ? `<div style="text-align:right;font-weight:700;font-size:14px;margin-top:8px;">Petty Cash Remaining Balance: ${fmtBD(currentBalance)}</div>`
@@ -999,13 +1011,22 @@ async function printCashCount(id){
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Cash Count</h2>
     <p>${c.branch} · ${fmtDate(c.date)} · Counted by: ${c.countedBy||'—'}</p>
-    <table style="width:420px;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px 8px 4px 0;">Denomination</th><th style="padding:4px 8px;">Pieces</th><th style="text-align:right;padding:4px 0 4px 8px;">Subtotal</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2" style="padding:4px 8px 4px 0;">TOTAL</td><td style="text-align:right;padding:4px 0 4px 8px;">${fmtBD(c.amount)}</td></tr></tfoot>
-    </table>
+    <div style="display:flex;align-items:flex-start;gap:16px;">
+      <table style="width:420px;flex:0 0 420px;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px 8px 4px 0;">Denomination</th><th style="padding:4px 8px;">Pieces</th><th style="text-align:right;padding:4px 0 4px 8px;">Subtotal</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2" style="padding:4px 8px 4px 0;">TOTAL</td><td style="text-align:right;padding:4px 0 4px 8px;">${fmtBD(c.amount)}</td></tr></tfoot>
+      </table>
+      ${shotsHtml}
+    </div>
     ${pettyNetHtml}
   `;
+  // wait for the receipt pictures to load, or they print as blanks
+  const pimgs = [...document.querySelectorAll('#printArea img')];
+  await Promise.race([
+    Promise.all(pimgs.map(im => im.complete ? Promise.resolve() : new Promise(r => { im.onload = im.onerror = r; }))),
+    new Promise(r => setTimeout(r, 6000))
+  ]);
   window.print();
 }
 
