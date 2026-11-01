@@ -60,6 +60,8 @@ body[data-skin] .wrap .card, body[data-skin] .wrap .panel{
   -webkit-backdrop-filter:blur(26px) saturate(180%); backdrop-filter:blur(26px) saturate(180%);
   position:relative;
 }
+/* a tab panel sitting directly inside a card is just the card's content — no second glass box (flower-admin, chocolate-admin) */
+body[data-skin] .wrap .card > .panel{ background:none; border:0; box-shadow:none; border-radius:0; -webkit-backdrop-filter:none; backdrop-filter:none; padding:0; }
 body[data-skin] .wrap .card::before{ content:""; position:absolute; left:0; right:0; top:0; height:3px; background:linear-gradient(90deg,var(--rose),var(--gold)); opacity:.85; border-radius:18px 18px 0 0; pointer-events:none; }
 body[data-skin] .wrap .card-title, body[data-skin] .wrap .card h2, body[data-skin] .wrap .card h3{ font-family:'Fraunces',serif; font-weight:900; color:var(--ink); }
 body[data-skin] .wrap label{ color:var(--ink-dim); font-weight:700; letter-spacing:.08em; }
