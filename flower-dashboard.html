@@ -26,6 +26,16 @@
   @media (min-width:1251px){ #app .kpis.k8{ grid-template-columns:repeat(8,minmax(0,1fr)); } }
   @media (min-width:900px) and (max-width:1250px){ #app .kpis.k8{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
 </style>
+<style>
+/* big stamp in the middle of the screen when a rate decision is queued / saved (same feel as Stock Approval) */
+@keyframes lbStampIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.2) rotate(-15deg)}60%{opacity:1;transform:translate(-50%,-50%) scale(.9) rotate(-8deg)}100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-8deg)}}
+@keyframes lbStampFade{to{opacity:0}}
+.lb-stamp{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);font-family:'Space Mono',monospace;font-weight:700;font-size:40px;letter-spacing:.1em;padding:14px 28px;border:5px solid;border-radius:8px;z-index:100000;pointer-events:none;white-space:nowrap;animation:lbStampIn .4s cubic-bezier(.2,1.6,.4,1) forwards,lbStampFade .3s ease 1s forwards}
+.lb-stamp.ok{color:var(--ok,#3d8a57);border-color:var(--ok,#3d8a57);background:rgba(61,138,87,.12)}
+.lb-stamp.bad{color:var(--bad,#c5483a);border-color:var(--bad,#c5483a);background:rgba(197,72,58,.12)}
+@media(max-width:600px){.lb-stamp{font-size:28px;padding:10px 18px}}
+@media (prefers-reduced-motion:reduce){.lb-stamp{animation:none}}
+</style>
 
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
@@ -271,10 +281,16 @@
   document.getElementById('approverName').addEventListener('input', function(){ ui.approver = this.value; });
 
   // approve / reject only QUEUE the decision; "Save All" sends everything and reloads once
+  function showStamp(label, cls){
+    const el = document.createElement('div');
+    el.className = 'lb-stamp ' + cls; el.textContent = label;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1300);
+  }
   document.getElementById('alScroll').addEventListener('click', e=>{
     const btn = e.target.closest('[data-queue]'); if(!btn) return;
     const row = btn.dataset.row, act = btn.dataset.queue;
-    if(ui.queue[row] === act) delete ui.queue[row]; else ui.queue[row] = act;
+    if(ui.queue[row] === act) delete ui.queue[row]; else { ui.queue[row] = act; showStamp(act === 'approveRate' ? 'APPROVE' : 'REJECT', act === 'approveRate' ? 'ok' : 'bad'); }
     keepScroll(['alScroll'], renderAlerts);
   });
   document.getElementById('saveAllBtn').addEventListener('click', async ()=>{
@@ -297,6 +313,7 @@
       failed = true;
     }
     renderAlerts();
+    if(!failed) showStamp('SAVED ✓', 'ok');
     if(failed) setNote('Some decisions were not saved — please check and try again.');
   });
 
