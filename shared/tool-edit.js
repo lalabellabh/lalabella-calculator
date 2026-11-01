@@ -16,6 +16,10 @@
  * Hidden tools are removed from the page before the carousel starts, so
  * the page's own code never sees them. A small ✏️ button on the tools area
  * opens the editor; closing it after a change reloads the page.
+ *
+ * "Add a page": the editor can also add any other page of the system as a new
+ * tool (e.g. Flower Admin). The page is built by copying the first tool of the
+ * area, so it looks the same. Saved per device with the hide / order settings.
  */
 (function () {
   if (window.LBToolEdit) return;
@@ -34,6 +38,52 @@
     catch (e) { return {}; }
   }
   function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  // Every page that can be added as a tool: [href, icon, label, adminOnly]
+  const CATALOG = [
+    ['flower-tools.html', '🌸', 'Flower Tools'], ['flower-dashboard.html', '📊', 'Flower Dashboard'], ['flower-receiving.html', '🛒', 'Flower Receiving'],
+    ['flower-purchase.html', '🧾', 'Flower Purchase'], ['flower-stock-count.html', '📋', 'Flower Stock Count'], ['flower-catalog.html', '📚', 'Flower Catalog'],
+    ['flower-arrangements.html', '💐', 'Flower Arrangements'], ['flower-transfer.html', '🔄', 'Flower Transfer'], ['flower-barcode.html', '🏷️', 'Flower Barcode'],
+    ['flower-calc.html', '🧮', 'Flower Calculator'], ['flower-admin.html', '🔐', 'Flower Admin', 1], ['flower-photos.html', '🖼️', 'Flower Photos', 1],
+    ['flower-odoo-import.html', '📥', 'Flower Odoo Price Import', 1], ['flower-guide.html', '📖', 'Flower Guide'],
+    ['dashboard.html', '📊', 'Chocolate Dashboard'], ['chocolate-receiving.html', '📥', 'Chocolate Receiving'], ['chocolate-release.html', '📤', 'Chocolate Release'],
+    ['stock-count.html', '📋', 'Chocolate Stock Count'], ['stock-approval.html', '✅', 'Stock Approval'], ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],
+    ['chocolate-barcode.html', '🏷️', 'Chocolate Barcode'], ['chocolate-calc.html', '🍫', 'Chocolate Calculator'], ['chocolate-admin.html', '🔐', 'Chocolate Admin', 1],
+    ['chocolate-photos.html', '🖼️', 'Chocolate Photos', 1], ['chocolate-odoo-import.html', '📥', 'Chocolate Odoo Price Import', 1], ['chocolate-guide.html', '📖', 'Chocolate Guide'],
+    ['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-admin.html', '🔐', 'Item Admin', 1],
+    ['item-photos.html', '🖼️', 'Item Photos', 1], ['item-odoo-import.html', '📥', 'Item Odoo Price Import', 1],
+    ['nova-command-center.html', '🎙️', 'NOVA'], ['schedule.html', '📆', 'Duty Schedule'], ['attendance.html', '🕒', 'Attendance'],
+    ['delivery-admin.html', '🗺️', 'Delivery Map', 1], ['profile.html', '👤', 'My Profile'], ['petty-cash.html', '💰', 'Petty Cash & Cash'],
+    ['notes.html', '📝', 'Notes'], ['order-form.html', '🧾', 'Order Form'], ['card-print.html', '💌', 'Card Print'], ['seeds-card.html', '🌱', 'Seeds of Success Card'],
+    ['branch-config.html', '📍', 'Branch Config'], ['user-admin.html', '👥', 'User Management', 1], ['brain.html', '🧠', 'Brain Vault', 1],
+    ['system-health.html', '🩺', 'System Health', 1], ['index.html', '🏠', 'Main Home']
+  ];
+
+  // Builds a new tool by copying an existing one of the same area.
+  function makeEl(tpl, x) {
+    const el = tpl.cloneNode(true);
+    el.classList.remove('active');
+    el.removeAttribute('id'); el.removeAttribute('data-edit-key');
+    el.querySelectorAll('[data-edit-key]').forEach(n => n.removeAttribute('data-edit-key'));
+    el.setAttribute('data-lb-extra', '1');
+    if (tpl.tagName === 'A') {
+      el.setAttribute('href', x.href);
+    } else {
+      // a tab button of the page (Item Inventory): turn it into a link button
+      el.removeAttribute('data-tab'); el.setAttribute('type', 'button'); el.setAttribute('data-lbhref', x.href);
+      el.addEventListener('click', e => { e.preventDefault(); e.stopImmediatePropagation(); location.href = x.href; }, true);
+    }
+    if (el.hasAttribute('data-card-key')) el.setAttribute('data-card-key', x.href);
+    if (el.hasAttribute('data-title')) el.setAttribute('data-title', x.label);
+    const ic = el.querySelector('.tool-circle,.card-icon,.carousel-circle,.desktop-tool-icon,.nav-icon,[data-tool-icon]');
+    if (ic) ic.textContent = x.icon;
+    const tt = el.querySelector('h3,b');
+    if (tt) tt.textContent = x.label;
+    el.querySelectorAll('p,small').forEach(n => { n.textContent = ''; });
+    el.querySelectorAll('.card-kicker').forEach(n => { n.textContent = 'Page'; });
+    return el;
+  }
+  const hrefOf = el => ((el.getAttribute('href') || el.getAttribute('data-lbhref') || '').split('?')[0].split('#')[0]);
 
   function addStyle() {
     if (document.getElementById('lbte-style')) return;
@@ -54,6 +104,7 @@
       '.lbte-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.lbte-mv{width:32px;height:32px;flex:0 0 auto;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);border-radius:8px;cursor:pointer;font-size:13px;padding:0}',
       '.lbte-mv:disabled{opacity:.3;cursor:default}',
+      '.lbte-add{margin-top:12px;border:1px dashed var(--s-line);border-radius:12px;padding:10px;background:var(--s-card)}.lbte-add b{font-size:12.5px}.lbte-add-row{display:flex;gap:8px;margin-top:8px}.lbte-add select{flex:1;min-width:0;border:1px solid var(--s-line);border-radius:8px;padding:8px;background:var(--s-bg);color:var(--s-ink);font:inherit;font-size:13px}.lbte-add-btn{border:0;background:var(--s-acc);color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}html[data-lb-theme="dark"] .lbte-add-btn{color:#1d1719}.lbte-rm{border:0;background:none;color:var(--s-acc);font-size:15px;cursor:pointer;padding:4px 6px;flex:0 0 auto}',
       '.lbte-note{font-size:11.5px;color:var(--s-dim);margin:8px 0 0;line-height:1.45}',
       '.lbte-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}',
       '.lbte-reset{background:none;border:0;color:var(--s-acc);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 0}',
@@ -69,6 +120,17 @@
     const box = typeof opts.container === 'string' ? document.querySelector(opts.container) : opts.container;
     if (!box) return;
     const keyOf = opts.key || defaultKey;
+    // Pages added from the editor ("Add a page"): build them from the first tool before anything is read.
+    const pre = Array.from(box.querySelectorAll(opts.item));
+    const extraPrefs = Array.isArray(read(opts.storageKey).extra) ? read(opts.storageKey).extra : [];
+    if (pre.length) {
+      const have = new Set(pre.map(hrefOf));
+      extraPrefs.forEach(x => {
+        if (!x || !x.href || have.has(x.href)) return;
+        have.add(x.href);
+        box.appendChild(makeEl(pre[0], x));
+      });
+    }
     const els = Array.from(box.querySelectorAll(opts.item));
     // Master list (default order) with label + icon for the editor.
     const master = els.map(el => {
@@ -84,6 +146,8 @@
       }
       return {
         key: keyOf(el),
+        href: hrefOf(el),
+        extra: el.hasAttribute('data-lb-extra'),
         label,
         icon: iconEl ? (iconEl.textContent || '').trim() : Array.from((el.firstElementChild?.textContent || '').trim()).slice(0, 2).join('')
       };
@@ -156,14 +220,21 @@
         return '<div class="lbte-row' + (off ? ' off' : '') + '">' +
           '<input type="checkbox" data-k="' + esc(t.key) + '"' + (off ? '' : ' checked') + (last ? ' disabled title="At least one tool must stay"' : '') + '>' +
           '<span class="lbte-lbl">' + esc(t.icon) + ' ' + esc(t.label) + '</span>' +
+          (t.extra ? '<button type="button" class="lbte-rm" data-rm="' + esc(t.href) + '" title="Remove this added page" aria-label="Remove">✕</button>' : '') +
           '<button type="button" class="lbte-mv" data-mv="-1" data-k="' + esc(t.key) + '"' + (n === 0 ? ' disabled' : '') + ' aria-label="Move up">▲</button>' +
           '<button type="button" class="lbte-mv" data-mv="1" data-k="' + esc(t.key) + '"' + (n === s.list.length - 1 ? ' disabled' : '') + ' aria-label="Move down">▼</button>' +
           '</div>';
-      }).join('') + '</div><div class="lbte-note">Unchecked = hidden. Saved on this device only.</div>';
+      }).join('') + '</div>' + addBox() + '<div class="lbte-note">Unchecked = hidden. Saved on this device only.</div>';
+    }
+    function addBox() {
+      const present = new Set(master.map(m => m.href));
+      const opts2 = CATALOG.filter(c => !present.has(c[0])).map(c => '<option value="' + esc(c[0]) + '">' + esc(c[1] + ' ' + c[2] + (c[3] ? '  (Admin)' : '')) + '</option>').join('');
+      if (!opts2) return '';
+      return '<div class="lbte-add"><b>➕ Add a page</b><div class="lbte-add-row"><select id="lbteAddSel">' + opts2 + '</select><button type="button" class="lbte-add-btn">Add</button></div></div>';
     }
     function save(fn) {
       const s = state();
-      const p = { order: s.list.map(t => t.key), hidden: s.hidden.slice() };
+      const p = { order: s.list.map(t => t.key), hidden: s.hidden.slice(), extra: (Array.isArray(read(opts.storageKey).extra) ? read(opts.storageKey).extra : []) };
       fn(p);
       write(opts.storageKey, p);
       changed = true;
@@ -179,9 +250,26 @@
     back.addEventListener('click', e => {
       if (e.target === back || e.target.closest('.lbte-done')) { close(); return; }
       if (e.target.closest('.lbte-reset')) {
-        if (!confirm('Show all tools in the default order?')) return;
+        if (!confirm('Show all tools in the default order? (Pages you added will be removed too.)')) return;
         try { localStorage.removeItem(opts.storageKey); } catch (_) {}
         changed = true; draw(); return;
+      }
+      const addBtn = e.target.closest('.lbte-add-btn');
+      if (addBtn) {
+        const sel = back.querySelector('#lbteAddSel'); if (!sel) return;
+        const c = CATALOG.find(x => x[0] === sel.value); if (!c) return;
+        const p = read(opts.storageKey);
+        p.extra = (Array.isArray(p.extra) ? p.extra : []).filter(x => x && x.href !== c[0]);
+        p.extra.push({ href: c[0], icon: c[1], label: c[2] });
+        write(opts.storageKey, p);
+        changed = true; close(); return;   // reload: the new tool appears at the end of the list
+      }
+      const rm = e.target.closest('.lbte-rm');
+      if (rm) {
+        const h = rm.dataset.rm, p = read(opts.storageKey);
+        p.extra = (Array.isArray(p.extra) ? p.extra : []).filter(x => x && x.href !== h);
+        write(opts.storageKey, p);
+        changed = true; close(); return;
       }
       const cb = e.target.closest('input[data-k]');
       if (cb) {
