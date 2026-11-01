@@ -287,9 +287,8 @@ async function handleDeleteCashCount(p: any, user: any) {
   if (!isAdmin(user)) return { error: ADMIN_ONLY_MSG };
   const id = Number(p.id);
   if (!Number.isInteger(id) || id < 1) return { error: 'Invalid entry.' };
-  const rows = await sbGet('cash_daily_counts', `select=sent_to_qalali&id=eq.${id}`);
+  const rows = await sbGet('cash_daily_counts', `select=id&id=eq.${id}`);
   if (!rows.length) return { error: 'Entry not found.' };
-  if (rows[0].sent_to_qalali) return { error: 'Cannot delete — this has already been sent to Qalali branch.' };
   await sbDelete('cash_daily_counts', `id=eq.${id}`);
   return { success: true };
 }
