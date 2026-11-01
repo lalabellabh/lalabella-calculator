@@ -11,86 +11,156 @@
 <title>Lalabella — AI Office</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0d0a1a;--ink:#f1ecff;--muted:#9a90b8;--line:#2c2447;--ok:#5be29a;--work:#4fb3ff;--warn:#ffc24f;--bad:#ff6b6b}
+  :root{--bg:#0d0a1a;--panel:#150f2b;--ink:#f1ecff;--muted:#9a90b8;--line:#2c2447;--ok:#5be29a;--work:#4fb3ff;--warn:#ffc24f;--bad:#ff6b6b;--u:3px}
   *{box-sizing:border-box}
-  html,body{margin:0;background:radial-gradient(120% 80% at 50% 0%,#1d1535 0%,var(--bg) 60%) fixed !important;background-color:var(--bg) !important;color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh}
-  body::before,body::after{display:none !important}
+  html,body{margin:0;color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif}
   html,html:root.lb-wall{background:#0d0a1a !important;background-color:#0d0a1a !important;background-image:radial-gradient(120% 80% at 50% 0%,#1d1535 0%,#0d0a1a 60%) !important;background-attachment:fixed !important}
-  body{background:transparent !important}
-  .stage{max-width:1180px;margin:0 auto;padding:14px 16px 40px}
-  .head{display:flex;align-items:center;gap:12px;padding-left:54px;min-height:44px;flex-wrap:wrap}
-  .head h1{font-family:'Press Start 2P',monospace;font-size:13px;margin:0;letter-spacing:.04em;line-height:1.5}
+  body{background:transparent !important;min-height:100vh}
+  body::before,body::after{display:none !important}
+  .app{max-width:1600px;margin:0 auto;padding:12px 14px 30px;display:flex;flex-direction:column;gap:12px}
+  .head{display:flex;align-items:center;gap:10px;padding-left:54px;min-height:44px;flex-wrap:wrap}
+  .head h1{font-family:'Press Start 2P',monospace;font-size:13px;margin:0;letter-spacing:.04em;line-height:1.5;color:#f1ecff !important}
+  .head .tag{font-size:11.5px;color:var(--muted) !important}
   .head .sp{flex:1}
   .upd{font-size:12px;color:var(--muted) !important}
-  .head h1{color:#f1ecff !important}
-  .sub{color:#9a90b8 !important}
-  .pill{font-size:11px;font-weight:700;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:#171230;color:var(--ink);cursor:pointer;font-family:inherit}
-  .sub{font-size:12.5px;color:var(--muted);margin:6px 0 14px}
-  .floor{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .room{position:relative;border-radius:18px;padding:30px 12px 12px;border:1px solid var(--line);min-height:150px;display:flex;gap:10px;flex-wrap:wrap;align-content:flex-start;overflow:hidden}
-  .room .lbl{position:absolute;top:8px;left:12px;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.06em;opacity:.8}
-  .r-front{background:linear-gradient(135deg,#143a3a,#0f2428);color:#7ff0e0}
-  .r-writers{background:linear-gradient(135deg,#3a2a52,#241a38);color:#d6b7ff}
-  .r-records{background:linear-gradient(135deg,#4a3320,#2c2014);color:#ffcf8a}
-  .r-qa{background:linear-gradient(135deg,#4d1f36,#2b1322);color:#ff9fc4}
-  .r-vault{background:linear-gradient(135deg,#1c2f4d,#121d33);color:#9cc8ff}
-  .r-util{background:linear-gradient(135deg,#27402a,#17261a);color:#a9f0a0}
-  .r-deck{background:radial-gradient(circle at 50% 40%,#2a4a6d,#14243b 70%);color:#8fd9ff;align-items:center;justify-content:center;flex-direction:column;text-align:center}
-  .desk{width:132px;background:#0d0a1ae0;border:1px solid var(--line);border-radius:12px;padding:8px 8px 9px;cursor:pointer;color:var(--ink);text-align:center;position:relative;transition:transform .15s,border-color .15s;font:inherit}
-  .desk:hover{transform:translateY(-3px);border-color:#5d4f95}
-  .desk .av{height:62px;display:flex;align-items:flex-end;justify-content:center}
-  .desk svg{width:48px;height:60px;image-rendering:pixelated;shape-rendering:crispEdges}
-  .desk.working svg,.desk.ok svg{animation:bob 1.6s steps(2) infinite}
-  .desk.alert{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad),0 0 18px #ff6b6b66}
-  .desk.alert svg{animation:shake .35s linear infinite}
-  .desk.warn{border-color:var(--warn)}
-  @keyframes bob{50%{transform:translateY(-3px)}}
+  .pill{font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:#171230;color:var(--ink) !important;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+  .pill:hover{border-color:#5d4f95}
+  .pill.hi{background:linear-gradient(135deg,#3a2a7a,#24407a);border-color:#4f63b8}
+  .main{display:flex;flex-direction:column;gap:12px}
+  .denied{display:none;text-align:center;padding:40px 10px;color:var(--muted)}
+
+  /* ---------- the office map ---------- */
+  .ow{position:relative;border-radius:18px;overflow:hidden;border:1px solid #3a3060;background:#1a1430;box-shadow:0 18px 50px #0008}
+  .map{position:relative;width:100%;height:560px;overflow:hidden;user-select:none;-webkit-user-select:none}
+  .wall{position:absolute;left:0;right:0;top:0;height:22%;background:linear-gradient(#2b2350,#211a3e);border-bottom:4px solid #120e24}
+  .win{position:absolute;top:14%;height:70%;border:4px solid #0f0b1f;border-radius:4px;overflow:hidden;box-shadow:inset 0 0 0 2px #3c3366}
+  .win svg{width:100%;height:100%;display:block}
+  .win::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent calc(50% - 2px),#0f0b1f calc(50% - 2px),#0f0b1f calc(50% + 2px),transparent calc(50% + 2px)),linear-gradient(115deg,#ffffff14 0 18%,transparent 18% 30%,#ffffff0d 30% 36%,transparent 36%)}
+  .clock{position:absolute;top:22%;font-family:'Press Start 2P',monospace;font-size:9px;color:#7ff0e0;background:#0f0b1f;border:2px solid #3c3366;border-radius:6px;padding:5px 6px;transform:translateX(-50%)}
+  .floor{position:absolute;left:0;right:0;top:22%;bottom:0;background-color:#3a2c4a;background-image:linear-gradient(45deg,#3f3050 25%,transparent 25%,transparent 75%,#3f3050 75%),linear-gradient(45deg,#3f3050 25%,transparent 25%,transparent 75%,#3f3050 75%);background-size:28px 28px;background-position:0 0,14px 14px}
+  .zone{position:absolute;border-radius:10px;border:2px dashed #ffffff22}
+  .zone b{position:absolute;left:6px;top:4px;max-width:calc(100% - 10px);overflow:hidden;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:.06em;opacity:.85;white-space:nowrap}
+  .z-front{background:#1b4b4a55;color:#7ff0e0}.z-writers{background:#4a347055;color:#d6b7ff}.z-records{background:#5a3e2255;color:#ffcf8a}.z-hr{background:#6a2a5255;color:#ffa6d2}
+  .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
+  .it{position:absolute;transform:translate(-50%,-50%);pointer-events:none}
+  .dk{width:calc(15*var(--u));height:calc(7*var(--u));background:#8a5a3a;border-radius:2px;box-shadow:inset 0 calc(-2*var(--u)) 0 #6b4429,0 calc(1*var(--u)) 0 #2a1a10}
+  .dk::before{content:'';position:absolute;right:calc(.5*var(--u));top:calc(-4.5*var(--u));width:calc(5*var(--u));height:calc(4*var(--u));background:#1d1b2e;border:calc(.7*var(--u)) solid #44405e;border-radius:2px}
+  .dk::after{content:'';position:absolute;right:calc(2*var(--u));top:calc(-1.2*var(--u));width:calc(2*var(--u));height:calc(1.2*var(--u));background:#44405e}
+  .dk.on::before{background:#4fb3ff;box-shadow:0 0 calc(4*var(--u)) #4fb3ffaa}
+  .dk.big{width:calc(22*var(--u));background:#6b3a2a;box-shadow:inset 0 calc(-2*var(--u)) 0 #4e2a1e,0 calc(1*var(--u)) 0 #2a1a10}
+  .dk .np{position:absolute;right:calc(1*var(--u));top:calc(.6*var(--u));font-family:'Press Start 2P',monospace;font-size:6px;color:#ffd24a}
+  .rack{width:calc(9*var(--u));height:calc(18*var(--u));background:#1a2238;border:calc(.7*var(--u)) solid #3c4a6e;border-radius:2px;background-image:repeating-linear-gradient(#1a2238 0 calc(2*var(--u)),#2a3658 calc(2*var(--u)) calc(2.6*var(--u)))}
+  .rack i{position:absolute;width:calc(1*var(--u));height:calc(1*var(--u));background:var(--ok);left:calc(1.5*var(--u));animation:blink 1s steps(2) infinite}
+  .coffee{width:calc(7*var(--u));height:calc(10*var(--u));background:#3a3a46;border-radius:2px;box-shadow:inset 0 calc(3*var(--u)) 0 #55556a}
+  .coffee::after{content:'';position:absolute;left:calc(2*var(--u));bottom:calc(1*var(--u));width:calc(3*var(--u));height:calc(2.4*var(--u));background:#fff;border-radius:0 0 2px 2px}
+  .cooler{width:calc(6*var(--u));height:calc(13*var(--u));background:linear-gradient(#7fd3ff 0 38%,#e8eef5 38%);border-radius:calc(2*var(--u)) calc(2*var(--u)) 2px 2px}
+  .sofa{width:calc(20*var(--u));height:calc(7*var(--u));background:#9e2f4a;border-radius:calc(2*var(--u));box-shadow:inset 0 calc(-3*var(--u)) 0 #7a2238}
+  .plant{width:calc(6*var(--u));height:calc(9*var(--u))}
+  .plant::before{content:'';position:absolute;left:calc(1*var(--u));bottom:0;width:calc(4*var(--u));height:calc(3*var(--u));background:#b0603a;border-radius:0 0 2px 2px}
+  .plant::after{content:'';position:absolute;left:0;top:0;width:calc(6*var(--u));height:calc(6.5*var(--u));background:#3fae5a;border-radius:50% 50% 40% 40%;box-shadow:inset calc(-1*var(--u)) calc(-1*var(--u)) 0 #2d8a44}
+  .bucket{width:calc(5*var(--u));height:calc(4*var(--u));background:#4a7ad0;border-radius:0 0 3px 3px}
+  .shelf{width:calc(14*var(--u));height:calc(12*var(--u));background:#5a3e22;border-radius:2px;background-image:linear-gradient(90deg,#c9506b 0 12%,#4fb3ff 12% 22%,#ffc24f 22% 34%,transparent 34% 44%,#5be29a 44% 56%,#d6b7ff 56% 70%,transparent 70%);background-size:100% 33%;background-repeat:repeat-y;box-shadow:inset 0 0 0 calc(.8*var(--u)) #3a2814}
+
+  .pp{position:absolute;width:calc(8*var(--u));height:calc(12*var(--u));transform:translate(-50%,-100%);cursor:pointer;will-change:left,top}
+  .pp .fig{position:absolute;inset:0}
+  .pp svg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;shape-rendering:crispEdges}
+  .pp .fb{opacity:0}
+  .pp.walk .fa{animation:fa .34s steps(1) infinite}.pp.walk .fb{animation:fb .34s steps(1) infinite}
+  @keyframes fa{0%{opacity:1}50%{opacity:0}} @keyframes fb{0%{opacity:0}50%{opacity:1}}
+  .pp.left .fig{transform:scaleX(-1)}
+  .pp.type .fig{animation:bob .5s steps(2) infinite}
+  .pp.panic .fig{animation:shake .3s linear infinite}
+  .pp.mop .mopx{display:block}
+  .mopx{display:none;position:absolute;right:calc(-3*var(--u));bottom:0;width:calc(1*var(--u));height:calc(11*var(--u));background:#c9a26a;transform:rotate(14deg);transform-origin:bottom}
+  .mopx::after{content:'';position:absolute;left:calc(-1.5*var(--u));bottom:calc(-1*var(--u));width:calc(4*var(--u));height:calc(1.6*var(--u));background:#e8e8e8;border-radius:2px}
+  .pp .dot{position:absolute;left:50%;top:calc(-4.5*var(--u));width:calc(2*var(--u));height:calc(2*var(--u));border-radius:50%;transform:translateX(-50%);background:var(--ok);box-shadow:0 0 6px currentColor}
+  .pp.st-working .dot{background:var(--work)}.pp.st-warn .dot{background:var(--warn)}.pp.st-alert .dot{background:var(--bad);animation:blink .6s infinite}
+  .pp .nt{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;font-size:9px;font-weight:700;white-space:nowrap;color:#fff;background:#0d0a1acc;padding:0 4px;border-radius:4px;pointer-events:none}
+  .pp .bub{position:absolute;left:50%;bottom:calc(100% + 5*var(--u));transform:translateX(-50%) scale(.6);opacity:0;transition:opacity .2s,transform .2s;background:#fff;color:#1b1535;font-size:10px;font-weight:700;line-height:1.25;padding:4px 7px;border-radius:8px;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 3px 10px #0006}
+  .pp .bub::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#fff}
+  .pp .bub.on{opacity:1;transform:translateX(-50%) scale(1)}
+  .pp .bub.red{background:var(--bad);color:#fff}.pp .bub.red::after{border-top-color:var(--bad)}
+  .pp .bub.amb{background:var(--warn)}.pp .bub.amb::after{border-top-color:var(--warn)}
+  .pp:hover .nt{background:#5d4f95}
+  @keyframes bob{50%{transform:translateY(calc(-.7*var(--u)))}}
   @keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
-  .nm{font-weight:700;font-size:13px;margin-top:4px}
-  .rl{font-size:10.5px;color:var(--muted)}
-  .chip{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:.06em;margin-top:5px;padding:2px 8px;border-radius:99px;background:#1b1535}
-  .chip i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;animation:blink 1.4s infinite}
-  .working .chip{color:var(--work)} .ok .chip{color:var(--ok)} .warn .chip{color:var(--warn)} .alert .chip{color:var(--bad)}
   @keyframes blink{50%{opacity:.25}}
-  .say{font-size:11px;color:#cfc6ea;margin-top:6px;line-height:1.35;min-height:30px}
-  .deck-box{background:#0d0a1ad0;border:1px solid #38527a;border-radius:14px;padding:10px 12px;width:100%;text-align:left;margin-top:8px;font-size:12.5px;line-height:1.55}
-  .deck-box b{color:#fff}
-  .boss{width:150px}
-  .report{grid-column:span 2;border-radius:18px;border:1px solid var(--line);background:#150f2b;padding:14px 16px;position:relative}
-  .report h2{font-family:'Press Start 2P',monospace;font-size:10px;margin:0 0 10px;color:#8fd9ff;letter-spacing:.05em}
-  .report ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:13px}
-  .report li span.k{color:var(--muted);display:inline-block;min-width:150px}
-  .report a{color:#8fd9ff}
-  .aif{background:#0d0a1ae0;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:9px 12px;margin-top:8px}
-  .aif.warn{border-left-color:var(--warn)} .aif.alert{border-left-color:var(--bad)} .aif.ok{border-left-color:var(--ok)}
-  .aif b{color:#fff} .aif .nx{color:#8fd9ff;font-size:12.5px;margin-top:3px}
-  .good{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700} .amb{color:var(--warn);font-weight:700}
-  .sheet{position:fixed;inset:0;background:#000a;display:none;align-items:flex-end;justify-content:center;z-index:60}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:8px 12px;font-size:11.5px;color:var(--muted);background:#120d26;border-top:1px solid var(--line)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .legend .sp{flex:1}
+  .xland{display:none;position:absolute;right:10px;top:10px;z-index:9999}
+
+  /* ---------- side panels ---------- */
+  .side{display:flex;flex-direction:column;gap:12px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+  .panel h2{font-family:'Press Start 2P',monospace;font-size:9px;margin:0 0 10px;color:#8fd9ff;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
+  .panel h2 .w{font-family:'Space Grotesk',sans-serif;color:var(--muted);font-size:11px;letter-spacing:0;font-weight:500}
+  .deck{background:radial-gradient(circle at 20% 0%,#2a4a6d,#14243b 80%);border-color:#38527a;font-size:13px;line-height:1.55}
+  .deck b{color:#fff}
+  .roster{display:grid;gap:6px}
+  .rw{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#0d0a1ab0;border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:10px;padding:6px 10px;color:var(--ink);font:inherit;cursor:pointer}
+  .rw:hover{border-color:#5d4f95}
+  .rw.st-working{border-left-color:var(--work)}.rw.st-warn{border-left-color:var(--warn)}.rw.st-alert{border-left-color:var(--bad);background:#3a0f1aa0}
+  .rw svg{width:20px;height:30px;flex:0 0 auto;image-rendering:pixelated;shape-rendering:crispEdges}
+  .rw .t{flex:1;min-width:0}
+  .rw .n{font-weight:700;font-size:12.5px}.rw .n span{color:var(--muted);font-weight:500;font-size:11px}
+  .rw .s{font-size:11px;color:#cfc6ea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:99px;background:#1b1535;white-space:nowrap}
+  .st-working .chip{color:var(--work)}.st-ok .chip{color:var(--ok)}.st-warn .chip{color:var(--warn)}.st-alert .chip{color:var(--bad)}
+  .report{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:12.5px}
+  .report li span.k{color:var(--muted);display:inline-block;min-width:130px}
+  .panel a{color:#8fd9ff}
+  .aif{background:#0d0a1ae0;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:10px;padding:8px 11px;margin-top:7px;font-size:12.5px;line-height:1.5}
+  .aif.warn{border-left-color:var(--warn)}.aif.alert{border-left-color:var(--bad)}.aif.ok{border-left-color:var(--ok)}
+  .aif b{color:#fff}.aif .nx{color:#8fd9ff;font-size:12px;margin-top:3px}
+  .good{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}.amb{color:var(--warn);font-weight:700}
+  .sheet{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:100000;padding:12px}
   .sheet.on{display:flex}
-  .card{background:#150f2b;border:1px solid #4a3d7a;border-radius:18px 18px 0 0;padding:16px 18px 22px;width:min(560px,100%);max-height:80vh;overflow:auto}
-  .card h3{margin:0 0 2px;font-size:17px} .card .rl{margin-bottom:10px}
-  .card .row{font-size:13px;margin:8px 0;line-height:1.5} .card .row b{display:block;font-size:10.5px;letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px}
+  .card{background:#150f2b;border:1px solid #4a3d7a;border-radius:18px;padding:16px 18px 22px;width:min(560px,100%);max-height:84vh;overflow:auto}
+  .card h3{margin:0 0 2px;font-size:17px}.card .rl{font-size:11px;color:var(--muted);margin-bottom:10px}
+  .card .row{font-size:13px;margin:8px 0;line-height:1.5}.card .row b{display:block;font-size:10.5px;letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px}
   .never li{color:#ffb0b0;font-size:12.5px;margin:3px 0}
   .xx{float:right;border:0;background:#2a2150;color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;font:inherit;font-weight:700}
-  .denied{display:none;text-align:center;padding:40px 10px;color:var(--muted)}
-  @media (max-width:900px){.floor{grid-template-columns:1fr}.report{grid-column:auto}.room{min-height:0}.card{border-radius:18px}.sheet{align-items:center}}
+
+  /* desktop: one full screen, map left, panels right (each scrolls inside) */
+  @media (min-width:900px){
+    :root{--u:4px}
+    html,body{height:100%;overflow:hidden}
+    .app{height:100vh;height:100dvh;padding-bottom:12px}
+    .main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px}
+    .ow{display:flex;flex-direction:column;min-height:0}
+    .map{flex:1;height:auto;min-height:0}
+    .side{min-height:0;overflow-y:auto;padding-right:2px}
+    .head .tag{display:inline}
+  }
+  @media (min-width:1200px){ :root{--u:5px} }
+  @media (min-width:1500px){ :root{--u:6px} .main{grid-template-columns:minmax(0,1fr) 420px} }
+  @media (max-width:899px){ .head .tag{display:none} .map{height:min(150vw,600px)} .zone b{font-size:6px} .pp .nt{font-size:8px} }
+  /* landscape / full-screen mode */
+  body.land{overflow:hidden}
+  body.land .ow{position:fixed;inset:0;z-index:99990;border-radius:0;border:0;display:flex;flex-direction:column}
+  body.land .map{flex:1;height:auto}
+  body.land .xland{display:inline-flex}
+  @media (orientation:landscape) and (max-height:520px){ :root{--u:2.6px} .map{height:calc(100dvh - 40px)} .zone b{font-size:5.5px} }
 </style>
 </head>
 <body>
-<div class="stage" data-lb-text-skip>
-  <div class="head"><h1>🏢 AI OFFICE</h1><div class="sp"></div><span class="upd" id="upd"></span><button class="pill" id="ref">↻ Refresh</button><a class="pill" href="audit-log.html" style="text-decoration:none">🕘 Activity History</a></div>
-  <div class="sub">Your system's workers, at their desks. Free: they are scheduled jobs that read your own data — no paid AI. The Boss only reports; nobody here changes data on their own. Tap a desk for details.</div>
+<div class="app" data-lb-text-skip>
+  <div class="head"><h1>🏢 AI OFFICE</h1><span class="tag">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
+    <button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref">↻ Refresh</button><a class="pill" href="audit-log.html">🕘 Activity History</a></div>
   <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for the Admin who has User Management access.</p></div>
-  <div class="floor" id="floor">
-    <div class="room r-front"><div class="lbl">FRONT OFFICE</div><div id="d_dispatcher"></div></div>
-    <div class="room r-writers"><div class="lbl">WRITERS' ROOM</div><div id="d_scribe"></div></div>
-    <div class="room r-records"><div class="lbl">RECORDS</div><div id="d_auditor"></div></div>
-    <div class="room r-qa"><div class="lbl">QA DESK</div><div id="d_watcher"></div><div id="d_doctor"></div></div>
-    <div class="room r-deck"><div class="lbl" style="left:0;right:0;text-align:center">COMMAND DECK</div><div id="d_boss" style="margin-top:6px"></div><div class="deck-box" id="deckBox">Loading…</div></div>
-    <div class="room r-vault"><div class="lbl">THE VAULT</div><div id="d_archivist"></div></div>
-    <div class="room r-util"><div class="lbl">UTILITY</div><div id="d_janitor"></div></div>
-    <div class="report"><h2>DAILY REPORT — FROM THE BOSS</h2><ul id="report"><li>Loading…</li></ul></div>
-    <div class="report ai" id="aiCard" style="grid-column:1/-1"><h2>🧠 BOSS'S AI NOTE <span id="aiWhen" style="font-family:inherit;color:var(--muted);font-size:11px;letter-spacing:0"></span></h2><div id="aiBody" style="font-size:13.5px;line-height:1.55;color:var(--muted)">No AI note yet. The Boss reviews your system once a day (7:41 AM Bahrain) and leaves a note here.</div></div>
+  <div class="main" id="mainBox">
+    <section class="ow" id="ow">
+      <button class="pill xland" id="xland">✕ Exit</button>
+      <div class="map" id="map"></div>
+      <div class="legend"><span><i style="background:var(--work)"></i>Working</span><span><i style="background:var(--ok)"></i>All good</span><span><i style="background:var(--warn)"></i>Check</span><span><i style="background:var(--bad)"></i>Problem</span><span class="sp"></span><span id="phase"></span></div>
+    </section>
+    <aside class="side">
+      <div class="panel deck" id="deckBox">Loading…</div>
+      <div class="panel"><h2>👥 TEAM <span class="w" id="teamW"></span></h2><div class="roster" id="roster"></div></div>
+      <div class="panel"><h2>📋 DAILY REPORT</h2><ul class="report" id="report"><li>Loading…</li></ul></div>
+      <div class="panel" id="aiCard"><h2>🧠 BOSS'S AI NOTE <span class="w" id="aiWhen"></span></h2><div id="aiBody" style="font-size:13px;line-height:1.55;color:var(--muted)">No AI note yet. The Boss reviews your system once a day (7:41 AM Bahrain) and leaves a note here.</div></div>
+    </aside>
   </div>
 </div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
@@ -101,19 +171,24 @@
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
-  if(u.canManageUsers === false){ $('floor').style.display = 'none'; $('denied').style.display = 'block'; return; }
+  if(u.canManageUsers === false){ $('mainBox').style.display = 'none'; $('denied').style.display = 'block'; return; }
 
-  // ---------- pixel people ----------
-  var BMP = ['..HHHH..','.HHHHHH.','.SESSES.','..SSSS..','.BBBBBB.','SBBBBBBS','.BBBBBB.','..PPPP..','..P..P..','.SS..SS.'];
-  function sprite(c){
-    var map = { H:c.h, S:'#f2c9a0', E:'#1b1535', B:c.b, P:c.p }, out = '';
-    BMP.forEach(function(row, y){ for(var x = 0; x < 8; x++){ var ch = row[x]; if(ch !== '.') out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + map[ch] + '"/>'; } });
+  // ---------- pixel people (two leg frames for walking) ----------
+  var BODY = ['..HHHH..','.HHHHHH.','.SESSES.','..SSSS..','.BBBBBB.','SBBBBBBS','.BBBBBB.','..PPPP..'];
+  var LEGS = [['..P..P..','.SS..SS.'], ['.P....P.','SS....SS']];
+  function sprite(c, f){
+    var map = { H:c.h, S:c.s || '#f2c9a0', E:'#1b1535', B:c.b, P:c.p }, out = '';
+    BODY.concat(LEGS[f || 0]).forEach(function(row, y){ for(var x = 0; x < 8; x++){ var ch = row[x]; if(ch !== '.') out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + map[ch] + '"/>'; } });
     if(c.crown) out += '<rect x="2" y="-1" width="4" height="1" fill="#ffd24a"/><rect x="2" y="-2" width="1" height="1" fill="#ffd24a"/><rect x="5" y="-2" width="1" height="1" fill="#ffd24a"/>';
-    return '<svg viewBox="0 -2 8 12" xmlns="http://www.w3.org/2000/svg">' + out + '</svg>';
+    if(c.tie) out += '<rect x="3" y="4" width="2" height="1" fill="' + c.tie + '"/><rect x="3" y="5" width="2" height="1" fill="' + c.tie + '"/>';
+    if(c.cap) out += '<rect x="1" y="0" width="7" height="1" fill="' + c.cap + '"/><rect x="2" y="-1" width="4" height="1" fill="' + c.cap + '"/>';
+    return '<svg viewBox="0 -2 8 12" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' + out + '</svg>';
   }
-  var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320'},
-    watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1},
-    archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c'} };
+  var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320',tie:'#7a3f12'},
+    watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a',s:'#c99a74'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1,tie:'#9e2f4a'},
+    archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
+    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'} };
+  var KEYS = ['boss','dispatcher','scribe','auditor','hr','timekeeper','watcher','doctor','archivist','janitor'];
 
   // ---------- helpers ----------
   function ago(t){ if(!t) return 'never'; var s = Math.max(0, (Date.now() - new Date(t).getTime()) / 1000);
@@ -161,43 +236,190 @@
     var jn = jobState(job('duty-schedule-monthly-cleanup'), 86400);
     EMP.janitor = { name:'Jun', role:'Janitor', st:jn[0], say:'Schedule cleaned · ' + ago((job('duty-schedule-monthly-cleanup') || {}).last_start),
       now:'Moves old duty-schedule rows to the archive every night so the live schedule stays fast.', out:jn[1], tools:['duty-schedule-monthly-cleanup job'], never:NEVER_ALL.concat(['Deletes anything that is not old schedule rows']) };
+    var H = S.hr || {}, late = Number(H.late_today) || 0, noOut = Number(H.no_out_yday) || 0, blk = Number(H.blocked_today) || 0, inT = Number(H.in_today) || 0, brk = Number(H.on_break) || 0, wk = Number(H.working_now) || 0, evn = Number(H.events_today) || 0;
+    var nm = function(a){ return (a || []).slice(0, 4).join(', '); };
+    EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? late + ' late today' : (inT ? inT + ' of ' + (H.staff || 0) + ' staff clocked in' : 'No clock-ins yet today'),
+      now:'Checks who came in late today (after the grace minutes) and which staff have an approved event / exemption today.', out:(late ? 'Late today: ' + nm(H.late_names) : 'Nobody late today') + ' · Approved events today: ' + evn + ' · Active staff: ' + (H.staff || 0),
+      tools:['Attendance logs','Attendance events','Attendance page'], never:NEVER_ALL.concat(['Marks anyone absent, late or excused by itself','Edits time-in records']) };
+    EMP.timekeeper = { name:'Tiko', role:'Timekeeper', st: (noOut || blk >= 5) ? 'warn' : (wk ? 'working' : 'ok'), say: noOut ? noOut + ' forgot to clock out yesterday' : (blk ? blk + ' blocked clock-in' + (blk > 1 ? 's' : '') + ' today' : wk + ' working · ' + brk + ' on break'),
+      now:'Watches the time clock: who is in, who is on break, who forgot to clock out yesterday, and clock-ins blocked for being outside the shop radius.',
+      out:'In today: ' + inT + ' · Working now: ' + wk + ' · On break: ' + brk + ' · Blocked (outside shop): ' + blk + (noOut ? ' · No clock-out yesterday: ' + nm(H.no_out_names) : '') + ' · Last punch ' + ago(H.last_at),
+      tools:['Attendance logs (GPS / fingerprint)'], never:NEVER_ALL.concat(['Clocks anyone in or out','Changes the shop radius or grace time']) };
     var order = ['alert','warn','working','ok'], all = Object.keys(EMP).map(function(k){ return EMP[k].st; });
     var worst = all.indexOf('alert') > -1 ? 'alert' : all.indexOf('warn') > -1 ? 'warn' : 'ok';
     var ap = S.approvals || {}, apn = (Number(ap.rate) || 0) + (Number(ap.choc) || 0);
     EMP.boss = { name:'BOSS', role:'Chief of Staff', st: worst === 'ok' ? 'working' : worst, say: worst === 'ok' ? 'All desks are fine' : 'Someone needs attention',
       now:'Reads every desk, then writes the daily report. Reports only — decisions stay with you.', out:'See the daily report below.', tools:['All desks','Daily report'], never:['Posts, sends or spends without your approval','Does the specialists\' jobs itself','Invents results (only real numbers from your system)','Uses paid AI'] };
-    return { worst:worst, ap:ap, apn:apn, unassigned:unassigned };
+    return { worst:worst, ap:ap, apn:apn, unassigned:unassigned, H:H };
   }
 
-  function desk(k){
-    var e = EMP[k]; if(!e) return '';
-    return '<button class="desk ' + e.st + (k === 'boss' ? ' boss' : '') + '" data-k="' + k + '"><div class="av">' + sprite(LOOK[k]) + '</div><div class="nm">' + esc(e.name) + '</div><div class="rl">' + esc(e.role) + '</div><div class="chip"><i></i>' + LBL[e.st] + '</div><div class="say">' + esc(e.say) + '</div></button>';
-  }
   function render(){
     var r = compute();
-    ['dispatcher','scribe','auditor','watcher','doctor','boss','archivist','janitor'].forEach(function(k){ $('d_' + k).innerHTML = desk(k); });
-    var n = Object.keys(EMP).length - 1, issues = Object.keys(EMP).filter(function(k){ return k !== 'boss' && (EMP[k].st === 'warn' || EMP[k].st === 'alert'); });
-    $('deckBox').innerHTML = (r.worst === 'ok' ? '<b class="good">✔ All ' + n + ' workers are fine.</b>' : '<b class="' + (r.worst === 'alert' ? 'bad' : 'amb') + '">' + issues.length + ' desk' + (issues.length > 1 ? 's need' : ' needs') + ' attention: ' + issues.map(function(k){ return EMP[k].name; }).join(', ') + '</b>') +
+    var n = KEYS.length - 1, issues = KEYS.filter(function(k){ return k !== 'boss' && (EMP[k].st === 'warn' || EMP[k].st === 'alert'); });
+    $('deckBox').innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:9px;color:#8fd9ff;margin-bottom:8px">👑 COMMAND DECK</div>' +
+      (r.worst === 'ok' ? '<b class="good">✔ All ' + n + ' workers are fine.</b>' : '<b class="' + (r.worst === 'alert' ? 'bad' : 'amb') + '">' + issues.length + ' desk' + (issues.length > 1 ? 's need' : ' needs') + ' attention: ' + issues.map(function(k){ return EMP[k].name; }).join(', ') + '</b>') +
       '<br>Approvals waiting: <b>' + r.apn + '</b> · Online now: <b>' + (S.online || 0) + '</b> of ' + (S.staff || 0) + ' staff';
-    var A = S.audit || {}, E = S.errors || {}, B = S.backup || {}, ap = r.ap;
+    $('teamW').textContent = KEYS.length + ' workers';
+    $('roster').innerHTML = KEYS.map(function(k){ var e = EMP[k];
+      return '<button class="rw st-' + e.st + '" data-k="' + k + '">' + sprite(LOOK[k], 0) + '<div class="t"><div class="n">' + esc(e.name) + ' <span>' + esc(e.role) + '</span></div><div class="s">' + esc(e.say) + '</div></div><span class="chip">' + LBL[e.st] + '</span></button>'; }).join('');
+    var A = S.audit || {}, E = S.errors || {}, B = S.backup || {}, ap = r.ap, H = r.H || {};
     $('report').innerHTML =
-      '<li><span class="k">Overall</span>' + (r.worst === 'ok' ? '<span class="good">All good</span>' : r.worst === 'warn' ? '<span class="amb">Some things to check</span>' : '<span class="bad">Problem — see red desk</span>') + '</li>' +
+      '<li><span class="k">Overall</span>' + (r.worst === 'ok' ? '<span class="good">All good</span>' : r.worst === 'warn' ? '<span class="amb">Some things to check</span>' : '<span class="bad">Problem — see red person</span>') + '</li>' +
       '<li><span class="k">Errors (24 h)</span>' + (Number(E.last24h) ? '<span class="amb">' + E.last24h + '</span> — <a href="audit-log.html">open Errors</a>' : '<span class="good">none</span>') + '</li>' +
       '<li><span class="k">Last backup</span>' + (B.last_at ? (B.ok ? '<span class="good">OK</span> · ' : '<span class="bad">FAILED</span> · ') + ago(B.last_at) : '<span class="amb">none yet</span>') + '</li>' +
-      '<li><span class="k">Changes logged (24 h)</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">Activity History</a></li>' +
-      '<li><span class="k">Approvals waiting</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate stock</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">none</span>') + '</li>' +
-      '<li><span class="k">Orders to assign</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">none</span>') + '</li>' +
-      '<li><span class="k">Staff online</span>' + (S.online || 0) + ' of ' + (S.staff || 0) + '</li>';
+      '<li><span class="k">Changes (24 h)</span>' + (A.last24h || 0) + ' · deletions: ' + (A.deletes24h || 0) + ' — <a href="audit-log.html">history</a></li>' +
+      '<li><span class="k">Attendance today</span>' + (Number(H.in_today) || 0) + ' in · ' + (Number(H.late_today) ? '<span class="amb">' + H.late_today + ' late</span>' : '0 late') + ' · ' + (Number(H.no_out_yday) ? '<span class="amb">' + H.no_out_yday + ' no clock-out yesterday</span>' : 'all clocked out yesterday') + '</li>' +
+      '<li><span class="k">Approvals waiting</span>' + (r.apn ? '<span class="amb">' + (ap.rate || 0) + ' flower rate</span> (<a href="flower-dashboard.html">review</a>) · <span class="amb">' + (ap.choc || 0) + ' chocolate</span> (<a href="stock-approval.html">review</a>)' : '<span class="good">none</span>') + '</li>' +
+      '<li><span class="k">Orders to assign</span>' + (r.unassigned ? '<span class="amb">' + r.unassigned + '</span>' : '<span class="good">none</span>') + '</li>';
     var ai = S.ai;
     if(ai && ai.summary){
       var f = Array.isArray(ai.findings) ? ai.findings : [];
-      $('aiWhen').textContent = ' · ' + ago(ai.at) + ' · ' + (ai.author || 'Boss');
+      $('aiWhen').textContent = ago(ai.at) + ' · ' + (ai.author || 'Boss');
       $('aiBody').style.color = '#e6e0f7';
       $('aiBody').innerHTML = '<div class="aif ' + esc(ai.severity) + '"><b>' + esc(ai.summary) + '</b></div>' + f.slice(0, 5).map(function(x){
         return '<div class="aif ' + esc(x.severity || 'ok') + '"><b>' + esc(x.title) + '</b><div>' + esc(x.detail) + '</div>' + (x.next ? '<div class="nx">➜ ' + esc(x.next) + '</div>' : '') + '</div>'; }).join('');
     }
     $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    mapInit(); KEYS.forEach(function(k){ var p = P[k]; if(p){ p.el.className = p.el.className.replace(/\bst-\w+/g, '') + ' st-' + EMP[k].st; } });
   }
+
+  // ---------- city skyline in the windows (Bahrain time: day / sunset / night) ----------
+  function bhHour(){ var d = new Date(); return ((d.getUTCHours() + 3) % 24) + d.getUTCMinutes() / 60; }
+  function rnd(seed){ return function(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }; }
+  function skySvg(i){
+    var h = bhHour(), ph = (h >= 19 || h < 5.3) ? 'night' : h < 6.8 ? 'dawn' : h < 16.4 ? 'day' : 'sunset';
+    var G = { day:['#5fb4ff','#bfe6ff'], dawn:['#3b4a8a','#ffb38a'], sunset:['#4a2a6a','#ff8a5c'], night:['#060818','#1b2350'] }[ph];
+    var R = rnd(17 + i * 31), out = '<defs><linearGradient id="sg' + i + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + G[0] + '"/><stop offset="1" stop-color="' + G[1] + '"/></linearGradient></defs><rect width="100" height="60" fill="url(#sg' + i + ')"/>';
+    if(ph === 'night'){ for(var s = 0; s < 18; s++) out += '<rect x="' + (R() * 100).toFixed(1) + '" y="' + (R() * 30).toFixed(1) + '" width=".7" height=".7" fill="#fff" opacity="' + (.4 + R() * .6).toFixed(2) + '"/>';
+      if(i === 1) out += '<circle cx="70" cy="12" r="5" fill="#f4f1d0"/><circle cx="72.5" cy="10.5" r="4.4" fill="' + G[0] + '"/>'; }
+    else if(i === (ph === 'sunset' ? 3 : ph === 'dawn' ? 0 : 2)) out += '<circle cx="' + (ph === 'day' ? 60 : 50) + '" cy="' + (ph === 'day' ? 14 : 42) + '" r="' + (ph === 'day' ? 6 : 9) + '" fill="' + (ph === 'day' ? '#fff3b0' : '#ffd27a') + '" opacity=".95"/>';
+    var bc = ph === 'night' ? '#0d1030' : ph === 'day' ? '#4a6488' : '#2a2045', x = -2;
+    while(x < 102){ var w = 5 + R() * 9, bh = 14 + R() * 30, y = 52 - bh; out += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (bh + 8).toFixed(1) + '" fill="' + bc + '"/>';
+      if(R() < .25) out += '<rect x="' + (x + w / 2 - .4).toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" width=".8" height="5" fill="' + bc + '"/>';
+      for(var wy = y + 2; wy < 50; wy += 3.2) for(var wx = x + 1.2; wx < x + w - 1.2; wx += 2.4){ var lit = ph === 'night' ? R() < .45 : ph === 'day' ? false : R() < .25;
+        out += '<rect x="' + wx.toFixed(1) + '" y="' + wy.toFixed(1) + '" width="1.1" height="1.5" fill="' + (lit ? '#ffd86a' : (ph === 'day' ? '#8fb3d9' : '#232a55')) + '"' + (lit ? '' : ' opacity=".6"') + '/>'; }
+      x += w + R() * 1.5; }
+    out += '<rect y="52" width="100" height="8" fill="' + (ph === 'night' ? '#0a1a3a' : ph === 'day' ? '#2a8fb0' : '#5a3a6a') + '"/>';
+    for(var k = 0; k < 6; k++) out += '<rect x="' + (R() * 95).toFixed(1) + '" y="' + (54 + R() * 4).toFixed(1) + '" width="' + (3 + R() * 4).toFixed(1) + '" height=".5" fill="#ffffff" opacity=".35"/>';
+    return { svg:'<svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' + out + '</svg>', ph:ph };
+  }
+  function paintSky(){
+    var ph = 'day';
+    document.querySelectorAll('.win').forEach(function(w, i){ var s = skySvg(i); w.innerHTML = s.svg; ph = s.ph; });
+    var d = new Date(Date.now() + 3 * 3600000), hh = d.getUTCHours(), mm = d.getUTCMinutes();
+    if($('clk')) $('clk').textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+    $('phase').textContent = { day:'☀️ Daytime in Manama', dawn:'🌅 Sunrise in Manama', sunset:'🌇 Sunset in Manama', night:'🌃 Night in Manama' }[ph] + ' · tap a person for details';
+  }
+
+  // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
+  var DESK = { dispatcher:[9,44], scribe:[23,44], auditor:[37,44], hr:[53,44], timekeeper:[66,44], boss:[88,42], watcher:[9,82], doctor:[23,82], archivist:[40,82] };
+  var SPOT = { boss:[84,52], coffee:[77,73], cooler:[85,73], sofa:[91,88], closet:[59,86], aisle:58 };
+  var ZONES = [['front','FRONT OFFICE',2,25,15,33],['writers','WRITERS',16,25,14,33],['records','RECORDS',30,25,14,33],['hr','HR · ATTENDANCE',46,25,27,33],['boss','BOSS',75,25,23,33],
+    ['qa','QA DESK',2,63,30,34],['vault','VAULT',33,63,18,34],['util','UTILITY',52,63,15,34],['kitchen','PANTRY',69,63,29,34]];
+  var P = {}, inited = false, MAP;
+  function seat(k){ var d = DESK[k]; return d ? [d[0], d[1] - 2.5] : SPOT.closet; }
+  function front(k){ var d = DESK[k] || SPOT.closet; return [d[0] + (k === 'boss' ? -6 : 4), d[1] + 8]; }
+  function mapInit(){
+    if(inited) return; inited = true; MAP = $('map');
+    var h = '<div class="wall">';
+    [[4,20],[27,20],[50,20],[73,20]].forEach(function(w){ h += '<div class="win" style="left:' + w[0] + '%;width:' + w[1] + '%"></div>'; });
+    h += '<div class="clock" id="clk" style="left:97%;top:30%"></div></div><div class="floor"></div>';
+    ZONES.forEach(function(z){ h += '<div class="zone z-' + z[0] + '" style="left:' + z[2] + '%;top:' + z[3] + '%;width:' + z[4] + '%;height:' + z[5] + '%"><b>' + z[1] + '</b></div>'; });
+    Object.keys(DESK).forEach(function(k){ if(k === 'archivist') return; var d = DESK[k]; h += '<div class="it dk' + (k === 'boss' ? ' big' : '') + '" id="dk_' + k + '" data-y="' + d[1] + '" style="left:' + d[0] + '%;top:' + d[1] + '%">' + (k === 'boss' ? '<span class="np">BOSS</span>' : '') + '</div>'; });
+    h += '<div class="it dk" id="dk_archivist" data-y="82" style="left:40%;top:82%"></div><div class="it rack" data-y="80" style="left:47.5%;top:76%"><i style="top:20%"></i><i style="top:45%;animation-delay:.3s"></i><i style="top:70%;animation-delay:.6s"></i></div>';
+    h += '<div class="it shelf" data-y="34" style="left:44%;top:31%"></div><div class="it coffee" data-y="70" style="left:76%;top:68%"></div><div class="it cooler" data-y="70" style="left:85%;top:67%"></div>';
+    h += '<div class="it sofa" data-y="92" style="left:90%;top:92%"></div><div class="it bucket" data-y="88" style="left:62%;top:88%"></div>';
+    [[3.5,30],[73,31],[3,92],[31,92],[96.5,70]].forEach(function(p){ h += '<div class="it plant" data-y="' + p[1] + '" style="left:' + p[0] + '%;top:' + p[1] + '%"></div>'; });
+    KEYS.forEach(function(k){ var s = seat(k);
+      h += '<div class="pp" id="pp_' + k + '" data-k="' + k + '" style="left:' + s[0] + '%;top:' + s[1] + '%"><div class="bub"></div><div class="dot"></div><div class="fig"><div class="fa">' + sprite(LOOK[k], 0) + '</div><div class="fb">' + sprite(LOOK[k], 1) + '</div>' + (k === 'janitor' ? '<div class="mopx"></div>' : '') + '</div><div class="nt">' + esc(EMP[k].name) + '</div></div>'; });
+    MAP.innerHTML = h;
+    document.querySelectorAll('.it').forEach(function(el){ el.style.zIndex = Math.round(Number(el.getAttribute('data-y')) * 10) + 6; });
+    KEYS.forEach(function(k){ var el = $('pp_' + k), s = seat(k); P[k] = { k:k, el:el, bub:el.querySelector('.bub'), x:s[0], y:s[1], t:0 }; el.style.zIndex = Math.round(s[1] * 10); });
+    MAP.addEventListener('click', function(e){ var b = e.target.closest('.pp'); if(b) open(b.getAttribute('data-k')); });
+    paintSky(); setInterval(paintSky, 60000);
+    setInterval(function(){ KEYS.forEach(function(k){ var p = P[k]; if(p.walking){ var y = (p.el.offsetTop / MAP.clientHeight) * 100; p.el.style.zIndex = Math.round(y * 10); } }); }, 120);
+    KEYS.forEach(function(k, i){ setTimeout(function(){ think(k); }, 600 + i * 450); });
+  }
+
+  // ---------- walking ----------
+  function say(k, text, ms, tone){ var p = P[k]; if(!p || !text) return; clearTimeout(p.bt); p.bub.textContent = text; p.bub.className = 'bub on' + (tone ? ' ' + tone : ''); p.bt = setTimeout(function(){ p.bub.className = 'bub'; }, ms || 3000); }
+  function leg(p, x, y, speed){
+    return new Promise(function(res){
+      var W = MAP.clientWidth, Hh = MAP.clientHeight, dist = Math.hypot((x - p.x) * W / 100, (y - p.y) * Hh / 100), dur = Math.max(.15, dist / speed);
+      if(Math.abs(x - p.x) > .3) p.el.classList.toggle('left', x < p.x);
+      p.el.style.transition = 'left ' + dur + 's linear, top ' + dur + 's linear';
+      p.el.style.left = x + '%'; p.el.style.top = y + '%'; p.x = x; p.y = y;
+      setTimeout(res, dur * 1000 + 30);
+    });
+  }
+  async function go(k, to, run){
+    var p = P[k]; p.walking = true; p.el.classList.remove('type', 'panic'); p.el.classList.add('walk');
+    var sp = (run ? 150 : 70) * (MAP.clientWidth < 600 ? .6 : 1), ay = SPOT.aisle;
+    var jit = (Math.random() - .5) * 3;
+    if(Math.abs(p.y - to[1]) > 3 || (p.y < ay && to[1] < ay && Math.abs(p.x - to[0]) > 3)){ await leg(p, p.x, ay + jit, sp); await leg(p, to[0], ay + jit, sp); }
+    await leg(p, to[0], to[1], sp);
+    p.el.classList.remove('walk'); p.walking = false; p.el.style.zIndex = Math.round(to[1] * 10);
+  }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+  function scr(k, on){ var d = $('dk_' + k); if(d) d.classList.toggle('on', !!on); }
+  function short(t){ t = String(t || ''); return t.length > 34 ? t.slice(0, 32) + '…' : t; }
+  async function sitWork(k, ms, talk){
+    var p = P[k], s = seat(k); if(Math.abs(p.x - s[0]) > .5 || Math.abs(p.y - s[1]) > .5) await go(k, s);
+    p.el.classList.remove('left'); p.el.classList.add('type'); scr(k, true);
+    if(talk) setTimeout(function(){ say(k, short(EMP[k].say), 3200); }, 400 + Math.random() * 1500);
+    await wait(ms); p.el.classList.remove('type'); scr(k, false);
+  }
+  async function think(k){
+    try{
+      var e = EMP[k], st = e ? e.st : 'ok', r = Math.random();
+      if(document.hidden){ await wait(4000); }
+      else if(k === 'boss'){
+        var bad = KEYS.filter(function(x){ return x !== 'boss' && EMP[x] && (EMP[x].st === 'alert' || EMP[x].st === 'warn'); });
+        if(bad.length && r < .55){ var t = pick(bad); await go(k, front(t)); say(k, EMP[t].st === 'alert' ? 'Ano nangyari, ' + EMP[t].name + '?' : 'Check natin \'yan', 2600, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(1200); say(t, short(EMP[t].say), 3000, EMP[t].st === 'alert' ? 'red' : 'amb'); await wait(2600); }
+        else if(r < .8){ var t2 = pick(KEYS.filter(function(x){ return x !== 'boss' && x !== 'janitor'; })); await go(k, front(t2)); say(k, pick(['Good job 👍','Kumusta?','Nice work!','Tuloy lang 💪']), 2400); await wait(2600); }
+        else if(r < .9){ await go(k, SPOT.coffee); say(k, '☕', 2000); await wait(3000); }
+        await sitWork(k, 5000 + Math.random() * 6000, Math.random() < .3);
+      }
+      else if(k === 'janitor'){
+        if(st === 'alert' || st === 'warn'){ await go(k, SPOT.boss, st === 'alert'); say(k, short(e.say), 3500, st === 'alert' ? 'red' : 'amb'); await wait(3500); }
+        if(r < .75){ P[k].el.classList.add('mop'); var spots = [[10 + Math.random() * 60, 56 + Math.random() * 6], [20 + Math.random() * 70, 88 + Math.random() * 6], [10 + Math.random() * 80, 58]];
+          for(var i = 0; i < 2; i++){ await go(k, pick(spots)); if(Math.random() < .3) say(k, pick(['🧹','✨ Malinis na','🧽']), 1800); await wait(900); } P[k].el.classList.remove('mop'); }
+        await go(k, SPOT.closet); await wait(2500 + Math.random() * 3000);
+      }
+      else if(st === 'alert'){
+        await go(k, SPOT.boss, true); say(k, '! ' + short(e.say), 3800, 'red'); await wait(3800);
+        await go(k, seat(k), true); P[k].el.classList.add('panic'); scr(k, true); await wait(5000); P[k].el.classList.remove('panic'); scr(k, false);
+      }
+      else if(st === 'warn'){
+        if(r < .35){ await go(k, SPOT.boss); say(k, short(e.say), 3400, 'amb'); await wait(3400); }
+        else { await sitWork(k, 4000, false); say(k, '? ' + short(e.say), 3000, 'amb'); await wait(2500); }
+      }
+      else if(st === 'working'){ await sitWork(k, 7000 + Math.random() * 5000, Math.random() < .45); }
+      else {
+        if(r < .5) await sitWork(k, 5000 + Math.random() * 7000, Math.random() < .25);
+        else if(r < .66){ await go(k, [SPOT.coffee[0] + (Math.random() - .5) * 4, SPOT.coffee[1] + 2]); say(k, '☕', 1800); await wait(2800); }
+        else if(r < .78){ await go(k, [SPOT.cooler[0] + (Math.random() - .5) * 3, SPOT.cooler[1] + 2]); say(k, '💧', 1800); await wait(2600); }
+        else if(r < .9){ var o = pick(KEYS.filter(function(x){ return x !== k && x !== 'janitor'; })); await go(k, front(o)); say(k, '💬', 2200); await wait(2000); say(o, pick(['😄','👍','Sige!','Haha']), 1800); await wait(1600); }
+        else { await go(k, [SPOT.sofa[0] + (Math.random() - .5) * 8, SPOT.sofa[1] - 3]); say(k, pick(['😌','Break muna','🎵']), 2000); await wait(4000); }
+      }
+    }catch(err){ await wait(3000); }
+    setTimeout(function(){ think(k); }, 300 + Math.random() * 900);
+  }
+
+  // ---------- landscape / full screen ----------
+  function land(on){
+    document.body.classList.toggle('land', on);
+    try{
+      if(on){ var el = document.documentElement; var rq = el.requestFullscreen || el.webkitRequestFullscreen; if(rq) Promise.resolve(rq.call(el)).then(function(){ try{ screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(function(){}); }catch(e){} }).catch(function(){}); }
+      else { if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){} }
+    }catch(e){}
+  }
+  $('landBtn').addEventListener('click', function(){ land(true); });
+  $('xland').addEventListener('click', function(){ land(false); });
+  document.addEventListener('fullscreenchange', function(){ if(!document.fullscreenElement && document.body.classList.contains('land')) document.body.classList.remove('land'); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ $('sheet').classList.remove('on'); if(document.body.classList.contains('land')) land(false); } });
+
   function open(k){
     var e = EMP[k]; if(!e) return;
     $('card').innerHTML = '<button class="xx" id="xx">Close</button><h3>' + esc(e.name) + '</h3><div class="rl">' + esc(e.role) + ' · <b style="color:var(--' + (e.st === 'alert' ? 'bad' : e.st === 'warn' ? 'warn' : e.st === 'working' ? 'work' : 'ok') + ')">' + LBL[e.st] + '</b></div>' +
@@ -206,19 +428,9 @@
     $('sheet').classList.add('on'); $('xx').onclick = function(){ $('sheet').classList.remove('on'); };
   }
   $('sheet').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
-  $('floor').addEventListener('click', function(e){ var b = e.target.closest('.desk'); if(b) open(b.getAttribute('data-k')); });
+  $('roster').addEventListener('click', function(e){ var b = e.target.closest('.rw'); if(b) open(b.getAttribute('data-k')); });
 
   var busy = false;
-
-  // The server says the 15-minute password unlock ran out: clear the remembered unlock and reload ONCE so the password box shows;
-  // then keep retrying quietly until the person has unlocked.
-  function reauthFix(){
-    try{
-      var last = Number(sessionStorage.getItem('lbReauthTry') || 0);
-      if(Date.now() - last > 30000){ sessionStorage.setItem('lbReauthTry', String(Date.now())); sessionStorage.removeItem('lbAdminUnlock'); location.reload(); return true; }
-    }catch(e){}
-    return false;
-  }
   async function load(){
     if(busy) return; busy = true;
     try{
@@ -226,12 +438,12 @@
       var d = await res.json();
       if(!d.success){
         if(d.reauth){ try{ window.lbAdminRelock && window.lbAdminRelock(); }catch(e){} $('deckBox').textContent = 'Enter your password in the box to unlock…'; setTimeout(load, 4000); return; }
-        if(/access/i.test(d.error || '')){ $('floor').style.display = 'none'; $('denied').style.display = 'block'; }
+        if(/access/i.test(d.error || '')){ $('mainBox').style.display = 'none'; $('denied').style.display = 'block'; }
         else $('deckBox').textContent = d.error || 'Could not load.';
         return;
       }
       S = d.status; render();
-    }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; }
+    }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; setTimeout(load, 8000); }
     finally{ busy = false; }
   }
   $('ref').addEventListener('click', load);
