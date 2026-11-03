@@ -1508,7 +1508,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     addBtn.disabled = !(n > 0);
   }
 
-  function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return g >= 1000 ? s + ' · ' + (g / 1000).toFixed(3) + ' kg' : s; }   // 1800 -> "1,800 g · 1.800 kg" (comma for thousands so it is not mixed up with BD decimals)
+  function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return s; }   // 1800 -> "1,800 g" (comma for thousands so it is not mixed up with BD decimals)
   // Pieces <-> weight: pieces mode shows the grams, grams/kg mode shows the matching number of pieces.
   function eqText(m, kg, gpp, whole){
     if(whole || !(kg > 0) || !(gpp > 0)) return '';

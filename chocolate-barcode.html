@@ -1269,7 +1269,7 @@ document.getElementById('addDisplayExtraBtn').addEventListener('click', ()=>{
   renderDisplayCart();
 });
 
-function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return g >= 1000 ? s + ' · ' + (g / 1000).toFixed(3) + ' kg' : s; }   // 1800 -> "1,800 g · 1.800 kg" (comma for thousands so it is not mixed up with BD decimals)
+function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return s; }   // 1800 -> "1,800 g" (comma for thousands so it is not mixed up with BD decimals)
 // Pieces <-> weight: pieces show their grams, grams/kg show the matching number of pieces. unit: 'piece' | 'g' | 'kg'
 function eqUnitText(unit, qty, gpp){
   qty = Number(qty) || 0; gpp = Number(gpp) || 0;
