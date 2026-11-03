@@ -104,7 +104,7 @@
       '.lbte-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.lbte-mv{width:32px;height:32px;flex:0 0 auto;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);border-radius:8px;cursor:pointer;font-size:13px;padding:0}',
       '.lbte-mv:disabled{opacity:.3;cursor:default}',
-      '.lbte-add{margin-top:12px;border:1px dashed var(--s-line);border-radius:12px;padding:10px;background:var(--s-card)}.lbte-add b{font-size:12.5px}.lbte-add-row{display:flex;gap:8px;margin-top:8px}.lbte-add select{flex:1;min-width:0;border:1px solid var(--s-line);border-radius:8px;padding:8px;background:var(--s-bg);color:var(--s-ink);font:inherit;font-size:13px}.lbte-add-btn{border:0;background:var(--s-acc);color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}html[data-lb-theme="dark"] .lbte-add-btn{color:#1d1719}.lbte-rm{border:0;background:none;color:var(--s-acc);font-size:15px;cursor:pointer;padding:4px 6px;flex:0 0 auto}',
+      '.lbte-add{margin-top:12px;border:1px dashed var(--s-line);border-radius:12px;padding:10px;background:var(--s-card)}.lbte-add b{font-size:12.5px}.lbte-add-row{display:flex;gap:8px;margin-top:8px}.lbte-add select{flex:1;min-width:0;border:1px solid var(--s-line);border-radius:8px;padding:8px;background:var(--s-bg);color:var(--s-ink);font:inherit;font-size:13px}.lbte-add-btn{border:0;background:var(--s-acc);color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}html[data-lb-theme="dark"] .lbte-add-btn{color:#1d1719}.lbte-add-btn:disabled{opacity:.45;cursor:default}.lbte-addn{font-size:11.5px;color:var(--s-dim)}.lbte-find{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--s-line);border-radius:8px;padding:7px 9px;background:var(--s-bg);color:var(--s-ink);font:inherit;font-size:13px}.lbte-picks{margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--s-line);border-radius:8px;background:var(--s-bg)}.lbte-pick{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--s-line);font-size:13px;cursor:pointer}.lbte-pick:last-child{border-bottom:0}.lbte-pick input{width:17px;height:17px;accent-color:var(--s-acc);margin:0;flex:0 0 auto}.lbte-pick i{font-style:normal;font-size:10px;font-weight:700;color:var(--s-acc);border:1px solid var(--s-line);border-radius:99px;padding:1px 6px;margin-left:4px}.lbte-all{border:1px solid var(--s-line);background:transparent;color:var(--s-ink);border-radius:8px;padding:7px 10px;font:inherit;font-size:12px;cursor:pointer}.lbte-rm{border:0;background:none;color:var(--s-acc);font-size:15px;cursor:pointer;padding:4px 6px;flex:0 0 auto}',
       '.lbte-note{font-size:11.5px;color:var(--s-dim);margin:8px 0 0;line-height:1.45}',
       '.lbte-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}',
       '.lbte-reset{background:none;border:0;color:var(--s-acc);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 0}',
@@ -228,9 +228,14 @@
     }
     function addBox() {
       const present = new Set(master.map(m => m.href));
-      const opts2 = CATALOG.filter(c => !present.has(c[0])).map(c => '<option value="' + esc(c[0]) + '">' + esc(c[1] + ' ' + c[2] + (c[3] ? '  (Admin)' : '')) + '</option>').join('');
-      if (!opts2) return '';
-      return '<div class="lbte-add"><b>➕ Add a page</b><div class="lbte-add-row"><select id="lbteAddSel">' + opts2 + '</select><button type="button" class="lbte-add-btn">Add</button></div></div>';
+      // pick several pages at once (checkboxes), with a quick search when the list is long
+      const left = CATALOG.filter(c => !present.has(c[0]));
+      if (!left.length) return '';
+      const items = left.map(c => '<label class="lbte-pick" data-q="' + esc((c[2] + ' ' + c[0]).toLowerCase()) + '"><input type="checkbox" value="' + esc(c[0]) + '"><span>' + esc(c[1] + ' ' + c[2]) + (c[3] ? ' <i>Admin</i>' : '') + '</span></label>').join('');
+      return '<div class="lbte-add"><b>➕ Add pages</b> <span class="lbte-addn">— tick one or more</span>' +
+        (left.length > 6 ? '<input type="search" class="lbte-find" placeholder="Search pages…">' : '') +
+        '<div class="lbte-picks">' + items + '</div>' +
+        '<div class="lbte-add-row"><button type="button" class="lbte-all">Select all</button><span style="flex:1"></span><button type="button" class="lbte-add-btn" disabled>Add</button></div></div>';
     }
     function save(fn) {
       const s = state();
@@ -247,6 +252,16 @@
     }
     function onKey(e) { if (e.key === 'Escape') close(); }
 
+    function pickCount() {
+      const n = back.querySelectorAll('.lbte-pick input:checked').length, b = back.querySelector('.lbte-add-btn');
+      if (b) { b.disabled = !n; b.textContent = n ? 'Add ' + n + ' page' + (n > 1 ? 's' : '') : 'Add'; }
+    }
+    back.addEventListener('change', e => { if (e.target.closest('.lbte-pick')) pickCount(); });
+    back.addEventListener('input', e => {
+      if (!e.target.classList.contains('lbte-find')) return;
+      const q = e.target.value.trim().toLowerCase();
+      back.querySelectorAll('.lbte-pick').forEach(l => { l.style.display = !q || l.dataset.q.indexOf(q) > -1 ? '' : 'none'; });
+    });
     back.addEventListener('click', e => {
       if (e.target === back || e.target.closest('.lbte-done')) { close(); return; }
       if (e.target.closest('.lbte-reset')) {
@@ -254,15 +269,24 @@
         try { localStorage.removeItem(opts.storageKey); } catch (_) {}
         changed = true; draw(); return;
       }
+      const allBtn = e.target.closest('.lbte-all');
+      if (allBtn) {
+        const boxes = [...back.querySelectorAll('.lbte-pick')].filter(l => l.style.display !== 'none').map(l => l.querySelector('input'));
+        const on = boxes.some(b => !b.checked);
+        boxes.forEach(b => { b.checked = on; });
+        allBtn.textContent = on ? 'Clear' : 'Select all';
+        pickCount(); return;
+      }
       const addBtn = e.target.closest('.lbte-add-btn');
       if (addBtn) {
-        const sel = back.querySelector('#lbteAddSel'); if (!sel) return;
-        const c = CATALOG.find(x => x[0] === sel.value); if (!c) return;
+        const picked = [...back.querySelectorAll('.lbte-pick input:checked')].map(i => CATALOG.find(x => x[0] === i.value)).filter(Boolean);
+        if (!picked.length) return;
         const p = read(opts.storageKey);
-        p.extra = (Array.isArray(p.extra) ? p.extra : []).filter(x => x && x.href !== c[0]);
-        p.extra.push({ href: c[0], icon: c[1], label: c[2] });
+        const hrefs = new Set(picked.map(c => c[0]));
+        p.extra = (Array.isArray(p.extra) ? p.extra : []).filter(x => x && !hrefs.has(x.href));
+        picked.forEach(c => p.extra.push({ href: c[0], icon: c[1], label: c[2] }));
         write(opts.storageKey, p);
-        changed = true; close(); return;   // reload: the new tool appears at the end of the list
+        changed = true; close(); return;   // reload: the new tools appear at the end of the list
       }
       const rm = e.target.closest('.lbte-rm');
       if (rm) {
