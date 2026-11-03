@@ -1,4 +1,4 @@
-// LALABELLA SHOPIFY NEW-ORDER ALERT v2.1 (see shopify-orders-fast.ts in the repo for notes)
+// LALABELLA SHOPIFY NEW-ORDER ALERT v2.2 (branch: checkout > area keywords > map pin) (see shopify-orders-fast.ts in the repo for notes)
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SECRET = Deno.env.get('SHOPIFY_WEBHOOK_SECRET') || '';
@@ -56,14 +56,30 @@ function km(aLat: number, aLng: number, bLat: number, bLng: number) {
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
+// Branch order (same as the Tampermonkey + Branch Config): 1) branch picked at checkout, 2) area keywords from Branch Config
+// (city first, then the street lines), 3) only if no keyword matches: nearest branch to the map pin.
+// The map pin is often the customer's phone location or a default pin, so it must not beat the area they typed.
+function kwHit(text: string, branches: any[]) {
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ') + ' ';
+  if (!t.trim()) return null;
+  for (const b of branches) {
+    const words = String(b.keywords || '').split(/[,;\n]/).map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim()).filter((s: string) => s.length > 1);
+    if (b.name && words.some((w: string) => t.indexOf(' ' + w + ' ') !== -1)) return b;
+  }
+  return null;
+}
 async function pickBranch(order: any, attrs: Record<string, string>) {
-  const branches: any[] = (await rest('GET', 'branch_config?select=name,latitude,longitude,keywords&order=id.asc')) || [];
+  const branches: any[] = ((await rest('GET', 'branch_config?select=name,latitude,longitude,keywords&order=id.asc')) || []).filter((b: any) => b && b.name);
   const picked = (attrs['order location'] || '').toLowerCase();
   if (picked) {
     const hit = branches.find((b) => b.name && picked.indexOf(String(b.name).toLowerCase()) !== -1);
     if (hit) return { name: String(hit.name), source: 'checkout' };
   }
   const sa = order.shipping_address || {};
+  for (const part of [sa.city, sa.province, [sa.address1, sa.address2].filter(Boolean).join(' ')]) {
+    const hit = kwHit(part, branches);
+    if (hit) return { name: String(hit.name), source: 'address' };
+  }
   const lat = Number(sa.latitude), lng = Number(sa.longitude);
   if (isFinite(lat) && isFinite(lng) && lat && lng) {
     let best: any = null, bd = 1e9;
@@ -74,13 +90,6 @@ async function pickBranch(order: any, attrs: Record<string, string>) {
       if (d < bd) { bd = d; best = b; }
     });
     if (best) return { name: String(best.name), source: 'map' };
-  }
-  const addr = [sa.address1, sa.address2, sa.city, sa.province].filter(Boolean).join(' ').toLowerCase();
-  if (addr) {
-    for (const b of branches) {
-      const words = String(b.keywords || '').split(/[,;\n]/).map((s: string) => s.trim().toLowerCase()).filter((s: string) => s.length > 1);
-      if (words.some((w: string) => addr.indexOf(w) !== -1)) return { name: String(b.name), source: 'address' };
-    }
   }
   return { name: '', source: '' };
 }
