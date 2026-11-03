@@ -49,6 +49,10 @@
         var rows = (sh.rows || []).map(function (r) { return (r || []).map(function (c) { return sh.raw === false ? cell(c) : (c == null ? '' : c); }); });
         if (!rows.length) rows = [['(no data)']];
         var ws = X.utils.aoa_to_sheet(rows);
+        if (sh.fmt) Object.keys(ws).forEach(function (k) {   // number formats per column, e.g. { 7: '#,##0.000' } for BD
+          if (k.charAt(0) === '!' || !ws[k] || ws[k].t !== 'n') return;
+          var c = X.utils.decode_cell(k).c; if (sh.fmt[c]) ws[k].z = sh.fmt[c];
+        });
         var widths = [];
         rows.forEach(function (r) { r.forEach(function (c, i) { var l = String(c == null ? '' : c).length; widths[i] = Math.min(60, Math.max(widths[i] || 6, l + 2)); }); });
         ws['!cols'] = widths.map(function (w) { return { wch: w }; });

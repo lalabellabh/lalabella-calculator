@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v12
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v13
+// v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
 // v12 (Nov 2026): getPettyCash also returns createdAt (when the entry was really saved) and dateChanges (date edits from the audit log) — for Excel export + back-date flags.
 // v11 (Nov 2026): an Admin can now also delete a cash count that was already sent to Qalali (client asks for a stronger confirm).
 // v10 (Oct 2026): bucket petty-cash-photos is PRIVATE. getPettyCash / addPettyCashEntry return short-lived (1h) signed URLs in photoUrl.
@@ -77,7 +78,7 @@ async function sbDelete(table: string, query: string) {
 async function sessionUser(token: string) {
   const t = String(token || '').trim();
   if (!t) return null;
-  const rows = await sbGet('users', `select=id,role,status,token_created&limit=1&token=eq.${encodeURIComponent(t)}`);
+  const rows = await sbGet('users', `select=id,username,role,status,token_created&limit=1&token=eq.${encodeURIComponent(t)}`);
   const u = rows && rows[0];
   if (!u) return null;
   if (String(u.status || 'Active') === 'Inactive') return null;
@@ -151,11 +152,14 @@ async function handleGetPettyCash(p: any) {
   let netFromTransactions = 0;
   (rows || []).forEach((r: any) => { netFromTransactions += r.entry_type === 'topup' ? Number(r.amount) : -Number(r.amount); });
 
-  let targetAmount = null, balance = netFromTransactions;
+  let targetAmount = null, balance = netFromTransactions, targetSetAt = null, targetSetBy = '', targetHistory: any[] = [];
   if (branch && branch !== 'All') {
-    const settingRows = await sbGet('petty_cash_settings', `select=target_amount&branch=eq.${encodeURIComponent(branch)}`);
+    const settingRows = await sbGet('petty_cash_settings', `select=target_amount,updated_at,updated_by&branch=eq.${encodeURIComponent(branch)}`);
     targetAmount = settingRows.length ? Number(settingRows[0].target_amount) : 0;
+    targetSetAt = settingRows.length ? settingRows[0].updated_at || null : null;
+    targetSetBy = settingRows.length ? settingRows[0].updated_by || '' : '';
     balance = targetAmount + netFromTransactions;
+    try { targetHistory = (await sbRpc('petty_target_history', { p_branch: branch })) || []; } catch (e) { console.error('petty_target_history', e); }
   }
 
   const signed = await signPettyPhotos(rows || []);
@@ -163,7 +167,7 @@ async function handleGetPettyCash(p: any) {
   let dateChanges: Record<string, any[]> = {};
   try { dateChanges = (await sbRpc('petty_date_changes')) || {}; } catch (e) { console.error('petty_date_changes', e); }
   return {
-    balance, targetAmount,
+    balance, targetAmount, targetSetAt, targetSetBy, targetHistory,
     transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '', createdAt: r.created_at || null, dateChanges: dateChanges[String(r.id)] || [] })),
   };
 }
@@ -173,7 +177,7 @@ async function handleSetPettyCashTarget(p: any, user: any) {
   const targetAmount = Number(p.targetAmount);
   if (!branch || branch === 'All') return { error: 'Please select a specific branch.' };
   if (isNaN(targetAmount) || targetAmount < 0) return { error: 'Invalid amount.' };
-  await sbUpsert('petty_cash_settings', [{ branch, target_amount: targetAmount }], 'branch');
+  await sbUpsert('petty_cash_settings', [{ branch, target_amount: targetAmount, updated_at: new Date().toISOString(), updated_by: String(user && user.username || '').slice(0, 60) }], 'branch');
   return { success: true };
 }
 async function handleAddPettyCashEntry(p: any) {
