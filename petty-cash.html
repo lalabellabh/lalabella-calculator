@@ -129,6 +129,12 @@
   .denom-grid .d-label{font-size:12.5px;font-weight:700;}
   .denom-grid input{margin-bottom:0;padding:6px 8px;text-align:center;}
   .denom-grid .d-subtotal{font-size:11px;color:var(--dim);text-align:right;font-weight:600;}
+  .fx-row{display:grid;grid-template-columns:92px 1fr 84px 88px 26px;gap:6px;align-items:center;margin-bottom:6px}
+  .fx-row select,.fx-row input{width:100%;box-sizing:border-box;padding:7px 6px;font-size:12.5px}
+  .fx-row .fx-sub{font-size:12px;font-weight:700;text-align:right}
+  .fx-row .fx-x{border:0;background:none;color:var(--rose);font-size:15px;cursor:pointer;padding:0}
+  .fx-note{font-size:10.5px;color:var(--dim);margin-top:4px}
+  @media(max-width:520px){.fx-row{grid-template-columns:80px 1fr 70px 26px}.fx-row .fx-sub{grid-column:1/4;text-align:left}}
   .denom-total{text-align:right;font-weight:800;font-size:14px;color:var(--rose);padding:8px 0;border-top:1px solid var(--line);margin-top:6px;}
 
   .pc-filter{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px;align-items:end;}
@@ -366,6 +372,11 @@
       <label style="margin-top:14px;">🪙 Coins (Fils)</label>
       <div id="denomCoins"></div>
 
+      <label style="margin-top:14px;">💱 Other currency (e.g. Saudi riyal)</label>
+      <div id="fxRows"></div>
+      <button type="button" class="print-btn" id="fxAdd" data-no-excel style="margin-top:4px">＋ Add foreign money</button>
+      <div class="fx-note">Changed to BD with the rate shown (BD for 1). Change the rate if the money changer gives a different one.</div>
+
       <div class="denom-total">Total: <span id="denomGrandTotal">0.000 BD</span></div>
 
       <label style="margin-top:14px;">Counted By</label>
@@ -488,22 +499,51 @@ function renderDenomRow(container, d){
 NOTE_DENOMS.forEach(d => renderDenomRow(document.getElementById('denomNotes'), d));
 COIN_DENOMS.forEach(d => renderDenomRow(document.getElementById('denomCoins'), d));
 
+/* ---------- Foreign money (e.g. Saudi riyal) → BD at an editable rate; saved as one line "SAR 250 @ 0.1003 BD" ---------- */
+// Default rates = BD for 1 unit. SAR, AED, QAR, OMR and USD are pegged (fixed); the others move — check with the money changer.
+const FX = [['SAR','Saudi riyal',0.1003],['AED','UAE dirham',0.1024],['QAR','Qatari riyal',0.1033],['KWD','Kuwaiti dinar',1.2240],['OMR','Omani rial',0.9779],['USD','US dollar',0.3760],['EUR','Euro',0.4100],['GBP','British pound',0.4900],['INR','Indian rupee',0.0044],['PHP','Philippine peso',0.0065],['EGP','Egyptian pound',0.0077]];
+function fxRate(code){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); if(m[code] > 0) return m[code]; }catch(e){} const f = FX.find(x => x[0] === code); return f ? f[2] : 0; }
+function fxSaveRate(code, r){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); m[code] = r; localStorage.setItem('lbFxRates', JSON.stringify(m)); }catch(e){} }
+function fxAddRow(){
+  const row = document.createElement('div'); row.className = 'fx-row';
+  row.innerHTML = '<select class="fx-cur">' + FX.map(f => '<option value="' + f[0] + '">' + f[0] + ' · ' + f[1] + '</option>').join('') + '</select>' +
+    '<input type="number" min="0" step="0.01" class="fx-amt" placeholder="Amount (e.g. 500)">' +
+    '<input type="number" min="0" step="0.0001" class="fx-rate" title="BD for 1">' +
+    '<div class="fx-sub">0.000 BD</div><button type="button" class="fx-x" title="Remove">✕</button>';
+  const cur = row.querySelector('.fx-cur'), amt = row.querySelector('.fx-amt'), rate = row.querySelector('.fx-rate');
+  rate.value = fxRate(cur.value);
+  const upd = () => { row.querySelector('.fx-sub').textContent = fxBD(row).toFixed(3) + ' BD'; updateGrandTotal(); };
+  cur.addEventListener('change', () => { rate.value = fxRate(cur.value); upd(); });
+  rate.addEventListener('change', () => { if(Number(rate.value) > 0) fxSaveRate(cur.value, Number(rate.value)); });
+  amt.addEventListener('input', upd); rate.addEventListener('input', upd);
+  row.querySelector('.fx-x').addEventListener('click', () => { row.remove(); updateGrandTotal(); });
+  document.getElementById('fxRows').appendChild(row); amt.focus();
+}
+function fxBD(row){ return Math.round((Number(row.querySelector('.fx-amt').value) || 0) * (Number(row.querySelector('.fx-rate').value) || 0) * 1000) / 1000; }
+document.getElementById('fxAdd').addEventListener('click', fxAddRow);
+
 function updateGrandTotal(){
   let total = 0;
   document.querySelectorAll('.denom-count').forEach(inp=>{
     total += (Number(inp.value) || 0) * Number(inp.dataset.value);
   });
+  document.querySelectorAll('#fxRows .fx-row').forEach(r => { total += fxBD(r); });
   document.getElementById('denomGrandTotal').textContent = total.toFixed(3) + ' BD';
   return total;
 }
 function collectBreakdown(){
   return Array.from(document.querySelectorAll('.denom-count'))
     .map(inp => ({ value: Number(inp.dataset.value), label: inp.dataset.label, count: Number(inp.value) || 0 }))
-    .filter(b => b.count > 0);
+    .filter(b => b.count > 0)
+    .concat(Array.from(document.querySelectorAll('#fxRows .fx-row')).map(r => {
+      const c = r.querySelector('.fx-cur').value, a = Number(r.querySelector('.fx-amt').value) || 0, rt = Number(r.querySelector('.fx-rate').value) || 0;
+      return { value: fxBD(r), label: c + ' ' + a + ' @ ' + rt + ' BD', count: 1 };
+    }).filter(b => b.value > 0));
 }
 function resetDenomInputs(){
   document.querySelectorAll('.denom-count').forEach(inp=>{ inp.value = ''; });
   document.querySelectorAll('.d-subtotal').forEach(el=>{ el.textContent = '0.000 BD'; });
+  document.getElementById('fxRows').innerHTML = '';
   updateGrandTotal();
 }
 
