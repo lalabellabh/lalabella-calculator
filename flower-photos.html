@@ -85,6 +85,24 @@
   .row.sel{ box-shadow:0 0 0 2px var(--rose); }
   @media (hover:hover) and (pointer:fine){ .pastebox{ display:block; } }
   input[type=file]{ display:none; }
+  #printArea{display:none}
+  @media print{
+    @page{size:A4;margin:10mm}
+    body{background:#fff!important}
+    body > *:not(#printArea){display:none!important}
+    #printArea{display:block!important;color:#222;font-family:"Space Grotesk",system-ui,sans-serif}
+    #printArea h2{font-size:18px;margin:0 0 2px}
+    #printArea .psub{font-size:11px;color:#666;margin:0 0 10px}
+    #printArea .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    #printArea .pcard{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:8px;text-align:center}
+    #printArea .pimg{height:140px;display:flex;align-items:center;justify-content:center;background:#fafafa;border-radius:6px;overflow:hidden;color:#aaa;font-size:11px}
+    #printArea .pimg img{max-width:100%;max-height:140px;object-fit:contain}
+    #printArea .pnm{font-weight:700;font-size:12.5px;margin-top:6px;line-height:1.25}
+    #printArea .pct{font-size:10.5px;color:#555;margin-top:2px}
+    #printArea .pfv{font-size:10px;color:#666;margin-top:3px;font-style:italic}
+    #printArea .pcd{font-size:10px;letter-spacing:.06em;margin-top:3px}
+    #printArea svg{width:100%;height:30px;margin-top:2px}
+  }
 </style>
 </head>
 <body>
@@ -98,6 +116,7 @@
     <input id="q" type="search" placeholder="Search flower name or code…" autocomplete="off">
     <select id="flt"><option value="all">Lahat</option><option value="none">Walang picture</option><option value="has">May picture</option></select>
     <button class="btn" id="addNew" type="button">➕ Add new flower</button>
+    <button class="btn" id="printBtn" type="button">🖨️ Print</button>
     <div class="count" id="count">Loading…</div>
   </div>
   <div id="list"></div>
@@ -106,7 +125,7 @@
 (function () {
   var API = (window.LB_CONFIG || {}).FLOWER_PHOTO_API;
   var CACHE_KEY = 'lbFlowerPhotosV1';
-  var items = [];
+  var items = [], shown = [];
   function token() { try { return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; } catch (e) { return ''; } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function call(body) {
@@ -125,6 +144,7 @@
       if (f === 'has' && !it.photo) return false;
       return true;
     });
+    shown = rows;
     var have = items.filter(function (i) { return i.photo; }).length;
     document.getElementById('count').textContent = have + ' of ' + items.length + ' may picture · ' + rows.length + ' shown';
     var el = document.getElementById('list');
@@ -138,6 +158,30 @@
     }).join('');
     drawBarcodes();
   }
+
+
+  // 🖨️ Print: a photo catalog of what is shown now (search + filter), 3 per row with name, price, code + barcode
+  document.getElementById('printBtn').addEventListener('click', function () {
+    if (!shown.length) { alert('Walang ipi-print — walang tumugma sa search / filter.'); return; }
+    var q = document.getElementById('q').value.trim(), f = document.getElementById('flt');
+    var pa = document.getElementById('printArea');
+    pa.innerHTML = '<h2>Lalabella — Flower Photos</h2><div class="psub">' + shown.length + ' item' + (shown.length > 1 ? 's' : '') + (q ? ' · Search: "' + esc(q) + '"' : '') + (f.value !== 'all' ? ' · ' + esc(f.options[f.selectedIndex].text) : '') + ' · Printed ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</div>' +
+      '<div class="pgrid">' + shown.map(function (it) {
+        var sub = (it.rate ? Number(it.rate).toFixed(3) + ' BHD' : '') + (it.unit ? ' · ' + esc(it.unit) : '');
+        return '<div class="pcard"><div class="pimg">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="">' : 'No photo') + '</div>' +
+          '<div class="pnm">' + esc(it.name) + '</div>' + (sub ? '<div class="pct">' + sub + '</div>' : '') +
+          (it.flavor ? '<div class="pfv">' + esc(it.flavor) + '</div>' : '') +
+          (it.code ? '<svg class="pbc" data-code="' + esc(it.code) + '"></svg><div class="pcd">' + esc(it.code) + '</div>' : '') + '</div>';
+      }).join('') + '</div>';
+    if (window.JsBarcode) Array.prototype.forEach.call(pa.querySelectorAll('svg.pbc'), function (svg) {
+      try { JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 1.2, height: 30, margin: 0, displayValue: false }); fitSvg(svg); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); } catch (e) { svg.remove(); }
+    });
+    // wait for the pictures (max 8 s) so they do not print blank
+    var imgs = Array.prototype.slice.call(pa.querySelectorAll('img'));
+    var btn = this; btn.disabled = true; btn.textContent = '⏳ Preparing…';
+    Promise.race([Promise.all(imgs.map(function (im) { return im.complete ? 0 : new Promise(function (r) { im.onload = im.onerror = r; }); })), new Promise(function (r) { setTimeout(r, 8000); })])
+      .then(function () { btn.disabled = false; btn.textContent = '🖨️ Print'; window.print(); });
+  });
 
   function fitSvg(svg) {
     if (!svg.getAttribute('viewBox')) {
@@ -371,5 +415,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="shared/nav.js" data-standalone></script>
+<div id="printArea"></div>
 </body>
 </html>
