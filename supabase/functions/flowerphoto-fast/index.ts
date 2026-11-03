@@ -4,6 +4,7 @@
 // One photo per flower NAME: saved on every flower_item row with that name (all origins).
 // addFlower creates the working-rate row (origin Legacy/Unknown, rate Approved) so the flower shows up
 // everywhere (catalog, receiving, stock, barcode) with its price right away.
+// v5 (Nov 2026): list() falls back to an origin price (approved first) when a flower has no Legacy/Unknown price; returns rateFrom = that origin.
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -81,7 +82,7 @@ async function savePhotoFile(base64Data: string, flowerName: string): Promise<st
 }
 
 async function list() {
-  const rows = await sbAll('flower_item?select=id,flower_name,item_code,origin,photo_url,rate,unit,stems_per_bunch&status=neq.Inactive&order=id.asc');
+  const rows = await sbAll('flower_item?select=id,flower_name,item_code,origin,photo_url,rate,rate_status,unit,stems_per_bunch&status=neq.Inactive&order=id.asc');
   const map = new Map<string, any>();
   rows.forEach((r: any) => {
     const name = String(r.flower_name || '').trim(); if (!name) return;
@@ -91,8 +92,17 @@ async function list() {
     g.codes.push({ code: r.item_code, origin: r.origin });
     if (r.photo_url && !g.photo) g.photo = r.photo_url;
     if (String(r.origin || '').trim() === 'Legacy/Unknown') { g.code = r.item_code; g.rate = Number(r.rate) || 0; g.unit = r.unit || ''; g.stems = Number(r.stems_per_bunch) || 1; }
+    // v5: remember an origin price too (approved first), for flowers that have no Legacy/Unknown price
+    else if (Number(r.rate) > 0) {
+      const ok = String(r.rate_status || '') === 'Approved';
+      if (!g.alt || (ok && !g.alt.ok)) g.alt = { ok, rate: Number(r.rate), unit: r.unit || '', stems: Number(r.stems_per_bunch) || 1, origin: String(r.origin || '').trim() };
+    }
   });
-  const items = [...map.values()].map(g => { if (!g.code && g.codes[0]) { g.code = g.codes[0].code; } return g; });
+  const items = [...map.values()].map(g => {
+    if (!g.code && g.codes[0]) { g.code = g.codes[0].code; }
+    if (!g.rate && g.alt) { g.rate = g.alt.rate; g.rateFrom = g.alt.origin; if (!g.unit) g.unit = g.alt.unit; if (g.stems === 1) g.stems = g.alt.stems; }
+    delete g.alt; return g;
+  });
   items.sort((a, b) => a.name.localeCompare(b.name));
   return { success: true, items };
 }
