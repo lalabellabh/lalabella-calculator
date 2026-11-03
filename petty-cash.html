@@ -551,6 +551,7 @@ async function loadPettyCash(){
     }
 
     window.lastPettyCashTxns = data.transactions;
+    window.lastPettyCashMeta = { branch, balance: data.balance, targetAmount: data.targetAmount, targetSetAt: data.targetSetAt || null, targetSetBy: data.targetSetBy || '', targetHistory: data.targetHistory || [] };
     renderPettyHistory();
   }catch(e){
     hist.innerHTML = '<div class="empty">Could not load — check your connection.</div>';
@@ -655,6 +656,51 @@ function pcBackTag(t){
   return out.map(x=>'<span class="bd-tag">'+esc(x)+'</span>').join('');
 }
 function pcBhTime(iso){ if(!iso) return ''; const d=new Date(new Date(iso).getTime()+3*3600000); return d.toISOString().slice(0,16).replace('T',' '); }
+
+// Statement (like a bank statement): allowance first, then every top-up / expense in date order with the money left after each one.
+function pcStatement(list){
+  const M=window.lastPettyCashMeta||{}, branch=document.getElementById('branchSelect').value;
+  const from=document.getElementById('pcFrom').value, to=document.getElementById('pcTo').value;
+  const today=new Date(Date.now()+3*3600000).toISOString().slice(0,10);
+  const bd=v=>Math.round((Number(v)||0)*1000)/1000;
+  if(branch==='All' || M.targetAmount==null){
+    return [['Lalabella — Petty Cash Statement'],[],['Pick ONE branch (top of the page) to get the statement with its allowance and the money left after each entry.']];
+  }
+  // allowance events: first known allowance, then every change (from the Activity History)
+  const H=(M.targetHistory||[]).filter(h=>h && h.to!=null);
+  const ev=[];
+  const firstAmt = H.length ? (H[0].from!=null ? Number(H[0].from) : Number(H[0].to)) : Number(M.targetAmount)||0;
+  const firstWhen = H.length && H[0].from==null ? H[0].at : (H.length ? null : M.targetSetAt);
+  ev.push({ day: firstWhen ? pcBhTime(firstWhen).slice(0,10) : '', saved: firstWhen ? pcBhTime(firstWhen) : '', desc:'Allowance (petty cash fund) given', type:'Allowance', by: (H.length && H[0].from==null ? (H[0].by||'') : (firstWhen ? M.targetSetBy : '')), inn: firstAmt, out:'', note: firstWhen ? '' : 'Date not recorded (set before Nov 2026)', sort:'0000' });
+  H.forEach((h,i)=>{ if(i===0 && h.from==null) return; const a=Number(h.from)||0, b=Number(h.to)||0, d=bd(b-a); if(!d) return;
+    ev.push({ day: pcBhTime(h.at).slice(0,10), saved: pcBhTime(h.at), desc:'Allowance changed '+a.toFixed(3)+' → '+b.toFixed(3), type:'Allowance change', by:h.by||'', inn: d>0?d:'', out: d<0?-d:'', note:'', sort: pcBhTime(h.at) }); });
+  // every entry of this branch (statement uses ALL entries so the balance is right; the date filter only hides rows)
+  (window.lastPettyCashTxns||[]).filter(t=>t.branch===branch).forEach(t=>{
+    const b=pcBackInfo(t), amt=Number(t.amount)||0;
+    const flags=[b.back?('Back-dated '+b.late+' day'+(b.late>1?'s':'')):'', b.future?'Future date':'', b.changed?'Date changed later':''].filter(Boolean).join(', ');
+    ev.push({ day:String(t.date||'').slice(0,10), saved:pcBhTime(t.createdAt), desc:(t.purpose||'')+((t.carPlate||t.driver)?' (Car '+(t.carPlate||'—')+', driver '+(t.driver||'—')+')':''), type:t.type==='topup'?'Top-up':'Expense', by:t.enteredBy||'', inn:t.type==='topup'?amt:'', out:t.type==='topup'?'':amt, note:flags, receipt:t.photoUrl?'yes':'', sort:String(t.date||'')+' '+(t.createdAt||'')+' '+String(t.id).padStart(9,'0') });
+  });
+  ev.sort((a,b)=> a.sort==='0000' ? -1 : b.sort==='0000' ? 1 : (a.day+' '+a.saved+' '+a.sort).localeCompare(b.day+' '+b.saved+' '+b.sort));
+  let bal=0; const rows=[]; let opening=null, tin=0, tout=0;
+  ev.forEach(e=>{
+    const inRange = e.sort==='0000' ? !from : ((!from || e.day>=from) && (!to || e.day<=to));
+    const before = e.sort!=='0000' && from && e.day<from;
+    bal=bd(bal+(Number(e.inn)||0)-(Number(e.out)||0));
+    if(before){ opening=bal; return; }
+    if(e.sort==='0000' && from){ opening=bal; return; }
+    if(!inRange) return;
+    tin+=Number(e.inn)||0; tout+=Number(e.out)||0;
+    rows.push([e.day?e.day:'—', e.type, e.desc, e.by, e.inn===''?'':bd(e.inn), e.out===''?'':bd(e.out), bal, e.note||'', e.saved||'', e.receipt||'']);
+  });
+  const endDay = to || today;
+  const head=[['Lalabella — Petty Cash Statement'],['Branch', branch],['Period',(from?from:'Start')+' to '+endDay],
+    ['Allowance (fund) now', bd(M.targetAmount)],['Allowance last set', M.targetSetAt ? pcBhTime(M.targetSetAt)+(M.targetSetBy?' by '+M.targetSetBy:'') : 'Not recorded (set before Nov 2026)'],[]];
+  const cols=[['Date','Type','For what / description','By','Money in (BD)','Money out (BD)','Money left after this (BD)','Notes','Saved in system (Bahrain time)','Receipt']];
+  const open = from ? [[from,'Opening','Money left at the start of this period','','','',opening==null?0:opening,'','','']] : [];
+  const foot=[[],['','','TOTAL in this period','',bd(tin),bd(tout)],['','','REMAINING as of '+endDay,'','','',rows.length?rows[rows.length-1][6]:(opening||0)]];
+  if(!to) foot.push(['','','Balance shown on the page now','','','',bd(M.balance)]);
+  return head.concat(cols, open, rows, foot);
+}
 document.getElementById('pcExcelBtn').addEventListener('click',()=>{
   const list=pcFiltered();
   if(!list.length){ alert('Nothing to export — no entries match this filter.'); return; }
@@ -679,7 +725,8 @@ document.getElementById('pcExcelBtn').addEventListener('click',()=>{
     ['Back-dated entries (date earlier than the day it was saved)',nBack],['Entries with a future date',nFuture],['Entries whose date was changed later',nChanged],[],
     ['Exported',pcBhTime(new Date().toISOString())+' (Bahrain)'],['Note','"Saved on" is the real time the entry was put in the system — it cannot be changed by staff.']];
   const btn=document.getElementById('pcExcelBtn'); btn.disabled=true; btn.textContent='⏳ Excel…';
-  lbExcel.save('Petty Cash ' + branch, [{ name:'Summary', rows:summary, freeze:false }, { name:'Entries', rows:[head].concat(rows) }])
+  const BD='#,##0.000';
+  lbExcel.save('Petty Cash ' + branch, [{ name:'Statement', rows:pcStatement(list), headerRow:7, fmt:{1:BD,4:BD,5:BD,6:BD} }, { name:'Entries (check)', rows:[head].concat(rows), fmt:{11:BD,12:BD,13:BD} }, { name:'Summary', rows:summary, freeze:false }])
     .catch(e=>alert(e && e.message || 'Could not make the Excel file.'))
     .finally(()=>{ btn.disabled=false; btn.textContent='📊 Excel'; });
 });
