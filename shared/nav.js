@@ -566,7 +566,21 @@
 
   // ---- ⚙️ Settings panel (Appearance + Edit Menu) ----
   const SECTION_TITLES = { chocolate: 'Chocolate Tools', flower: 'Flower Tools', item: 'Item Inventory', quick: 'Quick Tools', other: 'Other pages', mine: 'My own shortcuts' };
-  let setTab = null, renaming = null, custErr = '', custDraft = { i: '', n: '', l: '' };
+  let setTab = null, renaming = null, custErr = '', custDraft = { i: '', n: '', l: '' }, iconPick = null;
+  // Icon choices for your own shortcuts (tap the icon to pick), plus a guess from the name / link so they are not all 🔗.
+  const ICONS = ['🔗','🌐','🛍️','🛒','📦','🚚','🛵','💐','🌹','🌷','🌸','🍫','🎁','🎀','📊','📈','📋','📝','📄','📑','🗂️','📁','📅','🗓️','⏰','💰','💵','💳','🧾','🏦','👥','👤','📞','💬','📧','📣','⭐','❤️','✅','⚙️','🔧','🔍','📷','🖼️','🎨','🏷️','🏪','🏠','🚗','⛽','📍','🗺️','💡','📚','🎓','🍰','☕','🎉','🔔','🛡️'];
+  function guessIcon(name, link) {
+    const t = (String(name || '') + ' ' + String(link || '')).toLowerCase();
+    const R2 = [[/bleems/, '🛍️'], [/shopify|shop|store/, '🛒'], [/order/, '📦'], [/deliver|driver/, '🛵'], [/sheet|excel|xls|docs\.google\.com\/spreadsheets/, '📊'], [/doc|drive\.google|pdf/, '📄'],
+      [/calendar|schedule|duty/, '📅'], [/whatsapp|chat|messenger/, '💬'], [/mail|gmail/, '📧'], [/insta|facebook|tiktok|social/, '📣'], [/map|location/, '🗺️'], [/cash|petty|money|pay|bank/, '💰'],
+      [/invoice|receipt|bill/, '🧾'], [/flower|rose|bouquet/, '💐'], [/choco/, '🍫'], [/gift|card/, '🎁'], [/photo|picture|image/, '📷'], [/report|dashboard|stat/, '📈'], [/supplier|vendor/, '🏪'],
+      [/staff|hr|team|user/, '👥'], [/note/, '📝'], [/settings|admin/, '⚙️'], [/web|site|http|www|\.com/, '🌐']];
+    for (const r of R2) if (r[0].test(t)) return r[1];
+    return '🔗';
+  }
+  function iconGrid(target) {
+    return '<div class="lbset-icons">' + ICONS.map(e => '<button type="button" data-iconset="' + e + '" data-for="' + esc(target) + '">' + e + '</button>').join('') + '</div>';
+  }
 
   function settingsStyle() {
     if (document.getElementById('lb-settings-style')) return;
@@ -605,7 +619,11 @@
       '.lbset-ren{flex:1;min-width:0;padding:7px 8px;border:1px solid var(--s-acc);border-radius:8px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
       '.lbset-new{margin-top:10px;padding:10px;border:1px dashed var(--s-line);border-radius:12px;display:flex;flex-direction:column;gap:6px}',
       '.lbset-new b{font-size:12.5px}.lbset-new input{padding:9px 10px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px;min-width:0}',
-      '.lbset-new .r{display:flex;gap:6px}.lbset-new .r input:first-child{flex:0 0 64px;text-align:center}.lbset-new .r input:last-child{flex:1}',
+      '.lbset-new .r{display:flex;gap:6px}.lbset-new .r input:last-child{flex:1}',
+      '.lbset-ico{flex:0 0 64px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font-size:18px;cursor:pointer;padding:6px 4px}.lbset-ico small{font-size:10px;opacity:.6}',
+      '.lbset-ico.sm{flex:none;font-size:15px;padding:1px 4px;margin-right:2px;border-radius:7px;vertical-align:middle}',
+      '.lbset-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding:8px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);margin:4px 0}',
+      '.lbset-icons button{font-size:19px;border:1px solid transparent;background:transparent;border-radius:8px;padding:5px 0;cursor:pointer}.lbset-icons button:hover{border-color:var(--s-acc);background:var(--s-acc-soft)}',
       '.lbset-err{color:#c0392b;font-size:12px}',
       '.lbset-add select{flex:1;min-width:0;padding:9px 8px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);color:var(--s-ink);font:inherit;font-size:13px}',
       '.lbset-add button,.lbset-reset{border:0;background:var(--s-acc-soft);color:var(--s-acc);border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}',
@@ -740,14 +758,14 @@
       const i = x.item;
       const lbl = renaming === i[0]
         ? '<input class="lbset-ren" id="lbsetRen" maxlength="40" value="' + esc(i[2]) + '" placeholder="New name" aria-label="New name"><button type="button" class="lbset-btn" data-rensave="' + esc(i[0]) + '" aria-label="Save name">✓</button>'
-        : '<span class="lbset-lbl">' + i[1] + ' ' + esc(withOrigin(x, setTab)[2]) + (x.added ? '<span class="lbset-tag">added</span>' : '') + '</span>' +
+        : '<span class="lbset-lbl">' + (i[4] === 'custom' ? '<button type="button" class="lbset-ico sm" data-iconpick="' + esc(i[0]) + '" title="Change icon">' + i[1] + '</button>' : i[1]) + ' ' + esc(withOrigin(x, setTab)[2]) + (x.added ? '<span class="lbset-tag">added</span>' : '') + '</span>' +
           '<button type="button" class="lbset-btn" data-rename="' + esc(i[0]) + '" aria-label="Rename">✏️</button>';
       return '<div class="lbset-row' + (x.hidden ? ' off' : '') + '">' +
         '<input type="checkbox" data-show="' + esc(i[0]) + '"' + (x.hidden ? '' : ' checked') + ' aria-label="Show ' + esc(i[2]) + '">' + lbl +
         '<button type="button" class="lbset-btn" data-move="-1" data-h="' + esc(i[0]) + '"' + (n === 0 ? ' disabled' : '') + ' aria-label="Move up">▲</button>' +
         '<button type="button" class="lbset-btn" data-move="1" data-h="' + esc(i[0]) + '"' + (n === list.length - 1 ? ' disabled' : '') + ' aria-label="Move down">▼</button>' +
         (i[4] === 'custom' ? '<button type="button" class="lbset-btn" data-cdel="' + esc(i[0]) + '" aria-label="Delete shortcut">🗑</button>' : x.added ? '<button type="button" class="lbset-btn" data-remove="' + esc(i[0]) + '" aria-label="Remove">✕</button>' : '') +
-        '</div>';
+        '</div>' + (iconPick === i[0] ? iconGrid(i[0]) : '');
     }).join('') + '</div>';
 
     const inSection = list.map(x => x.item[0]);
@@ -763,7 +781,9 @@
         '<div class="lbset-note">They show up in the menu right away. Then tap ✏️ to rename them.</div></details>';
     }
     {
-      h += '<div class="lbset-new"><b>＋ Add your own shortcut to ' + esc(SECTION_TITLES[setTab]) + '</b><div class="r"><input id="lbcIcon" maxlength="4" placeholder="🔗" aria-label="Icon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
+      const curIco = custDraft.i || guessIcon(custDraft.n, custDraft.l);
+      h += '<div class="lbset-new"><b>＋ Add your own shortcut to ' + esc(SECTION_TITLES[setTab]) + '</b><div class="r"><button type="button" class="lbset-ico" id="lbcIconBtn" data-iconpick="__new" aria-label="Pick an icon" title="Pick an icon">' + esc(curIco) + ' <small>▾</small></button><input type="hidden" id="lbcIcon" value="' + esc(custDraft.i) + '"><input id="lbcName" maxlength="40" placeholder="Name (e.g. Supplier Sheet)" aria-label="Name" value="' + esc(custDraft.n) + '"></div>' +
+        (iconPick === '__new' ? iconGrid('__new') : '') +
         '<input id="lbcLink" maxlength="500" value="' + esc(custDraft.l) + '" placeholder="Page or link (e.g. notes.html or https://…)" aria-label="Link">' +
         (custErr ? '<div class="lbset-err">' + esc(custErr) + '</div>' : '') +
         '<button type="button" class="lbset-reset" style="padding:9px 14px;background:var(--s-acc-soft)" data-cadd>Add shortcut</button></div>';
@@ -808,7 +828,7 @@
   }
   function addCustom() {
     const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
-    const name = val('lbcName').replace(/\s+/g, ' ').slice(0, 40), ico = val('lbcIcon') || '🔗';
+    const name = val('lbcName').replace(/\s+/g, ' ').slice(0, 40), ico = val('lbcIcon') || guessIcon(val('lbcName'), val('lbcLink'));
     let href = val('lbcLink');
     custErr = ''; custDraft = { i: val('lbcIcon'), n: val('lbcName'), l: href };
     if (!name) custErr = 'Write a name for the shortcut.';
@@ -862,7 +882,26 @@
       drawSettings(); return;
     }
     if (t.dataset.mode) { if (window.LBTheme) window.LBTheme.set(t.dataset.mode); drawSettings(); return; }
-    if (t.dataset.tab) { setTab = t.dataset.tab; renaming = null; custErr = ''; drawSettings(); return; }
+    if (t.dataset.iconpick || t.dataset.iconset) {   // keep what was typed in the new-shortcut form across the redraw
+      const v = id => { const e = document.getElementById(id); return e ? e.value : null; };
+      if (v('lbcName') !== null) custDraft = { i: v('lbcIcon') || '', n: v('lbcName') || '', l: v('lbcLink') || '' };
+    }
+    if (t.dataset.iconpick) {
+      iconPick = iconPick === t.dataset.iconpick ? null : t.dataset.iconpick; drawSettings(); return;
+    }
+    if (t.dataset.iconset) {
+      const ico = t.dataset.iconset, target = t.dataset.for;
+      if (target === '__new') custDraft.i = ico;
+      else {
+        const c = readCustom(); c.forEach(x => { if (x && x.h === target) x.i = ico; });
+        try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (x) {}
+        if (REG[target] && REG[target].item) REG[target].item[1] = ico;
+        [QUICK, CUSTOM_OTHER].forEach(arr => arr.forEach(q => { if (q[0] === target) q[1] = ico; }));
+        try { renderAll(); } catch (x) {}
+      }
+      iconPick = null; drawSettings(); return;
+    }
+    if (t.dataset.tab) { setTab = t.dataset.tab; renaming = null; custErr = ''; iconPick = null; drawSettings(); return; }
     if (t.dataset.rename) { renaming = t.dataset.rename; drawSettings(); const r = document.getElementById('lbsetRen'); if (r) { r.focus(); r.select(); } return; }
     if (t.dataset.rensave) { saveRename(t.dataset.rensave); return; }
     if (t.dataset.cdel) {
@@ -946,6 +985,11 @@
     back.addEventListener('click', e => { if (e.target === back || e.target.closest('.lbset-x')) closeSettings(); });
     back.querySelector('.lbset').addEventListener('click', onSettingsClick);
     back.querySelector('.lbset').addEventListener('input', e => {
+      if (e.target && (e.target.id === 'lbcName' || e.target.id === 'lbcLink')) {
+        const hid = document.getElementById('lbcIcon'), btn = document.getElementById('lbcIconBtn');
+        if (hid && !hid.value && btn) { const n = document.getElementById('lbcName'), l = document.getElementById('lbcLink'); btn.firstChild.nodeValue = guessIcon(n && n.value, l && l.value) + ' '; }
+        return;
+      }
       if (e.target.hasAttribute && e.target.hasAttribute('data-text')) { const lb = document.getElementById('lbsetTextVal'); if (lb) lb.textContent = (parseInt(e.target.value, 10) || 100) + '%'; return; }
       if (e.target.hasAttribute && e.target.hasAttribute('data-alertvol')) {
         const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
