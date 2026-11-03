@@ -94,7 +94,11 @@
     #printArea h2{font-size:18px;margin:0 0 2px}
     #printArea .psub{font-size:11px;color:#666;margin:0 0 10px}
     #printArea .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    #printArea .pcard{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:8px;text-align:center}
+    #printArea .pcard{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:8px;text-align:center;display:flex;flex-direction:column}
+    #printArea .pcat{font-size:14px;margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid #9e2f4a;color:#9e2f4a;break-after:avoid;page-break-after:avoid}
+    #printArea .pcat span{font-size:11px;color:#888;font-weight:500}
+    #printArea .pcat:first-of-type{margin-top:4px}
+    #printArea .pfv{flex:1}
     #printArea .pimg{height:140px;display:flex;align-items:center;justify-content:center;background:#fafafa;border-radius:6px;overflow:hidden;color:#aaa;font-size:11px}
     #printArea .pimg img{max-width:100%;max-height:140px;object-fit:contain}
     #printArea .pnm{font-weight:700;font-size:12.5px;margin-top:6px;line-height:1.25}
@@ -426,6 +430,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="shared/nav.js" data-standalone></script>
-<div id="printArea"></div>
+<div id="printArea" data-lbchoc-skip data-lbflw-skip></div>
 </body>
 </html>

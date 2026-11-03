@@ -93,7 +93,11 @@
     #printArea h2{font-size:18px;margin:0 0 2px}
     #printArea .psub{font-size:11px;color:#666;margin:0 0 10px}
     #printArea .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    #printArea .pcard{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:8px;text-align:center}
+    #printArea .pcard{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:8px;text-align:center;display:flex;flex-direction:column}
+    #printArea .pcat{font-size:14px;margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid #9e2f4a;color:#9e2f4a;break-after:avoid;page-break-after:avoid}
+    #printArea .pcat span{font-size:11px;color:#888;font-weight:500}
+    #printArea .pcat:first-of-type{margin-top:4px}
+    #printArea .pfv{flex:1}
     #printArea .pimg{height:140px;display:flex;align-items:center;justify-content:center;background:#fafafa;border-radius:6px;overflow:hidden;color:#aaa;font-size:11px}
     #printArea .pimg img{max-width:100%;max-height:140px;object-fit:contain}
     #printArea .pnm{font-weight:700;font-size:12.5px;margin-top:6px;line-height:1.25}
@@ -167,13 +171,18 @@
     var q = document.getElementById('q').value.trim(), f = document.getElementById('flt');
     var pa = document.getElementById('printArea');
     pa.innerHTML = '<h2>Lalabella — Chocolate Photos</h2><div class="psub">' + shown.length + ' item' + (shown.length > 1 ? 's' : '') + (q ? ' · Search: "' + esc(q) + '"' : '') + (f.value !== 'all' ? ' · ' + esc(f.options[f.selectedIndex].text) : '') + ' · Printed ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</div>' +
-      '<div class="pgrid">' + shown.map(function (it) {
-        var sub = (it.category ? esc(it.category) : '');
+      (function () {
+        var groups = [], by = {};
+        shown.forEach(function (it) { var c = it.category || 'Other'; if (!by[c]) { by[c] = []; groups.push(c); } by[c].push(it); });
+        return groups.map(function (c) { return '<h3 class="pcat">' + esc(c) + ' <span>(' + by[c].length + ')</span></h3><div class="pgrid">' + by[c].map(card).join('') + '</div>'; }).join('');
+      })();
+    function card(it) {
+        var sub = '';
         return '<div class="pcard"><div class="pimg">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="">' : 'No photo') + '</div>' +
           '<div class="pnm">' + esc(it.name) + '</div>' + (sub ? '<div class="pct">' + sub + '</div>' : '') +
           '<div class="pfv"><b>Description:</b> ' + (it.flavor ? esc(it.flavor) : '<span class="pnone">(wala pa)</span>') + '</div>' +
           (it.code ? '<svg class="pbc" data-code="' + esc(it.code) + '"></svg><div class="pcd">' + esc(it.code) + '</div>' : '') + '</div>';
-      }).join('') + '</div>';
+    }
     var btn = this; btn.disabled = true; btn.textContent = '⏳ Preparing…';
     // the barcode tool must be loaded first (load it now if it is not), then draw every barcode
     var bcReady = window.JsBarcode ? Promise.resolve() : new Promise(function (res) {
@@ -425,6 +434,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="shared/nav.js" data-standalone></script>
-<div id="printArea"></div>
+<div id="printArea" data-lbchoc-skip data-lbflw-skip></div>
 </body>
 </html>
