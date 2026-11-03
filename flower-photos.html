@@ -99,9 +99,11 @@
     #printArea .pimg img{max-width:100%;max-height:140px;object-fit:contain}
     #printArea .pnm{font-weight:700;font-size:12.5px;margin-top:6px;line-height:1.25}
     #printArea .pct{font-size:10.5px;color:#555;margin-top:2px}
-    #printArea .pfv{font-size:10px;color:#666;margin-top:3px;font-style:italic}
+    #printArea .pfv{font-size:10.5px;color:#333;margin-top:4px;text-align:left;line-height:1.35}
+    #printArea .pfv b{font-size:9.5px;color:#777;text-transform:uppercase;letter-spacing:.04em}
+    #printArea .pnone{color:#aaa}
     #printArea .pcd{font-size:10px;letter-spacing:.06em;margin-top:3px}
-    #printArea svg{width:100%;height:30px;margin-top:2px}
+    #printArea svg{width:100%;height:38px;margin-top:6px}
   }
 </style>
 </head>
@@ -170,17 +172,26 @@
         var sub = (it.rate ? Number(it.rate).toFixed(3) + ' BHD' : '') + (it.unit ? ' · ' + esc(it.unit) : '');
         return '<div class="pcard"><div class="pimg">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="">' : 'No photo') + '</div>' +
           '<div class="pnm">' + esc(it.name) + '</div>' + (sub ? '<div class="pct">' + sub + '</div>' : '') +
-          (it.flavor ? '<div class="pfv">' + esc(it.flavor) + '</div>' : '') +
+          '<div class="pfv"><b>Description:</b> ' + (it.flavor ? esc(it.flavor) : '<span class="pnone">(wala pa)</span>') + '</div>' +
           (it.code ? '<svg class="pbc" data-code="' + esc(it.code) + '"></svg><div class="pcd">' + esc(it.code) + '</div>' : '') + '</div>';
       }).join('') + '</div>';
-    if (window.JsBarcode) Array.prototype.forEach.call(pa.querySelectorAll('svg.pbc'), function (svg) {
-      try { JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 1.2, height: 30, margin: 0, displayValue: false }); fitSvg(svg); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); } catch (e) { svg.remove(); }
-    });
-    // wait for the pictures (max 8 s) so they do not print blank
-    var imgs = Array.prototype.slice.call(pa.querySelectorAll('img'));
     var btn = this; btn.disabled = true; btn.textContent = '⏳ Preparing…';
-    Promise.race([Promise.all(imgs.map(function (im) { return im.complete ? 0 : new Promise(function (r) { im.onload = im.onerror = r; }); })), new Promise(function (r) { setTimeout(r, 8000); })])
-      .then(function () { btn.disabled = false; btn.textContent = '🖨️ Print'; window.print(); });
+    // the barcode tool must be loaded first (load it now if it is not), then draw every barcode
+    var bcReady = window.JsBarcode ? Promise.resolve() : new Promise(function (res) {
+      var sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+      sc.onload = sc.onerror = function () { res(); }; document.head.appendChild(sc); setTimeout(res, 8000);
+    });
+    bcReady.then(function () {
+      var bad = 0;
+      Array.prototype.forEach.call(pa.querySelectorAll('svg.pbc'), function (svg) {
+        try { if (!window.JsBarcode) throw 0; JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 1.4, height: 38, margin: 0, displayValue: false }); fitSvg(svg); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); } catch (e) { bad++; }
+      });
+      if (bad && !confirm('Hindi ma-load ang barcode (check internet). Ituloy pa rin ang print na walang barcode?')) { btn.disabled = false; btn.textContent = '🖨️ Print'; return; }
+      // wait for the pictures (max 8 s) so they do not print blank
+      var imgs = Array.prototype.slice.call(pa.querySelectorAll('img'));
+      return Promise.race([Promise.all(imgs.map(function (im) { return im.complete ? 0 : new Promise(function (r) { im.onload = im.onerror = r; }); })), new Promise(function (r) { setTimeout(r, 8000); })])
+        .then(function () { btn.disabled = false; btn.textContent = '🖨️ Print'; window.print(); });
+    });
   });
 
   function fitSvg(svg) {
