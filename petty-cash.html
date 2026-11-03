@@ -159,6 +159,10 @@
   .rc-lb img{max-width:96vw;max-height:84vh;border-radius:12px;background:#fff;}
   .rc-lb div{color:#fff;font-size:14px;font-weight:600;text-align:center;}
 
+  #ccEditModal{position:fixed;inset:0;background:rgba(20,8,12,.55);z-index:9400;display:none;align-items:center;justify-content:center;padding:16px;}
+  #ccEditModal.open{display:flex;}
+  #ccEditModal .box{background:var(--bg1);color:var(--ink);border:1px solid var(--glass-brd);box-shadow:var(--shadow);border-radius:18px;padding:18px;width:100%;max-width:440px;max-height:100%;overflow:auto;}
+  #ccEditModal .box h2{font-family:'Fraunces',serif;font-weight:900;font-size:16px;}
   #pcEditModal{position:fixed;inset:0;background:rgba(20,8,12,.55);z-index:9400;display:none;align-items:center;justify-content:center;padding:16px;}
   #pcEditModal.open{display:flex;}
   #pcEditModal .box{background:var(--bg1);color:var(--ink);border:1px solid var(--glass-brd);box-shadow:var(--shadow);border-radius:18px;padding:18px;width:100%;max-width:400px;max-height:100%;overflow:auto;}
@@ -403,6 +407,25 @@
   </div>
 </div><!-- /pcwrap -->
 
+<div id="ccEditModal"><div class="box">
+  <h2 style="margin-bottom:12px;">✏️ Edit Cash Count</h2>
+  <label>Date</label><input type="date" id="ceDate">
+  <label>Counted By</label><input type="text" id="ceBy" maxlength="80">
+  <label>💵 Notes (BD)</label><div id="ceNotes"></div>
+  <label style="margin-top:10px;">🪙 Coins (Fils)</label><div id="ceCoins"></div>
+  <label style="margin-top:10px;">💱 Other currency</label><div id="ceFx"></div>
+  <button type="button" class="print-btn" id="ceFxAdd" data-no-excel>＋ Add foreign money</button>
+  <div class="denom-total">Total: <span id="ceTotal">0.000 BD</span></div>
+  <label>Photo</label>
+  <div class="rc-btns"><label class="rc-b" for="cePhotoCam">📷 Camera</label><label class="rc-b" for="cePhotoFile">🖼️ Gallery</label></div>
+  <input type="file" id="cePhotoCam" accept="image/*" capture="environment" style="display:none;">
+  <input type="file" id="cePhotoFile" accept="image/*" style="display:none;">
+  <div class="rc-paste" id="cePhotoPaste" tabindex="0">📋 Click here, then Ctrl+V to paste a snip</div>
+  <div class="rc-prev" id="cePhotoPrev"><img alt="Photo"><button type="button" id="cePhotoClear" aria-label="Remove photo">✕</button></div>
+  <div style="display:flex;gap:8px;margin-top:10px;"><button class="save-btn" id="ceSave">Save</button><button class="print-btn" id="ceCancel" type="button" data-no-excel>Cancel</button></div>
+  <div class="msg" id="ceMsg"></div>
+</div></div>
+
 <div id="pcEditModal"><div class="box">
   <h2 style="margin-bottom:12px;">✏️ Edit Entry</h2>
   <label>Date</label><input type="date" id="peDate">
@@ -514,23 +537,27 @@ COIN_DENOMS.forEach(d => renderDenomRow(document.getElementById('denomCoins'), d
 const FX = [['SAR','Saudi riyal',0.1003],['AED','UAE dirham',0.1024],['QAR','Qatari riyal',0.1033],['KWD','Kuwaiti dinar',1.2240],['OMR','Omani rial',0.9779],['USD','US dollar',0.3760],['EUR','Euro',0.4100],['GBP','British pound',0.4900],['INR','Indian rupee',0.0044],['PHP','Philippine peso',0.0065],['EGP','Egyptian pound',0.0077]];
 function fxRate(code){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); if(m[code] > 0) return m[code]; }catch(e){} const f = FX.find(x => x[0] === code); return f ? f[2] : 0; }
 function fxSaveRate(code, r){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); m[code] = r; localStorage.setItem('lbFxRates', JSON.stringify(m)); }catch(e){} }
-function fxAddRow(){
+function fxAddRow(target, pre){
   const row = document.createElement('div'); row.className = 'fx-row';
   row.innerHTML = '<select class="fx-cur">' + FX.map(f => '<option value="' + f[0] + '">' + f[0] + ' · ' + f[1] + '</option>').join('') + '</select>' +
     '<input type="number" min="0" step="0.01" class="fx-amt" placeholder="Amount (e.g. 500)">' +
     '<input type="number" min="0" step="0.0001" class="fx-rate" title="BD for 1">' +
     '<div class="fx-sub">0.000 BD</div><button type="button" class="fx-x" title="Remove">✕</button>';
   const cur = row.querySelector('.fx-cur'), amt = row.querySelector('.fx-amt'), rate = row.querySelector('.fx-rate');
-  rate.value = fxRate(cur.value);
-  const upd = () => { row.querySelector('.fx-sub').textContent = fxBD(row).toFixed(3) + ' BD'; updateGrandTotal(); };
+  if(pre && pre.cur){ if(!FX.some(x => x[0] === pre.cur)){ const o = document.createElement('option'); o.value = pre.cur; o.textContent = pre.cur; cur.appendChild(o); } cur.value = pre.cur; }
+  rate.value = pre && pre.rate ? pre.rate : fxRate(cur.value);
+  if(pre && pre.amt) amt.value = pre.amt;
+  const upd = () => { row.querySelector('.fx-sub').textContent = fxBD(row).toFixed(3) + ' BD'; updateGrandTotal(); if(typeof ceTotal === 'function') ceTotal(); };
   cur.addEventListener('change', () => { rate.value = fxRate(cur.value); upd(); });
   rate.addEventListener('change', () => { if(Number(rate.value) > 0) fxSaveRate(cur.value, Number(rate.value)); });
   amt.addEventListener('input', upd); rate.addEventListener('input', upd);
-  row.querySelector('.fx-x').addEventListener('click', () => { row.remove(); updateGrandTotal(); });
-  document.getElementById('fxRows').appendChild(row); amt.focus();
+  row.querySelector('.fx-x').addEventListener('click', () => { row.remove(); updateGrandTotal(); if(typeof ceTotal === 'function') ceTotal(); });
+  document.getElementById(typeof target === 'string' ? target : 'fxRows').appendChild(row);
+  row.querySelector('.fx-sub').textContent = fxBD(row).toFixed(3) + ' BD';
+  if(!pre) amt.focus();
 }
 function fxBD(row){ return Math.round((Number(row.querySelector('.fx-amt').value) || 0) * (Number(row.querySelector('.fx-rate').value) || 0) * 1000) / 1000; }
-document.getElementById('fxAdd').addEventListener('click', fxAddRow);
+document.getElementById('fxAdd').addEventListener('click', () => fxAddRow('fxRows'));
 
 function updateGrandTotal(){
   let total = 0;
@@ -810,7 +837,7 @@ function rcCompress(file){
   });
 }
 // one picker per form ('pc' = add form, 'pe' = edit modal)
-const rcState={pc:{data:null},pe:{data:null,remove:false,old:''},cc:{data:null}};
+const rcState={pc:{data:null},pe:{data:null,remove:false,old:''},cc:{data:null},ce:{data:null,remove:false,old:''}};
 function rcShow(p,src){
   const box=document.getElementById(p+'PhotoPrev');
   if(src){ box.querySelector('img').src=src; box.classList.add('show'); } else { box.classList.remove('show'); box.querySelector('img').removeAttribute('src'); }
@@ -825,7 +852,7 @@ async function rcPick(p,file){
   try{ const d=await rcCompress(file); rcState[p].data=d; rcState[p].remove=false; rcShow(p,d); }
   catch(e){ alert('Could not read this picture. Try another one.'); }
 }
-['pc','pe','cc'].forEach(p=>{
+['pc','pe','cc','ce'].forEach(p=>{
   document.getElementById(p+'PhotoCam').addEventListener('change',function(){ rcPick(p,this.files[0]); });
   document.getElementById(p+'PhotoFile').addEventListener('change',function(){ rcPick(p,this.files[0]); });
   document.getElementById(p+'PhotoPaste').addEventListener('paste',function(e){
@@ -834,7 +861,7 @@ async function rcPick(p,file){
   });
   document.getElementById(p+'PhotoClear').addEventListener('click',function(){
     if(rcState[p].data){ rcState[p].data=null; rcShow(p,rcState[p].old||''); }       // drop the new one, go back to the saved one
-    else if(p==='pe' && rcState[p].old){ rcState[p].remove=true; rcShow(p,''); }      // remove the saved photo on Save
+    else if((p==='pe'||p==='ce') && rcState[p].old){ rcState[p].remove=true; rcShow(p,''); }      // remove the saved photo on Save
     ['Cam','File'].forEach(n=>{ document.getElementById(p+'Photo'+n).value=''; });
   });
   document.getElementById(p+'PhotoPrev').querySelector('img').addEventListener('click',function(){ if(this.src) rcOpenBig(this.src,''); });
@@ -1064,6 +1091,7 @@ async function loadCashCounts(){
         <div style="display:flex;gap:6px;align-items:center;">
           ${c.photoUrl?`<img class="rc-thumb" src="${esc(c.photoUrl)}" data-photo="${esc(c.photoUrl)}" data-cap="Cash count · ${esc(fmtDate(c.date))}" alt="Photo" loading="lazy">`:''}
           <button class="print-btn" data-id="${c.id}">🖨️ Print</button>
+          ${isAdminUser() ? `<button class="edit-btn" data-cid="${c.id}" title="Edit (Admin)">✏️</button>` : ''}
           ${c.sentToQalali
             ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span><button class="delete-btn" data-id="${c.id}" data-sent="1" title="Delete (Admin)">🗑️</button>`
             : `<button class="send-btn" data-id="${c.id}">Send to Qalali</button><button class="delete-btn" data-id="${c.id}" title="Delete">🗑️</button>`}
@@ -1079,6 +1107,7 @@ async function loadCashCounts(){
     hist.querySelectorAll('.print-btn').forEach(btn=>{
       btn.addEventListener('click', ()=> printCashCount(btn.dataset.id));
     });
+    hist.querySelectorAll('.edit-btn[data-cid]').forEach(btn=>btn.addEventListener('click', ()=> openCcEdit(btn.dataset.cid)));
     hist.querySelectorAll('.rc-thumb').forEach(im=>im.addEventListener('click',()=>rcOpenBig(im.dataset.photo,im.dataset.cap)));
   }catch(e){
     hist.innerHTML = '<div class="empty">Could not load — check your connection.</div>';
@@ -1099,6 +1128,65 @@ async function deleteCashCount(id, wasSent){
   }
 }
 
+/* ---------- Edit a cash count (Admin): date, counted by, money breakdown, foreign money, photo ---------- */
+let ceId = null, ceExtra = [];
+function ceDenomRow(container, d, count){
+  const row = document.createElement('div'); row.className = 'denom-grid';
+  row.innerHTML = `<div class="d-label">${d.label}</div><input type="number" min="0" step="1" class="ce-count" data-value="${d.value}" data-label="${d.label}" placeholder="0" value="${count || ''}"><div class="d-subtotal">${((count || 0) * d.value).toFixed(3)} BD</div>`;
+  const inp = row.querySelector('.ce-count');
+  inp.addEventListener('input', () => { row.querySelector('.d-subtotal').textContent = ((Number(inp.value) || 0) * d.value).toFixed(3) + ' BD'; ceTotal(); });
+  container.appendChild(row);
+}
+function ceBreakdown(){
+  return Array.from(document.querySelectorAll('#ccEditModal .ce-count')).map(i => ({ value: Number(i.dataset.value), label: i.dataset.label, count: Number(i.value) || 0 })).filter(b => b.count > 0)
+    .concat(Array.from(document.querySelectorAll('#ceFx .fx-row')).map(r => { const c = r.querySelector('.fx-cur').value, a = Number(r.querySelector('.fx-amt').value) || 0, rt = Number(r.querySelector('.fx-rate').value) || 0; return { value: fxBD(r), label: c + ' ' + a + ' @ ' + rt + ' BD', count: 1 }; }).filter(b => b.value > 0))
+    .concat(ceExtra);
+}
+function ceTotal(){
+  const el = document.getElementById('ceTotal'); if(!el) return 0;
+  const t = ceBreakdown().reduce((s, b) => s + b.value * b.count, 0); el.textContent = t.toFixed(3) + ' BD'; return t;
+}
+function openCcEdit(id){
+  const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id)); if(!c) return;
+  ceId = c.id; ceExtra = [];
+  document.getElementById('ceDate').value = String(c.date).slice(0,10);
+  document.getElementById('ceBy').value = c.countedBy || '';
+  const notes = document.getElementById('ceNotes'), coins = document.getElementById('ceCoins'), fx = document.getElementById('ceFx');
+  notes.innerHTML = ''; coins.innerHTML = ''; fx.innerHTML = '';
+  const byLabel = {}; (c.breakdown || []).forEach(b => { byLabel[b.label] = b; });
+  NOTE_DENOMS.forEach(d => ceDenomRow(notes, d, byLabel[d.label] ? byLabel[d.label].count : 0));
+  COIN_DENOMS.forEach(d => ceDenomRow(coins, d, byLabel[d.label] ? byLabel[d.label].count : 0));
+  const known = new Set(NOTE_DENOMS.concat(COIN_DENOMS).map(d => d.label));
+  (c.breakdown || []).forEach(b => {
+    if(known.has(b.label)) return;
+    const m = String(b.label).match(/^([A-Z]{3}) ([\d.]+) @ ([\d.]+) BD$/);
+    if(m) fxAddRow('ceFx', { cur: m[1], amt: m[2], rate: m[3] });
+    else ceExtra.push({ value: b.value, label: b.label, count: b.count });   // any other old line is kept as it is
+  });
+  rcReset('ce', c.photoUrl || '');
+  const m = document.getElementById('ceMsg'); m.className = 'msg'; m.textContent = '';
+  ceTotal();
+  document.getElementById('ccEditModal').classList.add('open');
+}
+document.getElementById('ceFxAdd').addEventListener('click', () => fxAddRow('ceFx'));
+document.getElementById('ceCancel').addEventListener('click', () => document.getElementById('ccEditModal').classList.remove('open'));
+document.getElementById('ccEditModal').addEventListener('click', e => { if(e.target.id === 'ccEditModal') e.currentTarget.classList.remove('open'); });
+document.getElementById('ceSave').addEventListener('click', async () => {
+  const m = document.getElementById('ceMsg'), btn = document.getElementById('ceSave');
+  const bd = ceBreakdown();
+  if(!bd.length){ m.textContent = 'Please enter the count for at least one denomination.'; m.className = 'msg error'; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const params = new URLSearchParams({ action:'editCashCount', id: ceId, date: document.getElementById('ceDate').value, countedBy: document.getElementById('ceBy').value.trim(), breakdown: JSON.stringify(bd), token: getToken() });
+    if(rcState.ce.data) params.set('photo', rcState.ce.data); else if(rcState.ce.remove) params.set('removePhoto', '1');
+    const res = await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() });
+    const data = await res.json();
+    if(!data.success){ m.textContent = data.error || 'Failed.'; m.className = 'msg error'; }
+    else { document.getElementById('ccEditModal').classList.remove('open'); loadCashCounts(); }
+  }catch(e){ m.textContent = 'Connection error.'; m.className = 'msg error'; }
+  btn.disabled = false; btn.textContent = 'Save';
+});
+
 async function printCashCount(id){
   const c = (window.lastCashCounts || []).find(x => String(x.id) === String(id));
   if(!c) return;
@@ -1109,8 +1197,10 @@ async function printCashCount(id){
   // Petty Cash history for this same branch, shown together below the
   // cash count so both totals can be seen and cross-checked at once
   // (e.g. a Petron/fuel expense that explains part of the cash used).
-  const pettyTxns = (window.lastPettyCashTxns || []).filter(t => t.branch === c.branch);
-  const pettyRows = pettyTxns.map(t => `
+  // Only the petty cash entries ON THE SAME DATE as this count (back-dated entries show on their own date's print).
+  const cDay = String(c.date).slice(0,10);
+  let pettyTxns = (window.lastPettyCashTxns || []).filter(t => t.branch === c.branch && String(t.date).slice(0,10) === cDay);
+  const rowsOf = list => list.map(t => `
     <tr>
       <td>${fmtDate(t.date)}</td>
       <td>${esc(t.purpose)}${carText(t) ? '<br><small>' + esc(carText(t)) + '</small>' : ''}</td>
@@ -1124,37 +1214,45 @@ async function printCashCount(id){
   // computed from whatever's cached, since the dropdown up top might
   // currently be showing a different branch entirely. This keeps the
   // printed remaining-balance accurate regardless of what's selected.
-  let currentBalance = null, freshTxns = null;
+  let currentBalance = null, freshTxns = null, dayEndBalance = null;
   try{
     const res = await fetch(PETTYCASH_API_URL + '?action=getPettyCash&branch=' + encodeURIComponent(c.branch) + '&token=' + encodeURIComponent(getToken()));
     const data = await res.json();
-    if(!data.error){ currentBalance = data.balance; freshTxns = data.transactions || null; }
+    if(!data.error){
+      currentBalance = data.balance; freshTxns = data.transactions || null;
+      // balance at the END of the count's date = allowance + every entry dated up to that day
+      if(freshTxns && data.targetAmount !== null && data.targetAmount !== undefined)
+        dayEndBalance = Number(data.targetAmount) + freshTxns.filter(t => String(t.date).slice(0,10) <= cDay).reduce((s, t) => s + (t.type === 'topup' ? Number(t.amount) : -Number(t.amount)), 0);
+    }
   }catch(e){}
+  if(freshTxns) pettyTxns = freshTxns.filter(t => t.branch === c.branch && String(t.date).slice(0,10) === cDay);
+  const pettyRows = rowsOf(pettyTxns);
+  let dayExp = 0, dayTop = 0; pettyTxns.forEach(t => { if(t.type === 'topup') dayTop += Number(t.amount); else dayExp += Number(t.amount); });
 
   // Receipt pictures of the petty cash entries on the SAME day as this count.
   // They are placed in the empty space to the right of the cash count table, sized to fit it.
   // (Fresh list from the server: the picture links are short-lived.)
   const BOXH = 150;   // px, about the height of the denomination table
   const dayKey = fmtDate(c.date);
-  const shots = (c.photoUrl ? [{ photoUrl: c.photoUrl }] : []).concat((freshTxns || pettyTxns).filter(t => t.branch === c.branch && t.photoUrl && fmtDate(t.date) === dayKey)).slice(0, 4);
+  const shots = (c.photoUrl ? [{ photoUrl: c.photoUrl }] : []).concat(pettyTxns.filter(t => t.photoUrl)).slice(0, 4);
   const cols = shots.length > 1 ? 2 : 1, cellH = shots.length > 2 ? Math.floor((BOXH - 4) / 2) : BOXH;
   const shotsHtml = shots.length ? `
     <div style="flex:1;min-width:0;height:${BOXH}px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px;align-content:start;">
       ${shots.map(t => `<div style="height:${cellH}px;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;"><img src="${esc(t.photoUrl)}" alt="Receipt" style="max-width:100%;max-height:100%;object-fit:contain;"></div>`).join('')}
     </div>` : '';
 
-  const balanceHtml = currentBalance !== null
-    ? `<div style="text-align:right;font-weight:700;font-size:14px;margin-top:8px;">Petty Cash Remaining Balance: ${fmtBD(currentBalance)}</div>`
+  const balanceHtml = (dayEndBalance !== null || currentBalance !== null)
+    ? `<div style="text-align:right;font-size:13px;margin-top:8px;line-height:1.6;">${pettyTxns.length ? 'Expenses this day: −' + fmtBD(dayExp) + (dayTop ? ' · Top-up: +' + fmtBD(dayTop) : '') + '<br>' : ''}<b style="font-size:14px;">Petty Cash balance at end of ${fmtDate(cDay)}: ${fmtBD(dayEndBalance !== null ? dayEndBalance : currentBalance)}</b></div>`
     : '';
 
   const pettyNetHtml = pettyTxns.length ? `
-    <h3 style="font-family:'Fraunces',serif;margin-top:24px;">Petty Cash History — ${c.branch}</h3>
+    <h3 style="font-family:'Fraunces',serif;margin-top:24px;">Petty Cash — ${c.branch} · ${fmtDate(cDay)} only</h3>
     <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Type</th><th style="text-align:left;">By</th><th style="text-align:right;">Amount</th></tr></thead>
       <tbody>${pettyRows}</tbody>
     </table>
     ${balanceHtml}
-  ` : balanceHtml;
+  ` : `<p style="margin-top:18px;font-size:12.5px;color:#555;">No petty cash expense on ${fmtDate(cDay)}.</p>` + balanceHtml;
 
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Cash Count</h2>
