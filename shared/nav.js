@@ -417,7 +417,7 @@
     const st = document.createElement('style'); st.id = 'lb-menu-fx';
     // calm version: only the list items (not the profile bar, weather or the top tiles); small slide, accent bar, soft highlight, icon grows a little
     st.textContent = [
-      '[data-lb-menu] .lb-sec-in > a,[data-lb-menu] > a:not(.lb-menu-profile){position:relative;transition:transform .2s ease,background-color .2s ease,box-shadow .2s ease!important}',
+      '[data-lb-menu] .lb-sec-in > a,[data-lb-menu] > a:not(.lb-menu-profile){position:relative;flex-shrink:0;transition:transform .2s ease,background-color .2s ease,box-shadow .2s ease!important}',
       '[data-lb-menu] .lb-sec-in > a::before,[data-lb-menu] > a:not(.lb-menu-profile)::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:3px;background:#c9506b;transform:scaleY(0);transition:transform .2s ease;pointer-events:none}',
       '[data-lb-menu] .lb-sec-in > a .lb-ic,[data-lb-menu] .lb-sec-in > a .lb-i0,[data-lb-menu] > a .lb-ic,[data-lb-menu] > a .lb-i0{display:inline-flex;transition:transform .2s ease}',
       '@media (hover:hover){',
@@ -436,10 +436,10 @@
     // tap ripple (phones too)
     document.addEventListener('pointerdown', e => {
       const a = e.target && e.target.closest && e.target.closest('[data-lb-menu] .lb-sec-in > a,[data-lb-menu] > a:not(.lb-menu-profile)'); if (!a) return;
-      if (getComputedStyle(a).overflow !== 'hidden') a.style.overflow = 'hidden';
+      const prevOv = a.style.overflow; a.style.overflow = 'hidden';   // only while the ripple runs, then put it back (some items have icons that stick out)
       const r = a.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2, sp = document.createElement('span');
       sp.className = 'lb-rip'; sp.style.width = sp.style.height = d + 'px'; sp.style.left = (e.clientX - r.left - d / 2) + 'px'; sp.style.top = (e.clientY - r.top - d / 2) + 'px';
-      a.appendChild(sp); setTimeout(() => sp.remove(), 600);
+      a.appendChild(sp); setTimeout(() => { sp.remove(); if (!a.querySelector('.lb-rip')) a.style.overflow = prevOv; }, 500);
     }, true);
     // items slide in one after another when the ☰ menu opens
     document.addEventListener('click', e => {
