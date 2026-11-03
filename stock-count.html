@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/scanner.js"></script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
@@ -241,6 +242,17 @@
 .pv-table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:12px; }
 .pv-table th, .pv-table td{ border:1px solid #999; padding:6px 8px; text-align:left; }
 .pv-table th{ background:#eee; }
+  .sc-search{display:flex;gap:8px;align-items:stretch}
+  .sc-search input{flex:1;min-width:0}
+  .sc-scan{flex:0 0 auto;border:1px solid rgba(158,47,74,.25);background:rgba(255,255,255,.85);border-radius:10px;padding:0 14px;font-size:18px;cursor:pointer}
+  .sc-scan:hover{border-color:#9e2f4a}
+  .sc-hit{outline:2px solid #c9506b;outline-offset:2px;border-radius:12px;transition:outline-color 1.5s ease}
+  .sc-msg{font-size:12px;margin:6px 0 0;color:#9e2f4a;min-height:1em}
+  .scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99999;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+  .scanner-modal.show{display:flex}
+  .scanner-modal video{width:100%;max-width:400px;border-radius:6px}
+  .scanner-modal .close-scan{margin-top:16px;background:#b5532a;color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer}
+  .scanner-hint{color:#fff;font-size:12px;margin-top:10px;text-align:center}
 </style>
 
 <style id="chocoSharedNavStyles">
@@ -366,7 +378,9 @@
   <div class="card">
     <div class="card-title">Items to Count</div>
     <label>Search Chocolate</label>
-    <input type="text" id="fItemSearch" placeholder="Type to filter..." autocomplete="off" />
+    <div class="sc-search"><input type="text" id="fItemSearch" placeholder="Name, barcode / code, or batch… (scanner gun: scan + Enter)" autocomplete="off" /><button type="button" class="sc-scan" id="scScanBtn" title="Scan barcode with camera">📷</button></div>
+    <div class="sc-msg" id="scMsg"></div>
+    <div class="scanner-modal" id="scScanModal"><video id="scScanVideo" autoplay playsinline muted></video><div class="scanner-hint">Point the camera at the chocolate barcode</div><button class="close-scan" id="scScanClose" type="button">Cancel</button></div>
     <label>Category</label>
     <div id="categoryPills" class="category-pills"></div>
     <div id="itemsList" class="items-scroll"></div>
@@ -629,7 +643,46 @@
     });
   }
 
+  /* ---------- Find a chocolate by barcode / code / name / batch (camera, scanner gun or typing) ---------- */
+  var SC_CODES = {};   // chocolate name (lower case) -> product code (what the barcode holds)
+  async function scLoadCodes(){
+    try{
+      const items = await (await fetch(API_URL + '?action=getItems&_ts=' + Date.now())).json();
+      const m = {}; (Array.isArray(items) ? items : []).forEach(it => { const n = String(it['Chocolate Name'] || it.ChocolateName || '').trim().toLowerCase(); const c = String(it['Product Code'] || '').trim(); if(n && c) m[n] = c; });
+      SC_CODES = m; renderItems();
+    }catch(e){ console.warn('[stock count] codes not loaded', e); }
+  }
+  function scCode(it){ return SC_CODES[String(it.ChocolateName || '').trim().toLowerCase()] || ''; }
+  function scHay(it){ return [it.ChocolateName, scCode(it), it.Batch, it.Category].join(' ').toLowerCase(); }
+  function scFind(raw){
+    const q = String(raw || '').trim(); if(!q) return;
+    const ql = q.toLowerCase();
+    const exact = stockItems.filter(it => scCode(it).toLowerCase() === ql || String(it.Batch || '').toLowerCase() === ql || String(it.ChocolateName || '').toLowerCase() === ql);
+    const box = document.getElementById('fItemSearch'), msg = document.getElementById('scMsg');
+    activeCategory = null; renderCategoryPills();
+    box.value = exact.length ? (scCode(exact[0]) && scCode(exact[0]).toLowerCase() === ql ? scCode(exact[0]) : q) : q;
+    itemSearchText = box.value.trim().toLowerCase(); renderItems();
+    const rows = [...document.querySelectorAll('#itemsList .count-row')];
+    if(!rows.length){ msg.textContent = 'Not found in this branch\'s stock: ' + q; return; }
+    msg.textContent = exact.length ? ('✓ ' + exact[0].ChocolateName + (rows.length > 1 ? ' — ' + rows.length + ' batches' : '')) : (rows.length + ' match' + (rows.length > 1 ? 'es' : ''));
+    const first = rows[0]; first.classList.add('sc-hit'); setTimeout(() => first.classList.remove('sc-hit'), 1800);
+    first.scrollIntoView({ block:'center', behavior:'smooth' });
+    const inp = first.querySelector('.physicalInput'); if(inp) setTimeout(() => inp.focus({ preventScroll:true }), 350);
+  }
+  document.getElementById('fItemSearch').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); scFind(this.value); } });
+  let scStop = null;
+  function scCloseScan(){ if(scStop){ try{ scStop(); }catch(e){} scStop = null; } document.getElementById('scScanModal').classList.remove('show'); }
+  document.getElementById('scScanClose').addEventListener('click', scCloseScan);
+  document.getElementById('scScanBtn').addEventListener('click', async () => {
+    if(typeof LBScan === 'undefined'){ alert('Scanner file missing - upload shared/scanner.js.'); return; }
+    document.getElementById('scScanModal').classList.add('show');
+    try{ scStop = await LBScan.start(document.getElementById('scScanVideo'), raw => { scStop = null; scCloseScan(); scFind(raw); }, e => { alert(LBScan.message(e)); scCloseScan(); }); }
+    catch(e){ alert(LBScan.message(e)); scCloseScan(); }
+  });
+  scLoadCodes();
+
   document.getElementById('fItemSearch').addEventListener('input', function(){
+    document.getElementById('scMsg').textContent = '';
     itemSearchText = this.value.trim().toLowerCase();
     renderItems();
   });
@@ -640,7 +693,7 @@
     const visible = stockItems
       .map((it, idx) => ({ it, idx }))
       .filter(({it}) => {
-        const matchesSearch = !itemSearchText || it.ChocolateName.toLowerCase().includes(itemSearchText);
+        const matchesSearch = !itemSearchText || scHay(it).includes(itemSearchText);
         const matchesCategory = !activeCategory || it.Category === activeCategory;
         return matchesSearch && matchesCategory;
       });
@@ -659,7 +712,7 @@
           <span>${it.ChocolateName}</span>
           <span>System: ${it.SystemStock} ${it.Unit || ''}</span>
         </div>
-        <div class="count-row-meta">Batch: ${it.Batch || '—'} · Expiry: ${fmtDate(it.ExpiryDate)}</div>
+        <div class="count-row-meta">${scCode(it) ? 'Code: ' + scCode(it) + ' · ' : ''}Batch: ${it.Batch || '—'} · Expiry: ${fmtDate(it.ExpiryDate)}</div>
         <div class="count-inputs">
           <div>
             <label>Physical Count ${it.Unit ? `(${it.Unit})` : ''}</label>
