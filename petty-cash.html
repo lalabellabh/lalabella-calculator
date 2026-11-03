@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <meta charset="utf-8">
@@ -113,6 +114,7 @@
   .txn-row:last-child{border-bottom:none;}
   .txn-main{font-size:12.5px;font-weight:600;}
   .txn-date{font-size:10.5px;color:var(--dim);margin-top:3px;}
+  .bd-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;background:#fff1d6;color:#9a5b00;font-weight:700;font-size:10px;border:1px solid #f0c77a}
   .txn-amt{font-weight:800;font-size:13px;white-space:nowrap;}
   .txn-amt.expense{color:var(--bad);} .txn-amt.topup{color:var(--ok);}
   .send-btn,.print-btn{font:700 10.5px 'Space Grotesk',sans-serif;padding:7px 10px;border-radius:9px;border:1px solid var(--glass-brd);background:var(--glass-strong);color:var(--ink);cursor:pointer;white-space:nowrap;}
@@ -337,7 +339,7 @@
       </div>
       <div class="pc-toolbar">
         <button class="print-btn" id="pcFClear" type="button">Clear filter</button>
-        <button class="print-btn" id="pcPrintBtn" type="button">🖨️ Print</button>
+        <button class="print-btn" id="pcPrintBtn" type="button" data-no-excel>🖨️ Print</button><button class="print-btn" id="pcExcelBtn" type="button" data-no-excel style="margin-left:6px">📊 Excel</button>
       </div>
       <div class="pc-sum" id="pcSum"></div>
       <div id="pcHistory"><div class="empty">Loading…</div></div>
@@ -586,7 +588,7 @@ function renderPettyHistory(){
       <div>
         <div class="txn-main">${esc(t.purpose)}</div>
         ${carLine(t)}
-        <div class="txn-date">${fmtDate(t.date)} · ${esc(t.branch)} · ${esc(t.enteredBy)||'—'}</div>
+        <div class="txn-date">${fmtDate(t.date)} · ${esc(t.branch)} · ${esc(t.enteredBy)||'—'}${pcBackTag(t)}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         ${t.photoUrl?`<img class="rc-thumb" src="${esc(t.photoUrl)}" data-photo="${esc(t.photoUrl)}" data-cap="${esc(t.purpose)} · ${esc(fmtDate(t.date))}" alt="Receipt" loading="lazy">`:''}
@@ -633,6 +635,53 @@ document.getElementById('pcPrintBtn').addEventListener('click',()=>{
   const pimgs=[...document.querySelectorAll('#printArea img')];
   Promise.race([Promise.all(waitImgs(pimgs)),new Promise(r=>setTimeout(r,6000))]).then(()=>window.print());
   function waitImgs(a){ return a.map(im=>im.complete?Promise.resolve():new Promise(r=>{im.onload=im.onerror=r;})); }
+});
+
+
+/* ---------- Back-date check + Excel export ---------- */
+// Recorded day = the Bahrain date the entry was really saved. Back-dated = its Date is earlier than that; Date changed = an Admin edited the date later.
+function pcRecDay(t){ if(!t.createdAt) return ''; return new Date(new Date(t.createdAt).getTime() + 3*3600000).toISOString().slice(0,10); }
+function pcDays(a,b){ return Math.round((new Date(b+'T00:00:00Z') - new Date(a+'T00:00:00Z'))/86400000); }
+function pcBackInfo(t){
+  const d=String(t.date||'').slice(0,10), rec=pcRecDay(t), ch=(t.dateChanges||[]);
+  const late = rec && d ? pcDays(d, rec) : 0;
+  return { rec, late, back: late > 0, future: late < 0, changed: ch.length > 0, changes: ch };
+}
+function pcBackTag(t){
+  const b=pcBackInfo(t); const out=[];
+  if(b.back) out.push('⏪ back-dated ' + b.late + ' day' + (b.late>1?'s':'') + ' (saved ' + fmtDate(b.rec) + ')');
+  if(b.future) out.push('⏩ future date (saved ' + fmtDate(b.rec) + ')');
+  if(b.changed) out.push('✏️ date changed');
+  return out.map(x=>'<span class="bd-tag">'+esc(x)+'</span>').join('');
+}
+function pcBhTime(iso){ if(!iso) return ''; const d=new Date(new Date(iso).getTime()+3*3600000); return d.toISOString().slice(0,16).replace('T',' '); }
+document.getElementById('pcExcelBtn').addEventListener('click',()=>{
+  const list=pcFiltered();
+  if(!list.length){ alert('Nothing to export — no entries match this filter.'); return; }
+  if(!window.lbExcel){ alert('Excel tool not loaded — reload the page.'); return; }
+  const branch=document.getElementById('branchSelect').value;
+  const from=document.getElementById('pcFrom').value, to=document.getElementById('pcTo').value;
+  const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)) || (a.id-b.id));
+  const head=['Entry date','Saved on (Bahrain time)','Back-dated?','Days back','Date changed later','Branch','Type','Purpose','Car plate','Driver','Entered by','Top-up (BD)','Expense (BD)','Running balance of this list (BD)','Receipt photo','Entry #'];
+  let run=0, nBack=0, nChanged=0, nFuture=0;
+  const rows=asc.map(t=>{
+    const b=pcBackInfo(t), amt=Number(t.amount)||0;
+    run += t.type==='topup' ? amt : -amt;
+    if(b.back) nBack++; if(b.changed) nChanged++; if(b.future) nFuture++;
+    return [String(t.date||'').slice(0,10), pcBhTime(t.createdAt), b.back?'YES':(b.future?'FUTURE DATE':'no'), b.back?b.late:(b.future?b.late:0),
+      b.changes.map(c=>pcBhTime(c.at).slice(0,10)+': '+(c.from||'?')+' → '+(c.to||'?')).join(' | '),
+      t.branch||'', t.type==='topup'?'Top-up':'Expense', t.purpose||'', t.carPlate||'', t.driver||'', t.enteredBy||'',
+      t.type==='topup'?amt:'', t.type==='topup'?'':amt, Math.round(run*1000)/1000, t.photoUrl?'yes':'no', t.id];
+  });
+  const tt=pcTotals(list);
+  const summary=[['Lalabella — Petty Cash export'],[],['Branch',branch],['Dates',(from||to)?((from||'start')+' to '+(to||'today')):'All dates'],['Entries',list.length],
+    ['Total top-up (BD)',tt.top],['Total expense (BD)',tt.exp],['Net (BD)',Math.round(tt.net*1000)/1000],[],
+    ['Back-dated entries (date earlier than the day it was saved)',nBack],['Entries with a future date',nFuture],['Entries whose date was changed later',nChanged],[],
+    ['Exported',pcBhTime(new Date().toISOString())+' (Bahrain)'],['Note','"Saved on" is the real time the entry was put in the system — it cannot be changed by staff.']];
+  const btn=document.getElementById('pcExcelBtn'); btn.disabled=true; btn.textContent='⏳ Excel…';
+  lbExcel.save('Petty Cash ' + branch, [{ name:'Summary', rows:summary, freeze:false }, { name:'Entries', rows:[head].concat(rows) }])
+    .catch(e=>alert(e && e.message || 'Could not make the Excel file.'))
+    .finally(()=>{ btn.disabled=false; btn.textContent='📊 Excel'; });
 });
 
 /* ---------- Receipt photos ---------- */

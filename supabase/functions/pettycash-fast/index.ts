@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v11
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v12
+// v12 (Nov 2026): getPettyCash also returns createdAt (when the entry was really saved) and dateChanges (date edits from the audit log) — for Excel export + back-date flags.
 // v11 (Nov 2026): an Admin can now also delete a cash count that was already sent to Qalali (client asks for a stronger confirm).
 // v10 (Oct 2026): bucket petty-cash-photos is PRIVATE. getPettyCash / addPettyCashEntry return short-lived (1h) signed URLs in photoUrl.
 // v9 (Oct 2026): receipt photo per entry (photo_url, bucket petty-cash-photos). addPettyCashEntry takes `photo` (base64 data URL, POST) —
@@ -61,6 +62,11 @@ async function sbUpsert(table: string, rows: unknown[], onConflict: string) {
   const text = await res.text();
   if (!res.ok) throw new Error(`db ${res.status}: ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : null;
+}
+async function sbRpc(fn: string, args: Record<string, unknown> = {}) {
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+  if (!res.ok) throw new Error(`rpc ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return res.json();
 }
 async function sbDelete(table: string, query: string) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } });
@@ -153,9 +159,12 @@ async function handleGetPettyCash(p: any) {
   }
 
   const signed = await signPettyPhotos(rows || []);
+  // v12: when the entry was really saved (createdAt) + every later change of its date (from the Activity History), for the Excel export / back-date check
+  let dateChanges: Record<string, any[]> = {};
+  try { dateChanges = (await sbRpc('petty_date_changes')) || {}; } catch (e) { console.error('petty_date_changes', e); }
   return {
     balance, targetAmount,
-    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '' })),
+    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '', createdAt: r.created_at || null, dateChanges: dateChanges[String(r.id)] || [] })),
   };
 }
 async function handleSetPettyCashTarget(p: any, user: any) {
