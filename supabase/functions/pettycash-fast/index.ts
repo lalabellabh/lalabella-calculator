@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v13
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v14
+// v14 (Nov 2026): a cash count can have a photo (photo_url on cash_daily_counts, same private bucket). addCashCount takes `photo` (POST); getCashCounts returns photoUrl (signed, 1h).
 // v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
 // v12 (Nov 2026): getPettyCash also returns createdAt (when the entry was really saved) and dateChanges (date edits from the audit log) — for Excel export + back-date flags.
 // v11 (Nov 2026): an Admin can now also delete a cash count that was already sent to Qalali (client asks for a stronger confirm).
@@ -276,10 +277,11 @@ async function handleGetCashCounts(p: any) {
   (allDenoms || []).forEach((d: any) => { (denomsByCount[d.cash_count_id] = denomsByCount[d.cash_count_id] || []).push({ value: Number(d.denomination_value), label: d.denomination_label, count: d.piece_count }); });
 
   const balance = (rows || []).filter((r: any) => !r.sent_to_qalali).reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+  const signed = await signPettyPhotos(rows || []);
 
   return {
     balance,
-    counts: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.count_date, amount: Number(r.amount), countedBy: r.counted_by, sentToQalali: r.sent_to_qalali, sentDate: r.sent_date, breakdown: denomsByCount[r.id] || [] })),
+    counts: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.count_date, amount: Number(r.amount), countedBy: r.counted_by, sentToQalali: r.sent_to_qalali, sentDate: r.sent_date, breakdown: denomsByCount[r.id] || [], photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '' })),
   };
 }
 async function handleAddCashCount(p: any) {
@@ -292,7 +294,12 @@ async function handleAddCashCount(p: any) {
   const usable = breakdown.filter((b: any) => Number(b.count) > 0);
   if (!usable.length) return { error: 'Please enter the count for at least one denomination.' };
   const amount = usable.reduce((sum: number, b: any) => sum + (Number(b.value) * Number(b.count)), 0);
-  const inserted = await sbPost('cash_daily_counts', [{ branch, count_date: countDate, amount, counted_by: countedBy }]);
+  let photoUrl = '';
+  if (p.photo) {
+    photoUrl = await savePettyPhoto(String(p.photo));
+    if (!photoUrl) return { error: 'The photo could not be saved (too big or not a picture). Nothing was saved — please try again.' };
+  }
+  const inserted = await sbPost('cash_daily_counts', [{ branch, count_date: countDate, amount, counted_by: countedBy, photo_url: photoUrl || null }]);
   const cashCountId = inserted[0].id;
   const denomRows = usable.map((b: any) => ({ cash_count_id: cashCountId, denomination_value: b.value, denomination_label: b.label, piece_count: Number(b.count) }));
   await sbPost('cash_count_denominations', denomRows);

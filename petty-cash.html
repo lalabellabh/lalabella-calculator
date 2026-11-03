@@ -379,6 +379,16 @@
 
       <div class="denom-total">Total: <span id="denomGrandTotal">0.000 BD</span></div>
 
+      <label style="margin-top:14px;">Photo <span style="text-transform:none;">(optional — e.g. the counted money, foreign notes or the deposit slip)</span></label>
+      <div class="rc-btns">
+        <label class="rc-b" for="ccPhotoCam">📷 Camera</label>
+        <label class="rc-b" for="ccPhotoFile">🖼️ Gallery</label>
+      </div>
+      <input type="file" id="ccPhotoCam" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="ccPhotoFile" accept="image/*" style="display:none;">
+      <div class="rc-paste" id="ccPhotoPaste" tabindex="0">📋 Click here, then Ctrl+V to paste a snip</div>
+      <div class="rc-prev" id="ccPhotoPrev"><img alt="Cash count photo"><button type="button" id="ccPhotoClear" aria-label="Remove photo">✕</button></div>
+
       <label style="margin-top:14px;">Counted By</label>
       <input type="text" id="ccCountedBy" placeholder="Your name">
       <button class="save-btn" id="ccSaveBtn">Save Count</button>
@@ -800,7 +810,7 @@ function rcCompress(file){
   });
 }
 // one picker per form ('pc' = add form, 'pe' = edit modal)
-const rcState={pc:{data:null},pe:{data:null,remove:false,old:''}};
+const rcState={pc:{data:null},pe:{data:null,remove:false,old:''},cc:{data:null}};
 function rcShow(p,src){
   const box=document.getElementById(p+'PhotoPrev');
   if(src){ box.querySelector('img').src=src; box.classList.add('show'); } else { box.classList.remove('show'); box.querySelector('img').removeAttribute('src'); }
@@ -815,7 +825,7 @@ async function rcPick(p,file){
   try{ const d=await rcCompress(file); rcState[p].data=d; rcState[p].remove=false; rcShow(p,d); }
   catch(e){ alert('Could not read this picture. Try another one.'); }
 }
-['pc','pe'].forEach(p=>{
+['pc','pe','cc'].forEach(p=>{
   document.getElementById(p+'PhotoCam').addEventListener('change',function(){ rcPick(p,this.files[0]); });
   document.getElementById(p+'PhotoFile').addEventListener('change',function(){ rcPick(p,this.files[0]); });
   document.getElementById(p+'PhotoPaste').addEventListener('paste',function(e){
@@ -1052,6 +1062,7 @@ async function loadCashCounts(){
           <div class="txn-date">${fmtDate(c.date)} · ${c.branch} · ${c.countedBy||'—'}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
+          ${c.photoUrl?`<img class="rc-thumb" src="${esc(c.photoUrl)}" data-photo="${esc(c.photoUrl)}" data-cap="Cash count · ${esc(fmtDate(c.date))}" alt="Photo" loading="lazy">`:''}
           <button class="print-btn" data-id="${c.id}">🖨️ Print</button>
           ${c.sentToQalali
             ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span><button class="delete-btn" data-id="${c.id}" data-sent="1" title="Delete (Admin)">🗑️</button>`
@@ -1068,6 +1079,7 @@ async function loadCashCounts(){
     hist.querySelectorAll('.print-btn').forEach(btn=>{
       btn.addEventListener('click', ()=> printCashCount(btn.dataset.id));
     });
+    hist.querySelectorAll('.rc-thumb').forEach(im=>im.addEventListener('click',()=>rcOpenBig(im.dataset.photo,im.dataset.cap)));
   }catch(e){
     hist.innerHTML = '<div class="empty">Could not load — check your connection.</div>';
   }
@@ -1124,7 +1136,7 @@ async function printCashCount(id){
   // (Fresh list from the server: the picture links are short-lived.)
   const BOXH = 150;   // px, about the height of the denomination table
   const dayKey = fmtDate(c.date);
-  const shots = (freshTxns || pettyTxns).filter(t => t.branch === c.branch && t.photoUrl && fmtDate(t.date) === dayKey).slice(0, 4);
+  const shots = (c.photoUrl ? [{ photoUrl: c.photoUrl }] : []).concat((freshTxns || pettyTxns).filter(t => t.branch === c.branch && t.photoUrl && fmtDate(t.date) === dayKey)).slice(0, 4);
   const cols = shots.length > 1 ? 2 : 1, cellH = shots.length > 2 ? Math.floor((BOXH - 4) / 2) : BOXH;
   const shotsHtml = shots.length ? `
     <div style="flex:1;min-width:0;height:${BOXH}px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px;align-content:start;">
@@ -1196,11 +1208,14 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
     const params = new URLSearchParams({ action: 'addCashCount', branch, date, breakdown: JSON.stringify(breakdown), countedBy, token: getToken() });
-    const res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
+    let res;
+    if(rcState.cc.data){ params.set('photo', rcState.cc.data); res = await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() }); }
+    else res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
     const data = await res.json();
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Count'; return; }
     msg.textContent = 'Saved! Total: ' + Number(data.amount).toFixed(3) + ' BD'; msg.className = 'msg success';
     resetDenomInputs();
+    rcReset('cc');
     loadCashCounts();
   }catch(e){
     msg.textContent = 'Connection error.'; msg.className = 'msg error';
