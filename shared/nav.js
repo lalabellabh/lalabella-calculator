@@ -415,30 +415,28 @@
   function menuFx() {
     if (document.getElementById('lb-menu-fx')) return;
     const st = document.createElement('style'); st.id = 'lb-menu-fx';
+    // calm version: only the list items (not the profile bar, weather or the top tiles); small slide, accent bar, soft highlight, icon grows a little
     st.textContent = [
-      '[data-lb-menu] a{position:relative;overflow:hidden;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,background-color .22s ease,border-color .22s ease!important;will-change:transform}',
-      '[data-lb-menu] a::before{content:"";position:absolute;left:0;top:18%;bottom:18%;width:3px;border-radius:3px;background:linear-gradient(#e0879c,#9e2f4a);transform:scaleY(0);transform-origin:center;transition:transform .25s ease;pointer-events:none}',
-      '[data-lb-menu] a::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);opacity:0;pointer-events:none}',
-      '[data-lb-menu] .lb-ic,[data-lb-menu] .lb-i0,[data-lb-menu] .hub-icon{display:inline-flex;transition:transform .35s cubic-bezier(.3,1.6,.5,1)}',
+      '[data-lb-menu] .lb-sec-in > a,[data-lb-menu] > a:not(.lb-menu-profile){position:relative;transition:transform .2s ease,background-color .2s ease,box-shadow .2s ease!important}',
+      '[data-lb-menu] .lb-sec-in > a::before,[data-lb-menu] > a:not(.lb-menu-profile)::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:3px;background:#c9506b;transform:scaleY(0);transition:transform .2s ease;pointer-events:none}',
+      '[data-lb-menu] .lb-sec-in > a .lb-ic,[data-lb-menu] .lb-sec-in > a .lb-i0,[data-lb-menu] > a .lb-ic,[data-lb-menu] > a .lb-i0{display:inline-flex;transition:transform .2s ease}',
       '@media (hover:hover){',
-      '  [data-lb-menu] a:hover{transform:translateX(5px);box-shadow:0 6px 16px rgba(158,47,74,.16)}',
-      '  [data-lb-menu] a:hover::before{transform:scaleY(1)}',
-      '  [data-lb-menu] a:hover::after{animation:lbShine .7s ease forwards}',
-      '  [data-lb-menu] a:hover .lb-ic,[data-lb-menu] a:hover .lb-i0,[data-lb-menu] a:hover .hub-icon{transform:scale(1.18) rotate(-8deg);animation:lbWig .55s ease .1s}',
+      '  [data-lb-menu] .lb-sec-in > a:hover,[data-lb-menu] > a:not(.lb-menu-profile):hover{transform:translateX(3px);box-shadow:0 3px 10px rgba(158,47,74,.10)}',
+      '  [data-lb-menu] .lb-sec-in > a:hover::before,[data-lb-menu] > a:not(.lb-menu-profile):hover::before{transform:scaleY(1)}',
+      '  [data-lb-menu] .lb-sec-in > a:hover .lb-ic,[data-lb-menu] .lb-sec-in > a:hover .lb-i0,[data-lb-menu] > a:hover .lb-ic,[data-lb-menu] > a:hover .lb-i0{transform:scale(1.12)}',
       '}',
-      '[data-lb-menu] a:active{transform:translateX(3px) scale(.97)}',
-      '@keyframes lbShine{0%{left:-60%;opacity:1}100%{left:120%;opacity:1}}',
-      '@keyframes lbWig{0%{transform:scale(1.18) rotate(-8deg)}35%{transform:scale(1.22) rotate(8deg)}65%{transform:scale(1.18) rotate(-4deg)}100%{transform:scale(1.18) rotate(-8deg)}}',
-      '.lb-rip{position:absolute;border-radius:50%;background:rgba(158,47,74,.22);transform:scale(0);animation:lbRip .55s ease-out forwards;pointer-events:none}',
+      '[data-lb-menu] .lb-sec-in > a:active,[data-lb-menu] > a:not(.lb-menu-profile):active{transform:scale(.98)}',
+      '.lb-rip{position:absolute;border-radius:50%;background:rgba(158,47,74,.14);transform:scale(0);animation:lbRip .45s ease-out forwards;pointer-events:none}',
       '@keyframes lbRip{to{transform:scale(1);opacity:0}}',
-      '[data-lb-menu].lb-menu-in a{animation:lbIn .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--lbi,0) * 22ms)}',
-      '@keyframes lbIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}',
-      '@media (prefers-reduced-motion:reduce){[data-lb-menu] a,[data-lb-menu] a::after,[data-lb-menu] .lb-ic,[data-lb-menu] .lb-i0{animation:none!important;transition:none!important}}'
+      '[data-lb-menu].lb-menu-in .lb-sec-in > a{animation:lbIn .25s ease both;animation-delay:calc(var(--lbi,0) * 12ms)}',
+      '@keyframes lbIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}',
+      '@media (prefers-reduced-motion:reduce){[data-lb-menu] a,[data-lb-menu] a *{animation:none!important;transition:none!important}}'
     ].join('\n');
     document.head.appendChild(st);
     // tap ripple (phones too)
     document.addEventListener('pointerdown', e => {
-      const a = e.target && e.target.closest && e.target.closest('[data-lb-menu] a'); if (!a) return;
+      const a = e.target && e.target.closest && e.target.closest('[data-lb-menu] .lb-sec-in > a,[data-lb-menu] > a:not(.lb-menu-profile)'); if (!a) return;
+      if (getComputedStyle(a).overflow !== 'hidden') a.style.overflow = 'hidden';
       const r = a.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2, sp = document.createElement('span');
       sp.className = 'lb-rip'; sp.style.width = sp.style.height = d + 'px'; sp.style.left = (e.clientX - r.left - d / 2) + 'px'; sp.style.top = (e.clientY - r.top - d / 2) + 'px';
       a.appendChild(sp); setTimeout(() => sp.remove(), 600);
@@ -447,7 +445,7 @@
     document.addEventListener('click', e => {
       if (!e.target || !e.target.closest || !e.target.closest('.lbnav-btn,.choco-nav-toggle,.nav-toggle,.burger')) return;
       document.querySelectorAll('[data-lb-menu]').forEach(m => {
-        m.querySelectorAll('a').forEach((x, n) => x.style.setProperty('--lbi', Math.min(n, 25)));
+        m.querySelectorAll('.lb-sec-in > a').forEach((x, n) => x.style.setProperty('--lbi', Math.min(n, 20)));
         m.classList.remove('lb-menu-in'); void m.offsetWidth; m.classList.add('lb-menu-in');
         clearTimeout(m._lbin); m._lbin = setTimeout(() => m.classList.remove('lb-menu-in'), 1200);
       });
