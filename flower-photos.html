@@ -160,7 +160,7 @@
     el.innerHTML = rows.map(function (it) {
       return '<div class="row" data-id="' + it.id + '">' +
         '<div class="pic">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" loading="lazy"><button type="button" class="xrm" data-a="rm" aria-label="Remove picture">✕</button>' : 'No photo') + '</div>' +
-        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + (it.rate ? Number(it.rate).toFixed(3) + ' BHD' : 'No price') + (it.unit ? ' · ' + esc(it.unit) : '') + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div><svg class="bc" data-code="' + esc(it.code) + '" aria-label="Barcode - tap to enlarge"></svg>' : '') + '<div class="fv' + (it.flavor ? '' : ' none') + '" data-a="edit">' + (it.flavor ? esc(it.flavor) : '＋ Add flavor / description') + '</div><div class="st"></div></div>' +
+        '<div class="meta"><div class="nm">' + esc(it.name) + '</div><div class="ct">' + (it.rate ? Number(it.rate).toFixed(3) + ' BHD' + (it.rateFrom ? ' (' + esc(it.rateFrom) + ')' : '') : 'No price') + (it.unit ? ' · ' + esc(it.unit) : '') + '</div>' + (it.code ? '<div class="cd">' + esc(it.code) + '</div><svg class="bc" data-code="' + esc(it.code) + '" aria-label="Barcode - tap to enlarge"></svg>' : '') + '<div class="fv' + (it.flavor ? '' : ' none') + '" data-a="edit">' + (it.flavor ? esc(it.flavor) : '＋ Add flavor / description') + '</div><div class="st"></div></div>' +
         '<div class="acts"><button class="btn" data-a="cam">📷 Camera</button>' +
         '<button class="btn alt" data-a="up">🖼️ ' + (it.photo ? 'Change' : 'Gallery') + '</button>' + '</div><div class="pastebox" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div></div></div>';
     }).join('');
@@ -175,7 +175,7 @@
     var pa = document.getElementById('printArea');
     pa.innerHTML = '<h2>Lalabella — Flower Photos</h2><div class="psub">' + shown.length + ' item' + (shown.length > 1 ? 's' : '') + (q ? ' · Search: "' + esc(q) + '"' : '') + (f.value !== 'all' ? ' · ' + esc(f.options[f.selectedIndex].text) : '') + ' · Printed ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</div>' +
       '<div class="pgrid">' + shown.map(function (it) {
-        var sub = (it.rate ? Number(it.rate).toFixed(3) + ' BHD' : '') + (it.unit ? ' · ' + esc(it.unit) : '');
+        var sub = (it.rate ? Number(it.rate).toFixed(3) + ' BHD' + (it.rateFrom ? ' (' + esc(it.rateFrom) + ')' : '') : '') + (it.unit ? ' · ' + esc(it.unit) : '');
         return '<div class="pcard"><div class="pimg">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="">' : 'No photo') + '</div>' +
           '<div class="pnm">' + esc(it.name) + '</div>' + (sub ? '<div class="pct">' + sub + '</div>' : '') +
           '<div class="pfv"><b>Description:</b> ' + (it.flavor ? esc(it.flavor) : '<span class="pnone">(wala pa)</span>') + '</div>' +
