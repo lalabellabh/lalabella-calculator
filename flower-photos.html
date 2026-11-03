@@ -108,7 +108,11 @@
     #printArea .pfv b{font-size:9.5px;color:#777;text-transform:uppercase;letter-spacing:.04em}
     #printArea .pnone{color:#aaa}
     #printArea .pcd{font-size:10px;letter-spacing:.06em;margin-top:3px}
-    #printArea svg{display:block;width:100%;height:16mm;margin:6px 0 0;shape-rendering:crispEdges;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #printArea img.pbc{display:block;width:100%;height:auto;max-height:22mm;object-fit:contain;margin:6px auto 0;image-rendering:pixelated;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #printArea.cols2 .pgrid{grid-template-columns:repeat(2,1fr)}
+    #printArea.cols2 .pimg{height:170px}
+    #printArea.cols2 .pimg img{max-height:170px}
+    #printArea.cols2 img.pbc{max-height:28mm}
     #printArea .pcard{padding:6px 4px}
   }
 </style>
@@ -124,6 +128,7 @@
     <input id="q" type="search" placeholder="Search flower name or code…" autocomplete="off">
     <select id="flt"><option value="all">Lahat</option><option value="none">Walang picture</option><option value="has">May picture</option></select>
     <button class="btn" id="addNew" type="button">➕ Add new flower</button>
+    <select id="printCols" title="How many per row when printing"><option value="3">Print: 3 per row</option><option value="2">Print: 2 per row (bigger barcode)</option></select>
     <button class="btn" id="printBtn" type="button">🖨️ Print</button>
     <div class="count" id="count">Loading…</div>
   </div>
@@ -169,17 +174,20 @@
 
 
   // 🖨️ Print: a photo catalog of what is shown now (search + filter), 3 per row with name, price, code + barcode
+  try { var pc = localStorage.getItem('lbPhotoPrintCols'); if (pc) document.getElementById('printCols').value = pc; } catch (e) {}
   document.getElementById('printBtn').addEventListener('click', function () {
     if (!shown.length) { alert('Walang ipi-print — walang tumugma sa search / filter.'); return; }
     var q = document.getElementById('q').value.trim(), f = document.getElementById('flt');
     var pa = document.getElementById('printArea');
+    pa.classList.toggle('cols2', document.getElementById('printCols').value === '2');
+    try { localStorage.setItem('lbPhotoPrintCols', document.getElementById('printCols').value); } catch (e) {}
     pa.innerHTML = '<h2>Lalabella — Flower Photos</h2><div class="psub">' + shown.length + ' item' + (shown.length > 1 ? 's' : '') + (q ? ' · Search: "' + esc(q) + '"' : '') + (f.value !== 'all' ? ' · ' + esc(f.options[f.selectedIndex].text) : '') + ' · Printed ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</div>' +
       '<div class="pgrid">' + shown.map(function (it) {
         var sub = (it.rate ? Number(it.rate).toFixed(3) + ' BHD' + (it.rateFrom ? ' (' + esc(it.rateFrom) + ')' : '') : '') + (it.unit ? ' · ' + esc(it.unit) : '');
         return '<div class="pcard"><div class="pimg">' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="">' : 'No photo') + '</div>' +
           '<div class="pnm">' + esc(it.name) + '</div>' + (sub ? '<div class="pct">' + sub + '</div>' : '') +
           '<div class="pfv"><b>Description:</b> ' + (it.flavor ? esc(it.flavor) : '<span class="pnone">(wala pa)</span>') + '</div>' +
-          (it.code ? '<svg class="pbc" data-code="' + esc(it.code) + '"></svg><div class="pcd">' + esc(it.code) + '</div>' : '') + '</div>';
+          (it.code ? '<img class="pbc" data-code="' + esc(it.code) + '" alt=""><div class="pcd">' + esc(it.code) + '</div>' : '') + '</div>';
       }).join('') + '</div>';
     var btn = this; btn.disabled = true; btn.textContent = '⏳ Preparing…';
     // the barcode tool must be loaded first (load it now if it is not), then draw every barcode
@@ -189,8 +197,14 @@
     });
     bcReady.then(function () {
       var bad = 0;
-      Array.prototype.forEach.call(pa.querySelectorAll('svg.pbc'), function (svg) {
-        try { if (!window.JsBarcode) throw 0; JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 2, height: 60, margin: 12, background: '#ffffff', lineColor: '#000000', displayValue: false }); /* margin = white quiet zone on both sides (scanners need it) */ fitSvg(svg); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); } catch (e) { bad++; }
+      // barcode as a sharp black/white picture (canvas → PNG, 4 px per bar, white quiet zone) so the printer does not blur thin bars
+      Array.prototype.forEach.call(pa.querySelectorAll('img.pbc'), function (im) {
+        try {
+          if (!window.JsBarcode) throw 0;
+          var cv = document.createElement('canvas');
+          JsBarcode(cv, im.getAttribute('data-code'), { format: 'CODE128', width: 4, height: 140, margin: 40, background: '#ffffff', lineColor: '#000000', displayValue: false });
+          im.src = cv.toDataURL('image/png');
+        } catch (e) { bad++; im.remove(); }
       });
       if (bad && !confirm('Hindi ma-load ang barcode (check internet). Ituloy pa rin ang print na walang barcode?')) { btn.disabled = false; btn.textContent = '🖨️ Print'; return; }
       // load EVERY picture before printing (the list only loads the ones on screen), showing progress; give up waiting after 60 s
