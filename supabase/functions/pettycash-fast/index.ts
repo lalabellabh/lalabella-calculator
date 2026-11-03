@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v14
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v15
+// v15 (Nov 2026): editCashCount (ADMIN ONLY) — fix date, counted by, the money breakdown (replaces all lines, total recalculated) and photo (photo / removePhoto=1).
 // v14 (Nov 2026): a cash count can have a photo (photo_url on cash_daily_counts, same private bucket). addCashCount takes `photo` (POST); getCashCounts returns photoUrl (signed, 1h).
 // v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
 // v12 (Nov 2026): getPettyCash also returns createdAt (when the entry was really saved) and dateChanges (date edits from the audit log) — for Excel export + back-date flags.
@@ -305,6 +306,35 @@ async function handleAddCashCount(p: any) {
   await sbPost('cash_count_denominations', denomRows);
   return { success: true, amount };
 }
+async function handleEditCashCount(p: any, user: any) {
+  if (!isAdmin(user)) return { error: 'Only an Admin can edit a cash count. Please ask an Admin.' };
+  const id = Number(p.id);
+  if (!Number.isInteger(id) || id < 1) return { error: 'Invalid entry.' };
+  const rows = await sbGet('cash_daily_counts', `select=id&id=eq.${id}`);
+  if (!rows.length) return { error: 'Entry not found.' };
+  const fields: Record<string, unknown> = {};
+  if (p.date !== undefined && p.date !== '') { if (!validDate(String(p.date))) return { error: 'Invalid date.' }; fields.count_date = String(p.date); }
+  if (p.countedBy !== undefined) fields.counted_by = String(p.countedBy).trim().slice(0, 80);
+  let usable: any[] | null = null;
+  if (p.breakdown !== undefined) {
+    let bd: any[] = [];
+    try { bd = JSON.parse(p.breakdown || '[]'); } catch { return { error: 'Invalid breakdown.' }; }
+    usable = bd.filter((b: any) => Number(b.count) > 0 && Number(b.value) > 0);
+    if (!usable.length) return { error: 'Please enter the count for at least one denomination.' };
+    fields.amount = usable.reduce((sum: number, b: any) => sum + (Number(b.value) * Number(b.count)), 0);
+  }
+  if (p.photo) {
+    const url = await savePettyPhoto(String(p.photo));
+    if (!url) return { error: 'The photo could not be saved (too big or not a picture). Nothing was changed.' };
+    fields.photo_url = url;
+  } else if (String(p.removePhoto || '') === '1') fields.photo_url = null;
+  if (usable) {
+    await sbDelete('cash_count_denominations', `cash_count_id=eq.${id}`);
+    await sbPost('cash_count_denominations', usable.map((b: any) => ({ cash_count_id: id, denomination_value: b.value, denomination_label: String(b.label || '').slice(0, 80), piece_count: Math.round(Number(b.count)) })));
+  }
+  if (Object.keys(fields).length) await sbPatch('cash_daily_counts', `id=eq.${id}`, fields);
+  return { success: true, amount: fields.amount };
+}
 async function handleDeleteCashCount(p: any, user: any) {
   if (!isAdmin(user)) return { error: ADMIN_ONLY_MSG };
   const id = Number(p.id);
@@ -348,6 +378,7 @@ Deno.serve(async (req) => {
     if (action === 'setPettyCashTarget') return json(await handleSetPettyCashTarget(p, user));
     if (action === 'getCashCounts') return json(await handleGetCashCounts(p));
     if (action === 'addCashCount') return json(await handleAddCashCount(p));
+    if (action === 'editCashCount') return json(await handleEditCashCount(p, user));
     if (action === 'deleteCashCount') return json(await handleDeleteCashCount(p, user));
     if (action === 'markSentToQalali') return json(await handleMarkSentToQalali(p));
 
