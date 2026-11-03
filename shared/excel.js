@@ -125,7 +125,7 @@
       b.setAttribute('data-lb-excel', '1');
       var x = document.createElement('button'); x.type = 'button'; x.className = b.className; x.setAttribute('data-lb-excel', 'btn'); x.setAttribute('data-no-excel', '');
       x.textContent = '📊 Excel'; x.title = 'Save what would print as an Excel file';
-      x.style.marginLeft = '6px';
+      if (/^inline/.test(getComputedStyle(b).display)) x.style.marginLeft = '6px';   // full-width buttons stay aligned
       x.addEventListener('click', function (e) { e.preventDefault(); excelVia(b, (document.title || 'Lalabella').replace(/^Lalabella\s*[—-]\s*/, '')); });
       b.insertAdjacentElement('afterend', x);
     });
