@@ -789,7 +789,7 @@
       }
     } else if(unitMode === 'gram'){
       kg = n / 1000;
-      label = n + ' g';
+      label = fmtGrams(n);
       total = kg * pricePerKg;
     } else {
       kg = n;
@@ -1269,11 +1269,12 @@ document.getElementById('addDisplayExtraBtn').addEventListener('click', ()=>{
   renderDisplayCart();
 });
 
+function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return g >= 1000 ? s + ' · ' + (g / 1000).toFixed(3) + ' kg' : s; }   // 1800 -> "1,800 g · 1.800 kg" (comma for thousands so it is not mixed up with BD decimals)
 // Pieces <-> weight: pieces show their grams, grams/kg show the matching number of pieces. unit: 'piece' | 'g' | 'kg'
 function eqUnitText(unit, qty, gpp){
   qty = Number(qty) || 0; gpp = Number(gpp) || 0;
   if(!(qty > 0) || !(gpp > 0)) return '';
-  if(unit === 'piece') return Math.round(qty * gpp * 10) / 10 + ' g';
+  if(unit === 'piece') return fmtGrams(qty * gpp);
   const kg = unit === 'kg' ? qty : qty / 1000, pcs = kg * 1000 / gpp, r = Math.round(pcs);
   return (Math.abs(pcs - r) < 0.01 ? r : '≈ ' + (Math.round(pcs * 10) / 10)) + ' pc' + (Math.abs(pcs - 1) < 0.01 ? '' : 's');
 }
