@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v16
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v17
+// v17 (Nov 2026): sales_entries.channel ('walkin' | 'whatsapp') saved on addSale / editSale, returned by getSales.
 // v16 (Nov 2026): SALES tab (table sales_entries, NOT part of petty cash): getSales / addSale (staff) / editSale + deleteSale (ADMIN ONLY).
 //                kind 'invoiced' = invoiced totals by Cash, Card, MyFatoorah, Credit (amount = the sum); kind 'payment' = cash a customer paid.
 // v15 (Nov 2026): editCashCount (ADMIN ONLY) — fix date, counted by, the money breakdown (replaces all lines, total recalculated) and photo (photo / removePhoto=1).
@@ -363,7 +364,7 @@ const m3 = (v: unknown) => { const n = Math.round((Number(v) || 0) * 1000) / 100
 const txt = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 function saleOut(r: any) {
   return { id: r.id, branch: r.branch, date: r.entry_date, kind: r.kind, cash: Number(r.cash), card: Number(r.card), myfatoorah: Number(r.myfatoorah), credit: Number(r.credit),
-    amount: Number(r.amount), customer: r.customer || '', ref: r.ref || '', notes: r.notes || '', enteredBy: r.entered_by || '', createdAt: r.created_at };
+    amount: Number(r.amount), customer: r.customer || '', ref: r.ref || '', channel: r.channel || '', notes: r.notes || '', enteredBy: r.entered_by || '', createdAt: r.created_at };
 }
 function saleFields(p: any, kind: string) {
   const f: Record<string, unknown> = {};
@@ -379,6 +380,7 @@ function saleFields(p: any, kind: string) {
     Object.assign(f, { cash: a, card: 0, myfatoorah: 0, credit: 0, amount: a, customer: txt(p.customer, 80) || null });
   }
   f.ref = txt(p.ref, 60) || null;
+  if (p.channel !== undefined) f.channel = p.channel === 'walkin' || p.channel === 'whatsapp' ? p.channel : null;
   f.notes = txt(p.notes, 200) || null;
   return { fields: f };
 }
