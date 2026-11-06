@@ -612,7 +612,9 @@
       fetch(API_URL + '?action=getReceivedBy&_ts=' + t).then(r=>r.json()).catch(e=>{ console.error(e); return []; })
     ]);
 
-    [stockItems, history, countedByNames] = results;
+    // the server can answer {error:...} (busy / logged out) instead of a list — never crash the page on that
+    [stockItems, history, countedByNames] = results.map(r => Array.isArray(r) ? r : []);
+    if (results.some(r => !Array.isArray(r))) console.warn('stock-count: some lists did not load', results.map(r => Array.isArray(r) ? 'ok' : r));
 
     document.getElementById('countedByList').innerHTML =
       countedByNames.map(n => `<option value="${n}"></option>`).join('');
