@@ -77,6 +77,18 @@
   .tab-panel{display:none;}
   .tab-panel.active{display:flex;flex-direction:column;gap:12px;animation:pcFade .22s ease;}
   @keyframes pcFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;}
+  .sl-total{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px;padding:10px 12px;border-radius:12px;background:var(--chip);font-weight:700;font-size:13px;}
+  .sl-total b{font-size:17px;color:var(--rose);}
+  .sl-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:2px 0 10px;}
+  .sl-cards div{background:var(--chip);border-radius:11px;padding:8px 10px;font-size:11px;color:var(--dim);}
+  .sl-cards div b{display:block;font-size:14px;color:var(--ink,inherit);margin-top:2px;}
+  .sl-cards div.t{background:linear-gradient(135deg,var(--rose),var(--plum));color:#fff;} .sl-cards div.t b{color:#fff;}
+  .sl-day{border-top:1px solid var(--line,rgba(0,0,0,.08));padding:8px 0 4px;}
+  .sl-day h4{margin:0 0 4px;font-size:12.5px;display:flex;justify-content:space-between;gap:8px;}
+  .sl-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--chip);color:var(--dim);margin-right:4px;}
+  .sl-tag.p{background:rgba(61,138,87,.16);color:var(--ok);}
+  .sl-edit{font-size:11.5px;margin:-4px 0 10px;padding:7px 10px;border-radius:9px;background:rgba(217,164,65,.18);display:none;}
   .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;}
 
   /* balance = big KPI tile */
@@ -272,6 +284,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="petty">💵 Petty Cash</button>
       <button class="tab-btn" data-tab="cash">🏦 Cash</button>
+      <button class="tab-btn" data-tab="sales">🧾 Sales</button>
     </div>
     <a class="backlink" href="index.html">← Back to Lalabella</a>
   </div>
@@ -405,6 +418,66 @@
     </div>
     </div>
   </div>
+  <!-- SALES TAB (separate from petty cash) -->
+  <div class="tab-panel" id="salesTab">
+    <div class="balance-card">
+      <div class="label" id="slHeadLbl">Invoiced today</div>
+      <div class="amount" id="slHeadAmt">—</div>
+      <div id="slHeadLine" style="color:var(--dim);font-size:11.5px;font-weight:600;margin-top:6px;"></div>
+    </div>
+
+    <div class="split">
+    <div class="card">
+      <h2 id="slFormTitle">➕ Add Sales</h2>
+      <div class="type-toggle">
+        <button type="button" class="active" data-sk="invoiced" id="slKindInv">🧾 Invoiced totals</button>
+        <button type="button" data-sk="payment" id="slKindPay">💵 Customer paid cash</button>
+      </div>
+      <div class="sl-edit" id="slEditBar">✏️ Editing an entry — <a href="#" id="slEditCancel">cancel</a></div>
+      <label>Date</label>
+      <input type="date" id="slDate">
+      <div id="slInvBox">
+        <div class="sl-grid">
+          <div><label>💵 Cash (BD)</label><input type="number" step="0.001" min="0" id="slCash" class="sl-n" placeholder="0.000"></div>
+          <div><label>💳 Card (BD)</label><input type="number" step="0.001" min="0" id="slCard" class="sl-n" placeholder="0.000"></div>
+          <div><label>🌐 MyFatoorah (BD)</label><input type="number" step="0.001" min="0" id="slMf" class="sl-n" placeholder="0.000"></div>
+          <div><label>📒 Credit (BD)</label><input type="number" step="0.001" min="0" id="slCredit" class="sl-n" placeholder="0.000"></div>
+        </div>
+        <div class="sl-total">Total invoiced <b id="slTotal">0.000 BD</b></div>
+      </div>
+      <div id="slPayBox" style="display:none;">
+        <label>Customer name</label>
+        <input type="text" id="slCustomer" maxlength="80" placeholder="e.g. Fatima" autocomplete="off">
+        <label>Amount received (BD)</label>
+        <input type="number" step="0.001" min="0.001" id="slAmount" placeholder="0.000">
+        <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;">This is the customer's money — it is <b>not</b> added to the petty cash.</div>
+      </div>
+      <label>Invoice / order no. <span style="text-transform:none;">(optional)</span></label>
+      <input type="text" id="slRef" maxlength="60" placeholder="e.g. INV-1023 or #20178" autocomplete="off">
+      <label>Notes <span style="text-transform:none;">(optional)</span></label>
+      <input type="text" id="slNotes" maxlength="200" placeholder="e.g. morning shift" autocomplete="off">
+      <label>Your Name</label>
+      <input type="text" id="slBy" placeholder="Your name">
+      <button class="save-btn" id="slSaveBtn">Save</button>
+      <div class="msg" id="slMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Sales History</h2>
+      <div class="pc-filter">
+        <div><label>From</label><input type="date" id="slFrom"></div>
+        <div><label>To</label><input type="date" id="slTo"></div>
+        <div><label>Show</label><select id="slFKind"><option value="">All</option><option value="invoiced">Invoiced totals</option><option value="payment">Customer cash</option></select></div>
+      </div>
+      <div class="pc-toolbar">
+        <button class="print-btn" id="slFClear" type="button" data-no-excel>This month</button>
+        <button class="print-btn" id="slPrintBtn" type="button" data-no-excel>🖨️ Print</button><button class="print-btn" id="slExcelBtn" type="button" data-no-excel style="margin-left:6px">📊 Excel</button>
+      </div>
+      <div class="sl-cards" id="slSum"></div>
+      <div id="slHistory"><div class="empty">Loading…</div></div>
+    </div>
+    </div>
+  </div>
 </div><!-- /pcwrap -->
 
 <div id="ccEditModal"><div class="box">
@@ -492,7 +565,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
-document.getElementById('branchSelect').addEventListener('change', ()=>{ loadPettyCash(); loadCashCounts(); });
+document.getElementById('branchSelect').addEventListener('change', ()=>{ loadPettyCash(); loadCashCounts(); loadSales(); });
 
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('pcDate').value = today;
@@ -1320,6 +1393,169 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
   }
   btn.disabled = false; btn.textContent = 'Save Count';
 });
+/* ---------- SALES tab: invoiced totals (Cash / Card / MyFatoorah / Credit) + cash paid by customers. NOT part of petty cash. ---------- */
+const SL = { kind:'invoiced', editId:0, rows:[] };
+function slNum(id){ return Math.round((Number(document.getElementById(id).value)||0)*1000)/1000; }
+function slCalc(){ const t = slNum('slCash')+slNum('slCard')+slNum('slMf')+slNum('slCredit'); document.getElementById('slTotal').textContent = fmtBD(t); return Math.round(t*1000)/1000; }
+document.querySelectorAll('.sl-n').forEach(i=>i.addEventListener('input', slCalc));
+function slSetKind(k){
+  SL.kind = k;
+  document.getElementById('slKindInv').classList.toggle('active', k==='invoiced');
+  document.getElementById('slKindPay').classList.toggle('active', k==='payment');
+  document.getElementById('slInvBox').style.display = k==='invoiced' ? '' : 'none';
+  document.getElementById('slPayBox').style.display = k==='payment' ? '' : 'none';
+}
+['slKindInv','slKindPay'].forEach(id=>document.getElementById(id).addEventListener('click', e=>{ if(SL.editId) return; slSetKind(e.currentTarget.dataset.sk); }));
+function slClearForm(){
+  ['slCash','slCard','slMf','slCredit','slCustomer','slAmount','slRef','slNotes'].forEach(id=>document.getElementById(id).value='');
+  SL.editId = 0; document.getElementById('slEditBar').style.display='none'; document.getElementById('slFormTitle').textContent='➕ Add Sales';
+  document.getElementById('slSaveBtn').textContent='Save'; slCalc();
+}
+document.getElementById('slEditCancel').addEventListener('click', e=>{ e.preventDefault(); slClearForm(); document.getElementById('slDate').value = today; });
+function slMonth(){ const d=new Date(Date.now()+3*3600000).toISOString().slice(0,10); document.getElementById('slFrom').value = d.slice(0,8)+'01'; document.getElementById('slTo').value = d; }
+document.getElementById('slDate').value = today;
+slMonth();
+try{ const n = localStorage.getItem('lbSalesBy'); if(n) document.getElementById('slBy').value = n; }catch(e){}
+
+async function slCall(params, post){
+  params.set('token', getToken());
+  const res = post ? await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() })
+                   : await fetch(PETTYCASH_API_URL + '?' + params.toString());
+  return res.json();
+}
+document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('slSaveBtn'), msg = document.getElementById('slMsg');
+  const branch = document.getElementById('branchSelect').value;
+  msg.className='msg';
+  if(!SL.editId && branch === 'All'){ msg.textContent='Please pick a branch first (top of the page).'; msg.className='msg error'; return; }
+  const by = document.getElementById('slBy').value.trim();
+  if(!by){ msg.textContent='Please type your name.'; msg.className='msg error'; return; }
+  const p = new URLSearchParams({ action: SL.editId ? 'editSale' : 'addSale', branch, kind: SL.kind, date: document.getElementById('slDate').value,
+    ref: document.getElementById('slRef').value.trim(), notes: document.getElementById('slNotes').value.trim(), enteredBy: by });
+  if(SL.editId) p.set('id', SL.editId);
+  if(SL.kind==='invoiced'){
+    if(slCalc() <= 0){ msg.textContent='Enter at least one amount (Cash, Card, MyFatoorah or Credit).'; msg.className='msg error'; return; }
+    p.set('cash', slNum('slCash')); p.set('card', slNum('slCard')); p.set('myfatoorah', slNum('slMf')); p.set('credit', slNum('slCredit'));
+  } else {
+    if(slNum('slAmount') <= 0){ msg.textContent='Enter the amount the customer paid.'; msg.className='msg error'; return; }
+    p.set('amount', slNum('slAmount')); p.set('customer', document.getElementById('slCustomer').value.trim());
+  }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const d = await slCall(p, true);
+    if(!d.success){ msg.textContent = d.error || 'Failed.'; msg.className='msg error'; }
+    else {
+      try{ localStorage.setItem('lbSalesBy', by); }catch(e){}
+      msg.textContent = SL.editId ? 'Updated ✓' : (SL.kind==='invoiced' ? 'Saved ✓ Total ' + fmtBD(d.sale.amount) : 'Saved ✓ ' + fmtBD(d.sale.amount) + ' customer cash');
+      msg.className='msg success'; slClearForm(); loadSales();
+    }
+  }catch(e){ msg.textContent='Connection error.'; msg.className='msg error'; }
+  btn.disabled = false; if(!SL.editId) btn.textContent = 'Save';
+});
+
+function slTotals(list){
+  const t = { cash:0, card:0, mf:0, credit:0, inv:0, pay:0, nPay:0 };
+  list.forEach(r=>{ if(r.kind==='invoiced'){ t.cash+=r.cash; t.card+=r.card; t.mf+=r.myfatoorah; t.credit+=r.credit; t.inv+=r.amount; } else { t.pay+=r.amount; t.nPay++; } });
+  return t;
+}
+function slFiltered(){ const k=document.getElementById('slFKind').value; return SL.rows.filter(r=>!k || r.kind===k); }
+function slRender(){
+  const list = slFiltered(), t = slTotals(list), hist = document.getElementById('slHistory');
+  document.getElementById('slSum').innerHTML =
+    `<div>💵 Cash<b>${fmtBD(t.cash)}</b></div><div>💳 Card<b>${fmtBD(t.card)}</b></div><div>🌐 MyFatoorah<b>${fmtBD(t.mf)}</b></div><div>📒 Credit<b>${fmtBD(t.credit)}</b></div>` +
+    `<div class="t">Total invoiced<b>${fmtBD(t.inv)}</b></div><div>👤 Customer cash (${t.nPay})<b>${fmtBD(t.pay)}</b></div>`;
+  // head card = today (this branch)
+  const td = today, tt = slTotals(SL.rows.filter(r=>r.date===td));
+  document.getElementById('slHeadAmt').textContent = fmtBD(tt.inv);
+  document.getElementById('slHeadLine').textContent = `Cash ${tt.cash.toFixed(3)} · Card ${tt.card.toFixed(3)} · MyFatoorah ${tt.mf.toFixed(3)} · Credit ${tt.credit.toFixed(3)}` + (tt.pay ? ` · Customer cash ${tt.pay.toFixed(3)}` : '');
+  if(!list.length){ hist.innerHTML = '<div class="empty">No sales saved for these dates.</div>'; return; }
+  const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
+  hist.innerHTML = Object.keys(days).sort().reverse().map(d=>{
+    const dt = slTotals(days[d]);
+    return `<div class="sl-day"><h4><span>${fmtDate(d)}</span><span>${dt.inv?'Invoiced '+fmtBD(dt.inv):''}${dt.inv&&dt.pay?' · ':''}${dt.pay?'Cust. cash '+fmtBD(dt.pay):''}</span></h4>` +
+      days[d].map(r=>`<div class="txn-row"><div>
+        <div class="txn-main">${r.kind==='invoiced' ? '<span class="sl-tag">INVOICED</span>'+fmtBD(r.amount) : '<span class="sl-tag p">CUSTOMER CASH</span>'+fmtBD(r.amount)}</div>
+        <div class="txn-date">${r.kind==='invoiced' ? `Cash ${r.cash.toFixed(3)} · Card ${r.card.toFixed(3)} · MyFatoorah ${r.myfatoorah.toFixed(3)} · Credit ${r.credit.toFixed(3)}` : esc(r.customer || 'Customer')}${r.ref?' · '+esc(r.ref):''}${r.notes?' · '+esc(r.notes):''}<br>${esc(r.branch)} · ${esc(r.enteredBy)||'—'}</div>
+      </div><div style="display:flex;gap:6px;align-items:center;">
+        ${isAdminUser() ? `<button class="edit-btn" data-sid="${r.id}" title="Edit (Admin)">✏️</button><button class="delete-btn" data-sid="${r.id}" title="Delete (Admin)">🗑️</button>` : ''}
+      </div></div>`).join('') + '</div>';
+  }).join('');
+  hist.querySelectorAll('.edit-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slEdit(Number(b.dataset.sid))));
+  hist.querySelectorAll('.delete-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slDelete(Number(b.dataset.sid))));
+}
+function slEdit(id){
+  const r = SL.rows.find(x=>x.id===id); if(!r) return;
+  slSetKind(r.kind); SL.editId = id;
+  document.getElementById('slDate').value = r.date;
+  document.getElementById('slCash').value = r.kind==='invoiced' && r.cash ? r.cash.toFixed(3) : '';
+  document.getElementById('slCard').value = r.card ? r.card.toFixed(3) : '';
+  document.getElementById('slMf').value = r.myfatoorah ? r.myfatoorah.toFixed(3) : '';
+  document.getElementById('slCredit').value = r.credit ? r.credit.toFixed(3) : '';
+  document.getElementById('slAmount').value = r.kind==='payment' ? r.amount.toFixed(3) : '';
+  document.getElementById('slCustomer').value = r.customer; document.getElementById('slRef').value = r.ref; document.getElementById('slNotes').value = r.notes;
+  document.getElementById('slBy').value = r.enteredBy;
+  document.getElementById('slEditBar').style.display='block'; document.getElementById('slFormTitle').textContent='✏️ Edit Sales';
+  document.getElementById('slSaveBtn').textContent='Save changes'; slCalc();
+  document.getElementById('slFormTitle').scrollIntoView({behavior:'smooth', block:'start'});
+}
+async function slDelete(id){
+  const r = SL.rows.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Delete this sales entry (' + fmtDate(r.date) + ' · ' + fmtBD(r.amount) + ')?')) return;
+  try{ const d = await slCall(new URLSearchParams({ action:'deleteSale', id }), false); if(!d.success){ alert(d.error || 'Failed.'); return; } loadSales(); }
+  catch(e){ alert('Connection error.'); }
+}
+async function loadSales(){
+  const hist = document.getElementById('slHistory');
+  try{
+    const d = await slCall(new URLSearchParams({ action:'getSales', branch: document.getElementById('branchSelect').value, from: document.getElementById('slFrom').value, to: document.getElementById('slTo').value }), false);
+    if(d.error) throw new Error(d.error);
+    SL.rows = (d.sales||[]).map(r=>Object.assign(r, { cash:+r.cash||0, card:+r.card||0, myfatoorah:+r.myfatoorah||0, credit:+r.credit||0, amount:+r.amount||0 }));
+    slRender();
+  }catch(e){ hist.innerHTML = '<div class="empty">Could not load — ' + esc(e.message && e.message.length < 90 ? e.message : 'check your connection.') + '</div>'; }
+}
+['slFrom','slTo'].forEach(id=>document.getElementById(id).addEventListener('change', loadSales));
+document.getElementById('slFKind').addEventListener('change', slRender);
+document.getElementById('slFClear').addEventListener('click', ()=>{ slMonth(); document.getElementById('slFKind').value=''; loadSales(); });
+function slRangeText(){ const f=document.getElementById('slFrom').value, t=document.getElementById('slTo').value; return (f||t) ? `${f?fmtDate(f):'start'} – ${t?fmtDate(t):'today'}` : 'All dates'; }
+document.getElementById('slPrintBtn').addEventListener('click', ()=>{
+  const list = slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id);
+  if(!list.length){ alert('Nothing to print for these dates.'); return; }
+  const t = slTotals(list), th='style="text-align:right;"';
+  const inv = list.filter(r=>r.kind==='invoiced'), pay = list.filter(r=>r.kind==='payment');
+  document.getElementById('printArea').innerHTML = `
+    <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales</h2>
+    <p>${esc(document.getElementById('branchSelect').value)} · ${slRangeText()}</p>` +
+    (inv.length ? `<h3>Invoiced totals</h3><table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Ref / notes</th><th style="text-align:left;">By</th></tr></thead>
+      <tbody>${inv.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2">TOTAL</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
+    (pay.length ? `<h3 style="margin-top:16px;">Cash paid by customers <small style="font-weight:400">(not petty cash)</small></h3><table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Customer</th><th style="text-align:left;">Ref / notes</th><th style="text-align:left;">By</th><th ${th}>Amount</th></tr></thead>
+      <tbody>${pay.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${esc(r.customer)||'—'}</td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td><td ${th}>${r.amount.toFixed(3)}</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="5">TOTAL</td><td ${th}>${t.pay.toFixed(3)} BD</td></tr></tbody></table>` : '') +
+    `<p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(new Date().toISOString().slice(0,10))} · ${list.length} entries</p>`;
+  window.print();
+});
+document.getElementById('slExcelBtn').addEventListener('click', ()=>{
+  const list = slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id);
+  if(!list.length){ alert('Nothing to export for these dates.'); return; }
+  if(!window.lbExcel){ alert('Excel tool not loaded — refresh the page.'); return; }
+  const t = slTotals(list), br = document.getElementById('branchSelect').value, f3 = '#,##0.000';
+  const inv = [['Lalabella — Sales (invoiced totals)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Cash','Card','MyFatoorah','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
+    .concat(list.filter(r=>r.kind==='invoiced').map(r=>[r.date,r.branch,r.cash,r.card,r.myfatoorah,r.credit,r.amount,r.ref,r.notes,r.enteredBy,r.createdAt?new Date(r.createdAt).toLocaleString('en-GB',{timeZone:'Asia/Bahrain'}):'']))
+    .concat([[],['TOTAL','',t.cash,t.card,t.mf,t.credit,t.inv]]);
+  const pay = [['Lalabella — Cash paid by customers (NOT petty cash)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Customer','Amount','Invoice / order','Notes','Entered by','Saved at']]
+    .concat(list.filter(r=>r.kind==='payment').map(r=>[r.date,r.branch,r.customer,r.amount,r.ref,r.notes,r.enteredBy,r.createdAt?new Date(r.createdAt).toLocaleString('en-GB',{timeZone:'Asia/Bahrain'}):'']))
+    .concat([[],['TOTAL','','',t.pay]]);
+  const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
+  const daily = [['Date','Cash','Card','MyFatoorah','Credit','Total invoiced','Customer cash']].concat(Object.keys(days).sort().map(d=>{ const x=slTotals(days[d]); return [d,x.cash,x.card,x.mf,x.credit,x.inv,x.pay]; })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.credit,t.inv,t.pay]]);
+  lbExcel.save('Lalabella Sales ' + br, [
+    { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3} },
+    { name:'Invoiced', rows: inv, headerRow: 4, fmt:{2:f3,3:f3,4:f3,5:f3,6:f3} },
+    { name:'Customer cash', rows: pay, headerRow: 4, fmt:{3:f3} },
+  ]).catch(e=>alert(e && e.message || 'Could not make the Excel file.'));
+});
+loadSales();
 </script>
 <script src="joyboy-bubble.js"></script>
 </body>

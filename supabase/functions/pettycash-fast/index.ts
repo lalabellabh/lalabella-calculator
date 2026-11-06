@@ -1,4 +1,6 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v15
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v16
+// v16 (Nov 2026): SALES tab (table sales_entries, NOT part of petty cash): getSales / addSale (staff) / editSale + deleteSale (ADMIN ONLY).
+//                kind 'invoiced' = invoiced totals by Cash, Card, MyFatoorah, Credit (amount = the sum); kind 'payment' = cash a customer paid.
 // v15 (Nov 2026): editCashCount (ADMIN ONLY) — fix date, counted by, the money breakdown (replaces all lines, total recalculated) and photo (photo / removePhoto=1).
 // v14 (Nov 2026): a cash count can have a photo (photo_url on cash_daily_counts, same private bucket). addCashCount takes `photo` (POST); getCashCounts returns photoUrl (signed, 1h).
 // v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
@@ -354,6 +356,72 @@ async function handleMarkSentToQalali(p: any) {
   return { success: true };
 }
 
+// ---------------------------------------------------------------
+// SALES (separate from petty cash): invoiced totals per payment method + cash paid by customers
+// ---------------------------------------------------------------
+const m3 = (v: unknown) => { const n = Math.round((Number(v) || 0) * 1000) / 1000; return isFinite(n) && n >= 0 && n < 1e8 ? n : NaN; };
+const txt = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+function saleOut(r: any) {
+  return { id: r.id, branch: r.branch, date: r.entry_date, kind: r.kind, cash: Number(r.cash), card: Number(r.card), myfatoorah: Number(r.myfatoorah), credit: Number(r.credit),
+    amount: Number(r.amount), customer: r.customer || '', ref: r.ref || '', notes: r.notes || '', enteredBy: r.entered_by || '', createdAt: r.created_at };
+}
+function saleFields(p: any, kind: string) {
+  const f: Record<string, unknown> = {};
+  if (kind === 'invoiced') {
+    const c = m3(p.cash), d = m3(p.card), m = m3(p.myfatoorah), k = m3(p.credit);
+    if ([c, d, m, k].some((x) => isNaN(x))) return { error: 'Please check the amounts.' };
+    const total = Math.round((c + d + m + k) * 1000) / 1000;
+    if (total <= 0) return { error: 'Enter at least one amount (Cash, Card, MyFatoorah or Credit).' };
+    Object.assign(f, { cash: c, card: d, myfatoorah: m, credit: k, amount: total });
+  } else {
+    const a = m3(p.amount);
+    if (isNaN(a) || a <= 0) return { error: 'Amount must be greater than zero.' };
+    Object.assign(f, { cash: a, card: 0, myfatoorah: 0, credit: 0, amount: a, customer: txt(p.customer, 80) || null });
+  }
+  f.ref = txt(p.ref, 60) || null;
+  f.notes = txt(p.notes, 200) || null;
+  return { fields: f };
+}
+async function handleGetSales(p: any) {
+  let q = 'select=*&order=entry_date.desc,id.desc&limit=1000';
+  if (p.branch && p.branch !== 'All') q += `&branch=eq.${encodeURIComponent(p.branch)}`;
+  if (p.from && validDate(String(p.from))) q += `&entry_date=gte.${p.from}`;
+  if (p.to && validDate(String(p.to))) q += `&entry_date=lte.${p.to}`;
+  const rows = await sbGet('sales_entries', q);
+  return { success: true, sales: (rows || []).map(saleOut) };
+}
+async function handleAddSale(p: any) {
+  const branch = txt(p.branch, 40);
+  const date = String(p.date || new Date().toISOString().slice(0, 10));
+  const kind = p.kind === 'payment' ? 'payment' : 'invoiced';
+  if (!branch || branch === 'All') return { error: 'Please pick a branch first (top of the page).' };
+  if (!validDate(date)) return { error: 'Invalid date.' };
+  const r: any = saleFields(p, kind);
+  if (r.error) return { error: r.error };
+  const ins = await sbPost('sales_entries', [{ branch, entry_date: date, kind, entered_by: txt(p.enteredBy, 60), ...r.fields }]);
+  return { success: true, sale: saleOut(ins[0]) };
+}
+async function handleEditSale(p: any, user: any) {
+  if (!isAdmin(user)) return { error: 'Only an Admin can edit a sales entry. Please ask an Admin.' };
+  const id = Number(p.id);
+  if (!Number.isInteger(id) || id < 1) return { error: 'Invalid entry.' };
+  const rows = await sbGet('sales_entries', `select=id,kind&id=eq.${id}`);
+  if (!rows.length) return { error: 'Entry not found.' };
+  const r: any = saleFields(p, rows[0].kind);
+  if (r.error) return { error: r.error };
+  if (p.date !== undefined && p.date !== '') { if (!validDate(String(p.date))) return { error: 'Invalid date.' }; r.fields.entry_date = String(p.date); }
+  if (p.enteredBy !== undefined) r.fields.entered_by = txt(p.enteredBy, 60);
+  await sbPatch('sales_entries', `id=eq.${id}`, r.fields);
+  return { success: true };
+}
+async function handleDeleteSale(p: any, user: any) {
+  if (!isAdmin(user)) return { error: ADMIN_ONLY_MSG };
+  const id = Number(p.id);
+  if (!Number.isInteger(id) || id < 1) return { error: 'Invalid entry.' };
+  await sbDelete('sales_entries', `id=eq.${id}`);
+  return { success: true };
+}
+
 async function readParams(req: Request): Promise<Record<string, any>> {
   if (req.method === 'GET') { const u = new URL(req.url); return Object.fromEntries(u.searchParams.entries()); }
   const ct = req.headers.get('content-type') || '';
@@ -381,6 +449,10 @@ Deno.serve(async (req) => {
     if (action === 'editCashCount') return json(await handleEditCashCount(p, user));
     if (action === 'deleteCashCount') return json(await handleDeleteCashCount(p, user));
     if (action === 'markSentToQalali') return json(await handleMarkSentToQalali(p));
+    if (action === 'getSales') return json(await handleGetSales(p));
+    if (action === 'addSale') return json(await handleAddSale(p));
+    if (action === 'editSale') return json(await handleEditSale(p, user));
+    if (action === 'deleteSale') return json(await handleDeleteSale(p, user));
 
     return json({ error: 'Unknown action' });
   } catch (err) {
