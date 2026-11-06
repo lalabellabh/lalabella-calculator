@@ -1,4 +1,4 @@
-// LALABELLA SHOPIFY NEW-ORDER ALERT v2.2 (branch: checkout > area keywords > map pin) (see shopify-orders-fast.ts in the repo for notes)
+// LALABELLA SHOPIFY NEW-ORDER ALERT v2.3 (branch: checkout > area keywords > map pin; stored only — the phone alert has NO branch, the Tampermonkey decides) (see shopify-orders-fast.ts in the repo for notes)
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SECRET = Deno.env.get('SHOPIFY_WEBHOOK_SECRET') || '';
@@ -94,7 +94,7 @@ async function pickBranch(order: any, attrs: Record<string, string>) {
   return { name: '', source: '' };
 }
 
-async function pushAlert(orders: { orderNo: string; branch: string; address: string }[]) {
+async function pushAlert(orders: { orderNo: string; source: string; total?: string }[]) {
   const cfg = await rest('GET', 'push_config?select=internal_key&id=eq.1&limit=1');
   const key = cfg && cfg[0] && cfg[0].internal_key;
   if (!key) return;
@@ -200,7 +200,7 @@ async function handleWebhook(req: Request, raw: string) {
   if (req.headers.get('x-lb-test') !== '1') {
     try {
       await Promise.race([
-        pushAlert([{ orderNo: row.order_no, branch: row.branch, address: row.address }]),
+        pushAlert([{ orderNo: row.order_no, source: 'shopify', total: row.total ? Number(row.total).toFixed(3) : '' }]),   /* no branch: the monkey decides */
         new Promise((r) => setTimeout(r, 4000)),
       ]);
     } catch (e) { console.error('push failed', e); }
