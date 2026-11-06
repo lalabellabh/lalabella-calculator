@@ -1249,15 +1249,32 @@ fontSize.addEventListener('input',()=>textArea.style.fontSize=Math.max(8,Math.mi
 
 // ---------- Highlight toolbar: resize/recolor just the selected text ----------
 const hlToolbar = document.getElementById('highlightToolbar');
+// must sit above the card (taps on it were landing on the card underneath -> selection lost -> toolbar closed)
+document.body.appendChild(hlToolbar); hlToolbar.style.zIndex = '9100';
 let savedRange = null;
 let hlToolbarPointerDown = false; // tracks touch/mouse press on the toolbar — :hover doesn't fire on touch devices, so this is what actually keeps it from hiding mid-tap
-hlToolbar.addEventListener('pointerdown', () => { hlToolbarPointerDown = true; });
+let hlTouchAt = 0;
+hlToolbar.addEventListener('pointerdown', () => { hlToolbarPointerDown = true; hlTouchAt = Date.now(); });
+// Phones: tapping a button would take the focus away from the message -> the selection disappears, the keyboard
+// closes and the toolbar hid itself before the tap counted. Keep the focus on the message for buttons and colours
+// (the Font list and the colour picker still open normally; the saved selection is used for them).
+hlToolbar.addEventListener('mousedown', e => { hlTouchAt = Date.now(); if(!e.target.closest('select,input')) e.preventDefault(); });
+// touch: a TAP on a button/colour is handled here (and the phone's own focus change is cancelled); a SWIPE still scrolls the bar
+let hlTx = 0, hlTy = 0;
+hlToolbar.addEventListener('touchstart', e => { hlTouchAt = Date.now(); const t = e.touches[0]; hlTx = t.clientX; hlTy = t.clientY; }, { passive:true });
+hlToolbar.addEventListener('touchend', e => {
+  hlTouchAt = Date.now();
+  const el = e.target.closest('button,[data-hlcolor]'); if(!el) return;
+  const t = e.changedTouches[0]; if(Math.abs(t.clientX - hlTx) > 10 || Math.abs(t.clientY - hlTy) > 10) return;   // it was a swipe
+  if(e.cancelable){ e.preventDefault(); el.click(); }
+}, { passive:false });
+function hlKeepOpen(){ return hlToolbarPointerDown || Date.now() - hlTouchAt < 900 || hlToolbar.contains(document.activeElement); }
 document.addEventListener('pointerup', () => { hlToolbarPointerDown = false; });
 
 function showHighlightToolbar(){
   const sel = window.getSelection();
   if(!sel || sel.isCollapsed || sel.rangeCount === 0){
-    hlToolbar.style.display = 'none';
+    if(!hlKeepOpen()) hlToolbar.style.display = 'none';
     return;
   }
   const range = sel.getRangeAt(0);
@@ -1311,7 +1328,7 @@ document.addEventListener('selectionchange', ()=>{
   const sel = window.getSelection();
   if(sel && sel.rangeCount > 0 && textArea.contains(sel.getRangeAt(0).commonAncestorContainer)){
     showHighlightToolbar();
-  } else if(!hlToolbarPointerDown){
+  } else if(!hlKeepOpen()){
     hlToolbar.style.display = 'none';
   }
 });
