@@ -802,13 +802,13 @@ body::before{
   <span id="imgColorSwatches" style="display:none;align-items:center;gap:4px;padding-left:4px;border-left:1px solid var(--line);"></span>
 </div>
 
-<div id="highlightToolbar" style="display:none;position:fixed;z-index:500;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 10px;align-items:center;gap:8px;">
+<div id="highlightToolbar" style="display:none;position:fixed;z-index:500;max-width:calc(100vw - 16px);overflow-x:auto;flex-wrap:nowrap;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 10px;align-items:center;gap:8px;">
   <button id="hlSmaller" title="Smaller" style="width:28px;height:28px;padding:0;font-size:14px;">A-</button>
   <button id="hlBigger" title="Bigger" style="width:28px;height:28px;padding:0;font-size:16px;">A+</button>
   <span style="width:1px;height:20px;background:var(--line);"></span>
   <select id="hlFontSelect" style="padding:5px 8px;font-size:12px;border:1px solid var(--line);border-radius:8px;" title="Font for the selected text only">
     <option value="">Font…</option>
-    <option value="" data-normal="1">— Normal —</option>
+    <option value="__normal">— Normal (same as the card) —</option>
     <option value="'Great Vibes',cursive">Great Vibes</option>
     <option value="'Allura',cursive">Allura</option>
     <option value="'Alex Brush',cursive">Alex Brush</option>
@@ -1235,6 +1235,8 @@ const ITALIC_FONTS = ['bodoni', 'cormorant', 'playfair']; // these were imported
 font.addEventListener('change',()=>{
   textArea.style.fontFamily = FONT_FAMILY_MAP[font.value] || FONT_FAMILY_MAP.bask;
   textArea.style.fontStyle = ITALIC_FONTS.includes(font.value) ? 'italic' : 'normal';
+  // the top font is for the whole message: words that got their own font follow it again (sizes/colours stay)
+  textArea.querySelectorAll('[style*="font-family"],[style*="font-style"],font[face]').forEach(el => { if(el.tagName === 'FONT') el.removeAttribute('face'); else resetSpanFont(el); });
 });
 fontSize.addEventListener('input',()=>textArea.style.fontSize=Math.max(8,Math.min(40,+fontSize.value||16))+'px');
 
@@ -1258,13 +1260,24 @@ function showHighlightToolbar(){
     return;
   }
   savedRange = range.cloneRange();
-  const rect = range.getBoundingClientRect();
+  placeHlToolbar(range.getBoundingClientRect());
+}
+// Put the toolbar OUTSIDE the message: above the card, else below the card, else under the selected words
+// (phones: the keyboard + the phone's own Copy/Paste bar sit on top, so the visible area is used).
+function placeHlToolbar(rect){
   hlToolbar.style.display = 'flex';
-  const top = Math.max(8, rect.top - hlToolbar.offsetHeight - 10);
-  const left = Math.min(window.innerWidth - hlToolbar.offsetWidth - 8, Math.max(8, rect.left + rect.width/2 - hlToolbar.offsetWidth/2));
+  const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : window.innerHeight, vW = vv ? vv.width : window.innerWidth;
+  const h = hlToolbar.offsetHeight, w = hlToolbar.offsetWidth, c = card.getBoundingClientRect(), gap = 8;
+  const fits = t => t >= vTop + 4 && t + h <= vTop + vH - 4;
+  const tries = [c.top - h - gap, c.bottom + gap, rect.bottom + 14, rect.top - h - 14];
+  let top = tries.find(fits);
+  if(top === undefined) top = Math.min(vTop + vH - h - 4, Math.max(vTop + 4, rect.bottom + 14));
+  const left = Math.min(vW - w - 8, Math.max(8, rect.left + rect.width/2 - w/2));
   hlToolbar.style.top = top + 'px';
   hlToolbar.style.left = left + 'px';
 }
+if(window.visualViewport) window.visualViewport.addEventListener('resize', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); });
+window.addEventListener('scroll', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); }, { passive:true });
 
 document.addEventListener('selectionchange', ()=>{
   // Only respond while the selection is actually within our card text.
@@ -1319,43 +1332,73 @@ function currentSelectionSpan(){
   return node;
 }
 
-function adjustHighlightSize(delta){
-  let span = currentSelectionSpan();
-  if(!span) span = wrapSelectionInSpan();
-  if(!span) return;
-  const current = parseFloat(getComputedStyle(span).fontSize) || 16;
-  const next = Math.max(8, Math.min(72, current + delta));
-  span.style.fontSize = next + 'px';
-}
-
-function applyHighlightColor(color){
-  let span = currentSelectionSpan();
-  if(!span) span = wrapSelectionInSpan();
-  if(!span) return;
-  span.style.color = color;
-}
-
-function applyHighlightFont(fontFamily, isItalic){
-  let span = currentSelectionSpan();
-  if(!span) span = wrapSelectionInSpan();
-  if(!span) return;
-  if(fontFamily){
-    span.style.fontFamily = fontFamily;
-    span.style.fontStyle = isItalic ? 'italic' : 'normal';
-    // Script/cursive fonts read small at the same px size as the rest
-    // of the text — bump size up a bit so they don't look tiny next
-    // to plain text in the same line.
-    const isScript = /Great Vibes|Allura|Alex Brush/.test(fontFamily);
-    if(isScript) span.style.fontSize = (parseFloat(getComputedStyle(span).fontSize)||16) * 1.35 + 'px';
-  } else {
-    span.style.fontFamily = '';
-    span.style.fontStyle = '';
+// Selected words -> one small <span> per piece of text inside the selection. Never wraps a whole line/paragraph
+// block (that is what made other words in the paragraph change too) and never nests a new span around old ones.
+function selectionSpans(){
+  const sel = window.getSelection();
+  let r = (sel && sel.rangeCount && !sel.isCollapsed && textArea.contains(sel.getRangeAt(0).commonAncestorContainer)) ? sel.getRangeAt(0) : savedRange;
+  if(!r || r.collapsed || !textArea.contains(r.commonAncestorContainer)) return [];
+  let sc = r.startContainer, so = r.startOffset, ec = r.endContainer, eo = r.endOffset;
+  if(ec.nodeType === 3 && eo > 0 && eo < ec.length) ec.splitText(eo);
+  if(sc.nodeType === 3 && so > 0 && so < sc.length){ const tail = sc.splitText(so); if(ec === sc) { ec = tail; eo = tail.length; } sc = tail; so = 0; }
+  const rr = document.createRange();
+  try{ rr.setStart(sc, sc.nodeType === 3 && so >= sc.length ? sc.length : so); rr.setEnd(ec, ec.nodeType === 3 ? Math.min(eo, ec.length) : eo); }catch(e){ return []; }
+  const nodes = [], tw = document.createTreeWalker(textArea, NodeFilter.SHOW_TEXT);
+  let n; while((n = tw.nextNode())){
+    if(!n.nodeValue || !rr.intersectsNode(n)) continue;
+    if(n === sc && sc.nodeType === 3 && so >= n.length) continue;   // selection starts at the very end of this piece
+    if(n === ec && ec.nodeType === 3 && eo === 0) continue;         // or ends right before it
+    if(!n.nodeValue.replace(/\s+/g,'')) continue;                   // only spaces / line breaks
+    nodes.push(n);
   }
+  const spans = nodes.map(t => {
+    const p = t.parentElement;
+    if(p && p !== textArea && p.tagName === 'SPAN' && p.childNodes.length === 1) return p;
+    const sp = document.createElement('span'); t.parentNode.insertBefore(sp, t); sp.appendChild(t); return sp;
+  });
+  if(spans.length){
+    const nr = document.createRange(); nr.setStartBefore(spans[0]); nr.setEndAfter(spans[spans.length - 1]);
+    sel.removeAllRanges(); sel.addRange(nr); savedRange = nr.cloneRange();
+  }
+  return spans;
+}
+function adjustHighlightSize(delta){
+  selectionSpans().forEach(sp => {
+    const current = parseFloat(getComputedStyle(sp).fontSize) || 16;
+    sp.style.fontSize = Math.max(8, Math.min(72, current + delta)) + 'px';
+    delete sp.dataset.scriptFrom;   // size was set by hand now
+  });
+}
+function applyHighlightColor(color){ selectionSpans().forEach(sp => { sp.style.color = color; }); }
+function hasFontAbove(sp){ for(let e = sp.parentElement; e && e !== textArea; e = e.parentElement){ if(e.style && e.style.fontFamily) return true; } return false; }
+function resetSpanFont(sp){
+  sp.style.fontFamily = ''; sp.style.fontStyle = '';
+  if('scriptFrom' in sp.dataset){ sp.style.fontSize = sp.dataset.scriptFrom; delete sp.dataset.scriptFrom; }
+}
+function applyHighlightFont(fontFamily, isItalic){
+  selectionSpans().forEach(sp => {
+    if(fontFamily){
+      const wasScript = 'scriptFrom' in sp.dataset;
+      if(wasScript) resetSpanFont(sp);
+      sp.style.fontFamily = fontFamily;
+      sp.style.fontStyle = isItalic ? 'italic' : 'normal';
+      // script fonts read small at the same px size — bump them a bit, and remember the old size for "Normal"
+      if(/Great Vibes|Allura|Alex Brush/.test(fontFamily)){
+        sp.dataset.scriptFrom = sp.style.fontSize || '';
+        sp.style.fontSize = Math.round((parseFloat(getComputedStyle(sp).fontSize) || 16) * 1.35) + 'px';
+      }
+    } else {
+      resetSpanFont(sp);
+      // an older piece around it still has a font: use the card's own font here explicitly
+      if(hasFontAbove(sp)){ sp.style.fontFamily = getComputedStyle(textArea).fontFamily; sp.style.fontStyle = getComputedStyle(textArea).fontStyle; }
+    }
+  });
 }
 const hlFontSelect = document.getElementById('hlFontSelect');
 hlFontSelect.addEventListener('change', (e) => {
   const opt = e.target.selectedOptions[0];
-  applyHighlightFont(opt.value, opt.dataset.italic === '1');
+  if(!opt || opt.value === '') return;
+  applyHighlightFont(opt.value === '__normal' ? '' : opt.value, opt.dataset.italic === '1');
   hlFontSelect.value = ''; // reset to placeholder so the same font can be re-picked without switching away first
 });
 
@@ -1366,20 +1409,14 @@ document.getElementById('hlSmaller').addEventListener('click', ()=> adjustHighli
 // Front/Back controls available for images, so text can be sent
 // above or behind an overlapping image/logo.
 document.getElementById('hlBringFrontBtn').addEventListener('click', () => {
-  let span = currentSelectionSpan();
-  if(!span) span = wrapSelectionInSpan();
-  if(!span) return;
+  const spans = selectionSpans(); if(!spans.length) return;
   frontLayerCounter += 1;
-  span.style.position = 'relative';
-  span.style.zIndex = frontLayerCounter;
+  spans.forEach(sp => { sp.style.position = 'relative'; sp.style.zIndex = frontLayerCounter; });
   playClick();
 });
 document.getElementById('hlSendBackBtn').addEventListener('click', () => {
-  let span = currentSelectionSpan();
-  if(!span) span = wrapSelectionInSpan();
-  if(!span) return;
-  span.style.position = 'relative';
-  span.style.zIndex = 1; // below the base image z-index (4), so an image shows on top of this text
+  const spans = selectionSpans(); if(!spans.length) return;
+  spans.forEach(sp => { sp.style.position = 'relative'; sp.style.zIndex = 1; }); // below the base image z-index (4), so an image shows on top of this text
   playClick();
 });
 document.querySelectorAll('#highlightToolbar span[data-hlcolor]').forEach(dot=>{
