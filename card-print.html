@@ -1267,7 +1267,9 @@ function showHighlightToolbar(){
     return;
   }
   savedRange = range.cloneRange();
+  const wasHidden = hlToolbar.style.display !== 'flex';
   placeHlToolbar(range.getBoundingClientRect());
+  if(wasHidden) hlRetryPlace();
 }
 // Put the toolbar OUTSIDE the message: above the card, else below the card, else under the selected words
 // (phones: the keyboard + the phone's own Copy/Paste bar sit on top, so the visible area is used).
@@ -1281,7 +1283,9 @@ function placeHlToolbar(rect){
   // and scroll the page if the selected words would sit under it.
   if(window.matchMedia('(pointer:coarse)').matches || vW < 760){
     const dockTop = vTop + vH - h - 6;
-    hlToolbar.style.top = dockTop + 'px';
+    // pinned with bottom (not top): when the keyboard opens the app/browser shrinks the screen and the bar follows it
+    hlToolbar.style.top = 'auto';
+    hlToolbar.style.bottom = Math.max(6, window.innerHeight - (vTop + vH) + 6) + 'px';
     hlToolbar.style.left = Math.max(8, (vW - w) / 2) + 'px';
     if(rect.bottom > dockTop - 8 && !hlDockScrolling){ hlDockScrolling = true; window.scrollBy(0, rect.bottom - dockTop + 24); setTimeout(() => { hlDockScrolling = false; }, 400); }
     return;
@@ -1291,9 +1295,14 @@ function placeHlToolbar(rect){
   let top = tries.find(fits);
   if(top === undefined) top = Math.min(vTop + vH - h - 4, Math.max(vTop + 4, rect.bottom + 14));
   const left = Math.min(vW - w - 8, Math.max(8, rect.left + rect.width/2 - w/2));
+  hlToolbar.style.bottom = 'auto';
   hlToolbar.style.top = top + 'px';
   hlToolbar.style.left = left + 'px';
 }
+// the keyboard opens a moment AFTER the selection: place again when the screen size changes, and a few times just after showing
+window.addEventListener('resize', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); });
+let hlRetryT = [];
+function hlRetryPlace(){ hlRetryT.forEach(clearTimeout); hlRetryT = [150, 400, 800].map(ms => setTimeout(() => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); }, ms)); }
 if(window.visualViewport) window.visualViewport.addEventListener('resize', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); });
 document.addEventListener('scroll', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); }, { passive:true, capture:true });   // capture: also when an inner box scrolls (app)
 
