@@ -1,4 +1,5 @@
-// LALABELLA — Web Push (Supabase Edge Function)  v8
+// LALABELLA — Web Push (Supabase Edge Function)  v9
+// v9: Shopify order alerts show the order number + total only (no branch); the Tampermonkey decides the branch.
 // v8: approvalNotify is SILENT (no phone push). Approvals only show in the in-app bell.
 // v7: approvalNotify = rate change waiting => Admin devices (mute_approvals) [now disabled].
 // v6: per-device choices mute_chat / mute_orders (getPrefs / setPrefs).
@@ -139,9 +140,17 @@ Deno.serve(async (req) => {
       if (!orders.length) return json({ success: true, sent: 0 });
       const subs = await subsFor(null, 0, 'orders');
       if (!subs.length) return json({ success: true, sent: 0 });
-      const lines = orders.map((o: any) => `#${clip(o.orderNo, 20).replace(/^#+/, '')} ${o.branch ? '➜ ' + clip(o.branch, 40) : '⚠ For manual assign'}`);
-      const title = orders.length === 1 ? 'New order to assign' : `${orders.length} new orders to assign`;
-      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html', tag: 'orders' });
+      // Shopify alerts: order number only (no branch) — the Tampermonkey + Branch Config decide the branch.
+      const allShop = orders.every((o: any) => o.source === 'shopify');
+      const lines = orders.map((o: any) => {
+        const no = '#' + clip(o.orderNo, 20).replace(/^#+/, '');
+        if (o.source === 'shopify') return no + (o.total ? ' · BHD ' + clip(o.total, 12) : '');
+        return `${no} ${o.branch ? '➜ ' + clip(o.branch, 40) : '⚠ For manual assign'}`;
+      });
+      const title = allShop
+        ? (orders.length === 1 ? 'New Shopify order' : `${orders.length} new Shopify orders`)
+        : (orders.length === 1 ? 'New order to assign' : `${orders.length} new orders to assign`);
+      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html', tag: allShop ? 'shopify' : 'orders' });
       return json({ success: true, ...r });
     }
 

@@ -34,10 +34,10 @@
     '#lbob-panel.show{display:block}#lbob-panel h4{margin:0 0 8px;font-size:13px;color:#9e2f4a}' +
     '#lbob-panel .o{font-size:12.5px;padding:6px 0;border-bottom:1px solid #f6e0da}' +
     '#lbob-panel .e{font-size:12px;color:#8a7078;text-align:center;padding:10px 0}' +
-    '#lbob-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9302;width:min(360px,calc(100vw - 20px));display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f0d9d9;border-left:5px solid #c9506b;border-radius:14px;box-shadow:0 14px 36px rgba(60,20,35,.3);padding:11px 12px;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024;cursor:pointer;transition:transform .3s ease,opacity .3s ease;opacity:0;visibility:hidden;pointer-events:none;}' +
+    '#lbob-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:2147483100;width:min(360px,calc(100vw - 20px));display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f0d9d9;border-left:5px solid #c9506b;border-radius:14px;box-shadow:0 14px 36px rgba(60,20,35,.3);padding:11px 12px;font-family:"Space Grotesk",Arial,sans-serif;color:#2f2024;cursor:pointer;transition:transform .3s ease,opacity .3s ease;opacity:0;visibility:hidden;pointer-events:none;}' +
     '#lbob-toast.show{transform:translate(-50%,0);opacity:1;visibility:visible;pointer-events:auto}#lbob-toast .tt{flex:1;min-width:0;font-size:12.5px;line-height:1.4}#lbob-toast .tt b{display:block;font-size:13px;color:#9e2f4a;margin-bottom:2px}' +
     '@media(max-width:600px){#lbob-toast{top:calc(max(12px,env(safe-area-inset-top)) + 56px)}}' +
-    '#lbob-toast .x{border:0;background:none;color:#8a7078;font-size:17px;cursor:pointer;padding:0 2px;line-height:1}' +
+    '#lbob-toast .x{flex:0 0 auto;width:32px;height:32px;margin:-6px -6px 0 0;border:0;border-radius:50%;background:#f6ecec;color:#8a7078;font-size:15px;cursor:pointer;padding:0;line-height:1}#lbob-toast .x:hover{background:#f0d9d9;color:#9e2f4a}' +
     '#lbob-panel a{display:block;text-align:center;margin-top:10px;padding:9px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12.5px;font-weight:700}';
   document.head.appendChild(css);
 
@@ -55,9 +55,24 @@
   toast.id = 'lbob-toast'; toast.setAttribute('role', 'status');
   toast.innerHTML = '<span style="font-size:20px">📦</span><div class="tt"></div><button class="x" type="button" aria-label="Close">✕</button>';
   document.body.appendChild(toast);
-  var toastTimer = 0;
-  function hideToast() { toast.classList.remove('show'); clearTimeout(toastTimer); stopRing(); }
+  var toastTimer = 0, toastPri = 0, toastQ = [];
+  // One pop-up at a time. A ringing new-order pop-up is never replaced by a lower one (abandoned cart, approvals):
+  // those wait in a queue and show after it is closed. Closing it in one tab closes it in the other open tabs too.
+  var TOAST_ACK = 'lbobToastAck';
+  function hideToast(fromOtherTab) {
+    var was = toast.classList.contains('show');
+    toast.classList.remove('show'); clearTimeout(toastTimer); stopRing(); toastPri = 0;
+    if (was && !fromOtherTab) { try { localStorage.setItem(TOAST_ACK, String(Date.now())); } catch (e) {} }
+    var next = toastQ.shift(); if (next) setTimeout(next, 450);
+  }
+  function canShow(pri, again) {
+    if (toast.classList.contains('show') && toastPri > pri) { if (toastQ.length < 5) toastQ.push(again); return false; }
+    toastPri = pri; return true;
+  }
+  window.addEventListener('storage', function (e) { if (e.key === TOAST_ACK && toast.classList.contains('show')) hideToast(true); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && toast.classList.contains('show')) hideToast(); });
   function showToast(rows) {
+    if (!canShow(2, function () { showToast(rows); })) return;
     var one = rows.slice(0, 2).map(function (o) {
       return '<div><b style="display:inline;font-size:12.5px">' + esc(o.orderNo) + '</b> · ' +
         (o.branch ? '<span style="color:#2f7a4f;font-weight:700">➜ ' + esc(o.branch) + '</span>' : '<span style="color:#b2402e;font-weight:700">⚠ manual assign</span>') + '</div>';
@@ -70,6 +85,7 @@
   }
   // Flower rate changes waiting for an Admin's approval (the server only sends these to Admins).
   function showApprToast(n, rows) {
+    if (!canShow(1, function () { showApprToast(n, rows); })) return;
     var one = rows.slice(0, 2).map(function (r) {
       return '<div><b style="display:inline;font-size:12.5px">' + esc(r.flower) + '</b>' + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
     }).join('');
@@ -93,11 +109,11 @@
 
   // New order from Shopify: stays on screen and rings (loud, repeating) until someone taps it.
   function showShopToast(rows) {
+    canShow(3, null);
     var bl = rows.every(function (o) { return o.source === 'bleems'; }), sh = rows.every(function (o) { return o.source !== 'bleems'; });
     var src = bl ? 'Bleems' : (sh ? 'Shopify' : 'online');
     var one = rows.slice(0, 2).map(function (o) {
-      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.order_no) + '</b>' + (o.source === 'bleems' && !bl ? ' <span style="color:#8a7078">(Bleems)</span>' : '') + ' · ' +
-        (o.branch ? '<span style="color:#2f7a4f;font-weight:700">➜ ' + esc(o.branch) + '</span>' : '<span style="color:#b2402e;font-weight:700">⚠ manual assign</span>') +
+      return '<div><b style="display:inline;font-size:12.5px">' + esc(o.order_no) + '</b>' + (o.source === 'bleems' && !bl ? ' <span style="color:#8a7078">(Bleems)</span>' : '') +    // no branch here: the Tampermonkey + Branch Config decide it (its own alert shows the branch)
         (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + '</div>';
     }).join('');
     var more = rows.length > 2 ? '<div style="color:#8a7078">+ ' + (rows.length - 2) + ' more</div>' : '';
@@ -108,12 +124,14 @@
     toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New ' + src + ' order!' : rows.length + ' new ' + src + ' orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
     toast.classList.add('show');
     clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 90000);   // rings ~36 s; then the pop-up closes by itself after 1.5 min (the order stays in the 🔔 list)
     ringLoop();
   }
   // a customer started checkout, left a phone/email, and never finished: a quiet notice (no alarm sound), logged in shopify_checkouts
   var AB_SEEN = 'lbobAbSeen';
   function abSeen() { try { var a = JSON.parse(localStorage.getItem(AB_SEEN) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
   function showAbandonToast(rows) {
+    if (!canShow(1, function () { showAbandonToast(rows); })) return;
     var one = rows.slice(0, 2).map(function (o) {
       var who = o.customer || o.phone || o.email || 'Customer';
       return '<div><b style="display:inline;font-size:12.5px">' + esc(who) + '</b>' + (o.total ? ' · ' + esc(o.currency || '') + ' ' + esc(o.total) : '') + (o.phone ? ' · ' + esc(o.phone) : '') + '<div style="color:#8a7078;font-size:11.5px">' + esc(o.items || '') + '</div></div>';
