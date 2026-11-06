@@ -437,6 +437,13 @@ body::before{
   }
 }
 
+@media (max-width:760px), (pointer:coarse){
+  .message-workspace > .stage{padding-bottom:90px !important;}
+}
+#highlightToolbar > *{flex-shrink:0;}
+#highlightToolbar #hlBigger,#highlightToolbar #hlSmaller{width:36px !important;height:36px !important;padding:0 !important;font-size:14px !important;}
+#highlightToolbar #hlFontSelect{max-width:150px;padding:6px 8px !important;font-size:13px !important;}
+#highlightToolbar #hlBringFrontBtn,#highlightToolbar #hlSendBackBtn{padding:6px 8px !important;font-size:12px !important;}
 @media (max-width:760px){
   .message-workspace .envelope{transition:transform .35s ease,margin-top .65s cubic-bezier(.2,.8,.2,1);}
   .message-workspace .envelope.open{margin-top:122px;}
@@ -1264,10 +1271,21 @@ function showHighlightToolbar(){
 }
 // Put the toolbar OUTSIDE the message: above the card, else below the card, else under the selected words
 // (phones: the keyboard + the phone's own Copy/Paste bar sit on top, so the visible area is used).
+let hlDockScrolling = false;
 function placeHlToolbar(rect){
   hlToolbar.style.display = 'flex';
   const vv = window.visualViewport, vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : window.innerHeight, vW = vv ? vv.width : window.innerWidth;
   const h = hlToolbar.offsetHeight, w = hlToolbar.offsetWidth, c = card.getBoundingClientRect(), gap = 8;
+  // Phones / app: the phone's own Cut-Copy bar always appears right above the selected words, so a floating toolbar
+  // there gets covered or covers the text. Dock it at the bottom of the visible screen (just above the keyboard) instead,
+  // and scroll the page if the selected words would sit under it.
+  if(window.matchMedia('(pointer:coarse)').matches || vW < 760){
+    const dockTop = vTop + vH - h - 6;
+    hlToolbar.style.top = dockTop + 'px';
+    hlToolbar.style.left = Math.max(8, (vW - w) / 2) + 'px';
+    if(rect.bottom > dockTop - 8 && !hlDockScrolling){ hlDockScrolling = true; window.scrollBy(0, rect.bottom - dockTop + 24); setTimeout(() => { hlDockScrolling = false; }, 400); }
+    return;
+  }
   const fits = t => t >= vTop + 4 && t + h <= vTop + vH - 4;
   const tries = [c.top - h - gap, c.bottom + gap, rect.bottom + 14, rect.top - h - 14];
   let top = tries.find(fits);
@@ -1277,7 +1295,7 @@ function placeHlToolbar(rect){
   hlToolbar.style.left = left + 'px';
 }
 if(window.visualViewport) window.visualViewport.addEventListener('resize', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); });
-window.addEventListener('scroll', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); }, { passive:true });
+document.addEventListener('scroll', () => { if(hlToolbar.style.display === 'flex' && savedRange) placeHlToolbar(savedRange.getBoundingClientRect()); }, { passive:true, capture:true });   // capture: also when an inner box scrolls (app)
 
 document.addEventListener('selectionchange', ()=>{
   // Only respond while the selection is actually within our card text.
