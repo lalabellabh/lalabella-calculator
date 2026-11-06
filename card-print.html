@@ -88,6 +88,7 @@ body.hide-watermark .card-deco-leaf{display:none;}
  body.printing-circle #printSheet .card::after{content:''!important;position:absolute!important;inset:0!important;border:1px dashed #999!important;border-radius:50%!important;pointer-events:none!important;z-index:999!important;box-sizing:border-box!important}
  body.printing-circle .message-workspace{display:none!important}
  body.printing-circle .stage{display:none!important}
+ body.printing-card > :not(#printSheet), body.printing-circle > :not(#printSheet){display:none!important}
 }
 #centerGuideV{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#3ecf5c;transform:translateX(-1px);z-index:400;display:none;pointer-events:none;}
 #centerGuideV.show{display:block;}
@@ -97,15 +98,16 @@ body.hide-watermark .card-deco-leaf{display:none;}
 .stage-with-rulers{display:inline-flex;flex-direction:column;align-items:flex-start;}
 .ruler-row{display:flex;align-items:flex-start;}
 .ruler-corner{flex-shrink:0;}
-.ruler-top{position:relative;height:20px;background:#faf5f5;border-bottom:1px solid var(--line);box-sizing:border-box;}
-.ruler-left{position:relative;width:20px;background:#faf5f5;border-right:1px solid var(--line);box-sizing:border-box;flex-shrink:0;}
+.ruler-top{position:relative;height:20px;background:transparent;border-bottom:1px solid var(--line);box-sizing:border-box;overflow:hidden;flex-shrink:0;}
+.ruler-left{position:relative;width:20px;background:transparent;border-right:1px solid var(--line);box-sizing:border-box;flex-shrink:0;overflow:hidden;}
 .ruler-tick{position:absolute;background:#b89aa0;}
 .ruler-top .ruler-tick{bottom:0;width:1px;}
 .ruler-left .ruler-tick{right:0;height:1px;}
 .ruler-tick.major{background:#8a6068;}
 .ruler-label{position:absolute;font-size:8.5px;color:#8a6068;font-family:sans-serif;user-select:none;}
-.ruler-top .ruler-label{bottom:2px;transform:translateX(-50%);}
-.ruler-left .ruler-label{right:3px;transform:translateY(-50%) rotate(0deg);}
+.ruler-top .ruler-label{top:1px;line-height:1;}
+.ruler-left .ruler-label{left:1px;line-height:1;font-size:8px;}
+#card{flex-shrink:0}
 
 /* User-placed horizontal guide lines — visible only while editing,
    same hide-on-print treatment as the center guide above. */
@@ -435,6 +437,21 @@ body::before{
   }
 }
 
+@media (max-width:760px){
+  .message-workspace .envelope{transition:transform .35s ease,margin-top .65s cubic-bezier(.2,.8,.2,1);}
+  .message-workspace .envelope.open{margin-top:122px;}
+  .message-workspace > .art-panel{position:relative !important;z-index:30;}
+}
+@media (min-width:761px){
+  .panel:has(> .toolbar){padding:12px 22px !important;margin-bottom:12px !important;}
+  .toolbar{gap:7px 9px !important;}
+  .toolbar > .group:first-child{width:auto !important;border-bottom:0 !important;margin:0 !important;padding-bottom:6px !important;}
+  .toolbar .group{padding:4px 9px !important;}
+  .toolbar button,.toolbar select,.toolbar input[type=number],.toolbar input[type=text]{min-height:32px !important;padding-top:5px !important;padding-bottom:5px !important;}
+  .panel > .group{margin:6px auto 2px !important;}
+  .panel #printOffsetBox{width:40px !important;height:40px !important;font-size:16px !important;}
+  .panel .empty-tip{margin-top:4px;font-size:11px;}
+}
 </style>
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
@@ -966,8 +983,10 @@ function cardSizeMm(){
 ['customW','customH'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ applyCustomSize(); updatePrintSize(); buildRulers(); renderUserGuides(); }));
 function buildRulers(){
   const { w: sizeMmW, h: sizeMmH } = cardSizeMm();
-  const cardRect = card.getBoundingClientRect();
-  const pxPerMmW = cardRect.width / sizeMmW; // actual on-screen scale, since the card is CSS-sized in mm but rendered in px
+  // offsetWidth/Height = the card's own CSS size. getBoundingClientRect() includes the page zoom (⚙️ Text size),
+  // and the ruler widths below are set in the same zoomed CSS pixels — using it made the rulers longer than the card.
+  const cardRect = { width: card.offsetWidth, height: card.offsetHeight };
+  const pxPerMmW = cardRect.width / sizeMmW;
   const pxPerMmH = cardRect.height / sizeMmH;
 
   const rulerTop = document.getElementById('rulerTop');
@@ -984,7 +1003,7 @@ function buildRulers(){
     const isMajor = mm % 10 === 0;
     topHtml += `<div class="ruler-tick${isMajor?' major':''}" style="left:${px}px;height:${isMajor?'10px':'6px'};"></div>`;
     if(isMajor){
-      topHtml += `<div class="ruler-label" style="left:${px}px;">${mm}</div>`;
+      if(px + 16 < cardRect.width) topHtml += `<div class="ruler-label" style="left:${px + 2}px;">${mm}</div>`;   // beside the tick, never past the card edge
     }
   }
   for(let mm = 0; mm <= sizeMmH; mm += 5){
@@ -992,7 +1011,7 @@ function buildRulers(){
     const isMajor = mm % 10 === 0;
     leftHtml += `<div class="ruler-tick${isMajor?' major':''}" style="top:${px}px;width:${isMajor?'10px':'6px'};"></div>`;
     if(isMajor){
-      leftHtml += `<div class="ruler-label" style="top:${px}px;">${mm}</div>`;
+      if(mm > 0 && px + 10 < cardRect.height) leftHtml += `<div class="ruler-label" style="top:${px + 1}px;">${mm}</div>`;
     }
   }
   rulerTop.innerHTML = topHtml;
@@ -1001,7 +1020,7 @@ function buildRulers(){
 
 function renderUserGuides(){
   const { h: sizeMmH } = cardSizeMm();
-  const cardRect = card.getBoundingClientRect();
+  const cardRect = { height: card.offsetHeight };
   const pxPerMm = cardRect.height / sizeMmH; // guides measure top-offset, so this uses the height-based scale
   const layer = document.getElementById('userGuidesLayer');
   layer.innerHTML = userGuides.map((mm, idx) => `
@@ -1031,6 +1050,8 @@ document.getElementById('addGuideBtn').addEventListener('click', () => {
 // Rebuild on load and on window resize (the card's on-screen pixel
 // size can change with viewport width even though its mm size doesn't).
 window.addEventListener('resize', () => { buildRulers(); renderUserGuides(); });
+// the app / Text-size setting can change the card's size after load without a window resize — follow the card itself
+if(window.ResizeObserver){ let rzT; new ResizeObserver(() => { clearTimeout(rzT); rzT = setTimeout(() => { buildRulers(); renderUserGuides(); }, 60); }).observe(card); }
 buildRulers();
 
 // ---------- Design / Plain / Sleeve toggles ----------
@@ -1882,6 +1903,13 @@ function floatingPicXml(rId, idNum, xEmu, yEmu, sizeEmu){
 </wp:anchor></w:drawing></w:r></w:p>`;
 }
 
+// the printed copy: no editor-only things, no duplicate ids, and never the "Type or paste…" hint
+function cpCleanCopy(copy){
+  copy.querySelectorAll('#userGuidesLayer,.ruler-top,.ruler-left').forEach(x=>x.remove());
+  copy.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
+  copy.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));
+  copy.querySelectorAll('.textArea').forEach(t=>{ if(t.classList.contains('placeholder') || t.textContent.trim()==='Type or paste your message here…') t.innerHTML=''; });
+}
 function printCardExact(){
   playClick();
   document.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
@@ -1952,6 +1980,7 @@ function printCardExact(){
       copy.style.width=circleMm+'mm'; copy.style.height=circleMm+'mm'; copy.style.transform='none';
       copy.querySelectorAll('.resize-handle,.delete-handle,#centerGuideV,.userGuideH').forEach(x=>x.remove());
       copy.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+      cpCleanCopy(copy);
       sheet.appendChild(copy);
     }
     document.body.classList.add('printing-circle');
@@ -1963,6 +1992,7 @@ function printCardExact(){
     copy.removeAttribute('id');
     copy.querySelectorAll('.resize-handle,.delete-handle,#centerGuideV,.userGuideH').forEach(x=>x.remove());
     copy.querySelectorAll('.image-item').forEach(x=>x.classList.remove('selected'));
+    cpCleanCopy(copy);
     { const lb=copy.querySelector(':scope > .card-bgl'); if(lb && /url\(/.test(lb.style.background) && !/cover/.test(lb.style.background)) lb.classList.add('bg-tile'); }   // drawn designs repeat outside the card; photos and colours just stretch
     sheet.appendChild(copy);
     document.body.classList.add('printing-card');
