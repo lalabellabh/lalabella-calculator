@@ -1,4 +1,7 @@
-// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v6
+// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v7
+// v7: PUSH STOCK (trial) - the FIRST thing that writes to Odoo. After each sync, our stock of chocolates and flowers at the
+//     branch (ModaMall) is copied to Odoo On Hand at the warehouse stock location (inventory adjustment, only when different),
+//     so receiving / counts / transfers done in our system show in Odoo too. Setting push_stock on/off in odoo_sync_settings.
 // v6: AUTO-DEDUCT (trial). action 'sync' (cron every 5 min with the internal key, or an Admin 'Sync now'): every new Odoo POS line
 //     (kits exploded) that is a chocolate or a flower of our Item List is taken out of OUR stock at the sync branch (ModaMall):
 //     chocolate = release from the oldest batches (chocolate_release_database, type 'Odoo Sale'), flower = fulfillment under
@@ -13,7 +16,7 @@
 // Admin only, except 'today' (any logged-in user). Uses the Odoo JSON-2 API: POST {ODOO_URL}/json/2/<model>/<method>, header Authorization: bearer <ODOO_KEY>.
 // Secrets (never in the repo): ODOO_URL (e.g. https://lalabella-test.odoo.com), ODOO_DB (database name), ODOO_KEY (API key of an Odoo user).
 // Actions: status -> who we are in Odoo + how many products; sales -> POS sales of a day (total + by payment method) + top products.
-// Nothing is written to Odoo.
+// Until v7 nothing was written to Odoo; v7 only sets On Hand quantities (inventory adjustments).
 
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -218,6 +221,90 @@ async function runSync() {
   return { success: true, done, other, errors };
 }
 
+
+// ---------- PUSH STOCK (our stock -> Odoo On Hand) ----------
+async function sbGetAllJ(q: string) {   // pages past the 1000-row limit
+  const out: any[] = [];
+  for (let from = 0; from < 200000; from += 1000) {
+    const r = await fetch(`${SB_URL}/rest/v1/${q}`, { headers: { ...SBH(), Range: `${from}-${from + 999}` } });
+    if (!r.ok) break; const rows = await r.json(); out.push(...rows); if (rows.length < 1000) break;
+  }
+  return out;
+}
+// Same rule as the Flower Dashboard: last CONSOLIDATED count + purchases (bunch -> stems) + transfers in - out - used, after that count.
+async function ourFlowerStock(branch: string) {
+  const [db, hist, tr, ful] = await Promise.all([
+    sbGetAllJ(`flower_database?select=flower_name,qty,unit,stems_per_bunch,entry_date,type&branch=eq.${encodeURIComponent(branch)}&order=id.asc`),
+    sbGetAllJ(`flower_stock_history?select=flower_name,count_date,physical_count&branch=eq.${encodeURIComponent(branch)}&item_code=eq.CONSOLIDATED&order=id.asc`),
+    sbGetAllJ(`flower_transfer_history?select=flower_name,qty,from_branch,to_branch,transfer_date&order=id.asc`),
+    sbGetAllJ(`flower_arrangement_fulfillments?select=flower_name,qty,fulfilled_date&branch=eq.${encodeURIComponent(branch)}&order=id.asc`),
+  ]);
+  const now = new Date(), last: Record<string, { d: Date; q: number }> = {};
+  hist.forEach((r: any) => { const n = String(r.flower_name || '').trim(), d = r.count_date ? new Date(r.count_date) : null; if (!n || !d || isNaN(d.getTime()) || d > now) return; if (!last[n] || d > last[n].d) last[n] = { d, q: Number(r.physical_count) || 0 }; });
+  const after = (n: string, d: Date | null) => !!d && !isNaN(d.getTime()) && d <= now && d > (last[n] ? last[n].d : new Date(0));
+  const st: Record<string, number> = {}; Object.keys(last).forEach(n => { st[n] = last[n].q; });
+  db.forEach((r: any) => { if (r.type === 'Supply') return; const n = String(r.flower_name || '').trim(); if (!n || !after(n, r.entry_date ? new Date(r.entry_date) : null)) return; const u = String(r.unit || '').trim().toLowerCase(), sp = Number(r.stems_per_bunch) || 1; st[n] = (st[n] || 0) + (u === 'bunch' && sp > 0 ? Number(r.qty) * sp : Number(r.qty) || 0); });
+  tr.forEach((r: any) => { const n = String(r.flower_name || '').trim(), d = r.transfer_date ? new Date(r.transfer_date) : null, q = Number(r.qty) || 0; if (!n || !q || !after(n, d)) return; if (String(r.to_branch || '').trim() === branch) st[n] = (st[n] || 0) + q; if (String(r.from_branch || '').trim() === branch) st[n] = (st[n] || 0) - q; });
+  ful.forEach((r: any) => { const n = String(r.flower_name || '').trim(); if (!n || !after(n, r.fulfilled_date ? new Date(r.fulfilled_date) : null)) return; st[n] = (st[n] || 0) - (Number(r.qty) || 0); });
+  return st;
+}
+async function runPush() {
+  const st: Record<string, string> = {}; (await sbGetJ('odoo_sync_settings?select=key,value')).forEach((r: any) => { st[r.key] = r.value; });
+  if ((st.push_stock || 'off') !== 'on') return { success: true, skipped: 'push stock is off' };
+  const branch = st.branch || 'ModaMall';
+  const id0 = (v: any) => Array.isArray(v) ? v[0] : v, nm1 = (v: any) => Array.isArray(v) ? String(v[1] || '') : '';
+  let loc = Number(st.odoo_location_id) || 0;
+  if (!loc) { const wh = await odoo('stock.warehouse', 'search_read', { domain: [], fields: ['lot_stock_id'], order: 'id asc', limit: 1 }); loc = wh.length ? id0(wh[0].lot_stock_id) : 0; }
+  if (!loc) return { success: false, error: 'No Odoo stock location found' };
+  const prods = await odoo('product.product', 'search_read', { domain: [['is_storable', '=', true]], fields: ['name', 'default_code', 'barcode', 'uom_id'], order: 'id asc', limit: 10000 });
+  const [items, fitems, chocRows, flowerSt] = await Promise.all([
+    sbGetJ('chocolate_item_list?select=chocolate_name,product_code,grams'), sbGetJ('flower_item?select=flower_name,item_code'),
+    sbGetAllJ(`chocolate_database?select=chocolate_name,current_stock,unit&branch=eq.${encodeURIComponent(branch)}`), ourFlowerStock(branch),
+  ]);
+  const low = (x: any) => String(x || '').trim().toLowerCase(), HOL = /\s*-?\s*holland\b.*$/i;
+  const choc: Record<string, any> = {}; items.forEach((r: any) => { const v = { name: r.chocolate_name, g: Number(r.grams) || 0 }; if (r.product_code) choc['c:' + low(r.product_code)] = v; choc['n:' + low(r.chocolate_name)] = v; });
+  const flw: Record<string, string> = {}; fitems.forEach((r: any) => { if (r.item_code) flw['c:' + low(r.item_code)] = r.flower_name; flw['n:' + low(r.flower_name)] = r.flower_name; });
+  const ourG: Record<string, number> = {}, ourP: Record<string, number> = {};
+  chocRows.forEach((r: any) => { const n = r.chocolate_name, q = Number(r.current_stock) || 0, c = choc['n:' + low(n)], g = c ? c.g : 0;
+    if (/kg/i.test(r.unit || '')) { ourG[n] = (ourG[n] || 0) + q * 1000; if (g) ourP[n] = (ourP[n] || 0) + q * 1000 / g; }
+    else { ourP[n] = (ourP[n] || 0) + q; if (g) ourG[n] = (ourG[n] || 0) + q * g; } });
+  const r3 = (x: number) => Math.round(x * 1000) / 1000;
+  const target: Record<number, { name: string; qty: number }> = {}, firstFlower: Record<string, number> = {};
+  prods.forEach((x: any) => {
+    const bare = low(String(x.name || '').replace(/^\[[^\]]*\]\s*/, ''));
+    const keys = [x.default_code, x.barcode].filter(Boolean).map((k: any) => 'c:' + low(k)).concat(['n:' + bare, 'n:' + bare.replace(HOL, ''), 'n:' + bare.replace(/\s*\([^)]*\)\s*$/, '')]);
+    const uom = nm1(x.uom_id);
+    for (const k of keys) {
+      if (choc[k]) { const n = choc[k].name, kg = /^kg|kilo/i.test(uom), gr = /^(g|gram|grams|gm)$/i.test(uom.trim());
+        const q = kg ? (ourG[n] ?? (ourP[n] || 0) * (choc[k].g || 0)) / 1000 : gr ? (ourG[n] || 0) : (ourP[n] ?? 0);
+        target[x.id] = { name: n, qty: r3(q) }; return; }
+      if (flw[k]) { const n = flw[k];   // one Odoo product per flower gets the stock; extra ones (other origins) get 0
+        if (firstFlower[n] === undefined) { firstFlower[n] = x.id; target[x.id] = { name: n, qty: r3((flowerSt[n] || 0) / (/dozen/i.test(uom) ? 12 : 1)) }; }
+        else target[x.id] = { name: n + ' (extra)', qty: 0 };
+        return; }
+    }
+  });
+  const ids = Object.keys(target).map(Number);
+  if (!ids.length) return { success: true, changed: 0 };
+  const quants = await odoo('stock.quant', 'search_read', { domain: [['location_id', '=', loc], ['product_id', 'in', ids]], fields: ['product_id', 'quantity'], limit: 10000 });
+  const qOf: Record<number, any[]> = {}; quants.forEach((q: any) => { (qOf[id0(q.product_id)] = qOf[id0(q.product_id)] || []).push(q); });
+  const changed: any[] = [];
+  for (const pid of ids) {
+    const t = target[pid], qs = qOf[pid] || [], cur = r3(qs.reduce((a: number, q: any) => a + Number(q.quantity || 0), 0));
+    if (Math.abs(cur - t.qty) < 0.006) continue;   // Odoo trial keeps 2 decimals (2.735 is stored as 2.74), so a rounding gap is not a change
+    try {
+      let qid = qs.length ? qs[0].id : 0;
+      if (qid) await odoo('stock.quant', 'write', { ids: [qid], vals: { inventory_quantity: r3(t.qty - (cur - Number(qs[0].quantity || 0))) } });   // other quants at the location stay, so the total = our qty
+      else { const c = await odoo('stock.quant', 'create', { vals_list: [{ product_id: pid, location_id: loc, inventory_quantity: t.qty }] }); qid = Array.isArray(c) ? c[0] : c; }
+      await odoo('stock.quant', 'action_apply_inventory', { ids: [qid] });
+      changed.push({ item: t.name, odoo_before: cur, now: t.qty });
+    } catch (e) { changed.push({ item: t.name, error: String((e as Error).message || e).slice(0, 160) }); }
+  }
+  const at = new Date().toISOString();
+  await fetch(`${SB_URL}/rest/v1/odoo_sync_settings?on_conflict=key`, { method: 'POST', headers: { ...SBH(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: 'last_push', value: JSON.stringify({ at, changed: changed.slice(0, 60), count: changed.length }), updated_at: at }]) });
+  return { success: true, changed: changed.length, list: changed.slice(0, 60) };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
@@ -233,14 +320,16 @@ Deno.serve(async (req) => {
       const k = (await sbGetJ('push_config?select=internal_key&id=eq.1'))[0];
       if (!k || !k.internal_key || p.key !== k.internal_key) return json({ success: false, error: 'bad key' }, 403);
       if (!ODOO_KEY) return json({ success: false, error: 'no Odoo key' });
-      return json(await runSync());
+      const sync = await runSync();
+      let push: any = null; try { push = await runPush(); } catch (e) { push = { error: String((e as Error).message || e).slice(0, 200) }; }
+      return json({ ...sync, push });
     }
     const u = await sessionUser(p.token);
     if (!u) return json({ success: false, error: 'Please log in again.' }, 401);
     if (p.action !== 'today' && String(u.role || '').toLowerCase() !== 'admin') return json({ success: false, error: 'Admin only.' }, 403);
     if (!ODOO_URL || !ODOO_KEY) return json({ success: false, setup: true, error: 'Odoo is not connected yet (the API key is missing).', url: ODOO_URL, db: ODOO_DB });
 
-    if (p.action === 'sync') return json(await runSync());   // Admin 'Sync now'
+    if (p.action === 'sync') { const sync = await runSync(); let push: any = null; try { push = await runPush(); } catch (e) { push = { error: String((e as Error).message || e).slice(0, 200) }; } return json({ ...sync, push }); }   // Admin 'Sync now'
     if (p.action === 'syncLog') {
       const rows = await sbGetJ('odoo_sync_lines?select=odoo_order,order_date,product,qty,status,details,note,created_at&order=id.desc&limit=100');
       const st: Record<string, string> = {}; (await sbGetJ('odoo_sync_settings?select=key,value')).forEach((r: any) => { st[r.key] = r.value; });
@@ -248,9 +337,9 @@ Deno.serve(async (req) => {
     }
     if (p.action === 'syncUndo') return json(await undoOrder(String(p.order || '')));
     if (p.action === 'syncSet') {   // turn auto-deduct on/off
-      const v = String(p.value) === 'on' ? 'on' : 'off';
-      await fetch(`${SB_URL}/rest/v1/odoo_sync_settings?on_conflict=key`, { method: 'POST', headers: { ...SBH(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: 'auto_deduct', value: v, updated_at: new Date().toISOString() }]) });
-      return json({ success: true, auto_deduct: v });
+      const v = String(p.value) === 'on' ? 'on' : 'off', key = p.key2 === 'push_stock' ? 'push_stock' : 'auto_deduct';
+      await fetch(`${SB_URL}/rest/v1/odoo_sync_settings?on_conflict=key`, { method: 'POST', headers: { ...SBH(), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key, value: v, updated_at: new Date().toISOString() }]) });
+      return json({ success: true, [key]: v });
     }
     if (p.action === 'status') {
       const ctx = await odoo('res.users', 'context_get', {});

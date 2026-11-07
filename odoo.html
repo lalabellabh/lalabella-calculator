@@ -58,7 +58,9 @@
     <h2>🔄 Auto-deduct from our stock (trial)</h2>
     <div class="row"><span id="adSt" class="pill">…</span><span class="muted" id="adInfo"></span><span style="flex:1"></span>
       <button class="btn ghost" id="adToggle">Turn off</button><button class="btn" id="adNow">Sync now</button></div>
-    <p class="muted" style="margin:8px 0 0">Every 5 minutes, each new Odoo POS sale of a chocolate or flower (kits opened) is taken out of our stock at the branch below: chocolate = release from the oldest batch, flower = used stems. Each sale line is done only once. Undo puts one order back (for test sales).</p>
+    <div class="row" style="margin-top:8px"><span id="psSt" class="pill">…</span><span class="muted">Copy our stock to Odoo On Hand (chocolates + flowers)</span><span style="flex:1"></span><button class="btn ghost" id="psToggle">Turn off</button></div>
+    <div class="muted" id="psInfo" style="margin-top:4px"></div>
+    <p class="muted" style="margin:8px 0 0">Push: after each sync, our ModaMall stock of chocolates and flowers (receiving, counts, transfers, sales) is copied to Odoo On Hand, so both show the same. Every 5 minutes, each new Odoo POS sale of a chocolate or flower (kits opened) is taken out of our stock at the branch below: chocolate = release from the oldest batch, flower = used stems. Each sale line is done only once. Undo puts one order back (for test sales).</p>
     <div id="adLog" class="box"></div>
   </div>
   <div class="card">
@@ -129,6 +131,11 @@
       var on = (d.settings.auto_deduct || 'off') === 'on';
       stEl.className = 'pill ' + (on ? 'ok' : 'bad'); stEl.textContent = on ? '✓ On' : 'Off';
       document.getElementById('adToggle').textContent = on ? 'Turn off' : 'Turn on'; document.getElementById('adToggle').dataset.v = on ? 'off' : 'on';
+      var ps = (d.settings.push_stock || 'off') === 'on', pe = document.getElementById('psSt');
+      pe.className = 'pill ' + (ps ? 'ok' : 'bad'); pe.textContent = ps ? '✓ Push on' : 'Push off';
+      document.getElementById('psToggle').textContent = ps ? 'Turn off' : 'Turn on'; document.getElementById('psToggle').dataset.v = ps ? 'off' : 'on';
+      var lp = null; try{ lp = JSON.parse(d.settings.last_push || 'null'); }catch(e){}
+      document.getElementById('psInfo').innerHTML = lp ? 'Last change sent to Odoo: ' + new Date(lp.at).toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + lp.count + ' item(s)' + (lp.changed && lp.changed.length ? ' — ' + lp.changed.slice(0, 8).map(function(c){ return esc(c.item) + (c.error ? ' ⚠ ' + esc(c.error) : ': ' + c.odoo_before + ' → ' + c.now); }).join(', ') + (lp.changed.length > 8 ? '…' : '') : '') : 'Nothing sent to Odoo yet.';
       document.getElementById('adInfo').textContent = 'Branch ' + (d.settings.branch || 'ModaMall') + ' · sales from ' + (d.settings.start_at ? new Date(d.settings.start_at.replace(' ', 'T') + 'Z').toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—');
       var S = { done:'<span class="pill ok">Deducted</span>', 'short':'<span class="pill bad">Short</span>', 'not ours':'<span class="muted">Odoo item only</span>', error:'<span class="pill bad">Error</span>', undone:'<span class="muted">Undone</span>', processing:'<span class="muted">…</span>' };
       var shownUndo = {};
@@ -145,13 +152,18 @@
   }
   document.getElementById('adNow').addEventListener('click', async function(){
     var b = this; b.disabled = true; b.textContent = 'Syncing…';
-    try{ var d = await call({ action:'sync' }); document.getElementById('adInfo').textContent = d.success ? ('Synced: ' + (d.done || 0) + ' deducted' + (d.other ? ', ' + d.other + ' Odoo-only' : '') + (d.errors ? ', ' + d.errors + ' errors' : '') + (d.skipped ? ' (' + d.skipped + ')' : '')) : (d.error || 'Failed'); }catch(e){}
+    try{ var d = await call({ action:'sync' }); document.getElementById('adInfo').textContent = d.success ? ('Synced: ' + (d.done || 0) + ' deducted' + (d.other ? ', ' + d.other + ' Odoo-only' : '') + (d.errors ? ', ' + d.errors + ' errors' : '') + (d.skipped ? ' (' + d.skipped + ')' : '') + (d.push && d.push.changed != null ? ' · ' + d.push.changed + ' sent to Odoo' : '') + (d.push && d.push.error ? ' · push error: ' + d.push.error : '')) : (d.error || 'Failed'); }catch(e){}
     b.disabled = false; b.textContent = 'Sync now'; syncLog(); today();
   });
   document.getElementById('adToggle').addEventListener('click', async function(){
     var v = this.dataset.v || 'off';
     if(v === 'off' && !confirm('Turn off auto-deduct? Odoo sales will no longer take stock from our system.')) return;
     await call({ action:'syncSet', value: v }); syncLog();
+  });
+  document.getElementById('psToggle').addEventListener('click', async function(){
+    var v = this.dataset.v || 'off';
+    if(v === 'on' && !confirm('Turn on push? Our stock of chocolates and flowers will be written to Odoo On Hand.')) return;
+    await call({ action:'syncSet', key2:'push_stock', value: v }); syncLog();
   });
   document.getElementById('adLog').addEventListener('click', async function(e){
     var b = e.target.closest('[data-undo]'); if(!b) return;
