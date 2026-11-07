@@ -1,4 +1,6 @@
-// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v2
+// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v3
+// v3: action 'today' (admin) — POS orders of the day with their lines, what LEFT the stock that day (stock moves to the customer,
+//     so kit/arrangement components show up), and Odoo On Hand next to our own ModaMall chocolate stock. Read-only.
 // v2: action 'ping' (no login) answers only {keySet, ok, error} — no Odoo data — so the connection can be checked from the server side.
 // ADMIN ONLY. Uses the Odoo JSON-2 API: POST {ODOO_URL}/json/2/<model>/<method>, header Authorization: bearer <ODOO_KEY>.
 // Secrets (never in the repo): ODOO_URL (e.g. https://lalabella-test.odoo.com), ODOO_DB (database name), ODOO_KEY (API key of an Odoo user).
@@ -72,6 +74,45 @@ Deno.serve(async (req) => {
       const products = await odoo('product.template', 'search_count', { domain: [['sale_ok', '=', true]] });
       const pos = await odoo('product.template', 'search_count', { domain: [['available_in_pos', '=', true]] }).catch(() => null);
       return json({ success: true, url: ODOO_URL, db: ODOO_DB, lang: ctx && ctx.lang, tz: ctx && ctx.tz, products, posProducts: pos });
+    }
+    if (p.action === 'today') {
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(String(p.day || '')) ? String(p.day) : new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+      const [a, b] = dayRange(day);
+      const orders = await odoo('pos.order', 'search_read', { domain: [['date_order', '>=', a], ['date_order', '<', b], ['state', 'in', ['paid', 'done', 'invoiced']]], fields: ['name', 'date_order', 'amount_total', 'payment_ids', 'lines'], order: 'date_order desc', limit: 300 });
+      const ids = (orders || []).map((o: any) => o.id);
+      let lines: any[] = [], pays: any[] = [];
+      if (ids.length) {
+        lines = await odoo('pos.order.line', 'search_read', { domain: [['order_id', 'in', ids]], fields: ['order_id', 'product_id', 'qty', 'price_subtotal_incl'], limit: 5000 });
+        pays = await odoo('pos.payment', 'search_read', { domain: [['pos_order_id', 'in', ids]], fields: ['pos_order_id', 'amount', 'payment_method_id'], limit: 2000 });
+      }
+      const byOrder: Record<number, any> = {};
+      (orders || []).forEach((o: any) => { byOrder[o.id] = { name: o.name, at: o.date_order, total: o.amount_total, items: [] as any[], pay: [] as string[] }; });
+      lines.forEach((l: any) => { const o = byOrder[Array.isArray(l.order_id) ? l.order_id[0] : l.order_id]; if (o) o.items.push({ name: Array.isArray(l.product_id) ? l.product_id[1] : '?', qty: l.qty, amount: l.price_subtotal_incl }); });
+      pays.forEach((x: any) => { const o = byOrder[Array.isArray(x.pos_order_id) ? x.pos_order_id[0] : x.pos_order_id]; if (o) o.pay.push((Array.isArray(x.payment_method_id) ? x.payment_method_id[1] : '?') + ' ' + Number(x.amount || 0).toFixed(3)); });
+      // what really left the stock (kits are exploded into their components here)
+      let moves: any[] = [];
+      try {
+        moves = await odoo('stock.move', 'search_read', { domain: [['state', '=', 'done'], ['date', '>=', a], ['date', '<', b], ['location_dest_id.usage', '=', 'customer']], fields: ['product_id', 'quantity', 'product_uom'], limit: 5000 });
+      } catch (e) { console.error('moves', e); }
+      const used: Record<string, { qty: number; uom: string }> = {};
+      moves.forEach((m: any) => { const n = Array.isArray(m.product_id) ? m.product_id[1] : '?'; const u = used[n] || (used[n] = { qty: 0, uom: Array.isArray(m.product_uom) ? m.product_uom[1] : '' }); u.qty += Number(m.quantity || 0); });
+      // Odoo On Hand (internal locations)
+      const quants = await odoo('stock.quant', 'search_read', { domain: [['location_id.usage', '=', 'internal']], fields: ['product_id', 'quantity'], limit: 5000 });
+      const onhand: Record<string, number> = {};
+      quants.forEach((q: any) => { const n = Array.isArray(q.product_id) ? q.product_id[1] : '?'; onhand[n] = (onhand[n] || 0) + Number(q.quantity || 0); });
+      // our side: ModaMall chocolate stock + grams per piece
+      const sb = async (q: string) => { const r = await fetch(`${SB_URL}/rest/v1/${q}`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); return r.ok ? r.json() : []; };
+      const ours = await sb('chocolate_database?select=chocolate_name,current_stock,unit&branch=eq.ModaMall&current_stock=neq.0');
+      const items = await sb('chocolate_item_list?select=chocolate_name,product_code,grams');
+      const fcodes = new Set(((await sb('flower_item?select=item_code')) || []).map((r: any) => r.item_code));
+      const ourStock: Record<string, number> = {}; (ours || []).forEach((r: any) => { ourStock[r.chocolate_name] = (ourStock[r.chocolate_name] || 0) + Number(r.current_stock || 0); });
+      const grams: Record<string, number> = {}; (items || []).forEach((r: any) => { if (r.product_code) grams[r.product_code] = Number(r.grams) || 0; });   // 0 = can (sold per unit)
+      const plain = (n: string) => n.replace(/^\[[^\]]*\]\s*/, '');
+      const codeOf = (n: string) => { const m = n.match(/^\[([^\]]*)\]/); return m ? m[1] : ''; };
+      const r3 = (x: number) => Math.round(x * 1000) / 1000;
+      const usedList = Object.entries(used).map(([n, v]) => { const g = grams[codeOf(n)] || 0; return { name: n, qty: r3(v.qty), uom: v.uom, pcs: g && /kg/i.test(v.uom) ? Math.round(v.qty * 1000 / g) : null, kind: grams[codeOf(n)] !== undefined ? 'chocolate' : (fcodes.has(codeOf(n)) ? 'flower' : 'other') }; }).sort((x, y) => x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name));
+      const compare = Object.entries(onhand).filter(([n]) => ourStock[plain(n)] != null).map(([n, q]) => ({ name: n, odoo: r3(q), ours: r3(ourStock[plain(n)]), diff: r3(q - ourStock[plain(n)]) })).sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+      return json({ success: true, day, orders: Object.values(byOrder), used: usedList, compare, movesFound: moves.length });
     }
     if (p.action === 'sales') {
       const day = /^\d{4}-\d{2}-\d{2}$/.test(String(p.day || '')) ? String(p.day) : new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
