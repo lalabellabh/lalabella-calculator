@@ -1187,6 +1187,16 @@ body>.wrap{position:relative;z-index:1}
       </div>
       <button class="btn btn-outline" id="printBarcodeBtn">🖨️ Print This Label</button>
       <button class="btn" id="editItemOpenBtn" style="display:none;">✏️ Edit Item / Photo</button>
+      <div id="qpBox" style="display:none;margin-top:8px;">
+        <div style="display:flex;gap:8px;">
+          <label for="qpCamera" id="qpCamLbl" class="btn btn-outline" style="flex:1;margin:0;text-align:center;cursor:pointer;">📷 Take Photo</label>
+          <label for="qpFile" class="btn btn-outline" style="flex:1;margin:0;text-align:center;cursor:pointer;">🖼️ Choose File</label>
+        </div>
+        <input type="file" id="qpCamera" accept="image/*" capture="environment" style="display:none;">
+        <input type="file" id="qpFile" accept="image/*" style="display:none;">
+        <div id="qpPaste" tabindex="0" style="margin-top:8px;padding:12px;border:1.5px dashed var(--line);border-radius:10px;text-align:center;font-size:12px;color:var(--ink-dim);cursor:text;background:var(--blush);">✂️ Snip, then click here and press Ctrl+V — the photo is saved right away</div>
+        <div id="qpMsg" style="font-size:12px;margin-top:6px;text-align:center;color:var(--ink-dim);"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -1758,6 +1768,8 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     }catch(e){}
     const eb = document.getElementById('editItemOpenBtn');
     if(eb) eb.style.display = lbIsAdmin() ? 'block' : 'none';
+    const qb = document.getElementById('qpBox');
+    if(qb){ qb.style.display = lbIsAdmin() ? 'block' : 'none'; document.getElementById('qpMsg').textContent = item['Photo Link (Drive)'] ? 'Has a photo — a new one replaces it.' : 'No photo yet.'; }
     document.getElementById('barcodeCard').scrollIntoView({behavior:'smooth'});
   }
 
@@ -2141,6 +2153,43 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       reader.readAsDataURL(file);
     });
   }
+
+  // ---- Quick photo on the barcode card: phone = camera, web = paste a snip (Ctrl+V). Saves at once. ----
+  (function(){
+    const box = document.getElementById('qpBox'); if(!box) return;
+    const touch = window.matchMedia('(pointer:coarse)').matches;
+    document.getElementById('qpCamLbl').style.display = touch ? '' : 'none';      // camera button on phones
+    document.getElementById('qpPaste').style.display = touch ? 'none' : '';       // paste zone on computers
+    const msg = document.getElementById('qpMsg');
+    let busy = false;
+    async function save(file){
+      if(!file || busy || !selectedBarcodeItem) return;
+      busy = true; msg.style.color = 'var(--ink-dim)'; msg.textContent = 'Saving photo…';
+      const name = selectedBarcodeItem['Item Name'], code = selectedBarcodeItem['Item Code'];
+      try{
+        const data = await compressImage(file);
+        const res = await (await fetch(API_URL, { method:'POST', body: new URLSearchParams({ action:'updateItemInventory', itemName: name, photoBase64: data }) })).json();
+        if(res.error) throw new Error(res.error);
+        await loadItems(true);
+        const fresh = ITEMS.find(x => x['Item Code'] === code); if(fresh) showBarcode(fresh);
+        msg.style.color = '#3d7a4f'; msg.textContent = '✓ Photo saved for ' + name;
+      }catch(e){ msg.style.color = '#c0392b'; msg.textContent = (e && e.message) || 'Could not save the photo. Try again.'; }
+      finally{ busy = false; }
+    }
+    ['qpCamera', 'qpFile'].forEach(id => document.getElementById(id).addEventListener('change', e => { save(e.target.files[0]); e.target.value = ''; }));
+    function fromClipboard(e){
+      const items = (e.clipboardData || window.clipboardData || {}).items || [];
+      for(let i = 0; i < items.length; i++){ if(items[i].type.indexOf('image') !== -1){ e.preventDefault(); save(items[i].getAsFile()); return true; } }
+      return false;
+    }
+    document.getElementById('qpPaste').addEventListener('paste', fromClipboard);
+    // Ctrl+V anywhere while the barcode card is open (not while typing in a box, not inside the Edit window)
+    document.addEventListener('paste', e => {
+      if(e.target.closest && (e.target.closest('#qpPaste') || e.target.closest('input,textarea,[contenteditable],#editItemModal,#addItemPastezone,#eiPaste'))) return;
+      if(box.style.display === 'none' || !document.getElementById('panelView').classList.contains('active') || document.getElementById('barcodeCard').style.display === 'none') return;
+      fromClipboard(e);
+    });
+  })();
 
   let addItemPhotoData = null;
   async function handleItemPhotoFile(file){
