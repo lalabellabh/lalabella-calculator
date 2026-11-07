@@ -133,7 +133,7 @@
   ];
 
   // System / admin pages live in ⚙️ Settings now (keeps the menu short). Still reachable from there.
-  const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html', 'audit-log.html', 'office.html', 'odoo.html'];
+  const SYS = ['nova-command-center.html', 'branch-config.html', 'user-admin.html', 'brain.html', 'system-health.html', 'audit-log.html', 'office.html'];
 
   // Pages that show a "Back" link based on ?from=<page they came from>.
   const FROM_AWARE = ['notes.html', 'order-form.html', 'card-print.html', 'branch-config.html',
