@@ -33,6 +33,9 @@
   th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)} th{font-size:11px;color:var(--muted)}
   td.n,th.n{text-align:right}
   .muted{color:var(--muted);font-size:12.5px}
+  .box{max-height:380px;overflow-y:auto;overscroll-behavior:contain;border-radius:10px}
+  .box th{position:sticky;top:0;background:#fffaf9;z-index:1}
+  .box table{margin-top:4px}
 </style>
 </head>
 <body>
@@ -47,15 +50,15 @@
   <div class="card">
     <h2>📅 Today in Odoo (ModaMall trial)</h2>
     <div class="row"><input type="date" id="tDay"><button class="btn" id="tLoad">Load</button><span class="muted" id="tInfo"></span></div>
-    <h3 style="font-size:13px;margin:14px 0 4px">🧾 Sales list</h3><div id="tOrders"></div>
-    <h3 style="font-size:13px;margin:14px 0 4px">🍫🌸 Used from stock <span class="muted">(includes what is inside kits / arrangements)</span></h3><div id="tUsed"></div>
-    <h3 style="font-size:13px;margin:14px 0 4px">⚖️ Used today vs stock (Odoo and our system, ModaMall)</h3><div id="tCmp"></div>
+    <h3 style="font-size:13px;margin:14px 0 4px">🧾 Sales list</h3><div id="tOrders" class="box"></div>
+    <h3 style="font-size:13px;margin:14px 0 4px">🍫🌸 Used from stock <span class="muted">(includes what is inside kits / arrangements)</span></h3><div id="tUsed" class="box"></div>
+    <h3 style="font-size:13px;margin:14px 0 4px">⚖️ Used today vs stock (Odoo and our system, ModaMall)</h3><div id="tCmp" class="box"></div>
   </div>
   <div class="card">
     <h2>🛒 Odoo POS sales</h2>
     <div class="row"><input type="date" id="day"><button class="btn" id="load">Load</button></div>
     <div class="kv" id="sKv"></div>
-    <div id="sTop"></div>
+    <div id="sTop" class="box"></div>
   </div>
 </div>
 <script>
