@@ -1558,12 +1558,34 @@ document.getElementById('slFKind').addEventListener('change', slRender);
 document.getElementById('slFClear').addEventListener('click', ()=>{ slMonth(); document.getElementById('slFKind').value=''; loadSales(); });
 function slRangeText(){ const f=document.getElementById('slFrom').value, t=document.getElementById('slTo').value; return (f||t) ? `${f?fmtDate(f):'start'} – ${t?fmtDate(t):'today'}` : 'All dates'; }
 // petty cash spent in the same branch + dates (expenses only; top-ups are not "used")
+let slPC = null;   // last petty cash answer (all entries + current balance) — for the day-by-day balance
 async function slPettyUsed(){
   const d = await slCall(new URLSearchParams({ action:'getPettyCash', branch: document.getElementById('branchSelect').value }), false);
   if(d.error) throw new Error(d.error);
+  slPC = d;
   const f=document.getElementById('slFrom').value, t=document.getElementById('slTo').value;
   return (d.transactions||[]).filter(x=>x.type!=='topup' && (!f || x.date>=f) && (!t || x.date<=t)).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
 }
+function slCarTxt(x){ return [x.carPlate, x.driver].filter(Boolean).join(' · '); }
+// Every day of the period (also days with nothing), from "From" up to the LAST day that has a sale or a petty cash entry
+// (not today — so a day that is still being filled in does not show as empty). Petty cash left = balance at the end of that day.
+function slDays(list, pc){
+  const f = document.getElementById('slFrom').value, t = document.getElementById('slTo').value;
+  const dates = list.map(r=>r.date).concat(pc.map(x=>x.date)).filter(Boolean).sort();
+  if(!dates.length) return [];
+  let start = f || dates[0], end = dates[dates.length-1];
+  if(t && end > t) end = t;
+  const out = [], cur = new Date(start + 'T00:00:00Z'), last = new Date(end + 'T00:00:00Z');
+  for(let i=0; cur <= last && i < 400; i++, cur.setUTCDate(cur.getUTCDate()+1)) out.push(cur.toISOString().slice(0,10));
+  return out;
+}
+function slLeftAt(day){   // petty cash balance at the end of `day` = today's balance minus everything saved for later days
+  if(!slPC || slPC.balance == null) return null;
+  let b = Number(slPC.balance) || 0;
+  (slPC.transactions||[]).forEach(x=>{ if(x.date > day) b -= (x.type==='topup' ? 1 : -1) * Number(x.amount||0); });
+  return Math.round(b*1000)/1000;
+}
+function slPeriodText(days){ return days.length ? fmtDate(days[0]) + ' – ' + fmtDate(days[days.length-1]) : slRangeText(); }
 function slSorted(){ return slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id); }
 document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   const list = slSorted();
@@ -1571,19 +1593,27 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   try{ pc = await slPettyUsed(); }catch(e){ if(!confirm('Could not load the petty cash (' + (e.message||'connection') + '). Print the sales only?')) return; }
   if(!list.length && !pc.length){ alert('Nothing to print for these dates.'); return; }
   const t = slTotals(list), pcT = pc.reduce((s,x)=>s+Number(x.amount||0),0), th='style="text-align:right;"';
+  const days = slDays(list, pc), oneBranch = document.getElementById('branchSelect').value !== 'All';
+  const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
+    const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
+    return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales &amp; Petty Cash</h2>
-    <p>${esc(document.getElementById('branchSelect').value)} · ${slRangeText()}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
-    <h3>Sales</h3>` +
+    <p>${esc(document.getElementById('branchSelect').value)} · ${slPeriodText(days)}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
+    <h3>Day by day</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Credit</th><th ${th}>Total sales</th><th ${th}>Petty cash used</th>${oneBranch?`<th ${th}>Petty cash left</th>`:''}</tr></thead>
+      <tbody>${dayRows}<tr style="border-top:2px solid #000;font-weight:700;"><td>TOTAL</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)}</td><td ${th}>${pcT.toFixed(3)}</td>${oneBranch?'<td></td>':''}</tr></tbody></table>
+    <h3 style="margin-top:16px;">Sales</h3>` +
     (list.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
       <tbody>${list.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '<p>No sales saved.</p>') +
     `<h3 style="margin-top:16px;">Petty cash used <small style="font-weight:400">(separate — not taken from the sales)</small></h3>` +
     (pc.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">By</th><th ${th}>Amount</th></tr></thead>
-      <tbody>${pc.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.branch)}</td><td>${esc(x.purpose)}</td><td>${esc(x.enteredBy)||'—'}</td><td ${th}>${Number(x.amount).toFixed(3)}</td></tr>`).join('')}
-      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="4">TOTAL PETTY CASH USED</td><td ${th}>${pcT.toFixed(3)} BD</td></tr></tbody></table>` : '<p>No petty cash used in these dates.</p>') +
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Car plate / driver</th><th style="text-align:left;">By</th><th ${th}>Amount</th></tr></thead>
+      <tbody>${pc.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.branch)}</td><td>${esc(x.purpose)}</td><td>${esc(slCarTxt(x))}</td><td>${esc(x.enteredBy)||'—'}</td><td ${th}>${Number(x.amount).toFixed(3)}</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="5">TOTAL PETTY CASH USED</td><td ${th}>${pcT.toFixed(3)} BD</td></tr></tbody></table>` : '<p>No petty cash used in these dates.</p>') +
     `<table style="margin:16px 0 0 auto;font-size:13px;border-collapse:collapse;">
       <tr><td style="padding:2px 14px 2px 0;">Total sales (Cash + Card + MyFatoorah + Credit)</td><td ${th}><b>${t.inv.toFixed(3)} BD</b></td></tr>
       <tr><td style="padding:2px 14px 2px 0;">· of which Cash</td><td ${th}>${t.cash.toFixed(3)} BD</td></tr>
@@ -1603,16 +1633,16 @@ document.getElementById('slExcelBtn').addEventListener('click', async ()=>{
   const sales = [['Lalabella — Sales'],[br + ' · ' + slRangeText()],[],['Date','Branch','Source','Cash','Card','MyFatoorah','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
     .concat(list.map(r=>[r.date,r.branch,r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):'',r.cash,r.card,r.myfatoorah,r.credit,r.amount,r.ref,r.notes,r.enteredBy,saved(r)]))
     .concat([[],['TOTAL SALES','','',t.cash,t.card,t.mf,t.credit,t.inv]]);
-  const petty = [['Lalabella — Petty cash used (separate from sales)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Purpose','Entered by','Amount']]
-    .concat(pc.map(x=>[x.date,x.branch,x.purpose,x.enteredBy||'',Number(x.amount)])).concat([[],['TOTAL PETTY CASH USED','','','',pcT]]);
+  const petty = [['Lalabella — Petty cash used (separate from sales)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Purpose','Car plate','Driver','Entered by','Amount']]
+    .concat(pc.map(x=>[x.date,x.branch,x.purpose,x.carPlate||'',x.driver||'',x.enteredBy||'',Number(x.amount)])).concat([[],['TOTAL PETTY CASH USED','','','','','',pcT]]);
   const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
   const pDay = {}; pc.forEach(x=>{ pDay[x.date] = (pDay[x.date]||0) + Number(x.amount||0); });
-  const allDays = Object.keys(Object.assign({}, days, pDay)).sort();
-  const daily = [['Date','Cash','Card','MyFatoorah','Credit','Total sales','Petty cash used']].concat(allDays.map(d=>{ const x=slTotals(days[d]||[]); return [d,x.cash,x.card,x.mf,x.credit,x.inv,Math.round((pDay[d]||0)*1000)/1000]; })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.credit,t.inv,pcT]]);
+  const allDays = slDays(list, pc), oneB = br !== 'All';
+  const daily = [['Date','Cash','Card','MyFatoorah','Credit','Total sales','Petty cash used'].concat(oneB?['Petty cash left']:[])].concat(allDays.map(d=>{ const x=slTotals(days[d]||[]); return [d,x.cash,x.card,x.mf,x.credit,x.inv,Math.round((pDay[d]||0)*1000)/1000].concat(oneB?[slLeftAt(d)]:[]); })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.credit,t.inv,pcT]]);
   lbExcel.save('Lalabella Sales ' + br, [
-    { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3} },
+    { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3,7:f3} },
     { name:'Sales', rows: sales, headerRow: 4, fmt:{3:f3,4:f3,5:f3,6:f3,7:f3} },
-    { name:'Petty cash used', rows: petty, headerRow: 4, fmt:{4:f3} },
+    { name:'Petty cash used', rows: petty, headerRow: 4, fmt:{6:f3} },
   ]).catch(e=>alert(e && e.message || 'Could not make the Excel file.'));
 });
 loadSales();
