@@ -1,4 +1,5 @@
-// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v1
+// LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v2
+// v2: action 'ping' (no login) answers only {keySet, ok, error} — no Odoo data — so the connection can be checked from the server side.
 // ADMIN ONLY. Uses the Odoo JSON-2 API: POST {ODOO_URL}/json/2/<model>/<method>, header Authorization: bearer <ODOO_KEY>.
 // Secrets (never in the repo): ODOO_URL (e.g. https://lalabella-test.odoo.com), ODOO_DB (database name), ODOO_KEY (API key of an Odoo user).
 // Actions: status -> who we are in Odoo + how many products; sales -> POS sales of a day (total + by payment method) + top products.
@@ -56,6 +57,11 @@ Deno.serve(async (req) => {
     let p: Record<string, any> = {};
     if (req.method === 'GET') p = Object.fromEntries(new URL(req.url).searchParams.entries());
     else { const ct = req.headers.get('content-type') || ''; p = ct.includes('json') ? await req.json() : Object.fromEntries(new URLSearchParams(await req.text())); }
+    if (p.action === 'ping') {
+      if (!ODOO_KEY) return json({ keySet: false, ok: false });
+      try { await odoo('res.users', 'context_get', {}); return json({ keySet: true, ok: true }); }
+      catch (e) { return json({ keySet: true, ok: false, error: String((e as Error).message || e).slice(0, 160) }); }
+    }
     const u = await sessionUser(p.token);
     if (!u) return json({ success: false, error: 'Please log in again.' }, 401);
     if (String(u.role || '').toLowerCase() !== 'admin') return json({ success: false, error: 'Admin only.' }, 403);
