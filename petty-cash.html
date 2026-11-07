@@ -447,7 +447,7 @@
         <div class="sl-total">Total invoiced <b id="slTotal">0.000 BD</b></div>
       </div>
       <div class="sl-grid">
-        <div><label>Source</label><select id="slChannel"><option value="">— pick —</option><option value="walkin">🚶 Walk-in</option><option value="whatsapp">💬 WhatsApp</option></select></div>
+        <div><label>Source</label><select id="slChannel"><option value="">— pick —</option><option value="walkin">🚶 Walk-in</option><option value="pickup">🛍️ Pick-up</option><option value="website">🌐 Website order</option><option value="whatsapp">💬 WhatsApp</option></select></div>
         <div><label>Invoice / order no. <span style="text-transform:none;">(optional)</span></label><input type="text" id="slRef" maxlength="60" placeholder="e.g. INV-1023" autocomplete="off"></div>
       </div>
       <label>Notes <span style="text-transform:none;">(optional)</span></label>
@@ -467,7 +467,7 @@
       <div class="pc-filter">
         <div><label>From</label><input type="date" id="slFrom"></div>
         <div><label>To</label><input type="date" id="slTo"></div>
-        <div><label>Source</label><select id="slFKind"><option value="">All</option><option value="walkin">🚶 Walk-in</option><option value="whatsapp">💬 WhatsApp</option></select></div>
+        <div><label>Source</label><select id="slFKind"><option value="">All</option><option value="walkin">🚶 Walk-in</option><option value="pickup">🛍️ Pick-up</option><option value="website">🌐 Website order</option><option value="whatsapp">💬 WhatsApp</option></select></div>
       </div>
       <div class="pc-toolbar">
         <button class="print-btn" id="slFClear" type="button" data-no-excel>This month</button>
@@ -1396,7 +1396,7 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
 /* ---------- SALES tab: invoiced totals (Cash / Card / MyFatoorah / Credit) + source (Walk-in / WhatsApp). NOT part of petty cash.
    Print / Excel also show the petty cash used in the same dates, with its own total (kept apart from sales). ---------- */
 const SL = { editId:0, rows:[] };
-const SL_CH = { walkin:'🚶 Walk-in', whatsapp:'💬 WhatsApp' };
+const SL_CH = { walkin:'🚶 Walk-in', pickup:'🛍️ Pick-up', website:'🌐 Website order', whatsapp:'💬 WhatsApp' };
 function slToday(){ return new Date(Date.now()+3*3600000).toISOString().slice(0,10); }   // Bahrain date (the phone's UTC date is still "yesterday" until 3 AM)
 function slNum(id){ return Math.round((Number(document.getElementById(id).value)||0)*1000)/1000; }
 function slCalc(){ const t = slNum('slCash')+slNum('slCard')+slNum('slMf')+slNum('slCredit'); document.getElementById('slTotal').textContent = fmtBD(t); return Math.round(t*1000)/1000; }
