@@ -1,4 +1,5 @@
 // LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v7
+// v8: a POS line whose product barcode/code is one of our Release (REL-) or Display (DISP-) labels is NOT deducted again (status 'released').
 // v7: PUSH STOCK (trial) - the FIRST thing that writes to Odoo. After each sync, our stock of chocolates and flowers at the
 //     branch (ModaMall) is copied to Odoo On Hand at the warehouse stock location (inventory adjustment, only when different),
 //     so receiving / counts / transfers done in our system show in Odoo too. Setting push_stock on/off in odoo_sync_settings.
@@ -194,6 +195,9 @@ async function runSync() {
     // claim the line first (unique) so two runs never deduct it twice
     try { await sbPostJ('odoo_sync_lines', [{ odoo_line_id: l.id, odoo_order: orderName, order_date: when.toISOString(), product: inf.name, qty: q, status: 'processing' }], 'return=minimal'); }
     catch (_) { continue; }
+    // made from OUR Release / Display (label REL-... or DISP-...): the chocolate already left our stock, so never deduct it again
+    const px = P[pid] || {}, madeCode = [px.barcode, px.default_code].map((c: any) => String(c || '').trim()).find((c: string) => /^(REL|DISP)-/i.test(c));
+    if (madeCode) { await sbPatchJ('odoo_sync_lines', `odoo_line_id=eq.${l.id}`, { status: 'released', details: [{ kind: 'other', item: inf.name, qty: r3(q) }], note: 'Already released in our system (' + madeCode + ')' }); other++; continue; }
     const bom = bomOf['p' + pid] || bomOf['t' + tmplOf[pid]];
     const parts = bom ? (linesOf[bom.id] || []).map((bl: any) => ({ inf: infoOf(id0(bl.product_id)), q: q / (Number(bom.product_qty) || 1) * Number(bl.product_qty || 0), uom: nm1(bl.product_uom_id) })) : [{ inf, q, uom: inf.uom }];
     const det: any[] = []; let note = '';
