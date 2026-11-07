@@ -291,7 +291,7 @@ async function runPush() {
   const changed: any[] = [];
   for (const pid of ids) {
     const t = target[pid], qs = qOf[pid] || [], cur = r3(qs.reduce((a: number, q: any) => a + Number(q.quantity || 0), 0));
-    if (Math.abs(cur - t.qty) < 0.006) continue;   // Odoo trial keeps 2 decimals (2.735 is stored as 2.74), so a rounding gap is not a change
+    if (Math.abs(cur - t.qty) < 0.006) continue;   // Odoo trial keeps 2 decimals (2.735 is stored as 2.74), so a rounding gap is not a change. MAIN ODOO: set Decimal Accuracy to 3 first, then put this back to 0.0005 (Brain note 32, section 11)
     try {
       let qid = qs.length ? qs[0].id : 0;
       if (qid) await odoo('stock.quant', 'write', { ids: [qid], vals: { inventory_quantity: r3(t.qty - (cur - Number(qs[0].quantity || 0))) } });   // other quants at the location stay, so the total = our qty
