@@ -28,7 +28,7 @@
       radial-gradient(circle at 92% 28%, rgba(217,164,65,.16), transparent 22%),
       radial-gradient(circle at 18% 82%, rgba(190,145,255,.14), transparent 24%),
       linear-gradient(145deg, #fdf1f0 0%, #f6e0da 60%, #eaf3ec 100%);
-    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh; min-height:calc(100vh / var(--lb-zoom, 1));
   }
   .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
   header{
@@ -1310,7 +1310,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       left:22px;
       top:92px;
       width:190px;
-      max-height:calc(100vh - 116px);
+      max-height:calc(100vh / var(--lb-zoom, 1) - 116px);
       overflow:hidden;
       flex-direction:column;
       gap:6px;
@@ -1391,7 +1391,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
 
     .panel .card{max-width:none !important;}
     #panelView.active #itemListContainer{
-      max-height:calc(100vh - 390px);
+      max-height:calc(100vh / var(--lb-zoom, 1) - 390px);
       min-height:260px;
     }
   }

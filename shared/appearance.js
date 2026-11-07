@@ -524,7 +524,9 @@
   }
   var printingNow = false;
   function applyText() {
-    if (st.text === 100 || printingNow) root.style.removeProperty('zoom'); else root.style.zoom = String(st.text / 100);
+    // --lb-zoom lets full-height layouts divide 100vh by the zoom (with CSS zoom, 100vh grows with it and the page overflows)
+    if (st.text === 100 || printingNow) { root.style.removeProperty('zoom'); root.style.removeProperty('--lb-zoom'); }
+    else { root.style.zoom = String(st.text / 100); root.style.setProperty('--lb-zoom', String(st.text / 100)); }
   }
   function applyIcons() {
     if (st.icons === 'circle' || st.icons === 'square') root.setAttribute('data-lb-icons', st.icons);
