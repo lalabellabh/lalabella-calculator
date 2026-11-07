@@ -49,7 +49,7 @@
     <div class="row"><input type="date" id="tDay"><button class="btn" id="tLoad">Load</button><span class="muted" id="tInfo"></span></div>
     <h3 style="font-size:13px;margin:14px 0 4px">🧾 Sales list</h3><div id="tOrders"></div>
     <h3 style="font-size:13px;margin:14px 0 4px">🍫🌸 Used from stock <span class="muted">(includes what is inside kits / arrangements)</span></h3><div id="tUsed"></div>
-    <h3 style="font-size:13px;margin:14px 0 4px">⚖️ Stock: Odoo vs our system (chocolates, ModaMall)</h3><div id="tCmp"></div>
+    <h3 style="font-size:13px;margin:14px 0 4px">⚖️ Used today vs stock (Odoo and our system, ModaMall)</h3><div id="tCmp"></div>
   </div>
   <div class="card">
     <h2>🛒 Odoo POS sales</h2>
@@ -92,16 +92,18 @@
       var d = await call({ action:'today', day: document.getElementById('tDay').value });
       if(!d.success){ o.innerHTML = '<p class="muted">' + esc(d.error || 'Failed') + '</p>'; u.innerHTML = c.innerHTML = ''; return; }
       inf.textContent = d.orders.length + ' order' + (d.orders.length === 1 ? '' : 's');
+      var K = { chocolate:'🍫', flower:'🌸', other:'📦', kit:'🎁' };
+      function q(x){ return '<b>' + esc(x.amount) + '</b>' + (x.pcs ? ' <span class="muted">≈ ' + x.pcs + ' pcs</span>' : ''); }
       o.innerHTML = d.orders.length ? '<table><thead><tr><th>Time</th><th>Order</th><th>Items</th><th>Paid</th><th class="n">Total</th></tr></thead><tbody>' + d.orders.map(function(x){
         var t = x.at ? new Date(x.at.replace(' ', 'T') + 'Z').toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bahrain' }) : '';
-        return '<tr><td>' + t + '</td><td>' + esc(x.name) + '</td><td>' + x.items.map(function(i){ return esc(i.name.replace(/^\[[^\]]*\]\s*/, '')) + ' × ' + i.qty; }).join('<br>') + '</td><td>' + x.pay.map(esc).join('<br>') + '</td><td class="n">' + bd(x.total) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No sales on this day.</p>';
-      var K = { chocolate:'🍫 Chocolate', flower:'🌸 Flower', other:'📦 Other (Odoo items)' };
-      u.innerHTML = d.used.length ? '<table><thead><tr><th>Item</th><th>Type</th><th class="n">Used</th></tr></thead><tbody>' + d.used.map(function(x){
-        return '<tr><td>' + esc(x.name) + '</td><td>' + (K[x.kind] || '') + '</td><td class="n">' + x.qty + ' ' + esc(x.uom) + (x.pcs ? ' <span class="muted">≈ ' + x.pcs + ' pcs</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table>'
-        : '<p class="muted">' + (d.orders.length ? 'Sales found, but nothing left the stock yet — in Odoo the stock may only move when the POS session is closed (Close Register).' : 'Nothing used on this day.') + '</p>';
-      c.innerHTML = d.compare.length ? '<table><thead><tr><th>Chocolate</th><th class="n">Odoo On Hand</th><th class="n">Our system</th><th class="n">Difference</th></tr></thead><tbody>' + d.compare.map(function(x){
-        var col = Math.abs(x.diff) < 0.0005 ? '' : (x.diff < 0 ? 'color:var(--bad)' : 'color:var(--ok)');
-        return '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.odoo + '</td><td class="n">' + x.ours + '</td><td class="n" style="' + col + '">' + (x.diff > 0 ? '+' : '') + x.diff + '</td></tr>'; }).join('') + '</tbody></table><p class="muted">Minus = Odoo has less than our system (sold in Odoo, not yet in ours).</p>' : '<p class="muted">Nothing to compare.</p>';
+        return '<tr><td>' + t + '</td><td>' + esc(x.name) + '</td><td>' + x.items.map(function(i){
+          return i.kind === 'kit' ? '🎁 ' + esc(i.name) + ' × ' + i.qty + i.inside.map(function(c){ return '<div class="muted" style="padding-left:14px">↳ ' + (K[c.kind] || '') + ' ' + esc(c.name) + ' — ' + q(c) + '</div>'; }).join('')
+            : (K[i.kind] || '') + ' ' + esc(i.name) + ' — ' + q(i); }).join('<br>') + '</td><td>' + x.pay.map(esc).join('<br>') + '</td><td class="n">' + bd(x.total) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No sales on this day.</p>';
+      u.innerHTML = d.used.length ? '<table><thead><tr><th>Item</th><th class="n">Used</th></tr></thead><tbody>' + d.used.map(function(x){
+        return '<tr><td>' + (K[x.kind] || '') + ' ' + esc(x.name) + '</td><td class="n">' + q(x) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">Nothing used on this day.</p>';
+      c.innerHTML = d.compare.length ? '<table><thead><tr><th>Item</th><th class="n">Used today</th><th class="n">Odoo stock</th><th class="n">Our stock</th><th class="n">Difference</th></tr></thead><tbody>' + d.compare.map(function(x){
+        var col = x.same ? '' : (x.less ? 'color:var(--bad)' : 'color:var(--ok)');
+        return '<tr><td>' + (K[x.kind] || '') + ' ' + esc(x.name) + '</td><td class="n"><b>' + esc(x.used) + '</b></td><td class="n">' + esc(x.odoo) + '</td><td class="n">' + esc(x.ours) + '</td><td class="n" style="' + col + '">' + (x.diff == null ? '—' : (x.same ? 'Same' : (x.less ? '−' : '+') + esc(x.diff))) + '</td></tr>'; }).join('') + '</tbody></table><p class="muted">− = Odoo has less than our system (sold in Odoo, not yet deducted here).' + (d.movesFound ? '' : ' Odoo stock usually goes down only after Close Register.') + '</p>' : '<p class="muted">Nothing used on this day.</p>';
     }catch(e){ o.innerHTML = '<p class="muted">Connection error.</p>'; u.innerHTML = c.innerHTML = ''; }
   }
   document.getElementById('tDay').value = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);

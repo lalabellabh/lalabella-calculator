@@ -590,20 +590,23 @@
     document.getElementById('odKv').innerHTML = `<div>Orders<b>${d.orders.length}</b></div><div>Sales<b>${fmtBD(tot)}</b></div>`;
     document.querySelectorAll('#odTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === od.tab));
     let h;
+    const qty = x => `<b style="font-family:'Space Mono',monospace;font-size:12px">${esc(x.amount)}</b>${x.pcs ? ` <span class="mt">≈ ${x.pcs} pcs</span>` : ''}`;
     if(od.tab === 'sales'){
       h = rows(d.orders, o => {
         const t = o.at ? new Date(o.at.replace(' ', 'T') + 'Z').toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bahrain' }) : '';
-        return `<div class="row"><div class="nm">${o.items.map(i => esc(odPlain(i.name)) + ' × ' + i.qty).join('<br>') || esc(o.name)}<div class="mt">${t} · ${esc(o.name)}${o.pay.length ? ' · ' + o.pay.map(esc).join(', ') : ''}</div></div><div class="rt">${fmtBD(o.total)}</div></div>`;
+        const it = o.items.map(i => i.kind === 'kit'
+          ? `🎁 ${esc(odPlain(i.name))} × ${i.qty}` + i.inside.map(c => `<div class="mt" style="padding-left:14px">↳ ${odKind[c.kind] || ''} ${esc(c.name)} — ${qty(c)}</div>`).join('')
+          : `${odKind[i.kind] || ''} ${esc(odPlain(i.name))} — ${qty(i)}`).join('<br>');
+        return `<div class="row"><div class="nm">${it || esc(o.name)}<div class="mt">${t} · ${esc(o.name)}${o.pay.length ? ' · ' + o.pay.map(esc).join(', ') : ''}</div></div><div class="rt">${fmtBD(o.total)}</div></div>`;
       }, 'No Odoo sales yet today.');
     } else if(od.tab === 'used'){
-      h = rows(d.used, x => `<div class="row"><div class="nm">${odKind[x.kind] || ''} ${esc(odPlain(x.name))}</div><div class="rt">${x.qty} ${esc(x.uom)}${x.pcs ? `<div class="mt">≈ ${x.pcs} pcs</div>` : ''}</div></div>`,
-        d.orders.length ? 'Sales found, stock not moved yet — it may move only when the POS is closed (Close Register).' : 'Nothing used yet today.');
+      h = rows(d.used, x => `<div class="row"><div class="nm">${odKind[x.kind] || ''} ${esc(odPlain(x.name))}</div><div class="rt">${qty(x)}</div></div>`, 'Nothing used yet today.');
     } else {
       h = rows(d.compare, x => {
-        const c = Math.abs(x.diff) < 0.0005 ? 'ok' : (x.diff < 0 ? 'bad' : 'warn');
-        return `<div class="row"><div class="nm">${esc(odPlain(x.name))}<div class="mt">Odoo ${x.odoo} · Ours ${x.ours}</div></div><div class="rt"><span class="pill ${c}">${c === 'ok' ? 'Same' : (x.diff > 0 ? '+' : '') + x.diff}</span></div></div>`;
-      }, 'Nothing to compare.');
-      if(d.compare.length) h += '<div class="mt" style="font-size:11px;color:var(--dim);padding:6px 2px">Minus = Odoo has less (sold in Odoo, not yet in our system).</div>';
+        const c = x.same ? 'ok' : (x.diff == null ? '' : (x.less ? 'bad' : 'warn'));
+        return `<div class="row"><div class="nm">${odKind[x.kind] || ''} ${esc(x.name)}<div class="mt">Used today <b>${esc(x.used)}</b> · Odoo stock ${esc(x.odoo)} · Our stock ${esc(x.ours)}</div></div><div class="rt">${x.diff == null ? '<span class="mt">not in our list</span>' : `<span class="pill ${c}">${x.same ? 'Same' : (x.less ? '−' : '+') + esc(x.diff)}</span>`}</div></div>`;
+      }, 'Nothing used yet today.');
+      if(d.compare.length) h += `<div class="mt" style="font-size:11px;color:var(--dim);padding:6px 2px">− = Odoo has less than our system (sold in Odoo, not yet deducted here).${d.movesFound ? '' : ' Odoo stock usually goes down only after Close Register.'}</div>`;
     }
     const sc = document.getElementById('odScroll'), top = sc.scrollTop; sc.innerHTML = h; sc.scrollTop = top;
   }
