@@ -1543,7 +1543,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       row.innerHTML = `
         <div>
           <div class="list-row-name">${entry.name}</div>
-          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)} · ${(entry.mode === 'pieces' && entryEq(entry)) ? entryEq(entry) : entry.kg.toFixed(3) + ' kg' + (entryEq(entry) ? ' · ' + entryEq(entry) : '')}</div>
+          <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</div>
         </div>
         <div class="list-row-right">
           <div class="list-row-price">${fmtBD(entry.total)}</div>
