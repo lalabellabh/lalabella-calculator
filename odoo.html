@@ -55,6 +55,13 @@
     <h3 style="font-size:13px;margin:14px 0 4px">⚖️ Used today vs stock (Odoo and our system, ModaMall)</h3><div id="tCmp" class="box"></div>
   </div>
   <div class="card">
+    <h2>🔄 Auto-deduct from our stock (trial)</h2>
+    <div class="row"><span id="adSt" class="pill">…</span><span class="muted" id="adInfo"></span><span style="flex:1"></span>
+      <button class="btn ghost" id="adToggle">Turn off</button><button class="btn" id="adNow">Sync now</button></div>
+    <p class="muted" style="margin:8px 0 0">Every 5 minutes, each new Odoo POS sale of a chocolate or flower (kits opened) is taken out of our stock at the branch below: chocolate = release from the oldest batch, flower = used stems. Each sale line is done only once. Undo puts one order back (for test sales).</p>
+    <div id="adLog" class="box"></div>
+  </div>
+  <div class="card">
     <h2>🛒 Odoo POS sales</h2>
     <div class="row"><input type="date" id="day"><button class="btn" id="load">Load</button></div>
     <div class="kv" id="sKv"></div>
@@ -114,7 +121,45 @@
   document.getElementById('day').value = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
   document.getElementById('reStatus').addEventListener('click', status);
   document.getElementById('load').addEventListener('click', sales);
-  function go(){ status(); today(); sales(); }
+  async function syncLog(){
+    var box = document.getElementById('adLog'), stEl = document.getElementById('adSt');
+    try{
+      var d = await call({ action:'syncLog' });
+      if(!d.success){ box.innerHTML = '<p class="muted">' + esc(d.error || 'Failed') + '</p>'; return; }
+      var on = (d.settings.auto_deduct || 'off') === 'on';
+      stEl.className = 'pill ' + (on ? 'ok' : 'bad'); stEl.textContent = on ? '✓ On' : 'Off';
+      document.getElementById('adToggle').textContent = on ? 'Turn off' : 'Turn on'; document.getElementById('adToggle').dataset.v = on ? 'off' : 'on';
+      document.getElementById('adInfo').textContent = 'Branch ' + (d.settings.branch || 'ModaMall') + ' · sales from ' + (d.settings.start_at ? new Date(d.settings.start_at.replace(' ', 'T') + 'Z').toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—');
+      var S = { done:'<span class="pill ok">Deducted</span>', 'short':'<span class="pill bad">Short</span>', 'not ours':'<span class="muted">Odoo item only</span>', error:'<span class="pill bad">Error</span>', undone:'<span class="muted">Undone</span>', processing:'<span class="muted">…</span>' };
+      var shownUndo = {};
+      box.innerHTML = d.rows.length ? '<table><thead><tr><th>Time</th><th>Order</th><th>Sold</th><th>Taken from our stock</th><th>Status</th><th></th></tr></thead><tbody>' + d.rows.map(function(r){
+        var t = r.order_date ? new Date(r.order_date).toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+        var took = (r.details || []).filter(function(x){ return x.kind !== 'other'; }).map(function(x){
+          return (x.kind === 'chocolate' ? '🍫 ' : '🌸 ') + esc(x.item) + ' — ' + (x.kind === 'flower' ? x.stems + ' pcs' : (x.grams != null ? (x.grams >= 1000 ? (x.grams / 1000) + ' kg' : Math.round(x.grams) + ' g') : '') + (x.pcs != null ? ' ≈ ' + Math.round(x.pcs) + ' pcs' : '')) +
+            (x.taken && x.taken.length ? ' <span class="muted">(' + x.taken.map(function(b){ return esc(b.batch) + ' ' + b.qty + ' ' + esc(b.unit); }).join(', ') + ')</span>' : ''); }).join('<br>');
+        var canUndo = (r.status === 'done' || r.status === 'short') && !shownUndo[r.odoo_order];
+        if(canUndo) shownUndo[r.odoo_order] = 1;
+        return '<tr><td>' + t + '</td><td>' + esc(r.odoo_order) + '</td><td>' + esc(r.product) + ' × ' + r.qty + '</td><td>' + (took || '<span class="muted">—</span>') + (r.note ? '<div class="muted" style="color:var(--bad)">' + esc(r.note) + '</div>' : '') + '</td><td>' + (S[r.status] || esc(r.status)) + '</td><td>' + (canUndo ? '<button class="btn ghost" data-undo="' + esc(r.odoo_order) + '" style="padding:5px 9px;font-size:11.5px">Undo order</button>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<p class="muted">No Odoo sales synced yet. Sell a chocolate or flower in the trial POS, then press Sync now.</p>';
+    }catch(e){ box.innerHTML = '<p class="muted">Connection error.</p>'; }
+  }
+  document.getElementById('adNow').addEventListener('click', async function(){
+    var b = this; b.disabled = true; b.textContent = 'Syncing…';
+    try{ var d = await call({ action:'sync' }); document.getElementById('adInfo').textContent = d.success ? ('Synced: ' + (d.done || 0) + ' deducted' + (d.other ? ', ' + d.other + ' Odoo-only' : '') + (d.errors ? ', ' + d.errors + ' errors' : '') + (d.skipped ? ' (' + d.skipped + ')' : '')) : (d.error || 'Failed'); }catch(e){}
+    b.disabled = false; b.textContent = 'Sync now'; syncLog(); today();
+  });
+  document.getElementById('adToggle').addEventListener('click', async function(){
+    var v = this.dataset.v || 'off';
+    if(v === 'off' && !confirm('Turn off auto-deduct? Odoo sales will no longer take stock from our system.')) return;
+    await call({ action:'syncSet', value: v }); syncLog();
+  });
+  document.getElementById('adLog').addEventListener('click', async function(e){
+    var b = e.target.closest('[data-undo]'); if(!b) return;
+    if(!confirm('Undo order ' + b.dataset.undo + '? The chocolate and flowers go back to our stock.')) return;
+    b.disabled = true; var d = await call({ action:'syncUndo', order: b.dataset.undo });
+    if(!d.success) alert(d.error || 'Failed'); syncLog(); today();
+  });
+  function go(){ status(); today(); sales(); syncLog(); }
   var ran = false; function once(){ if(!ran){ ran = true; go(); } }
   window.addEventListener('lbadminunlocked', once); setTimeout(once, 1200);
 })();
