@@ -1593,15 +1593,20 @@ function slCashCounts(){
   return (window.lastCashCounts || []).filter(c => (br === 'All' || c.branch === br) && (!f || String(c.date).slice(0,10) >= f) && (!t || String(c.date).slice(0,10) <= t))
     .slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
+// The cash count is a count of the SAME petty cash box (not extra money): show only the LATEST count of the period,
+// as a denomination table, next to what the petty cash should have at the end of that day — never added up.
 function slCashCountHtml(th){
   const cc = slCashCounts();
   if(!cc.length) return '';
-  const tot = cc.reduce((s,c)=>s+Number(c.amount||0),0);
-  return `<h3 style="margin-top:16px;">Cash count</h3>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Denominations</th><th style="text-align:left;">Counted by</th><th style="text-align:left;">Sent</th><th ${th}>Total</th></tr></thead>
-      <tbody>${cc.map(c=>`<tr><td>${fmtDate(c.date)}</td><td>${esc(c.branch)}</td><td>${(c.breakdown||[]).map(b=>esc(b.label)+' × '+b.count).join(', ')}</td><td>${esc(c.countedBy||'—')}</td><td>${c.sentToQalali?'✓ Qalali':''}</td><td ${th}>${Number(c.amount).toFixed(3)}</td></tr>`).join('')}
-      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="5">TOTAL CASH COUNTED</td><td ${th}>${tot.toFixed(3)} BD</td></tr></tbody></table>`;
+  const c = cc[cc.length - 1], day = String(c.date).slice(0,10);
+  const should = document.getElementById('branchSelect').value !== 'All' ? slLeftAt(day) : null;
+  const diff = should == null ? null : Math.round((Number(c.amount) - should) * 1000) / 1000;
+  return `<h3 style="margin-top:16px;">Cash count — ${fmtDate(c.date)} <small style="font-weight:400">· ${esc(c.branch)} · counted by ${esc(c.countedBy||'—')}</small></h3>
+    <table style="width:100%;max-width:520px;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Denomination</th><th style="text-align:center;">Pieces</th><th ${th}>Subtotal</th></tr></thead>
+      <tbody>${(c.breakdown||[]).map(b=>`<tr><td>${esc(b.label)}</td><td style="text-align:center;">${b.count}</td><td ${th}>${(Number(b.value)*Number(b.count)).toFixed(3)} BD</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="2">TOTAL</td><td ${th}>${Number(c.amount).toFixed(3)} BD</td></tr></tbody></table>
+    ${should == null ? '' : `<p style="margin:8px 0 0;font-size:13px;"><b>Petty Cash remaining (${fmtDate(day)}): ${should.toFixed(3)} BD</b>${diff ? ` · <span style="color:${diff>0?'#2f7a4f':'#b2402e'}">counted ${Math.abs(diff).toFixed(3)} BD ${diff>0?'more':'less'}</span>` : ' · <span style="color:#2f7a4f">matches ✓</span>'}</p>`}`;
 }
 function slSorted(){ return slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id); }
 document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
@@ -1631,7 +1636,6 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
     `<table style="margin:16px 0 0 auto;font-size:13px;border-collapse:collapse;">
       <tr><td style="padding:2px 14px 2px 0;">Total sales (Cash + Card + MyFatoorah + Credit)</td><td ${th}><b>${t.inv.toFixed(3)} BD</b></td></tr>
       <tr><td style="padding:2px 14px 2px 0;">· of which Cash</td><td ${th}>${t.cash.toFixed(3)} BD</td></tr>
-      ${slCashCounts().length ? `<tr><td style="padding:2px 14px 2px 0;">Cash counted</td><td ${th}>${slCashCounts().reduce((s,c)=>s+Number(c.amount||0),0).toFixed(3)} BD</td></tr>` : ''}
       <tr><td style="padding:2px 14px 2px 0;">Petty cash used (separate)</td><td ${th}>${pcT.toFixed(3)} BD</td></tr>
     </table>
     <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(slToday())} · ${list.length} sales entries · ${pc.length} petty cash entries</p>`;
