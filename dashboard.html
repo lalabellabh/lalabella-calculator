@@ -96,6 +96,11 @@
     grid-template-columns:1.05fr 1fr 1fr; grid-template-rows:minmax(0,1fr) minmax(0,1fr);
     grid-template-areas:"cat ov al" "cat mv st";
   }
+  #app .main.has-odoo{ grid-template-columns:1.05fr 1fr 1fr 1fr; grid-template-areas:"cat ov al od" "cat mv st od"; }
+  #app .panel.p-od{ grid-area:od; display:none; } #app .main.has-odoo .panel.p-od{ display:flex; }
+  #app .od-kv{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; }
+  #app .od-kv div{ background:var(--chip); border-radius:10px; padding:6px 9px; font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; }
+  #app .od-kv b{ display:block; font:700 14px 'Space Mono',monospace; color:var(--ink); text-transform:none; letter-spacing:0; margin-top:2px; }
   #app .p-cat{ grid-area:cat; } #app .p-ov{ grid-area:ov; } #app .p-al{ grid-area:al; } #app .p-mv{ grid-area:mv; } #app .p-st{ grid-area:st; }
   #app .panel{ display:flex; flex-direction:column; min-height:0; min-width:0; padding:14px 14px 10px; }
   #app .ph{ display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
@@ -172,6 +177,7 @@
     #app .kpis{ grid-template-columns:repeat(4,minmax(0,1fr)); }
     #app .kpi{ padding:9px 11px; } #app .kpi .k-ic{ display:none; } #app .kpi .k-lb{ margin-top:0; }
     #app .main{ grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,minmax(0,1fr)); grid-template-areas:"cat ov" "cat al" "mv st"; }
+    #app .main.has-odoo{ grid-template-columns:1fr 1fr 1fr; grid-template-rows:repeat(3,minmax(0,1fr)); grid-template-areas:"cat ov od" "cat al od" "mv st od"; }
   }
 </style>
 
@@ -282,6 +288,18 @@
       <div class="ph"><h2>🔎 Live Stock Levels</h2><span class="cnt" id="stCnt">0</span></div>
       <input type="text" class="search" id="stSearch" placeholder="Type a chocolate name (e.g. Rocher)…" autocomplete="off">
       <div class="scroll" id="stScroll"></div>
+    </section>
+
+    <section class="panel glass p-od" id="odPanel">
+      <div class="ph"><h2>🔗 Odoo Today</h2><span class="cnt" id="odCnt">ModaMall</span>
+        <div class="tabs" id="odTabs">
+          <button data-t="sales" class="on">Sales</button>
+          <button data-t="used">Used</button>
+          <button data-t="cmp">vs Ours</button>
+        </div>
+      </div>
+      <div class="od-kv" id="odKv"></div>
+      <div class="scroll" id="odScroll"></div>
     </section>
   </div>
 
@@ -560,6 +578,52 @@
   }
 
   loadData();
+
+  /* ---------- Odoo Today (trial, read-only) — hidden when Odoo is not connected ---------- */
+  const OD_API = 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/odoo-fast';
+  const od = { tab:'sales', d:null, busy:false };
+  const odKind = { chocolate:'🍫', flower:'🌸', other:'📦' };
+  const odPlain = n => String(n || '').replace(/^\[[^\]]*\]\s*/, '');
+  function odRender(){
+    const d = od.d; if(!d) return;
+    const tot = d.orders.reduce((a, o) => a + Number(o.total || 0), 0);
+    document.getElementById('odKv').innerHTML = `<div>Orders<b>${d.orders.length}</b></div><div>Sales<b>${fmtBD(tot)}</b></div>`;
+    document.querySelectorAll('#odTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === od.tab));
+    let h;
+    if(od.tab === 'sales'){
+      h = rows(d.orders, o => {
+        const t = o.at ? new Date(o.at.replace(' ', 'T') + 'Z').toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bahrain' }) : '';
+        return `<div class="row"><div class="nm">${o.items.map(i => esc(odPlain(i.name)) + ' × ' + i.qty).join('<br>') || esc(o.name)}<div class="mt">${t} · ${esc(o.name)}${o.pay.length ? ' · ' + o.pay.map(esc).join(', ') : ''}</div></div><div class="rt">${fmtBD(o.total)}</div></div>`;
+      }, 'No Odoo sales yet today.');
+    } else if(od.tab === 'used'){
+      h = rows(d.used, x => `<div class="row"><div class="nm">${odKind[x.kind] || ''} ${esc(odPlain(x.name))}</div><div class="rt">${x.qty} ${esc(x.uom)}${x.pcs ? `<div class="mt">≈ ${x.pcs} pcs</div>` : ''}</div></div>`,
+        d.orders.length ? 'Sales found, stock not moved yet — it may move only when the POS is closed (Close Register).' : 'Nothing used yet today.');
+    } else {
+      h = rows(d.compare, x => {
+        const c = Math.abs(x.diff) < 0.0005 ? 'ok' : (x.diff < 0 ? 'bad' : 'warn');
+        return `<div class="row"><div class="nm">${esc(odPlain(x.name))}<div class="mt">Odoo ${x.odoo} · Ours ${x.ours}</div></div><div class="rt"><span class="pill ${c}">${c === 'ok' ? 'Same' : (x.diff > 0 ? '+' : '') + x.diff}</span></div></div>`;
+      }, 'Nothing to compare.');
+      if(d.compare.length) h += '<div class="mt" style="font-size:11px;color:var(--dim);padding:6px 2px">Minus = Odoo has less (sold in Odoo, not yet in our system).</div>';
+    }
+    const sc = document.getElementById('odScroll'), top = sc.scrollTop; sc.innerHTML = h; sc.scrollTop = top;
+  }
+  async function odLoad(){
+    if(od.busy || document.hidden) return; od.busy = true;
+    try{
+      const tk = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+      const r = await fetch(OD_API, { method:'POST', body:new URLSearchParams({ action:'today', token:tk }) });
+      const d = await r.json();
+      const main = document.querySelector('#app .main');
+      if(!d || !d.success){ if(!od.d) main.classList.remove('has-odoo'); return; }   // not connected / no access: keep the panel hidden
+      od.d = d; main.classList.add('has-odoo'); odRender();
+    }catch(e){ /* offline: keep what is shown */ }
+    finally{ od.busy = false; }
+  }
+  document.getElementById('odTabs').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return; od.tab = b.dataset.t; document.getElementById('odScroll').scrollTop = 0; odRender();
+  });
+  document.getElementById('refreshBtn').addEventListener('click', odLoad);
+  setTimeout(odLoad, 800); setInterval(odLoad, 120000);
 })();
 </script>
 
