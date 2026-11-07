@@ -108,8 +108,9 @@
   function apprSave(n) { try { sessionStorage.setItem(APPR_KEY, String(n)); } catch (e) {} }
 
   // New order from Shopify: stays on screen and rings (loud, repeating) until someone taps it.
-  function showShopToast(rows) {
+  function showShopToast(rows, keep) {
     canShow(3, null);
+    shopShown = keep ? rows.map(function (o) { return onum(o.order_no); }) : [];
     var bl = rows.every(function (o) { return o.source === 'bleems'; }), sh = rows.every(function (o) { return o.source !== 'bleems'; });
     var src = bl ? 'Bleems' : (sh ? 'Shopify' : 'online');
     var one = rows.slice(0, 2).map(function (o) {
@@ -121,10 +122,16 @@
     if (pic) toast.firstChild.innerHTML = '<img alt="" src="' + esc(pic) + '" style="width:46px;height:46px;border-radius:10px;object-fit:cover;display:block">';
     else toast.firstChild.textContent = '🛍️';
     toast.removeAttribute('data-go');
-    toast.querySelector('.tt').innerHTML = '<b>' + (rows.length === 1 ? 'New ' + src + ' order!' : rows.length + ' new ' + src + ' orders!') + '</b>' + one + more + '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>';
+    var title = keep ? (rows.length === 1 ? src + ' order — not in a branch yet' : rows.length + ' ' + src + ' orders — not in a branch yet')
+                     : (rows.length === 1 ? 'New ' + src + ' order!' : rows.length + ' new ' + src + ' orders!');
+    toast.querySelector('.tt').innerHTML = '<b>' + title + '</b>' + one + more +
+      (keep ? '<div style="color:#8a7078;margin-top:3px">Rings again until it is placed in a branch. Tap = quiet for 3 min.</div>' +
+              '<button type="button" data-done style="margin-top:6px;border:0;border-radius:8px;padding:6px 10px;background:#2f7a4f;color:#fff;font-weight:700;font-size:12px;cursor:pointer">✓ Na-assign ko na</button>'
+            : '<div style="color:#8a7078;margin-top:2px">Tap to stop the sound</div>');
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(hideToast, 90000);   // rings ~36 s; then the pop-up closes by itself after 1.5 min (the order stays in the 🔔 list)
+    if (!keep) toastTimer = setTimeout(hideToast, 90000);   // Bleems: closes by itself after 1.5 min (stays in the 🔔 list)
+    shopRangAt = Date.now();
     ringLoop();
   }
   // a customer started checkout, left a phone/email, and never finished: a quiet notice (no alarm sound), logged in shopify_checkouts
@@ -146,6 +153,11 @@
     toastTimer = setTimeout(function () { hideToast(); }, 20000);
   }
   toast.addEventListener('click', function (e) {
+    if (shopShown.length) {   // Shopify order still not in a branch
+      if (e.target.closest('[data-done]')) { shopMarkDone(shopShown); shopShown = []; hideToast(); return; }
+      shopSnooze = Date.now() + 3 * 60000; try { localStorage.setItem('lbobShopSnooze', String(shopSnooze)); } catch (x) {}
+      shopShown = []; hideToast(); return;   // ✕ or tap: quiet for 3 minutes, then it rings again if still not assigned
+    }
     if (e.target.closest('.x')) { hideToast(); return; }
     var go = toast.getAttribute('data-go'); hideToast();
     if (go) { location.href = go; return; }
@@ -259,6 +271,33 @@
 
   // ---- new Shopify orders (webhook -> shopify-orders-fast): works even when the Tampermonkey script is off ----
   var SHOP_SEEN = 'lbobShopSeen';
+  // ---- A Shopify order keeps ringing until it is placed in a branch ----
+  // "Placed" = the Tampermonkey (order dashboard) reported its list AFTER the order arrived and the order is not in it.
+  // While the Tampermonkey is off it never reports, so the order keeps ringing (every 2 min) until someone taps
+  // "✓ Na-assign ko na" (or the Tampermonkey comes back and reports). Orders older than 6 h stop by themselves.
+  var monk = { at: 0, list: [] }, shopShown = [], shopSnooze = 0, shopRangAt = 0, SHOP_DONE = 'lbobShopDone';
+  function onum(v) { return String(v || '').replace(/\D+/g, ''); }
+  function shopDone() { try { var a = JSON.parse(localStorage.getItem(SHOP_DONE) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function shopMarkDone(nos) { var a = shopDone().concat(nos); try { localStorage.setItem(SHOP_DONE, JSON.stringify(a.filter(function (v, i) { return v && a.indexOf(v) === i; }).slice(-200))); } catch (e) {} }
+  function shopPending(orders) {
+    var done = shopDone(), now = Date.now();
+    return (orders || []).filter(function (o) {
+      if (o.source === 'bleems') return false;
+      var no = onum(o.order_no), at = new Date(o.received_at).getTime();
+      if (!no || !at || now - at > 6 * 3600000 || done.indexOf(no) !== -1) return false;
+      var reportedAfter = monk.at > at + 60000;
+      if (reportedAfter && monk.list.indexOf(no) === -1) return false;   // the dashboard shows it is no longer unassigned
+      return true;
+    });
+  }
+  function shopAlarm(pend) {
+    try { shopSnooze = Math.max(shopSnooze, Number(localStorage.getItem('lbobShopSnooze')) || 0); } catch (e) {}   // quiet in every open tab
+    if (Date.now() < shopSnooze) return;
+    var nos = pend.map(function (o) { return onum(o.order_no); }).join(',');
+    var showing = toast.classList.contains('show') && shopShown.length;
+    if (showing && shopShown.join(',') === nos) { if (Date.now() - shopRangAt > 2 * 60000) { shopRangAt = Date.now(); ringLoop(); } return; }
+    showShopToast(pend, true);
+  }
   function shopSeen() { try { var a = JSON.parse(localStorage.getItem(SHOP_SEEN) || 'null'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function pollShop() {
     var t = token(); if (!t || !SHOP_API) return;
@@ -267,14 +306,18 @@
       .then(function (d) {
         if (!d || d.success === false || !Array.isArray(d.orders)) return;
         var seen = shopSeen();
+        // Shopify: keeps alarming until the order is in a branch (see shopPending) — Bleems: one alert like before
         var fresh = d.orders.filter(function (o) {
-          return seen.indexOf(String(o.shopify_id)) === -1 && (Date.now() - new Date(o.received_at).getTime()) < 15 * 60000;
+          return o.source === 'bleems' && seen.indexOf(String(o.shopify_id)) === -1 && (Date.now() - new Date(o.received_at).getTime()) < 15 * 60000;
         });
+        var pend = shopPending(d.orders);
         var all = seen.concat(d.orders.map(function (o) { return String(o.shopify_id); }));
         var uniq = all.filter(function (v, i) { return all.indexOf(v) === i; });
         try { localStorage.setItem(SHOP_SEEN, JSON.stringify(uniq.slice(-100))); } catch (e) {}
-        if (fresh.length) showShopToast(fresh);
-        else if (Array.isArray(d.abandoned)) {
+        if (pend.length) shopAlarm(pend);
+        else if (shopShown.length) { shopShown = []; hideToast(); }   // all placed in a branch now
+        if (fresh.length && !pend.length) showShopToast(fresh);
+        else if (!pend.length && Array.isArray(d.abandoned)) {
           var ab = abSeen(), keys = d.abandoned.map(function (x) { return String(x.token); });
           if (ab !== null) {
             var fa = d.abandoned.filter(function (x) { return ab.indexOf(String(x.token)) === -1 && (Date.now() - new Date(x.updated_at).getTime()) < 3 * 3600000; });
@@ -285,7 +328,7 @@
       })
       .catch(function () {});
   }
-  pollShop();
+  setTimeout(pollShop, 2500);   // after the first dashboard check, so already-placed orders don't ring for a second
   setInterval(pollShop, 10000);
 
   var lastCount = null;
@@ -298,6 +341,8 @@
       .then(function (d) {
         if (d && d.success === false) return;
         var n = Number(d.count) || 0, rows = Array.isArray(d.ordersDetail) ? d.ordersDetail : [];
+        monk.at = d.lastUpdated ? new Date(d.lastUpdated).getTime() || 0 : 0;
+        monk.list = rows.map(function (o) { return onum(o.orderNo); });
         var apRows = Array.isArray(d.approvalsDetail) ? d.approvalsDetail : [], ap = Number(d.pendingApprovals) || 0;
         var shown = n + ap;
         if (shown > 0) { badge.textContent = String(shown); badge.classList.add('show'); } else badge.classList.remove('show');
