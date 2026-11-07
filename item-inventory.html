@@ -1149,6 +1149,18 @@ body>.wrap{position:relative;z-index:1}
       <div id="odooExportCount" style="font-size:12.5px;color:var(--ink-dim);margin-bottom:10px;"></div>
       <button class="btn" id="exportOdooBtn">⬇️ Download Odoo CSV</button>
     </div>
+
+    <div class="card" id="odooPhotoCard" style="display:none;">
+      <div class="card-title">📷 Photos from Odoo</div>
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;line-height:1.5;">
+        In Odoo: Products › list view › select all › ⚙ Actions › Export. Leave <b>"I want to update data"</b> unchecked, add <b>Name</b> and <b>Image 512</b>, choose <b>CSV</b>, then pick the file here.
+        Photos are matched to items by name. Admin only.
+      </div>
+      <input type="file" id="odooPhotoFile" accept=".csv,text/csv" style="margin-bottom:8px;max-width:100%;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-dim);margin-bottom:10px;"><input type="checkbox" id="odooPhotoOverwrite"> Replace photos that items already have</label>
+      <div id="odooPhotoInfo" style="font-size:12.5px;color:var(--ink-dim);margin-bottom:10px;"></div>
+      <button class="btn" id="odooPhotoStart" disabled>⬆️ Add Photos</button>
+    </div>
   </div>
 
   <!-- ===================== NOVA — voice-guided counting ===================== -->
@@ -1949,6 +1961,73 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     const s = String(val ?? '');
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
+
+  // ---- Photos from Odoo (CSV export with Name + Image 512) — Admin only ----
+  (function(){
+    const card = document.getElementById('odooPhotoCard'); if(!card) return;
+    if(lbIsAdmin()) card.style.display = '';
+    setTimeout(() => { if(lbIsAdmin()) card.style.display = ''; }, 2000);   // the user may load a moment later
+    const info = document.getElementById('odooPhotoInfo'), startBtn = document.getElementById('odooPhotoStart');
+    let plan = [];
+    const norm = s => String(s||'').toLowerCase().replace(/[^a-z0-9]/g, '');
+    function parseCsv(text){   // RFC 4180: quotes, commas and new lines inside quotes
+      const rows = []; let row = [], f = '', q = false;
+      for(let i = 0; i < text.length; i++){
+        const c = text[i];
+        if(q){ if(c === '"'){ if(text[i+1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+        else if(c === '"') q = true;
+        else if(c === ','){ row.push(f); f = ''; }
+        else if(c === '\n' || c === '\r'){ if(c === '\r' && text[i+1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+        else f += c;
+      }
+      if(f !== '' || row.length){ row.push(f); rows.push(row); }
+      return rows;
+    }
+    function mimeOf(b64){ return b64.startsWith('/9j/') ? 'image/jpeg' : b64.startsWith('UklGR') ? 'image/webp' : b64.startsWith('R0lGOD') ? 'image/gif' : 'image/png'; }
+    document.getElementById('odooPhotoFile').addEventListener('change', async e => {
+      plan = []; startBtn.disabled = true;
+      const file = e.target.files[0]; if(!file) return;
+      info.textContent = 'Reading file…';
+      const rows = parseCsv(await file.text());
+      const head = (rows[0] || []).map(h => h.trim().toLowerCase());
+      const ni = head.findIndex(h => h === 'name' || h === 'product name');
+      const ii = ['image 512','image 256','image 1024','image 1920','image','image 128'].map(n => head.indexOf(n)).find(i => i >= 0);
+      if(ni < 0 || ii === undefined){ info.textContent = 'The file needs the columns "Name" and "Image 512".'; return; }
+      if(!ITEMS.length) await loadItems(true);
+      const byName = {}, names = [];
+      ITEMS.forEach(it => { const k = norm(it['Item Name']); if(k && !byName[k]){ byName[k] = it; names.push(k); } });
+      const used = new Set(); let noPic = 0, noMatch = 0, hasPic = 0;
+      const overwrite = document.getElementById('odooPhotoOverwrite').checked;
+      rows.slice(1).forEach(r => {
+        const name = (r[ni] || '').trim(), b64 = (r[ii] || '').trim();
+        if(!name) return;
+        if(!b64 || b64 === 'False'){ noPic++; return; }
+        const k = norm(name);
+        let it = byName[k];
+        if(!it && k.length >= 4){ const c = names.filter(n => n.endsWith(k)); if(c.length === 1) it = byName[c[0]]; }   // "Crystal Tray 12095" in ours = "12095" in Odoo
+        if(!it){ noMatch++; return; }
+        if(used.has(it['Item Name'])) return;
+        if(it['Photo Link (Drive)'] && !overwrite){ hasPic++; return; }
+        used.add(it['Item Name']); plan.push({ name: it['Item Name'], data: 'data:' + mimeOf(b64) + ';base64,' + b64 });
+      });
+      info.innerHTML = '<b>' + plan.length + '</b> photos ready to add' + (hasPic ? ' · ' + hasPic + ' items already have a photo' : '') + (noMatch ? ' · ' + noMatch + ' not found in Item Inventory' : '') + (noPic ? ' · ' + noPic + ' have no photo in Odoo' : '') + '.';
+      startBtn.disabled = !plan.length;
+    });
+    startBtn.addEventListener('click', async () => {
+      if(!plan.length) return;
+      startBtn.disabled = true; let ok = 0, bad = 0;
+      for(let i = 0; i < plan.length; i++){
+        info.textContent = 'Uploading ' + (i + 1) + ' / ' + plan.length + '…  (' + plan[i].name + ')';
+        try{
+          const res = await (await fetch(API_URL, { method:'POST', body: new URLSearchParams({ action:'updateItemInventory', itemName: plan[i].name, photoBase64: plan[i].data }) })).json();
+          if(res && !res.error) ok++; else bad++;
+        }catch(e){ bad++; }
+      }
+      info.innerHTML = '✓ Done: <b>' + ok + '</b> photos added' + (bad ? ' · ' + bad + ' failed (try again)' : '') + '.';
+      plan = []; document.getElementById('odooPhotoFile').value = '';
+      await loadItems(true);
+    });
+  })();
 
   document.getElementById('exportOdooBtn').addEventListener('click', async ()=>{
     // Export always covers every branch, not just the one currently
