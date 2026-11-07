@@ -101,7 +101,7 @@ body[data-skin][data-gmode="dark"] .modal-overlay .modal label{ color:var(--ink-
 @media(min-width:901px) and (min-height:520px){
   html:has(body[data-skin]), body[data-skin]{ height:100%; overflow:hidden; }
   body[data-skin]{ padding:0!important; margin:0; }
-  body[data-skin] .wrap{ padding-top:12px!important; max-width:none; height:100vh; padding:12px 16px 14px; margin:0; display:grid; gap:12px; grid-template-rows:auto auto minmax(0,1fr); row-gap:0; grid-template-columns:var(--gcols,minmax(0,1fr) minmax(0,1fr)); align-items:stretch; }
+  body[data-skin] .wrap{ padding-top:12px!important; max-width:none; height:100vh; height:calc(100vh / var(--lb-zoom, 1)); padding:12px 16px 14px; margin:0; display:grid; gap:12px; grid-template-rows:auto auto minmax(0,1fr); row-gap:0; grid-template-columns:var(--gcols,minmax(0,1fr) minmax(0,1fr)); align-items:stretch; }
   body[data-skin] .wrap .gtop{ grid-column:1 / -1; margin:0; }
   body[data-skin] .wrap > .card, body[data-skin] .wrap > .panel, body[data-skin] .wrap .card.gcell,
   body[data-skin] .wrap .receiving-layout > .card, body[data-skin] .wrap .release-layout > .card, body[data-skin] .wrap .count-layout > .card{ overflow:auto; min-height:0; margin:0; }
