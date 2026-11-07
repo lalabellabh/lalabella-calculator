@@ -72,6 +72,10 @@
   window.addEventListener('storage', function (e) { if (e.key === TOAST_ACK && toast.classList.contains('show')) hideToast(true); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && toast.classList.contains('show')) hideToast(); });
   function showToast(rows) {
+    // It may have waited in the queue behind a ringing Shopify pop-up: only show orders that are STILL unassigned now
+    // (otherwise an old "New order to assign" pops up after the order was already placed in a branch).
+    rows = rows.filter(function (o) { return monk.list.indexOf(onum(o.orderNo)) !== -1; });
+    if (!rows.length) { if (!toast.classList.contains('show')) { var nx = toastQ.shift(); if (nx) nx(); } return; }
     if (!canShow(2, function () { showToast(rows); })) return;
     var one = rows.slice(0, 2).map(function (o) {
       return '<div><b style="display:inline;font-size:12.5px">' + esc(o.orderNo) + '</b> · ' +
