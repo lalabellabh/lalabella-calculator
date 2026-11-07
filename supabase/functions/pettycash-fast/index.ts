@@ -1,4 +1,5 @@
-// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v18
+// LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v19
+// v19 (Nov 2026): sales channel = any short lowercase word (walkin, pickup, website, whatsapp, corporate, other…) so new sources need no deploy.
 // v18 (Nov 2026): sales channel can also be 'pickup' or 'website'.
 // v17 (Nov 2026): sales_entries.channel ('walkin' | 'whatsapp') saved on addSale / editSale, returned by getSales.
 // v16 (Nov 2026): SALES tab (table sales_entries, NOT part of petty cash): getSales / addSale (staff) / editSale + deleteSale (ADMIN ONLY).
@@ -381,7 +382,7 @@ function saleFields(p: any, kind: string) {
     Object.assign(f, { cash: a, card: 0, myfatoorah: 0, credit: 0, amount: a, customer: txt(p.customer, 80) || null });
   }
   f.ref = txt(p.ref, 60) || null;
-  if (p.channel !== undefined) f.channel = ['walkin', 'whatsapp', 'pickup', 'website'].includes(p.channel) ? p.channel : null;
+  if (p.channel !== undefined) f.channel = /^[a-z]{2,20}$/.test(String(p.channel || '')) ? String(p.channel) : null;
   f.notes = txt(p.notes, 200) || null;
   return { fields: f };
 }
