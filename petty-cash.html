@@ -1163,7 +1163,6 @@ async function loadCashCounts(){
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${c.photoUrl?`<img class="rc-thumb" src="${esc(c.photoUrl)}" data-photo="${esc(c.photoUrl)}" data-cap="Cash count · ${esc(fmtDate(c.date))}" alt="Photo" loading="lazy">`:''}
-          <button class="print-btn" data-id="${c.id}">🖨️ Print</button>
           ${isAdminUser() ? `<button class="edit-btn" data-cid="${c.id}" title="Edit (Admin)">✏️</button>` : ''}
           ${c.sentToQalali
             ? `<span class="sent-badge">✓ Sent ${fmtDate(c.sentDate)}</span><button class="delete-btn" data-id="${c.id}" data-sent="1" title="Delete (Admin)">🗑️</button>`
@@ -1588,25 +1587,42 @@ function slLeftAt(day){   // petty cash balance at the end of `day` = today's ba
   return Math.round(b*1000)/1000;
 }
 function slPeriodText(days){ return days.length ? fmtDate(days[0]) + ' – ' + fmtDate(days[days.length-1]) : slRangeText(); }
+// Cash counts of the same branch + dates, inside the one Sales print (denominations only, no pictures)
+function slCashCounts(){
+  const f = document.getElementById('slFrom').value, t = document.getElementById('slTo').value, br = document.getElementById('branchSelect').value;
+  return (window.lastCashCounts || []).filter(c => (br === 'All' || c.branch === br) && (!f || String(c.date).slice(0,10) >= f) && (!t || String(c.date).slice(0,10) <= t))
+    .slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
+}
+function slCashCountHtml(th){
+  const cc = slCashCounts();
+  if(!cc.length) return '';
+  const tot = cc.reduce((s,c)=>s+Number(c.amount||0),0);
+  return `<h3 style="margin-top:16px;">Cash count</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Denominations</th><th style="text-align:left;">Counted by</th><th style="text-align:left;">Sent</th><th ${th}>Total</th></tr></thead>
+      <tbody>${cc.map(c=>`<tr><td>${fmtDate(c.date)}</td><td>${esc(c.branch)}</td><td>${(c.breakdown||[]).map(b=>esc(b.label)+' × '+b.count).join(', ')}</td><td>${esc(c.countedBy||'—')}</td><td>${c.sentToQalali?'✓ Qalali':''}</td><td ${th}>${Number(c.amount).toFixed(3)}</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="5">TOTAL CASH COUNTED</td><td ${th}>${tot.toFixed(3)} BD</td></tr></tbody></table>`;
+}
 function slSorted(){ return slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id); }
 document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   const list = slSorted();
   let pc = [];
   try{ pc = await slPettyUsed(); }catch(e){ if(!confirm('Could not load the petty cash (' + (e.message||'connection') + '). Print the sales only?')) return; }
-  if(!list.length && !pc.length){ alert('Nothing to print for these dates.'); return; }
+  if(!list.length && !pc.length && !slCashCounts().length){ alert('Nothing to print for these dates.'); return; }
   const t = slTotals(list), pcT = pc.reduce((s,x)=>s+Number(x.amount||0),0), th='style="text-align:right;"';
   const days = slDays(list, pc), oneBranch = document.getElementById('branchSelect').value !== 'All';
   const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
     const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
     return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
   document.getElementById('printArea').innerHTML = `
-    <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales &amp; Petty Cash</h2>
+    <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales, Cash Count &amp; Petty Cash</h2>
     <p>${esc(document.getElementById('branchSelect').value)} · ${slPeriodText(days)}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
     <h3>Sales</h3>` +
     (list.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
       <tbody>${list.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '<p>No sales saved.</p>') +
+    slCashCountHtml(th) +
     `<h3 style="margin-top:16px;">Petty cash used <small style="font-weight:400">(separate — not taken from the sales)</small></h3>` +
     (pc.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Purpose</th><th style="text-align:left;">Car plate / driver</th><th style="text-align:left;">By</th><th ${th}>Amount</th></tr></thead>
@@ -1615,6 +1631,7 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
     `<table style="margin:16px 0 0 auto;font-size:13px;border-collapse:collapse;">
       <tr><td style="padding:2px 14px 2px 0;">Total sales (Cash + Card + MyFatoorah + Credit)</td><td ${th}><b>${t.inv.toFixed(3)} BD</b></td></tr>
       <tr><td style="padding:2px 14px 2px 0;">· of which Cash</td><td ${th}>${t.cash.toFixed(3)} BD</td></tr>
+      ${slCashCounts().length ? `<tr><td style="padding:2px 14px 2px 0;">Cash counted</td><td ${th}>${slCashCounts().reduce((s,c)=>s+Number(c.amount||0),0).toFixed(3)} BD</td></tr>` : ''}
       <tr><td style="padding:2px 14px 2px 0;">Petty cash used (separate)</td><td ${th}>${pcT.toFixed(3)} BD</td></tr>
     </table>
     <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(slToday())} · ${list.length} sales entries · ${pc.length} petty cash entries</p>`;
