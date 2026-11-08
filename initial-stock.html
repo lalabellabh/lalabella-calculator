@@ -245,8 +245,9 @@
 
     <div class="grid-2">
       <div>
-        <label>Price / Kg (BD)</label>
+        <label id="fPriceLbl">Price / Kg (BD)</label>
         <input type="number" id="fPrice" min="0" step="0.001" placeholder="0.000" />
+        <div id="fPriceHint" style="font-size:11.5px;color:var(--ink-dim);margin-top:4px;min-height:14px"></div>
       </div>
       <div>
         <label>Storage Location</label>
@@ -490,6 +491,21 @@
     }catch(e){ alert('Could not unlock this branch. Check your connection.'); }
   });
 
+  // ---------- price per kg vs per piece ----------
+  // Piece items WITH a piece weight (grams in the Item List): the price typed is per KG and is turned into the piece price.
+  // Piece items WITHOUT a weight (cans, boxes): the price typed is per PIECE.
+  const isPiece = u => /piece|pc|box|can/i.test(String(u || ''));
+  function curItem(){ const n = document.getElementById('fSearch').value.trim(); return items.find(it => it['Chocolate Name'] === n) || null; }
+  function priceMode(){
+    const it = curItem(), g = it ? Number(it['Grams']) || 0 : 0, piece = isPiece(document.getElementById('fUnit').value);
+    const mode = !piece ? 'kg' : (g > 0 ? 'kg2pc' : 'pc');
+    document.getElementById('fPriceLbl').textContent = mode === 'pc' ? 'Price / piece (BD)' : 'Price / Kg (BD)';
+    const v = parseFloat(document.getElementById('fPrice').value);
+    document.getElementById('fPriceHint').textContent = mode === 'kg2pc' ? (v > 0 ? `= ${(v * g / 1000).toFixed(3)} BD per piece (${g} g)` : `per kg — piece weight ${g} g`) : '';
+    return { mode, g };
+  }
+  ['fUnit','fPrice','fSearch'].forEach(id => document.getElementById(id).addEventListener(id === 'fUnit' ? 'change' : 'input', () => setTimeout(priceMode, 0)));
+
   // ---------- form -> one entry ----------
   function readForm(){
     const categorySel = document.getElementById('fCategory').value;
@@ -507,6 +523,20 @@
     };
     if(!o.chocolateName || isNaN(o.qty) || o.qty <= 0){ alert('Chocolate name and a valid quantity are required.'); return null; }
     if(isNaN(o.price)) o.price = 0;
+    if(!o.enteredBy){ alert('Please enter your name in "Entered By".'); document.getElementById('fEnteredBy').focus(); return null; }
+    if(o.expiryDate){
+      const yr = Number(o.expiryDate.slice(0,4));
+      if(yr < 2020 || yr > 2100){ alert('The expiry date looks wrong (year ' + o.expiryDate.slice(0,4) + '). Please fix the year, e.g. 2027.'); document.getElementById('fExpiryDate').focus(); return null; }
+      if(o.expiryDate < new Date().toISOString().slice(0,10) && !confirm(o.chocolateName + ' is already expired (' + fmtDate(o.expiryDate) + '). Add anyway?')) return null;
+    } else if(!confirm('No expiry date for ' + o.chocolateName + '. Add without it?')) return null;
+    if(!(o.price > 0) && !confirm('No price for ' + o.chocolateName + '. Add without a price?')) return null;
+    const pm = priceMode();
+    o.priceInput = o.price;
+    if(pm.mode === 'kg2pc'){ o.priceShow = o.price.toFixed(3) + ' BD/kg = ' + (o.price * pm.g / 1000).toFixed(3) + '/pc'; o.price = Math.round(o.price * pm.g) / 1000; }
+    else if(pm.mode === 'pc'){
+      if(o.price > 50 && !confirm(o.price.toFixed(3) + ' BD per PIECE for ' + o.chocolateName + '? If this is the price per kg, press Cancel and change the unit to Kg.')) return null;
+      o.priceShow = o.price.toFixed(3) + ' BD/pc';
+    } else o.priceShow = o.price.toFixed(3) + ' BD/kg';
     return o;
   }
   function clearForm(){   // keeps Unit, Storage Location and Entered By for the next chocolate
@@ -573,7 +603,7 @@
       <div class="q-row${i === editIdx ? ' editing' : ''}">
         <div class="q-main">
           <div class="q-name">${esc(q.chocolateName)}</div>
-          <div class="q-meta">${q.qty} ${esc(q.unit)} · ${Number(q.price||0).toFixed(3)} BD/kg${q.batch ? ' · Batch ' + esc(q.batch) : ''}${q.expiryDate ? ' · Exp ' + esc(fmtDate(q.expiryDate)) : ''}${q.storageLocation ? ' · ' + esc(q.storageLocation) : ''}</div>
+          <div class="q-meta">${q.qty} ${esc(q.unit)} · ${esc(q.priceShow || (Number(q.price||0).toFixed(3) + ' BD/kg'))}${q.batch ? ' · Batch ' + esc(q.batch) : ''}${q.expiryDate ? ' · Exp ' + esc(fmtDate(q.expiryDate)) : ''}${q.storageLocation ? ' · ' + esc(q.storageLocation) : ''}</div>
         </div>
         <span class="q-st ${q.st === 'ok' ? 'ok' : q.st === 'err' ? 'bad' : ''}">${q.st === 'ok' ? '✓ Saved' : q.st === 'err' ? '✕ ' + esc(q.msg || 'Not saved') : q.st === 'saving' ? 'Saving…' : ''}</span>
         ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-ed${i === editIdx ? ' on' : ''}" data-e="${i}" title="${i === editIdx ? 'Tap again to stop editing' : 'Edit'}">✎</button><button class="q-x" data-i="${i}" title="Remove">✕</button>`}
@@ -598,7 +628,7 @@
     document.getElementById('fExpiryDate').value = q.expiryDate || '';
     document.getElementById('fQty').value = q.qty;
     if(q.unit) document.getElementById('fUnit').value = q.unit;
-    document.getElementById('fPrice').value = q.price || '';
+    document.getElementById('fPrice').value = (q.priceInput != null ? q.priceInput : q.price) || '';
     if(q.storageLocation) document.getElementById('fStorageLocation').value = q.storageLocation;
     document.getElementById('fEnteredBy').value = q.enteredBy || '';
     document.getElementById('fSearch').dispatchEvent(new Event('input'));

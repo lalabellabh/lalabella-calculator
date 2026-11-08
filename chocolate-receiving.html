@@ -1042,6 +1042,12 @@
       return;
     }
 
+    if(expiryDate){
+      const yr = Number(expiryDate.slice(0,4));
+      if(yr < 2020 || yr > 2100){ alert('The expiry date looks wrong (year ' + expiryDate.slice(0,4) + '). Please fix the year, e.g. 2027.'); document.getElementById('fExpiryDate').focus(); return; }
+      if(expiryDate < receiveDate && !confirm('The expiry date is before the receive date (already expired). Save anyway?')) return;
+    } else if(!confirm('No expiry date. Save without it?')) return;
+    if(!receivedBy){ alert('Please enter your name in "Received By".'); document.getElementById('fReceivedBy').focus(); return; }
     if(!deliveryNo) deliveryNo = generateDeliveryNo(currentBranch, receiveDate);
     if(!batchNo) batchNo = generateBatchNo(currentBranch, receiveDate);
 
