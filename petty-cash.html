@@ -442,6 +442,7 @@
           <div><label>💵 Cash (BD)</label><input type="number" step="0.001" min="0" id="slCash" class="sl-n" placeholder="0.000"></div>
           <div><label>💳 Card (BD)</label><input type="number" step="0.001" min="0" id="slCard" class="sl-n" placeholder="0.000"></div>
           <div><label>🌐 MyFatoorah (BD)</label><input type="number" step="0.001" min="0" id="slMf" class="sl-n" placeholder="0.000"></div>
+          <div><label>📲 Fawri+ / Benefit (BD)</label><input type="number" step="0.001" min="0" id="slBn" class="sl-n" placeholder="0.000"></div>
           <div><label>📒 Credit (BD)</label><input type="number" step="0.001" min="0" id="slCredit" class="sl-n" placeholder="0.000"></div>
         </div>
         <div class="sl-total">Total invoiced <b id="slTotal">0.000 BD</b></div>
@@ -1394,16 +1395,16 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
   }
   btn.disabled = false; btn.textContent = 'Save Count';
 });
-/* ---------- SALES tab: invoiced totals (Cash / Card / MyFatoorah / Credit) + source (Walk-in / WhatsApp). NOT part of petty cash.
+/* ---------- SALES tab: invoiced totals (Cash / Card / MyFatoorah / Fawri+ Benefit / Credit) + source (Walk-in / WhatsApp). NOT part of petty cash.
    Print / Excel also show the petty cash used in the same dates, with its own total (kept apart from sales). ---------- */
 const SL = { editId:0, rows:[] };
 const SL_CH = { walkin:'🚶 Walk-in', pickup:'🛍️ Pick-up', website:'🌐 Website order', whatsapp:'💬 WhatsApp', corporate:'🏢 Corporate', other:'📝 Others' };
 function slToday(){ return new Date(Date.now()+3*3600000).toISOString().slice(0,10); }   // Bahrain date (the phone's UTC date is still "yesterday" until 3 AM)
 function slNum(id){ return Math.round((Number(document.getElementById(id).value)||0)*1000)/1000; }
-function slCalc(){ const t = slNum('slCash')+slNum('slCard')+slNum('slMf')+slNum('slCredit'); document.getElementById('slTotal').textContent = fmtBD(t); return Math.round(t*1000)/1000; }
+function slCalc(){ const t = slNum('slCash')+slNum('slCard')+slNum('slMf')+slNum('slBn')+slNum('slCredit'); document.getElementById('slTotal').textContent = fmtBD(t); return Math.round(t*1000)/1000; }
 document.querySelectorAll('.sl-n').forEach(i=>i.addEventListener('input', slCalc));
 function slClearForm(){
-  ['slCash','slCard','slMf','slCredit','slRef','slNotes','slChannel'].forEach(id=>document.getElementById(id).value='');
+  ['slCash','slCard','slMf','slBn','slCredit','slRef','slNotes','slChannel'].forEach(id=>document.getElementById(id).value='');
   SL.editId = 0; document.getElementById('slEditBar').style.display='none'; document.getElementById('slFormTitle').textContent='➕ Add Sales';
   document.getElementById('slSaveBtn').textContent='Save'; slCalc();
 }
@@ -1422,30 +1423,30 @@ async function slCall(params, post){
 // "➕ Add to list": type invoices one by one; Save sends them all and the totals are worked out automatically.
 SL.draft = [];
 function slFormLine(){
-  const l = { cash: slNum('slCash'), card: slNum('slCard'), myfatoorah: slNum('slMf'), credit: slNum('slCredit'),
+  const l = { cash: slNum('slCash'), card: slNum('slCard'), myfatoorah: slNum('slMf'), benefit: slNum('slBn'), credit: slNum('slCredit'),
     channel: document.getElementById('slChannel').value, ref: document.getElementById('slRef').value.trim(), notes: document.getElementById('slNotes').value.trim() };
-  l.amount = Math.round((l.cash + l.card + l.myfatoorah + l.credit) * 1000) / 1000;
+  l.amount = Math.round((l.cash + l.card + l.myfatoorah + l.benefit + l.credit) * 1000) / 1000;
   return l;
 }
 function slDraftRender(){
   const box = document.getElementById('slDraft');
   if(!SL.draft.length){ box.style.display='none'; box.innerHTML=''; document.getElementById('slSaveBtn').textContent = SL.editId ? 'Save changes' : 'Save'; return; }
   const t = slTotals(SL.draft);
-  const m = l => [['Cash',l.cash],['Card',l.card],['MyFatoorah',l.myfatoorah],['Credit',l.credit]].filter(x=>x[1]).map(x=>x[0]+' '+x[1].toFixed(3)).join(' · ');
+  const m = l => [['Cash',l.cash],['Card',l.card],['MyFatoorah',l.myfatoorah],['Fawri+/Benefit',l.benefit],['Credit',l.credit]].filter(x=>x[1]).map(x=>x[0]+' '+x[1].toFixed(3)).join(' · ');
   box.style.display='block';
   box.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px;">NOT SAVED YET · ' + SL.draft.length + ' ITEM' + (SL.draft.length>1?'S':'') + '</div>' +
     SL.draft.map((l,i)=>`<div class="sl-dr"><div><b>${fmtBD(l.amount)}</b> <span style="color:var(--dim)">${m(l)}</span><br><span style="color:var(--dim);font-size:11px;">${l.channel?SL_CH[l.channel]:''}${l.ref?' · '+esc(l.ref):''}${l.notes?' · '+esc(l.notes):''}</span></div><button type="button" data-drx="${i}" title="Remove">✕</button></div>`).join('') +
-    `<div class="sl-dsum"><div>Cash<b>${t.cash.toFixed(3)}</b></div><div>Card<b>${t.card.toFixed(3)}</b></div><div>MyFatoorah<b>${t.mf.toFixed(3)}</b></div><div>Credit<b>${t.credit.toFixed(3)}</b></div><div class="t">Total<b>${t.inv.toFixed(3)}</b></div></div>`;
+    `<div class="sl-dsum"><div>Cash<b>${t.cash.toFixed(3)}</b></div><div>Card<b>${t.card.toFixed(3)}</b></div><div>MyFatoorah<b>${t.mf.toFixed(3)}</b></div><div>Fawri+/Benefit<b>${t.bn.toFixed(3)}</b></div><div>Credit<b>${t.credit.toFixed(3)}</b></div><div class="t">Total<b>${t.inv.toFixed(3)}</b></div></div>`;
   box.querySelectorAll('[data-drx]').forEach(b=>b.addEventListener('click',()=>{ SL.draft.splice(Number(b.dataset.drx),1); slDraftRender(); }));
   document.getElementById('slSaveBtn').textContent = 'Save all (' + SL.draft.length + ')';
 }
 window.addEventListener('beforeunload', e => { if(SL.draft && SL.draft.length){ e.preventDefault(); e.returnValue=''; } });
-function slClearLine(){ ['slCash','slCard','slMf','slCredit','slRef','slNotes'].forEach(id=>document.getElementById(id).value=''); slCalc(); }
+function slClearLine(){ ['slCash','slCard','slMf','slBn','slCredit','slRef','slNotes'].forEach(id=>document.getElementById(id).value=''); slCalc(); }
 document.getElementById('slAddBtn').addEventListener('click', ()=>{
   const msg = document.getElementById('slMsg'); msg.className='msg';
   if(SL.editId){ msg.textContent='Finish or cancel the edit first.'; msg.className='msg error'; return; }
   const l = slFormLine();
-  if(l.amount <= 0){ msg.textContent='Enter an amount first (Cash, Card, MyFatoorah or Credit).'; msg.className='msg error'; return; }
+  if(l.amount <= 0){ msg.textContent='Enter an amount first (Cash, Card, MyFatoorah, Fawri+/Benefit or Credit).'; msg.className='msg error'; return; }
   if(l.ref && SL.draft.some(x=>x.ref && x.ref.toLowerCase()===l.ref.toLowerCase())){ msg.textContent='That invoice no. is already in the list.'; msg.className='msg error'; return; }
   SL.draft.push(l); slClearLine(); slDraftRender();
   document.getElementById('slCash').focus();
@@ -1464,7 +1465,7 @@ document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
       const l = SL.draft[0];
       btn.textContent = 'Saving ' + (ok+1) + '…';
       let d = null;
-      try{ d = await slCall(new URLSearchParams({ action:'addSale', branch, kind:'invoiced', date, cash:l.cash, card:l.card, myfatoorah:l.myfatoorah, credit:l.credit, channel:l.channel, ref:l.ref, notes:l.notes, enteredBy:by }), true); }catch(e){ d = { error:'Connection error.' }; }
+      try{ d = await slCall(new URLSearchParams({ action:'addSale', branch, kind:'invoiced', date, cash:l.cash, card:l.card, myfatoorah:l.myfatoorah, benefit:l.benefit, credit:l.credit, channel:l.channel, ref:l.ref, notes:l.notes, enteredBy:by }), true); }catch(e){ d = { error:'Connection error.' }; }
       if(!d || !d.success){ msg.textContent = (d && d.error || 'Failed.') + ' — ' + ok + ' saved, ' + SL.draft.length + ' still in the list (tap Save again).'; msg.className='msg error'; break; }
       ok++; total += l.amount; SL.draft.shift(); slDraftRender();
     }
@@ -1477,9 +1478,9 @@ document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
   if(!SL.editId && branch === 'All'){ msg.textContent='Please pick a branch first (top of the page).'; msg.className='msg error'; return; }
   const by = document.getElementById('slBy').value.trim();
   if(!by){ msg.textContent='Please type your name.'; msg.className='msg error'; return; }
-  if(slCalc() <= 0){ msg.textContent='Enter at least one amount (Cash, Card, MyFatoorah or Credit).'; msg.className='msg error'; return; }
+  if(slCalc() <= 0){ msg.textContent='Enter at least one amount (Cash, Card, MyFatoorah, Fawri+/Benefit or Credit).'; msg.className='msg error'; return; }
   const p = new URLSearchParams({ action: SL.editId ? 'editSale' : 'addSale', branch, kind:'invoiced', date: document.getElementById('slDate').value,
-    cash: slNum('slCash'), card: slNum('slCard'), myfatoorah: slNum('slMf'), credit: slNum('slCredit'),
+    cash: slNum('slCash'), card: slNum('slCard'), myfatoorah: slNum('slMf'), benefit: slNum('slBn'), credit: slNum('slCredit'),
     channel: document.getElementById('slChannel').value, ref: document.getElementById('slRef').value.trim(), notes: document.getElementById('slNotes').value.trim(), enteredBy: by });
   if(SL.editId) p.set('id', SL.editId);
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -1497,8 +1498,8 @@ document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
 });
 
 function slTotals(list){
-  const t = { cash:0, card:0, mf:0, credit:0, inv:0 };
-  list.forEach(r=>{ t.cash+=r.cash; t.card+=r.card; t.mf+=r.myfatoorah; t.credit+=r.credit; t.inv+=r.amount; });
+  const t = { cash:0, card:0, mf:0, bn:0, credit:0, inv:0 };
+  list.forEach(r=>{ t.cash+=r.cash; t.card+=r.card; t.mf+=r.myfatoorah; t.bn+=(r.benefit||0); t.credit+=r.credit; t.inv+=r.amount; });
   return t;
 }
 function slFiltered(){ const k=document.getElementById('slFKind').value; return SL.rows.filter(r=>!k || r.channel===k); }
@@ -1506,11 +1507,11 @@ function slChTag(r){ return r.channel ? `<span class="sl-tag${r.channel==='whats
 function slRender(){
   const list = slFiltered(), t = slTotals(list), hist = document.getElementById('slHistory');
   document.getElementById('slSum').innerHTML =
-    `<div>💵 Cash<b>${fmtBD(t.cash)}</b></div><div>💳 Card<b>${fmtBD(t.card)}</b></div><div>🌐 MyFatoorah<b>${fmtBD(t.mf)}</b></div><div>📒 Credit<b>${fmtBD(t.credit)}</b></div>` +
+    `<div>💵 Cash<b>${fmtBD(t.cash)}</b></div><div>💳 Card<b>${fmtBD(t.card)}</b></div><div>🌐 MyFatoorah<b>${fmtBD(t.mf)}</b></div><div>📲 Fawri+/Benefit<b>${fmtBD(t.bn)}</b></div><div>📒 Credit<b>${fmtBD(t.credit)}</b></div>` +
     `<div class="t">Total sales<b>${fmtBD(t.inv)}</b></div>`;
   const td = slToday(), tt = slTotals(SL.rows.filter(r=>r.date===td));
   document.getElementById('slHeadAmt').textContent = fmtBD(tt.inv);
-  document.getElementById('slHeadLine').textContent = `Cash ${tt.cash.toFixed(3)} · Card ${tt.card.toFixed(3)} · MyFatoorah ${tt.mf.toFixed(3)} · Credit ${tt.credit.toFixed(3)}`;
+  document.getElementById('slHeadLine').textContent = `Cash ${tt.cash.toFixed(3)} · Card ${tt.card.toFixed(3)} · MyFatoorah ${tt.mf.toFixed(3)} · Benefit ${tt.bn.toFixed(3)} · Credit ${tt.credit.toFixed(3)}`;
   if(!list.length){ hist.innerHTML = '<div class="empty">No sales saved for these dates.</div>'; return; }
   const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
   hist.innerHTML = Object.keys(days).sort().reverse().map(d=>{
@@ -1518,7 +1519,7 @@ function slRender(){
     return `<div class="sl-day"><h4><span>${fmtDate(d)}</span><span>Total ${fmtBD(dt.inv)}</span></h4>` +
       days[d].map(r=>`<div class="txn-row"><div>
         <div class="txn-main">${slChTag(r)}${fmtBD(r.amount)}${r.kind==='payment'?' <small>(customer cash)</small>':''}</div>
-        <div class="txn-date">Cash ${r.cash.toFixed(3)} · Card ${r.card.toFixed(3)} · MyFatoorah ${r.myfatoorah.toFixed(3)} · Credit ${r.credit.toFixed(3)}${r.ref?' · '+esc(r.ref):''}${r.notes?' · '+esc(r.notes):''}<br>${esc(r.branch)} · ${esc(r.enteredBy)||'—'}</div>
+        <div class="txn-date">Cash ${r.cash.toFixed(3)} · Card ${r.card.toFixed(3)} · MyFatoorah ${r.myfatoorah.toFixed(3)} · Benefit ${(r.benefit||0).toFixed(3)} · Credit ${r.credit.toFixed(3)}${r.ref?' · '+esc(r.ref):''}${r.notes?' · '+esc(r.notes):''}<br>${esc(r.branch)} · ${esc(r.enteredBy)||'—'}</div>
       </div><div style="display:flex;gap:6px;align-items:center;">
         ${isAdminUser() ? `<button class="edit-btn" data-sid="${r.id}" title="Edit (Admin)">✏️</button><button class="delete-btn" data-sid="${r.id}" title="Delete (Admin)">🗑️</button>` : ''}
       </div></div>`).join('') + '</div>';
@@ -1532,7 +1533,7 @@ function slEdit(id){
   const v = n => n ? n.toFixed(3) : '';
   document.getElementById('slDate').value = r.date;
   document.getElementById('slCash').value = v(r.cash); document.getElementById('slCard').value = v(r.card);
-  document.getElementById('slMf').value = v(r.myfatoorah); document.getElementById('slCredit').value = v(r.credit);
+  document.getElementById('slMf').value = v(r.myfatoorah); document.getElementById('slBn').value = v(r.benefit); document.getElementById('slCredit').value = v(r.credit);
   document.getElementById('slChannel').value = r.channel || ''; document.getElementById('slRef').value = r.ref; document.getElementById('slNotes').value = r.notes;
   document.getElementById('slBy').value = r.enteredBy;
   document.getElementById('slEditBar').style.display='block'; document.getElementById('slFormTitle').textContent='✏️ Edit Sales';
@@ -1550,7 +1551,7 @@ async function loadSales(){
   try{
     const d = await slCall(new URLSearchParams({ action:'getSales', branch: document.getElementById('branchSelect').value, from: document.getElementById('slFrom').value, to: document.getElementById('slTo').value }), false);
     if(d.error) throw new Error(d.error);
-    SL.rows = (d.sales||[]).map(r=>Object.assign(r, { cash:+r.cash||0, card:+r.card||0, myfatoorah:+r.myfatoorah||0, credit:+r.credit||0, amount:+r.amount||0 }));
+    SL.rows = (d.sales||[]).map(r=>Object.assign(r, { cash:+r.cash||0, card:+r.card||0, myfatoorah:+r.myfatoorah||0, benefit:+r.benefit||0, credit:+r.credit||0, amount:+r.amount||0 }));
     slRender();
   }catch(e){ hist.innerHTML = '<div class="empty">Could not load — ' + esc(e.message && e.message.length < 90 ? e.message : 'check your connection.') + '</div>'; }
 }
@@ -1633,19 +1634,19 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   const days = slDays(list, pc), oneBranch = document.getElementById('branchSelect').value !== 'All';
   const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
     const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
-    return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
+    return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.bn)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales, Cash Count &amp; Petty Cash</h2>
     <p>${esc(document.getElementById('branchSelect').value)} · ${slPeriodText(days)}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
     ` +
     (list.length ? `<h3>Sales</h3><table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
-      <tbody>${list.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
-      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Fawri+/Benefit</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
+      <tbody>${list.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${(r.benefit||0).toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.bn.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
     slCashCountHtml(th) +
     slPettyDayHtml(pc, days, th) +
     (list.length ? `<table style="margin:16px 0 0 auto;font-size:13px;border-collapse:collapse;">
-      <tr><td style="padding:2px 14px 2px 0;">Total sales (Cash + Card + MyFatoorah + Credit)</td><td ${th}><b>${t.inv.toFixed(3)} BD</b></td></tr>
+      <tr><td style="padding:2px 14px 2px 0;">Total sales (Cash + Card + MyFatoorah + Fawri+/Benefit + Credit)</td><td ${th}><b>${t.inv.toFixed(3)} BD</b></td></tr>
       <tr><td style="padding:2px 14px 2px 0;">· of which Cash</td><td ${th}>${t.cash.toFixed(3)} BD</td></tr>
     </table>` : '') +
     `<p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(slToday())}${list.length ? ' · ' + list.length + ' sales entries' : ''}</p>`;
@@ -1659,18 +1660,18 @@ document.getElementById('slExcelBtn').addEventListener('click', async ()=>{
   if(!list.length && !pc.length){ alert('Nothing to export for these dates.'); return; }
   const t = slTotals(list), pcT = Math.round(pc.reduce((s,x)=>s+Number(x.amount||0),0)*1000)/1000, br = document.getElementById('branchSelect').value, f3 = '#,##0.000';
   const saved = r => r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB',{timeZone:'Asia/Bahrain'}) : '';
-  const sales = [['Lalabella — Sales'],[br + ' · ' + slRangeText()],[],['Date','Branch','Source','Cash','Card','MyFatoorah','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
-    .concat(list.map(r=>[r.date,r.branch,r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):'',r.cash,r.card,r.myfatoorah,r.credit,r.amount,r.ref,r.notes,r.enteredBy,saved(r)]))
-    .concat([[],['TOTAL SALES','','',t.cash,t.card,t.mf,t.credit,t.inv]]);
+  const sales = [['Lalabella — Sales'],[br + ' · ' + slRangeText()],[],['Date','Branch','Source','Cash','Card','MyFatoorah','Fawri+/Benefit','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
+    .concat(list.map(r=>[r.date,r.branch,r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):'',r.cash,r.card,r.myfatoorah,r.benefit||0,r.credit,r.amount,r.ref,r.notes,r.enteredBy,saved(r)]))
+    .concat([[],['TOTAL SALES','','',t.cash,t.card,t.mf,t.bn,t.credit,t.inv]]);
   const petty = [['Lalabella — Petty cash used (separate from sales)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Purpose','Car plate','Driver','Entered by','Amount']]
     .concat(pc.map(x=>[x.date,x.branch,x.purpose,x.carPlate||'',x.driver||'',x.enteredBy||'',Number(x.amount)])).concat([[],['TOTAL PETTY CASH USED','','','','','',pcT]]);
   const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
   const pDay = {}; pc.forEach(x=>{ pDay[x.date] = (pDay[x.date]||0) + Number(x.amount||0); });
   const allDays = slDays(list, pc), oneB = br !== 'All';
-  const daily = [['Date','Cash','Card','MyFatoorah','Credit','Total sales','Petty cash used'].concat(oneB?['Petty cash left']:[])].concat(allDays.map(d=>{ const x=slTotals(days[d]||[]); return [d,x.cash,x.card,x.mf,x.credit,x.inv,Math.round((pDay[d]||0)*1000)/1000].concat(oneB?[slLeftAt(d)]:[]); })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.credit,t.inv,pcT]]);
+  const daily = [['Date','Cash','Card','MyFatoorah','Fawri+/Benefit','Credit','Total sales','Petty cash used'].concat(oneB?['Petty cash left']:[])].concat(allDays.map(d=>{ const x=slTotals(days[d]||[]); return [d,x.cash,x.card,x.mf,x.bn,x.credit,x.inv,Math.round((pDay[d]||0)*1000)/1000].concat(oneB?[slLeftAt(d)]:[]); })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.bn,t.credit,t.inv,pcT]]);
   lbExcel.save('Lalabella Sales ' + br, [
-    { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3,7:f3} },
-    { name:'Sales', rows: sales, headerRow: 4, fmt:{3:f3,4:f3,5:f3,6:f3,7:f3} },
+    { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3,7:f3,8:f3} },
+    { name:'Sales', rows: sales, headerRow: 4, fmt:{3:f3,4:f3,5:f3,6:f3,7:f3,8:f3} },
     { name:'Petty cash used', rows: petty, headerRow: 4, fmt:{6:f3} },
   ]).catch(e=>alert(e && e.message || 'Could not make the Excel file.'));
 });
