@@ -424,7 +424,7 @@
   function chkHtml(){
     if(!chk) return '<div class="row"><div class="nm" style="color:var(--dim)">Checking…</div></div>';
     const icon = { chocolate:'🍫', flower:'🌸' };
-    return rows(chk.issues, it => `<div class="row"><div class="nm">${icon[it.module] || ''} ${esc(it.item)}<div class="mt">${esc(it.branch)} · ${esc(it.issue)}</div><div class="mt" style="color:var(--dim)">→ ${esc(it.fix)} <a href="${esc(it.page)}">Open</a></div></div>
+    return rows(chk.issues, it => `<div class="row"><div class="nm">${icon[it.module] || ''} ${esc(it.item)}<div class="mt">${esc(it.branch)} · ${esc(it.issue)}</div><div class="mt" style="color:var(--dim)">→ ${esc(it.fix)} <a href="${esc(it.link || it.page)}">Open →</a></div></div>
       <div class="rt"><span class="pill ${it.level === 'bad' ? 'bad' : 'warn'}">${it.level === 'bad' ? 'Fix' : 'Check'}</span></div></div>`, 'Nothing missing 👍');
   }
   const loadData = () => fetchData(true);
