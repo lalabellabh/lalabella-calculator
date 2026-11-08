@@ -157,6 +157,10 @@
   .q-ed:hover{ color:var(--ink); border-color:var(--ink); }
   .q-row.editing{ background:rgba(200,120,140,.10); border-radius:6px; }
   .search-wrap{ position:relative; }
+  .cancel-edit{ display:none; width:100%; margin-top:8px; padding:10px 0; background:transparent; border:1px solid var(--line); border-radius:3px; color:var(--ink-dim);
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12.5px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; }
+  .cancel-edit.on{ display:block; }
+  .cancel-edit:hover{ color:var(--rust); border-color:var(--rust); }
   .search-x{ position:absolute; right:52px; top:50%; transform:translateY(-50%); width:28px; height:28px; border:0; border-radius:50%; background:rgba(200,120,140,.18); color:var(--ink); font-size:14px; line-height:1; cursor:pointer; display:none; z-index:2; }
   .search-x.on{ display:block; }
 </style>
@@ -255,6 +259,8 @@
       <button class="add-btn" id="addListBtn" title="Add this chocolate to the list, then fill the next one">+ Add to List</button>
       <button class="submit-btn" id="saveBtn">Save Opening Balance</button>
     </div>
+
+    <button type="button" class="cancel-edit" id="cancelEdit">✕ Cancel edit</button>
 
     <div class="queue" id="queueBox">
       <div class="queue-head"><span id="queueTitle">List (0)</span><button type="button" id="queueClear">Clear list</button></div>
@@ -410,7 +416,7 @@
     document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
     applyLockState();
     renderHistory();
-    editIdx = -1; document.getElementById('addListBtn').textContent = '+ Add to List';
+    editIdx = -1; document.getElementById('addListBtn').textContent = '+ Add to List'; document.getElementById('cancelEdit').classList.remove('on');
     loadQueue(); renderQueue();
   });
 
@@ -575,8 +581,10 @@
   function setEditMode(i){
     editIdx = i;
     document.getElementById('addListBtn').textContent = i >= 0 ? '✓ Update in List' : '+ Add to List';
+    document.getElementById('cancelEdit').classList.toggle('on', i >= 0);
     renderQueue();
   }
+  document.getElementById('cancelEdit').addEventListener('click', () => { setEditMode(-1); clearForm(); });
   function fillForm(q){
     document.getElementById('fSearch').value = q.chocolateName || '';
     if(q.category && !categories.includes(q.category)){ categories.push(q.category); populateCategoryDropdown(); }
