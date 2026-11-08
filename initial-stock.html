@@ -141,7 +141,9 @@
   .add-btn:disabled{ opacity:.5; cursor:not-allowed; }
   .queue{ margin-top:16px; border:1px solid var(--line); border-radius:6px; padding:10px 12px; display:none; }
   .queue.show{ display:block; }
-  #queueList{ max-height:300px; overflow-y:auto; overscroll-behavior:contain; padding-right:4px; }
+  #queueList{ max-height:calc(55vh / var(--lb-zoom,1)); overflow-y:auto; overscroll-behavior:contain; padding-right:6px; scrollbar-width:thin; scrollbar-color:rgba(160,70,95,.55) transparent; }
+  #queueList::-webkit-scrollbar{ width:7px; } #queueList::-webkit-scrollbar-thumb{ background:rgba(160,70,95,.55); border-radius:6px; }
+  .queue.side{ margin:0 0 18px; }
   .queue-head{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:13px; margin-bottom:6px; }
   .queue-head button{ background:none; border:none; color:var(--ink-dim); font-size:11.5px; cursor:pointer; text-decoration:underline; }
   .q-row{ display:flex; align-items:center; gap:8px; border-top:1px solid var(--line); padding:8px 0; font-size:12.5px; }
@@ -263,10 +265,6 @@
 
     <button type="button" class="cancel-edit" id="cancelEdit">✕ Cancel edit</button>
 
-    <div class="queue" id="queueBox">
-      <div class="queue-head"><span id="queueTitle">List (0)</span><button type="button" id="queueClear">Clear list</button></div>
-      <div id="queueList"></div>
-    </div>
 
     <div class="lock-actions">
       <button class="lock-btn lock" id="lockBtn">Lock This Branch</button>
@@ -275,6 +273,10 @@
   </div>
 
   <div class="card">
+    <div class="queue side" id="queueBox">
+      <div class="queue-head"><span id="queueTitle">List (0)</span><button type="button" id="queueClear">Clear list</button></div>
+      <div id="queueList"></div>
+    </div>
     <div class="card-title">Opening Balances Logged (This Branch)</div>
     <div id="historyList"></div>
   </div>
