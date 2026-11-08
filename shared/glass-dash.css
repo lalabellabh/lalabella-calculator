@@ -86,7 +86,7 @@ html,body{ margin:0; padding:0; }
   #app .ph{ display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
   #app .ph h2{ margin:0; font:600 15px 'Fraunces',serif; }
   #app .ph .cnt{ font:700 11px 'Space Mono',monospace; color:var(--gold); background:var(--chip); padding:2px 8px; border-radius:10px; }
-  #app .tabs{ display:flex; gap:4px; background:var(--chip); padding:3px; border-radius:11px; }
+  #app .tabs{ display:flex; flex-wrap:wrap; gap:4px; background:var(--chip); padding:3px; border-radius:11px; }
   #app .tabs button{
     border:0; background:transparent; color:var(--dim); font:600 11px 'Space Grotesk',sans-serif;
     padding:6px 10px; border-radius:8px; cursor:pointer; white-space:nowrap;
