@@ -155,6 +155,7 @@
   .q-x:hover{ color:var(--rust); border-color:var(--rust); }
   .q-ed{ background:none; border:1px solid var(--line); border-radius:50%; width:26px; height:26px; cursor:pointer; color:var(--ink-dim); flex:none; font-size:13px; }
   .q-ed:hover{ color:var(--ink); border-color:var(--ink); }
+  .q-ed.on{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .q-row.editing{ background:rgba(200,120,140,.10); border-radius:6px; }
   .search-wrap{ position:relative; }
   .cancel-edit{ display:none; width:100%; margin-top:8px; padding:10px 0; background:transparent; border:1px solid var(--line); border-radius:3px; color:var(--ink-dim);
@@ -573,7 +574,7 @@
           <div class="q-meta">${q.qty} ${esc(q.unit)} · ${Number(q.price||0).toFixed(3)} BD/kg${q.batch ? ' · Batch ' + esc(q.batch) : ''}${q.expiryDate ? ' · Exp ' + esc(fmtDate(q.expiryDate)) : ''}${q.storageLocation ? ' · ' + esc(q.storageLocation) : ''}</div>
         </div>
         <span class="q-st ${q.st === 'ok' ? 'ok' : q.st === 'err' ? 'bad' : ''}">${q.st === 'ok' ? '✓ Saved' : q.st === 'err' ? '✕ ' + esc(q.msg || 'Not saved') : q.st === 'saving' ? 'Saving…' : ''}</span>
-        ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-ed" data-e="${i}" title="Edit">✎</button><button class="q-x" data-i="${i}" title="Remove">✕</button>`}
+        ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-ed${i === editIdx ? ' on' : ''}" data-e="${i}" title="${i === editIdx ? 'Tap again to stop editing' : 'Edit'}">✎</button><button class="q-x" data-i="${i}" title="Remove">✕</button>`}
       </div>`).join('');
     document.getElementById('saveBtn').textContent = waiting ? `Save All (${waiting})` : 'Save Opening Balance';
   }
@@ -604,7 +605,8 @@
   }
   document.getElementById('queueList').addEventListener('click', e => {
     const ed = e.target.closest('.q-ed');
-    if(ed){ const i = Number(ed.dataset.e); fillForm(queue[i]); setEditMode(i); return; }
+    if(ed){ const i = Number(ed.dataset.e); if(i === editIdx){ setEditMode(-1); clearForm(); return; }   // tap ✎ again = stop editing, the item stays in the list as it was
+      fillForm(queue[i]); setEditMode(i); return; }
     const b = e.target.closest('.q-x'); if(!b) return;
     const i = Number(b.dataset.i);
     queue.splice(i, 1); if(editIdx === i){ editIdx = -1; clearForm(); } else if(editIdx > i) editIdx--;
