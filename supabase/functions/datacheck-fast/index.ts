@@ -3,6 +3,7 @@
 //   Chocolate (batches with stock): expired, no expiry date, no "entered by", no price, a piece price that looks like a per-kg price,
 //                                   Initial Stock entered but the branch not locked yet, receiving at a branch with no Initial Stock.
 //   Flower: a branch with receiving but no Flower Stock Count yet; receiving lines (last 30 days) without "received by" or with rate 0.
+// v3: Initial Stock rows open the Initial Stock page (its own Edit), receiving rows open Chocolate Receiving.
 // v2: every issue has `link` = the page + ?branch= (+ &edit=<entry ID>&field=<input>) so 'Open' lands on the entry to fix.
 // Read-only. Any logged-in user. action 'check' (branch optional, 'All' = every branch) -> { success, issues: [{level, module, branch, item, issue, fix, page}] }
 
@@ -58,16 +59,18 @@ async function check(branchSel: string) {
 
   // ---- chocolate batches ----
   for (const b of choc) {
-    const it = b.chocolate_name + (b.batch_no ? ` · ${b.batch_no}` : ''), piece = /piece|pc/i.test(String(b.unit || '')), eid = String(b.legacy_id || b.id);
-    if (!b.expiry_date) add('warn', 'chocolate', b.branch, it, 'No expiry date', 'Add the expiry date.', 'chocolate-receiving.html', eid, 'eExpiryDate');
-    else if (Number(String(b.expiry_date).slice(0, 4)) < 2020 || Number(String(b.expiry_date).slice(0, 4)) > 2100) add('bad', 'chocolate', b.branch, it, `Expiry date looks wrong: ${dmy(b.expiry_date)} (year ${String(b.expiry_date).slice(0, 4)})`, 'Fix the year of the expiry date (e.g. 2027).', 'chocolate-receiving.html', eid, 'eExpiryDate');
+    const init = String(b.delivery_note_no || '') === 'INITIAL STOCK';   // opening balance: fixed on the Initial Stock page
+    const it = b.chocolate_name + (init ? ' · Initial Stock' : '') + (b.batch_no ? ` · ${b.batch_no}` : ''), piece = /piece|pc/i.test(String(b.unit || '')), eid = String(b.legacy_id || b.id);
+    const PG = init ? 'initial-stock.html' : 'chocolate-receiving.html', F = (f: string) => init ? ({ eExpiryDate: 'iExpiry', eReceivedBy: 'iBy', ePrice: 'iPrice' } as Record<string, string>)[f] : f;
+    if (!b.expiry_date) add('warn', 'chocolate', b.branch, it, 'No expiry date', 'Add the expiry date.', PG, eid, F('eExpiryDate'));
+    else if (Number(String(b.expiry_date).slice(0, 4)) < 2020 || Number(String(b.expiry_date).slice(0, 4)) > 2100) add('bad', 'chocolate', b.branch, it, `Expiry date looks wrong: ${dmy(b.expiry_date)} (year ${String(b.expiry_date).slice(0, 4)})`, 'Fix the year of the expiry date (e.g. 2027).', PG, eid, F('eExpiryDate'));
     else if (String(b.expiry_date).slice(0, 10) < today) add('bad', 'chocolate', b.branch, it, `Expired ${dmy(b.expiry_date)} — still ${Number(b.current_stock)} ${b.unit || ''} in stock`, 'Release it as waste / expired, or fix the date.', 'chocolate-release.html');
-    if (!String(b.created_by || '').trim()) add('warn', 'chocolate', b.branch, it, 'No "Entered by" name', 'Add who entered it.', 'chocolate-receiving.html', eid, 'eReceivedBy');
+    if (!String(b.created_by || '').trim()) add('warn', 'chocolate', b.branch, it, 'No "Entered by" name', 'Add who entered it.', PG, eid, F('eReceivedBy'));
     const ppk = Number(b.price_per_kg) || 0, ppp = Number(b.price_per_piece) || 0, w = Number(b.weight_per_piece) || 0;
-    if (piece ? !ppp && !ppk : !ppk) add('warn', 'chocolate', b.branch, it, piece ? 'No price per piece' : 'No price per kg', 'Add the price so the stock value is right.', 'chocolate-receiving.html', eid, 'ePrice');
+    if (piece ? !ppp && !ppk : !ppk) add('warn', 'chocolate', b.branch, it, piece ? 'No price per piece' : 'No price per kg', 'Add the price so the stock value is right.', PG, eid, F('ePrice'));
     if (piece && ppp && w) {
       const perKg = ppp * 1000 / w, s = std[b.chocolate_name] || 0;
-      if (perKg > Math.max(150, s * 3)) add('bad', 'chocolate', b.branch, it, `Price per piece ${ppp.toFixed(3)} BD for a ${w} g piece = ${Math.round(perKg)} BD/kg — looks like the per-kg price was typed as the piece price`, `Per piece should be about ${s ? (s * w / 1000).toFixed(3) : '?'} BD (or change the unit to Kg).`, 'chocolate-receiving.html', eid, 'ePrice');
+      if (perKg > Math.max(150, s * 3)) add('bad', 'chocolate', b.branch, it, `Price per piece ${ppp.toFixed(3)} BD for a ${w} g piece = ${Math.round(perKg)} BD/kg — looks like the per-kg price was typed as the piece price`, `Per piece should be about ${s ? (s * w / 1000).toFixed(3) : '?'} BD (or change the unit to Kg).`, PG, eid, F('ePrice'));
     }
   }
   // Initial Stock entered but not locked / chocolate receiving without Initial Stock
