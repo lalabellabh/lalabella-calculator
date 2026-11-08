@@ -134,6 +134,24 @@
   .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
   .hist-remarks{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; font-style:italic; }
   .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
+  .btn-row{ display:flex; gap:8px; margin-top:18px; }
+  .btn-row .submit-btn{ margin-top:0; flex:1; }
+  .add-btn{ flex:1; padding:14px 0; background:transparent; color:var(--ink); border:1px dashed var(--ink); border-radius:3px;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; }
+  .add-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .queue{ margin-top:16px; border:1px solid var(--line); border-radius:6px; padding:10px 12px; display:none; }
+  .queue.show{ display:block; }
+  .queue-head{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:13px; margin-bottom:6px; }
+  .queue-head button{ background:none; border:none; color:var(--ink-dim); font-size:11.5px; cursor:pointer; text-decoration:underline; }
+  .q-row{ display:flex; align-items:center; gap:8px; border-top:1px solid var(--line); padding:8px 0; font-size:12.5px; }
+  .q-row:first-of-type{ border-top:none; }
+  .q-row .q-main{ flex:1; min-width:0; }
+  .q-row .q-name{ font-weight:600; }
+  .q-row .q-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:2px; }
+  .q-row .q-st{ font-size:11px; color:var(--ink-dim); white-space:nowrap; }
+  .q-row .q-st.ok{ color:var(--ok); } .q-row .q-st.bad{ color:var(--rust); }
+  .q-x{ background:none; border:1px solid var(--line); border-radius:50%; width:26px; height:26px; cursor:pointer; color:var(--ink-dim); flex:none; }
+  .q-x:hover{ color:var(--rust); border-color:var(--rust); }
 </style>
 
 <meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
@@ -226,7 +244,15 @@
     <input type="text" id="fEnteredBy" list="enteredByList" placeholder="Type or pick a name" autocomplete="off" />
     <datalist id="enteredByList"></datalist>
 
-    <button class="submit-btn" id="saveBtn">Save Opening Balance</button>
+    <div class="btn-row">
+      <button class="add-btn" id="addListBtn" title="Add this chocolate to the list, then fill the next one">+ Add to List</button>
+      <button class="submit-btn" id="saveBtn">Save Opening Balance</button>
+    </div>
+
+    <div class="queue" id="queueBox">
+      <div class="queue-head"><span id="queueTitle">List (0)</span><button type="button" id="queueClear">Clear list</button></div>
+      <div id="queueList"></div>
+    </div>
 
     <div class="lock-actions">
       <button class="lock-btn lock" id="lockBtn">Lock This Branch</button>
@@ -320,6 +346,7 @@
     document.getElementById('lockBtn').style.display = locked ? 'none' : 'block';
     document.getElementById('unlockBtn').style.display = locked ? 'block' : 'none';
     document.getElementById('saveBtn').disabled = locked;
+    document.getElementById('addListBtn').disabled = locked;
     ['fSearch','fCategory','fInternalCode','fBatch','fExpiryDate','fQty','fUnit','fPrice','fStorageLocation','fEnteredBy'].forEach(id=>{
       document.getElementById(id).disabled = locked;
     });
@@ -376,6 +403,7 @@
     document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
     applyLockState();
     renderHistory();
+    loadQueue(); renderQueue();
   });
 
   let _ht = null;
@@ -445,88 +473,133 @@
     }catch(e){ alert('Could not unlock this branch. Check your connection.'); }
   });
 
+  // ---------- form -> one entry ----------
+  function readForm(){
+    const categorySel = document.getElementById('fCategory').value;
+    const o = {
+      chocolateName: document.getElementById('fSearch').value.trim(),
+      category: (categorySel === '__add_new__') ? document.getElementById('fNewCategory').value.trim() : categorySel,
+      internalCode: document.getElementById('fInternalCode').value.trim(),
+      batch: document.getElementById('fBatch').value.trim(),
+      expiryDate: document.getElementById('fExpiryDate').value,
+      qty: parseFloat(document.getElementById('fQty').value),
+      unit: document.getElementById('fUnit').value,
+      price: parseFloat(document.getElementById('fPrice').value),
+      storageLocation: document.getElementById('fStorageLocation').value,
+      enteredBy: document.getElementById('fEnteredBy').value.trim()
+    };
+    if(!o.chocolateName || isNaN(o.qty) || o.qty <= 0){ alert('Chocolate name and a valid quantity are required.'); return null; }
+    if(isNaN(o.price)) o.price = 0;
+    return o;
+  }
+  function clearForm(){   // keeps Unit, Storage Location and Entered By for the next chocolate
+    ['fSearch','fNewCategory','fInternalCode','fBatch','fExpiryDate','fQty','fPrice'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('fCategory').value = '';
+    document.getElementById('newCategoryRow').style.display = 'none';
+    populateItemList(null);
+    document.getElementById('fSearch').focus();
+  }
+  // saves one entry; returns true when saved
+  async function saveOne(o, askDup){
+    const entryDateForBatch = new Date().toISOString().slice(0,10);
+    let batch = o.batch || generateInitBatchNo(currentBranch, entryDateForBatch);
+    if(o.batch){
+      try{
+        const dupRes = await (await fetch(`${API_URL}?action=checkDuplicateBatch&chocolateName=${encodeURIComponent(o.chocolateName)}&batch=${encodeURIComponent(batch)}&branch=${currentBranch}`)).json();
+        if(dupRes.exists){
+          if(!askDup) throw new Error('batch already saved');
+          if(!confirm(`${o.chocolateName} with batch "${batch}" already has a record for ${currentBranch}. Save anyway?`)) return false;
+        }
+      }catch(e){ if(e && e.message === 'batch already saved') throw e; /* if the check fails, continue anyway */ }
+    }
+    const params = new URLSearchParams({
+      action: 'addInitialStock', branch: currentBranch,
+      chocolateName: o.chocolateName, category: o.category, internalCode: o.internalCode, batch, expiryDate: o.expiryDate,
+      qty: o.qty, unit: o.unit, price: o.price, storageLocation: o.storageLocation,
+      enteredBy: o.enteredBy, entryDate: entryDateForBatch
+    });
+    const res = await fetch(`${API_URL}?${params.toString()}`);
+    const data = await res.json();
+    if(!res.ok || (data && data.error)) throw new Error((data && data.error) || 'save failed');
+    entries.push({
+      ID: data.id, 'Receive Date': entryDateForBatch, 'Delivery Note No': 'INITIAL STOCK',
+      'Chocolate Name': o.chocolateName, 'Batch No.': batch,
+      'Qty Received': o.qty, Unit: o.unit, 'Price / Kg': o.price, Branch: currentBranch, 'Created By': o.enteredBy
+    });
+    if(o.enteredBy && !enteredByNames.includes(o.enteredBy)){
+      enteredByNames.push(o.enteredBy);
+      document.getElementById('enteredByList').innerHTML = enteredByNames.map(n => `<option value="${n}"></option>`).join('');
+      fetch(`${API_URL}?action=addReceivedBy&name=${encodeURIComponent(o.enteredBy)}`).catch(()=>{});
+    }
+    if(o.category && !categories.includes(o.category)){ categories.push(o.category); populateCategoryDropdown(); }
+    return true;
+  }
+
+  // ---------- list (add many, save all at once) ----------
+  const QKEY = () => 'lbInitQueue:' + currentBranch;
+  let queue = [];
+  function loadQueue(){ try{ queue = JSON.parse(localStorage.getItem(QKEY()) || '[]') || []; }catch(e){ queue = []; } }
+  function keepQueue(){ try{ localStorage.setItem(QKEY(), JSON.stringify(queue.filter(q => q.st !== 'ok'))); }catch(e){} }
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function renderQueue(){
+    const box = document.getElementById('queueBox'), waiting = queue.filter(q => q.st !== 'ok').length;
+    box.classList.toggle('show', queue.length > 0);
+    document.getElementById('queueTitle').textContent = 'List (' + queue.length + ')';
+    document.getElementById('queueList').innerHTML = queue.map((q, i) => `
+      <div class="q-row">
+        <div class="q-main">
+          <div class="q-name">${esc(q.chocolateName)}</div>
+          <div class="q-meta">${q.qty} ${esc(q.unit)} · ${Number(q.price||0).toFixed(3)} BD/kg${q.batch ? ' · Batch ' + esc(q.batch) : ''}${q.expiryDate ? ' · Exp ' + esc(fmtDate(q.expiryDate)) : ''}${q.storageLocation ? ' · ' + esc(q.storageLocation) : ''}</div>
+        </div>
+        <span class="q-st ${q.st === 'ok' ? 'ok' : q.st === 'err' ? 'bad' : ''}">${q.st === 'ok' ? '✓ Saved' : q.st === 'err' ? '✕ ' + esc(q.msg || 'Not saved') : q.st === 'saving' ? 'Saving…' : ''}</span>
+        ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-x" data-i="${i}" title="Remove">✕</button>`}
+      </div>`).join('');
+    document.getElementById('saveBtn').textContent = waiting ? `Save All (${waiting})` : 'Save Opening Balance';
+  }
+  document.getElementById('queueList').addEventListener('click', e => {
+    const b = e.target.closest('.q-x'); if(!b) return;
+    queue.splice(Number(b.dataset.i), 1); keepQueue(); renderQueue();
+  });
+  document.getElementById('queueClear').addEventListener('click', () => {
+    if(queue.some(q => q.st !== 'ok') && !confirm('Remove all chocolates from the list?')) return;
+    queue = []; keepQueue(); renderQueue();
+  });
+  document.getElementById('addListBtn').addEventListener('click', () => {
+    if(lockStatus[currentBranch]) return;
+    const o = readForm(); if(!o) return;
+    queue = queue.filter(q => q.st !== 'ok');   // saved rows leave the list once you start a new one
+    queue.push(o); keepQueue(); renderQueue(); clearForm();
+  });
+
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     if(lockStatus[currentBranch]) return;
-
-    const chocolateName = document.getElementById('fSearch').value.trim();
-    const categorySel = document.getElementById('fCategory').value;
-    const category = (categorySel === '__add_new__')
-      ? document.getElementById('fNewCategory').value.trim()
-      : categorySel;
-    const internalCode = document.getElementById('fInternalCode').value.trim();
-    let batch = document.getElementById('fBatch').value.trim();
-    const expiryDate = document.getElementById('fExpiryDate').value;
-    const qty = parseFloat(document.getElementById('fQty').value);
-    const unit = document.getElementById('fUnit').value;
-    const price = parseFloat(document.getElementById('fPrice').value);
-    const storageLocation = document.getElementById('fStorageLocation').value;
-    const enteredBy = document.getElementById('fEnteredBy').value.trim();
-
-    if(!chocolateName || isNaN(qty) || qty <= 0){
-      alert('Chocolate name and a valid quantity are required.');
+    const saveBtn = document.getElementById('saveBtn');
+    const todo = queue.filter(q => q.st !== 'ok');
+    // the form is filled too: add it to the list first so nothing is lost
+    if(todo.length && document.getElementById('fSearch').value.trim()){
+      const o = readForm(); if(!o) return; queue.push(o); todo.push(o); clearForm();
+    }
+    if(!todo.length){   // single entry, as before
+      const o = readForm(); if(!o) return;
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+      try{ if(await saveOne(o, true)){ clearForm(); renderHistory(); } }
+      catch(e){ alert('Could not save this entry. Check your connection and try again.'); }
+      saveBtn.disabled = false; renderQueue();
       return;
     }
-
-    const entryDateForBatch = new Date().toISOString().slice(0,10);
-    if(!batch) batch = generateInitBatchNo(currentBranch, entryDateForBatch);
-
-    if(batch){
-      try{
-        const dupRes = await (await fetch(`${API_URL}?action=checkDuplicateBatch&chocolateName=${encodeURIComponent(chocolateName)}&batch=${encodeURIComponent(batch)}&branch=${currentBranch}`)).json();
-        if(dupRes.exists){
-          if(!confirm(`${chocolateName} with batch "${batch}" already has a record for ${currentBranch}. Save anyway?`)) return;
-        }
-      }catch(e){ /* if the check fails, continue anyway */ }
+    if(!confirm(`Save ${todo.length} opening balance(s) for ${currentBranch}?`)) return;
+    saveBtn.disabled = true; document.getElementById('addListBtn').disabled = true;
+    let ok = 0, bad = 0;
+    for(const q of todo){
+      q.st = 'saving'; renderQueue(); saveBtn.textContent = `Saving ${ok + bad + 1} of ${todo.length}...`;
+      try{ await saveOne(q, false); q.st = 'ok'; ok++; }
+      catch(e){ q.st = 'err'; q.msg = (e && e.message === 'batch already saved') ? 'Batch already saved' : 'Not saved'; bad++; }
+      keepQueue(); renderQueue();
     }
-
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
-
-    const params = new URLSearchParams({
-      action: 'addInitialStock',
-      branch: currentBranch,
-      chocolateName, category, internalCode, batch, expiryDate,
-      qty, unit, price: isNaN(price) ? 0 : price, storageLocation,
-      enteredBy, entryDate: entryDateForBatch
-    });
-
-    try{
-      const res = await fetch(`${API_URL}?${params.toString()}`);
-      const data = await res.json();
-
-      entries.push({
-        ID: data.id, 'Receive Date': entryDateForBatch, 'Delivery Note No': 'INITIAL STOCK',
-        'Chocolate Name': chocolateName, 'Batch No.': batch,
-        'Qty Received': qty, Unit: unit, 'Price / Kg': price, Branch: currentBranch,
-        'Created By': enteredBy
-      });
-
-      if(enteredBy && !enteredByNames.includes(enteredBy)){
-        enteredByNames.push(enteredBy);
-        document.getElementById('enteredByList').innerHTML =
-          enteredByNames.map(n => `<option value="${n}"></option>`).join('');
-        fetch(`${API_URL}?action=addReceivedBy&name=${encodeURIComponent(enteredBy)}`).catch(()=>{});
-      }
-      if(category && !categories.includes(category)){
-        categories.push(category);
-        populateCategoryDropdown();
-      }
-
-      document.getElementById('fSearch').value = '';
-      document.getElementById('fCategory').value = '';
-      document.getElementById('fNewCategory').value = '';
-      document.getElementById('newCategoryRow').style.display = 'none';
-      document.getElementById('fInternalCode').value = '';
-      document.getElementById('fBatch').value = '';
-      document.getElementById('fExpiryDate').value = '';
-      document.getElementById('fQty').value = '';
-      document.getElementById('fPrice').value = '';
-
-      renderHistory();
-    }catch(e){
-      alert('Could not save this entry. Check your connection and try again.');
-    }
-    saveBtn.disabled = false; saveBtn.textContent = 'Save Opening Balance';
+    renderHistory();
+    saveBtn.disabled = false; document.getElementById('addListBtn').disabled = lockStatus[currentBranch];
+    renderQueue();
+    alert(bad ? `${ok} saved, ${bad} not saved (still in the list, press Save All to try again).` : `${ok} saved.`);
   });
 
   document.getElementById('refreshBtn').addEventListener('click', async ()=>{
@@ -536,6 +609,7 @@
     btn.textContent = '↻ Refresh Data';
   });
 
+  loadQueue(); renderQueue();
   loadData();
 </script>
 
