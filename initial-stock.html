@@ -152,6 +152,12 @@
   .q-row .q-st.ok{ color:var(--ok); } .q-row .q-st.bad{ color:var(--rust); }
   .q-x{ background:none; border:1px solid var(--line); border-radius:50%; width:26px; height:26px; cursor:pointer; color:var(--ink-dim); flex:none; }
   .q-x:hover{ color:var(--rust); border-color:var(--rust); }
+  .q-ed{ background:none; border:1px solid var(--line); border-radius:50%; width:26px; height:26px; cursor:pointer; color:var(--ink-dim); flex:none; font-size:13px; }
+  .q-ed:hover{ color:var(--ink); border-color:var(--ink); }
+  .q-row.editing{ background:rgba(200,120,140,.10); border-radius:6px; }
+  .search-wrap{ position:relative; }
+  .search-x{ position:absolute; right:52px; top:50%; transform:translateY(-50%); width:28px; height:28px; border:0; border-radius:50%; background:rgba(200,120,140,.18); color:var(--ink); font-size:14px; line-height:1; cursor:pointer; display:none; z-index:2; }
+  .search-x.on{ display:block; }
 </style>
 
 <meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
@@ -187,7 +193,7 @@
     <div class="card-title">Opening Balance Entry</div>
 
     <label>Chocolate Name</label>
-    <input type="text" id="fSearch" list="itemList" placeholder="Type or pick a chocolate" autocomplete="off" />
+    <div class="search-wrap"><input type="text" id="fSearch" list="itemList" placeholder="Type or pick a chocolate" autocomplete="off" /><button type="button" class="search-x" id="searchClear" aria-label="Clear" title="Clear">✕</button></div>
     <datalist id="itemList"></datalist>
 
     <div class="grid-2">
@@ -403,6 +409,7 @@
     document.querySelectorAll('.branch-tab').forEach(b => b.classList.toggle('active', b === btn));
     applyLockState();
     renderHistory();
+    editIdx = -1; document.getElementById('addListBtn').textContent = '+ Add to List';
     loadQueue(); renderQueue();
   });
 
@@ -497,8 +504,15 @@
     document.getElementById('fCategory').value = '';
     document.getElementById('newCategoryRow').style.display = 'none';
     populateItemList(null);
+    document.getElementById('searchClear').classList.remove('on');
     document.getElementById('fSearch').focus();
   }
+  document.getElementById('fSearch').addEventListener('input', function(){ document.getElementById('searchClear').classList.toggle('on', !!this.value); });
+  document.getElementById('searchClear').addEventListener('click', () => {
+    const f = document.getElementById('fSearch'); f.value = '';
+    document.getElementById('searchClear').classList.remove('on');
+    f.dispatchEvent(new Event('input')); f.focus();
+  });
   // saves one entry; returns true when saved
   async function saveOne(o, askDup){
     const entryDateForBatch = new Date().toISOString().slice(0,10);
@@ -546,27 +560,55 @@
     box.classList.toggle('show', queue.length > 0);
     document.getElementById('queueTitle').textContent = 'List (' + queue.length + ')';
     document.getElementById('queueList').innerHTML = queue.map((q, i) => `
-      <div class="q-row">
+      <div class="q-row${i === editIdx ? ' editing' : ''}">
         <div class="q-main">
           <div class="q-name">${esc(q.chocolateName)}</div>
           <div class="q-meta">${q.qty} ${esc(q.unit)} · ${Number(q.price||0).toFixed(3)} BD/kg${q.batch ? ' · Batch ' + esc(q.batch) : ''}${q.expiryDate ? ' · Exp ' + esc(fmtDate(q.expiryDate)) : ''}${q.storageLocation ? ' · ' + esc(q.storageLocation) : ''}</div>
         </div>
         <span class="q-st ${q.st === 'ok' ? 'ok' : q.st === 'err' ? 'bad' : ''}">${q.st === 'ok' ? '✓ Saved' : q.st === 'err' ? '✕ ' + esc(q.msg || 'Not saved') : q.st === 'saving' ? 'Saving…' : ''}</span>
-        ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-x" data-i="${i}" title="Remove">✕</button>`}
+        ${q.st === 'ok' || q.st === 'saving' ? '' : `<button class="q-ed" data-e="${i}" title="Edit">✎</button><button class="q-x" data-i="${i}" title="Remove">✕</button>`}
       </div>`).join('');
     document.getElementById('saveBtn').textContent = waiting ? `Save All (${waiting})` : 'Save Opening Balance';
   }
+  let editIdx = -1;
+  function setEditMode(i){
+    editIdx = i;
+    document.getElementById('addListBtn').textContent = i >= 0 ? '✓ Update in List' : '+ Add to List';
+    renderQueue();
+  }
+  function fillForm(q){
+    document.getElementById('fSearch').value = q.chocolateName || '';
+    if(q.category && !categories.includes(q.category)){ categories.push(q.category); populateCategoryDropdown(); }
+    document.getElementById('fCategory').value = q.category || '';
+    document.getElementById('newCategoryRow').style.display = 'none';
+    document.getElementById('fInternalCode').value = q.internalCode || '';
+    document.getElementById('fBatch').value = q.batch || '';
+    document.getElementById('fExpiryDate').value = q.expiryDate || '';
+    document.getElementById('fQty').value = q.qty;
+    if(q.unit) document.getElementById('fUnit').value = q.unit;
+    document.getElementById('fPrice').value = q.price || '';
+    if(q.storageLocation) document.getElementById('fStorageLocation').value = q.storageLocation;
+    document.getElementById('fEnteredBy').value = q.enteredBy || '';
+    document.getElementById('fSearch').dispatchEvent(new Event('input'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('fQty').focus();
+  }
   document.getElementById('queueList').addEventListener('click', e => {
+    const ed = e.target.closest('.q-ed');
+    if(ed){ const i = Number(ed.dataset.e); fillForm(queue[i]); setEditMode(i); return; }
     const b = e.target.closest('.q-x'); if(!b) return;
-    queue.splice(Number(b.dataset.i), 1); keepQueue(); renderQueue();
+    const i = Number(b.dataset.i);
+    queue.splice(i, 1); if(editIdx === i){ editIdx = -1; clearForm(); } else if(editIdx > i) editIdx--;
+    setEditMode(editIdx); keepQueue(); renderQueue();
   });
   document.getElementById('queueClear').addEventListener('click', () => {
     if(queue.some(q => q.st !== 'ok') && !confirm('Remove all chocolates from the list?')) return;
-    queue = []; keepQueue(); renderQueue();
+    queue = []; editIdx = -1; setEditMode(-1); keepQueue(); renderQueue();
   });
   document.getElementById('addListBtn').addEventListener('click', () => {
     if(lockStatus[currentBranch]) return;
     const o = readForm(); if(!o) return;
+    if(editIdx >= 0 && queue[editIdx]){ queue[editIdx] = o; setEditMode(-1); keepQueue(); renderQueue(); clearForm(); return; }
     queue = queue.filter(q => q.st !== 'ok');   // saved rows leave the list once you start a new one
     queue.push(o); keepQueue(); renderQueue(); clearForm();
   });
@@ -574,6 +616,7 @@
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     if(lockStatus[currentBranch]) return;
     const saveBtn = document.getElementById('saveBtn');
+    if(editIdx >= 0 && queue[editIdx] && document.getElementById('fSearch').value.trim()){ const o = readForm(); if(!o) return; queue[editIdx] = o; setEditMode(-1); clearForm(); keepQueue(); }
     const todo = queue.filter(q => q.st !== 'ok');
     // the form is filled too: add it to the list first so nothing is lost
     if(todo.length && document.getElementById('fSearch').value.trim()){
