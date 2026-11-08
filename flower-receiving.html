@@ -978,6 +978,21 @@ body::after{
     });
   }
 
+
+  // "Open" from the dashboard Check list: ?edit=<ID>&field=<input id> opens that entry's Edit and highlights the field to fix
+  (function(){
+    const q = new URLSearchParams(location.search), id = q.get('edit'), field = q.get('field');
+    if(!id) return;
+    let n = 0;
+    const t = setInterval(() => {
+      const e = entries.find(x => String(x.ID) === id);
+      if(e){
+        clearInterval(t); openEditModal(e.ID);
+        const f = field && document.getElementById(field);
+        if(f) setTimeout(() => { f.scrollIntoView({ block:'center' }); f.focus(); f.style.outline = '3px solid #c0392b'; f.style.outlineOffset = '2px'; f.addEventListener('input', () => { f.style.outline = ''; }, { once:true }); }, 150);
+      } else if(++n > 60){ clearInterval(t); alert('Could not find entry ' + id + ' on this page (check the branch tab).'); }
+    }, 500);
+  })();
   let editingId = null;
   function openEditModal(id){
     const entry = entries.find(e => e.ID === id);

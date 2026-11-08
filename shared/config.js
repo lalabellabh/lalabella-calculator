@@ -180,3 +180,14 @@ window.LB_CONFIG = Object.freeze({
     return orig(input, init);
   };
 })();
+
+// "Open" from the dashboard Check list: ?branch=<name> selects that branch tab on the page (pages with .branch-tab buttons).
+(function () {
+  try {
+    var b = new URLSearchParams(location.search).get('branch'); if (!b) return;
+    var tries = 0, t = setInterval(function () {
+      var btn = document.querySelector('.branch-tab[data-branch="' + b.replace(/"/g, '') + '"], #branchTabs [data-branch="' + b.replace(/"/g, '') + '"]');
+      if (btn || ++tries > 40) { clearInterval(t); if (btn && !btn.classList.contains('active') && !btn.classList.contains('on')) btn.click(); }
+    }, 250);
+  } catch (e) {}
+})();
