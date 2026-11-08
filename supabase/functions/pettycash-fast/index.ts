@@ -1,9 +1,10 @@
 // LALABELLA PETTY CASH & CASH — FAST PATH (Supabase Edge Function)  v19
+// v20 (Nov 2026): sales_entries.benefit = Fawri+ / BenefitPay amount (part of the invoiced total, like MyFatoorah).
 // v19 (Nov 2026): sales channel = any short lowercase word (walkin, pickup, website, whatsapp, corporate, other…) so new sources need no deploy.
 // v18 (Nov 2026): sales channel can also be 'pickup' or 'website'.
 // v17 (Nov 2026): sales_entries.channel ('walkin' | 'whatsapp') saved on addSale / editSale, returned by getSales.
 // v16 (Nov 2026): SALES tab (table sales_entries, NOT part of petty cash): getSales / addSale (staff) / editSale + deleteSale (ADMIN ONLY).
-//                kind 'invoiced' = invoiced totals by Cash, Card, MyFatoorah, Credit (amount = the sum); kind 'payment' = cash a customer paid.
+//                kind 'invoiced' = invoiced totals by Cash, Card, MyFatoorah, Fawri+/Benefit, Credit (amount = the sum); kind 'payment' = cash a customer paid.
 // v15 (Nov 2026): editCashCount (ADMIN ONLY) — fix date, counted by, the money breakdown (replaces all lines, total recalculated) and photo (photo / removePhoto=1).
 // v14 (Nov 2026): a cash count can have a photo (photo_url on cash_daily_counts, same private bucket). addCashCount takes `photo` (POST); getCashCounts returns photoUrl (signed, 1h).
 // v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
@@ -365,21 +366,21 @@ async function handleMarkSentToQalali(p: any) {
 const m3 = (v: unknown) => { const n = Math.round((Number(v) || 0) * 1000) / 1000; return isFinite(n) && n >= 0 && n < 1e8 ? n : NaN; };
 const txt = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 function saleOut(r: any) {
-  return { id: r.id, branch: r.branch, date: r.entry_date, kind: r.kind, cash: Number(r.cash), card: Number(r.card), myfatoorah: Number(r.myfatoorah), credit: Number(r.credit),
+  return { id: r.id, branch: r.branch, date: r.entry_date, kind: r.kind, cash: Number(r.cash), card: Number(r.card), myfatoorah: Number(r.myfatoorah), benefit: Number(r.benefit || 0), credit: Number(r.credit),
     amount: Number(r.amount), customer: r.customer || '', ref: r.ref || '', channel: r.channel || '', notes: r.notes || '', enteredBy: r.entered_by || '', createdAt: r.created_at };
 }
 function saleFields(p: any, kind: string) {
   const f: Record<string, unknown> = {};
   if (kind === 'invoiced') {
-    const c = m3(p.cash), d = m3(p.card), m = m3(p.myfatoorah), k = m3(p.credit);
-    if ([c, d, m, k].some((x) => isNaN(x))) return { error: 'Please check the amounts.' };
-    const total = Math.round((c + d + m + k) * 1000) / 1000;
-    if (total <= 0) return { error: 'Enter at least one amount (Cash, Card, MyFatoorah or Credit).' };
-    Object.assign(f, { cash: c, card: d, myfatoorah: m, credit: k, amount: total });
+    const c = m3(p.cash), d = m3(p.card), m = m3(p.myfatoorah), b = m3(p.benefit), k = m3(p.credit);
+    if ([c, d, m, b, k].some((x) => isNaN(x))) return { error: 'Please check the amounts.' };
+    const total = Math.round((c + d + m + b + k) * 1000) / 1000;
+    if (total <= 0) return { error: 'Enter at least one amount (Cash, Card, MyFatoorah, Fawri+/Benefit or Credit).' };
+    Object.assign(f, { cash: c, card: d, myfatoorah: m, benefit: b, credit: k, amount: total });
   } else {
     const a = m3(p.amount);
     if (isNaN(a) || a <= 0) return { error: 'Amount must be greater than zero.' };
-    Object.assign(f, { cash: a, card: 0, myfatoorah: 0, credit: 0, amount: a, customer: txt(p.customer, 80) || null });
+    Object.assign(f, { cash: a, card: 0, myfatoorah: 0, benefit: 0, credit: 0, amount: a, customer: txt(p.customer, 80) || null });
   }
   f.ref = txt(p.ref, 60) || null;
   if (p.channel !== undefined) f.channel = /^[a-z]{2,20}$/.test(String(p.channel || '')) ? String(p.channel) : null;
