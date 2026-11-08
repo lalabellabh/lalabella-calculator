@@ -36,6 +36,11 @@
   .box{max-height:380px;overflow-y:auto;overscroll-behavior:contain;border-radius:10px}
   .box th{position:sticky;top:0;background:#fffaf9;z-index:1}
   .box table{margin-top:4px}
+  .mf.on{background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;border-color:transparent}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px}
+  .tag.auto{background:#eef3ff;color:#3b5bb5} .tag.saved{background:rgba(61,122,79,.14);color:var(--ok)} .tag.no{background:#f4eeee;color:var(--muted)} .tag.warn{background:rgba(192,57,43,.12);color:var(--bad)}
+  .msel{border:1px solid var(--line);border-radius:8px;padding:6px;font:inherit;font-size:12.5px;max-width:230px}
+  .lnk{background:none;border:0;color:var(--rose-dark);font:600 12px 'Space Grotesk',sans-serif;cursor:pointer;text-decoration:underline;padding:2px}
 </style>
 </head>
 <body>
@@ -45,7 +50,7 @@
     <h2>Connection</h2>
     <div class="row"><span id="st" class="pill">Checking…</span><span class="muted" id="stInfo"></span><span style="flex:1"></span><button class="btn ghost" id="reStatus">↻ Check again</button></div>
     <div class="kv" id="stKv"></div>
-    <p class="muted" style="margin:10px 0 0">Read-only for now: the system only <b>reads</b> from Odoo. Nothing is changed in Odoo.</p>
+    <p class="muted" style="margin:10px 0 0">Trial: the system reads Odoo sales and writes only the On Hand stock of our chocolates and flowers (push, can be turned off below).</p>
   </div>
   <div class="card">
     <h2>📅 Today in Odoo (ModaMall trial)</h2>
@@ -62,6 +67,20 @@
     <div class="muted" id="psInfo" style="margin-top:4px"></div>
     <p class="muted" style="margin:8px 0 0">Push: after each sync, our ModaMall stock of chocolates and flowers (receiving, counts, transfers, sales) is copied to Odoo On Hand, so both show the same. Every 5 minutes, each new Odoo POS sale of a chocolate or flower (kits opened) is taken out of our stock at the branch below: chocolate = release from the oldest batch, flower = used stems. Each sale line is done only once. Undo puts one order back (for test sales).</p>
     <div id="adLog" class="box"></div>
+  </div>
+  <div class="card">
+    <h2>🔗 Item matching (Odoo item → our item)</h2>
+    <p class="muted" style="margin:0 0 8px">Which Odoo item is which chocolate or flower of ours. Sales and the stock push use this (Odoo receiving too, when we add it), so an Odoo item with a different name still takes from the right item. A saved match wins over the name rule. Mark boxes, vases and other items as <b>Not ours</b>.</p>
+    <div class="row">
+      <button class="btn ghost mf" data-f="sold">⚠ Sold, not matched <span id="mfSold">0</span></button>
+      <button class="btn ghost mf" data-f="none">Not matched <span id="mfNone">0</span></button>
+      <button class="btn ghost mf" data-f="matched">Matched <span id="mfMatched">0</span></button>
+      <button class="btn ghost mf" data-f="twice">Same item twice <span id="mfTwice">0</span></button>
+      <input id="mSearch" placeholder="Search Odoo item…" style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit">
+      <button class="btn ghost" id="mLoad">↻</button>
+    </div>
+    <div class="muted" id="mInfo" style="margin-top:6px"></div>
+    <div id="mList" class="box"></div>
   </div>
   <div class="card">
     <h2>🛒 Odoo POS sales</h2>
@@ -171,7 +190,71 @@
     b.disabled = true; var d = await call({ action:'syncUndo', order: b.dataset.undo });
     if(!d.success) alert(d.error || 'Failed'); syncLog(); today();
   });
-  function go(){ status(); today(); sales(); syncLog(); }
+  // ---------- Item matching ----------
+  var MD = null, mFilter = 'sold', mEdit = -1;
+  function eff(r){ return r.saved || r.auto || null; }   // the match in use
+  function effKey(r){ var m = eff(r); return m && m.kind !== 'none' ? m.kind + ':' + m.name : ''; }
+  async function mapLoad(){
+    document.getElementById('mInfo').textContent = 'Loading Odoo items…';
+    var d = await call({ action: 'mapList' }).catch(function(){ return null; });
+    if(!d || !d.success){ document.getElementById('mInfo').textContent = (d && d.error) || 'Could not load.'; return; }
+    MD = d; mapRender();
+  }
+  function mapRender(){
+    if(!MD) return;
+    var cnt = {}; MD.rows.forEach(function(r){ var k = effKey(r); if(k) cnt[k] = (cnt[k] || 0) + 1; });
+    var groups = { sold: [], none: [], matched: [], twice: [] };
+    MD.rows.forEach(function(r){ var m = eff(r);
+      if(!m){ groups.none.push(r); if(r.sold) groups.sold.push(r); }
+      else if(m.kind !== 'none') groups.matched.push(r);
+      if(effKey(r) && cnt[effKey(r)] > 1) groups.twice.push(r); });
+    groups.twice.sort(function(a, b){ return effKey(a).localeCompare(effKey(b)); });
+    document.getElementById('mfSold').textContent = groups.sold.length; document.getElementById('mfNone').textContent = groups.none.length;
+    document.getElementById('mfMatched').textContent = groups.matched.length; document.getElementById('mfTwice').textContent = groups.twice.length;
+    document.querySelectorAll('.mf').forEach(function(b){ b.classList.toggle('on', b.dataset.f === mFilter); });
+    var q = document.getElementById('mSearch').value.trim().toLowerCase();
+    var list = (q ? MD.rows : groups[mFilter]).filter(function(r){ return !q || (r.name + ' ' + r.code + ' ' + r.barcode + ' ' + r.categ).toLowerCase().indexOf(q) >= 0; });
+    document.getElementById('mInfo').textContent = (q ? 'Search in all ' : '') + list.length + ' Odoo item(s)' + (mFilter === 'twice' && !q ? ' — flowers from different origins can share one item; chocolates should not.' : '');
+    if(!list.length){ document.getElementById('mList').innerHTML = '<p class="muted">Nothing here 👍</p>'; return; }
+    var shown = list.slice(0, 300);
+    document.getElementById('mList').innerHTML = '<table><tr><th>Odoo item</th><th>Our item</th><th></th></tr>' + shown.map(function(r){
+      var m = eff(r), i = MD.rows.indexOf(r);
+      var ours = !m ? '<span class="tag no">not matched</span>' : (m.kind === 'none' ? '<span class="muted">Not ours</span>' : (m.kind === 'chocolate' ? '🍫 ' : '🌸 ') + esc(m.name))
+        + (r.saved ? ' <span class="tag saved">saved</span>' : (m ? ' <span class="tag auto">by name</span>' : '')) + (effKey(r) && cnt[effKey(r)] > 1 ? ' <span class="tag warn">×' + cnt[effKey(r)] + '</span>' : '');
+      var cell = mEdit === i ? mapSelect(r) : ours;
+      return '<tr><td>' + esc(r.name) + (r.sold && !m ? ' <span class="tag warn">sold ' + r.sold + '× not taken</span>' : '') + '<div class="muted" style="font-size:11px">' + esc([r.code, r.categ, r.uom].filter(Boolean).join(' · ')) + '</div></td><td>' + cell + '</td><td class="n">'
+        + (mEdit === i ? '<button class="btn" data-ms="' + i + '">Save</button> <button class="lnk" data-mc="1">Cancel</button>' : '<button class="lnk" data-me="' + i + '">Change</button>') + '</td></tr>';
+    }).join('') + '</table>' + (list.length > 300 ? '<p class="muted">Showing 300 of ' + list.length + ' — use search.</p>' : '');
+  }
+  function mapSelect(r){
+    var m = eff(r), cur = m ? (m.kind === 'none' ? 'none:' : m.kind + ':' + m.name) : '';
+    function o(v, t){ return '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(t) + '</option>'; }
+    return '<select class="msel" id="mSel">' + o('', '— pick —') + o('none:', 'Not ours (box, vase, other)') + (r.saved ? o('clear:', '↩ Remove saved match (use name rule)') : '')
+      + '<optgroup label="Chocolates">' + MD.chocolates.map(function(n){ return o('chocolate:' + n, n); }).join('') + '</optgroup>'
+      + '<optgroup label="Flowers">' + MD.flowers.map(function(n){ return o('flower:' + n, n); }).join('') + '</optgroup></select>';
+  }
+  document.getElementById('mList').addEventListener('click', async function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.me){ mEdit = Number(b.dataset.me); mapRender(); var sel = document.getElementById('mSel'); if(sel) sel.focus(); return; }
+    if(b.dataset.mc){ mEdit = -1; mapRender(); return; }
+    if(b.dataset.ms){
+      var r = MD.rows[Number(b.dataset.ms)], v = document.getElementById('mSel').value; if(!v) return;
+      var kind = v.split(':')[0], name = v.slice(kind.length + 1);
+      var redo = (kind === 'chocolate' || kind === 'flower') && r.sold && confirm(r.name + ' was sold ' + r.sold + '× and not taken from our stock. Take those sales from ' + name + ' on the next sync?') ? '1' : '0';
+      b.disabled = true; b.textContent = 'Saving…';
+      var d = await call({ action: 'mapSet', id: r.id, kind: kind === 'clear' ? '' : kind, name: name, odooName: r.name, redo: redo }).catch(function(){ return null; });
+      if(!d || !d.success){ alert((d && d.error) || 'Could not save.'); b.disabled = false; b.textContent = 'Save'; return; }
+      r.saved = kind === 'clear' ? null : { kind: kind, name: kind === 'none' ? '' : name };
+      if(d.redo) r.sold = 0;
+      mEdit = -1; mapRender();
+      if(d.redo) document.getElementById('mInfo').textContent = d.redo + ' past sale line(s) will be taken from ' + name + ' on the next sync (or press Sync now).';
+    }
+  });
+  document.querySelectorAll('.mf').forEach(function(b){ b.addEventListener('click', function(){ mFilter = b.dataset.f; mEdit = -1; document.getElementById('mSearch').value = ''; mapRender(); }); });
+  var mT; document.getElementById('mSearch').addEventListener('input', function(){ clearTimeout(mT); mT = setTimeout(function(){ mEdit = -1; mapRender(); }, 200); });
+  document.getElementById('mLoad').addEventListener('click', mapLoad);
+
+  function go(){ status(); today(); sales(); syncLog(); mapLoad(); }
   var ran = false; function once(){ if(!ran){ ran = true; go(); } }
   window.addEventListener('lbadminunlocked', once); setTimeout(once, 1200);
 })();
