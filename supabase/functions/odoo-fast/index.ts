@@ -1,4 +1,6 @@
 // LALABELLA <-> ODOO (trial) — read-only connection test (Supabase Edge Function)  v7
+// v9: ITEM MATCHING - odoo_product_map (Odoo product id -> our chocolate / flower / 'none') wins over the name rules, in sync, push and
+//     'today'. Actions mapList / mapSet (admin). Saving a match can re-run past sales of that product that were skipped.
 // v8: a POS line whose product barcode/code is one of our Release (REL-) or Display (DISP-) labels is NOT deducted again (status 'released').
 // v7: PUSH STOCK (trial) - the FIRST thing that writes to Odoo. After each sync, our stock of chocolates and flowers at the
 //     branch (ModaMall) is copied to Odoo On Hand at the warehouse stock location (inventory adjustment, only when different),
@@ -84,6 +86,12 @@ async function sbDelJ(table: string, filter: string) {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers: { ...SBH(), Prefer: 'return=minimal' } });
   if (!r.ok) throw new Error(`${table} delete: ${r.status}`);
 }
+// Item matching saved by the Admin (wins over the name rules)
+async function loadMap() {
+  const M: Record<number, { kind: string; name: string }> = {};
+  (await sbGetJ('odoo_product_map?select=odoo_product_id,our_kind,our_name')).forEach((r: any) => { M[Number(r.odoo_product_id)] = { kind: r.our_kind, name: r.our_name || '' }; });
+  return M;
+}
 // Undo what the sync took for one Odoo order (trial helper): batches get the chocolate back, flower fulfillments are removed.
 async function undoOrder(order: string) {
   const rows = await sbGetJ(`odoo_sync_lines?select=*&odoo_order=eq.${encodeURIComponent(order)}&status=in.(done,short)`);
@@ -132,13 +140,17 @@ async function runSync() {
   const bomOf: Record<string, any> = {}; boms.forEach((b: any) => { const k = b.product_id ? 'p' + id0(b.product_id) : 't' + id0(b.product_tmpl_id); if (!bomOf[k]) bomOf[k] = b; });
   const linesOf: Record<number, any[]> = {}; bomLines.forEach((l: any) => { (linesOf[id0(l.bom_id)] = linesOf[id0(l.bom_id)] || []).push(l); });
   // our item lists
-  const [items, fitems] = await Promise.all([sbGetJ('chocolate_item_list?select=chocolate_name,product_code,grams'), sbGetJ('flower_item?select=flower_name,item_code')]);
+  const [items, fitems, M] = await Promise.all([sbGetJ('chocolate_item_list?select=chocolate_name,product_code,grams'), sbGetJ('flower_item?select=flower_name,item_code'), loadMap()]);
   const low = (x: any) => String(x || '').trim().toLowerCase();
   const choc: Record<string, any> = {}; items.forEach((r: any) => { const v = { name: r.chocolate_name, g: Number(r.grams) || 0 }; if (r.product_code) choc['c:' + low(r.product_code)] = v; choc['n:' + low(r.chocolate_name)] = v; });
   const flw: Record<string, string> = {}; fitems.forEach((r: any) => { if (r.item_code) flw['c:' + low(r.item_code)] = r.flower_name; flw['n:' + low(r.flower_name)] = r.flower_name; });
   const HOL = /\s*-?\s*holland\b.*$/i;
   function infoOf(pid: number) {
     const x = P[pid] || {}; const name = String(x.name || '?');
+    const m = M[pid];
+    if (m) { if (m.kind === 'chocolate') { const c = choc['n:' + low(m.name)]; return { kind: 'chocolate', ours: m.name, g: c ? c.g : 0, uom: nm1(x.uom_id), name }; }
+      if (m.kind === 'flower') return { kind: 'flower', ours: m.name, g: 0, uom: nm1(x.uom_id), name };
+      return { kind: 'other', ours: name, g: 0, uom: nm1(x.uom_id), name }; }
     const bare = low(name.replace(/^\[[^\]]*\]\s*/, ''));
     const keys = [x.default_code, x.barcode].filter(Boolean).map((k: any) => 'c:' + low(k)).concat(['n:' + bare, 'n:' + bare.replace(HOL, ''), 'n:' + bare.replace(/\s*\([^)]*\)\s*$/, '')]);
     for (const k of keys) { if (choc[k]) return { kind: 'chocolate', ours: choc[k].name, g: choc[k].g, uom: nm1(x.uom_id), name }; if (flw[k]) return { kind: 'flower', ours: flw[k], g: 0, uom: nm1(x.uom_id), name }; }
@@ -261,9 +273,9 @@ async function runPush() {
   if (!loc) { const wh = await odoo('stock.warehouse', 'search_read', { domain: [], fields: ['lot_stock_id'], order: 'id asc', limit: 1 }); loc = wh.length ? id0(wh[0].lot_stock_id) : 0; }
   if (!loc) return { success: false, error: 'No Odoo stock location found' };
   const prods = await odoo('product.product', 'search_read', { domain: [['is_storable', '=', true]], fields: ['name', 'default_code', 'barcode', 'uom_id'], order: 'id asc', limit: 10000 });
-  const [items, fitems, chocRows, flowerSt] = await Promise.all([
+  const [items, fitems, chocRows, flowerSt, M] = await Promise.all([
     sbGetJ('chocolate_item_list?select=chocolate_name,product_code,grams'), sbGetJ('flower_item?select=flower_name,item_code'),
-    sbGetAllJ(`chocolate_database?select=chocolate_name,current_stock,unit&branch=eq.${encodeURIComponent(branch)}`), ourFlowerStock(branch),
+    sbGetAllJ(`chocolate_database?select=chocolate_name,current_stock,unit&branch=eq.${encodeURIComponent(branch)}`), ourFlowerStock(branch), loadMap(),
   ]);
   const low = (x: any) => String(x || '').trim().toLowerCase(), HOL = /\s*-?\s*holland\b.*$/i;
   const choc: Record<string, any> = {}; items.forEach((r: any) => { const v = { name: r.chocolate_name, g: Number(r.grams) || 0 }; if (r.product_code) choc['c:' + low(r.product_code)] = v; choc['n:' + low(r.chocolate_name)] = v; });
@@ -278,6 +290,13 @@ async function runPush() {
     const bare = low(String(x.name || '').replace(/^\[[^\]]*\]\s*/, ''));
     const keys = [x.default_code, x.barcode].filter(Boolean).map((k: any) => 'c:' + low(k)).concat(['n:' + bare, 'n:' + bare.replace(HOL, ''), 'n:' + bare.replace(/\s*\([^)]*\)\s*$/, '')]);
     const uom = nm1(x.uom_id);
+    const m = M[x.id];
+    if (m) {   // saved match first
+      if (m.kind === 'none') return;
+      keys.length = 0; keys.push(m.kind === 'chocolate' ? 'n:' + low(m.name) : 'mf:' + m.name);
+      if (m.kind === 'flower') flw['mf:' + m.name] = m.name;
+      if (m.kind === 'chocolate' && !choc['n:' + low(m.name)]) return;
+    }
     for (const k of keys) {
       if (choc[k]) { const n = choc[k].name, kg = /^kg|kilo/i.test(uom), gr = /^(g|gram|grams|gm)$/i.test(uom.trim());
         const q = kg ? (ourG[n] ?? (ourP[n] || 0) * (choc[k].g || 0)) / 1000 : gr ? (ourG[n] || 0) : (ourP[n] ?? 0);
@@ -339,6 +358,41 @@ Deno.serve(async (req) => {
       const st: Record<string, string> = {}; (await sbGetJ('odoo_sync_settings?select=key,value')).forEach((r: any) => { st[r.key] = r.value; });
       return json({ success: true, settings: st, rows });
     }
+    if (p.action === 'mapList') {   // Item matching: every Odoo product we sell or stock, its match, and what was sold but not matched
+      const id0 = (v: any) => Array.isArray(v) ? v[0] : v, nm1 = (v: any) => Array.isArray(v) ? String(v[1] || '') : '';
+      const prods = await odoo('product.product', 'search_read', { domain: ['|', ['sale_ok', '=', true], ['is_storable', '=', true]], fields: ['name', 'default_code', 'barcode', 'categ_id', 'uom_id', 'is_storable'], order: 'name asc', limit: 6000 });
+      const [items, fitems, M, sold] = await Promise.all([sbGetJ('chocolate_item_list?select=chocolate_name,product_code&order=chocolate_name.asc'), sbGetJ('flower_item?select=flower_name,item_code&order=flower_name.asc'), loadMap(),
+        sbGetJ('odoo_sync_lines?select=product&status=eq.not%20ours&limit=2000')]);
+      const low = (x: any) => String(x || '').trim().toLowerCase(), HOL = /\s*-?\s*holland\b.*$/i;
+      const choc: Record<string, string> = {}; items.forEach((r: any) => { if (r.product_code) choc['c:' + low(r.product_code)] = r.chocolate_name; choc['n:' + low(r.chocolate_name)] = r.chocolate_name; });
+      const flw: Record<string, string> = {}; fitems.forEach((r: any) => { if (r.item_code) flw['c:' + low(r.item_code)] = r.flower_name; flw['n:' + low(r.flower_name)] = r.flower_name; });
+      const soldN: Record<string, number> = {}; sold.forEach((r: any) => { soldN[r.product] = (soldN[r.product] || 0) + 1; });
+      const rows = prods.map((x: any) => {
+        const bare = low(String(x.name || '').replace(/^\[[^\]]*\]\s*/, ''));
+        const keys = [x.default_code, x.barcode].filter(Boolean).map((k: any) => 'c:' + low(k)).concat(['n:' + bare, 'n:' + bare.replace(HOL, ''), 'n:' + bare.replace(/\s*\([^)]*\)\s*$/, '')]);
+        let auto: any = null; for (const k of keys) { if (choc[k]) { auto = { kind: 'chocolate', name: choc[k] }; break; } if (flw[k]) { auto = { kind: 'flower', name: flw[k] }; break; } }
+        const m = M[x.id];
+        return { id: x.id, name: x.name, code: x.default_code || '', barcode: x.barcode || '', categ: nm1(x.categ_id), uom: nm1(x.uom_id), storable: !!x.is_storable,
+          auto, saved: m ? { kind: m.kind, name: m.name } : null, sold: soldN[x.name] || 0 };
+      });
+      return json({ success: true, rows, chocolates: items.map((r: any) => r.chocolate_name), flowers: [...new Set(fitems.map((r: any) => r.flower_name))] });
+    }
+    if (p.action === 'mapSet') {   // save one match; kind '' = remove the saved match (back to the name rules)
+      const pid = Number(p.id), kind = String(p.kind || ''), name = String(p.name || '').trim(), odooName = String(p.odooName || '');
+      if (!pid) return json({ success: false, error: 'No product' });
+      if (!kind) { await sbDelJ('odoo_product_map', `odoo_product_id=eq.${pid}`); }
+      else {
+        if (!['chocolate', 'flower', 'none'].includes(kind) || (kind !== 'none' && !name)) return json({ success: false, error: 'Pick our item' });
+        await fetch(`${SB_URL}/rest/v1/odoo_product_map?on_conflict=odoo_product_id`, { method: 'POST', headers: { ...SBH(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ odoo_product_id: pid, odoo_name: odooName, our_kind: kind, our_name: kind === 'none' ? null : name, set_by: u.username || '', updated_at: new Date().toISOString() }]) });
+      }
+      let redo = 0;   // past sales of this product that were skipped ("Odoo item only") are done again on the next sync
+      if (kind && kind !== 'none' && odooName && String(p.redo) === '1') {
+        const old = await sbGetJ(`odoo_sync_lines?select=id&status=eq.not%20ours&product=eq.${encodeURIComponent(odooName)}`);
+        redo = old.length; if (redo) await sbDelJ('odoo_sync_lines', `status=eq.not%20ours&product=eq.${encodeURIComponent(odooName)}`);
+      }
+      return json({ success: true, redo });
+    }
     if (p.action === 'syncUndo') return json(await undoOrder(String(p.order || '')));
     if (p.action === 'syncSet') {   // turn auto-deduct on/off
       const v = String(p.value) === 'on' ? 'on' : 'off', key = p.key2 === 'push_stock' ? 'push_stock' : 'auto_deduct';
@@ -386,6 +440,7 @@ Deno.serve(async (req) => {
       try { movesFound = await odoo('stock.move', 'search_count', { domain: [['state', '=', 'done'], ['date', '>=', a], ['date', '<', b], ['location_dest_id.usage', '=', 'customer']] }); } catch (_) { /* ignore */ }
       // our side
       const sb = async (q: string) => { const r = await fetch(`${SB_URL}/rest/v1/${q}`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); return r.ok ? r.json() : []; };
+      const TM = await loadMap();
       const [ours, items, fitems] = await Promise.all([
         sb('chocolate_database?select=chocolate_name,current_stock,unit&branch=eq.ModaMall&current_stock=neq.0'),
         sb('chocolate_item_list?select=chocolate_name,product_code,grams'),
@@ -404,6 +459,10 @@ Deno.serve(async (req) => {
         const bare = low(name.replace(/^\[[^\]]*\]\s*/, '')), noParen = bare.replace(/\s*\([^)]*\)\s*$/, '');
         keys.push('n:' + bare, 'n:' + noParen);
         let kind = 'other', ours = name, g = 0;
+        const m = TM[pid];
+        if (m) { if (m.kind === 'chocolate') { const c = choc['n:' + low(m.name)]; return (info[pid] = { name, uom, kind: 'chocolate', ours: m.name, g: c ? c.g : 0 }); }
+          if (m.kind === 'flower') return (info[pid] = { name, uom, kind: 'flower', ours: m.name, g: 0 });
+          return (info[pid] = { name, uom, kind: 'other', ours: name, g: 0 }); }
         for (const k of keys) { if (choc[k]) { kind = 'chocolate'; ours = choc[k].name; g = choc[k].g; break; } if (flw[k]) { kind = 'flower'; ours = flw[k]; break; } }
         return (info[pid] = { name, uom, kind, ours, g });
       };
