@@ -403,6 +403,8 @@
     try{
       const r = await (await fetch(LB_CONFIG.SUPABASE_URL + '/functions/v1/datacheck-fast', { method:'POST', body: new URLSearchParams({ branch, token: window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '' }) })).json();
       if(!r || !r.success || branch !== ui.branch) return;
+      r.issues = (r.issues || []).filter(i => i.module === 'chocolate');   // flower problems show on the Flower Dashboard
+      r.bad = r.issues.filter(i => i.level === 'bad').length; r.warn = r.issues.length - r.bad;
       chk = r;
       const n = document.getElementById('alChkN'); n.textContent = fmtNum(r.issues.length);
       n.style.cssText = r.bad ? 'background:var(--bad);color:#fff;border-radius:8px;padding:0 5px;opacity:1' : '';
@@ -411,7 +413,7 @@
     }catch(e){ console.error(e); }
   }
   function chkToast(r){
-    try{ if(sessionStorage.getItem('lbChkToast') === String(r.bad + '/' + r.warn)) return; sessionStorage.setItem('lbChkToast', String(r.bad + '/' + r.warn)); }catch(e){}
+    try{ if(sessionStorage.getItem('lbChkToastChoc') === String(r.bad + '/' + r.warn)) return; sessionStorage.setItem('lbChkToastChoc', String(r.bad + '/' + r.warn)); }catch(e){}
     const t = document.createElement('button');
     t.type = 'button';
     t.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:9999;max-width:330px;text-align:left;border:0;border-radius:14px;padding:12px 14px;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.18);font:inherit;color:inherit;cursor:pointer;border-left:5px solid #c0392b');

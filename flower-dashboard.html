@@ -123,6 +123,7 @@
         <div class="tabs" id="alTabs">
           <button data-t="low" class="on">Low stock<span class="b" id="alLowN">0</span></button>
           <button data-t="apr">Rate approvals<span class="b" id="alAprN">0</span></button>
+          <button data-t="chk" title="Missing or wrong data (stock count, received by, rate)">⚠ Check<span class="b" id="alChkN">0</span></button>
         </div>
       </div>
       <div class="scroll" id="alScroll"></div>
@@ -254,7 +255,33 @@
       if(cachedDash) setNote('Could not refresh — showing saved data from ' + timeStr(cachedDash.t) + '. Tap Refresh to try again.');
       else { loadingEl.style.display = ''; loadingEl.textContent = 'Could not load dashboard data.'; }
     }
+    loadCheck(branch);
     await extras;
+  }
+
+  // ---------- Data check (flower part of datacheck-fast) ----------
+  let chk = null, chkToastDone = false;
+  async function loadCheck(branch){
+    try{
+      const r = await (await fetch(LB_CONFIG.SUPABASE_URL + '/functions/v1/datacheck-fast', { method:'POST', body: new URLSearchParams({ branch, token: window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '' }) })).json();
+      if(!r || !r.success || branch !== ui.branch) return;
+      r.issues = (r.issues || []).filter(i => i.module === 'flower');
+      r.bad = r.issues.filter(i => i.level === 'bad').length; r.warn = r.issues.length - r.bad;
+      chk = r;
+      const n = document.getElementById('alChkN'); n.textContent = fmtNum(r.issues.length);
+      n.style.cssText = r.bad ? 'background:var(--bad,#c0392b);color:#fff;border-radius:8px;padding:0 5px;opacity:1' : '';
+      if(ui.alTab === 'chk' && data) renderAlerts();
+      if(r.bad && !chkToastDone){ chkToastDone = true; chkToast(r); }
+    }catch(e){ console.error(e); }
+  }
+  function chkToast(r){
+    try{ if(sessionStorage.getItem('lbChkToastFlower') === String(r.bad + '/' + r.warn)) return; sessionStorage.setItem('lbChkToastFlower', String(r.bad + '/' + r.warn)); }catch(e){}
+    const t = document.createElement('button');
+    t.type = 'button';
+    t.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:9999;max-width:330px;text-align:left;border:0;border-radius:14px;padding:12px 14px;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.18);font:inherit;color:inherit;cursor:pointer;border-left:5px solid #c0392b');
+    t.innerHTML = '<b>⚠ ' + r.bad + ' problem' + (r.bad === 1 ? '' : 's') + (r.warn ? ' + ' + r.warn + ' to check' : '') + '</b><div style="font-size:12px;opacity:.8;margin-top:3px">' + esc(r.issues[0].branch + ' · ' + r.issues[0].issue).slice(0, 120) + '</div><div style="font-size:11.5px;margin-top:5px;font-weight:600">Tap to see the list →</div>';
+    t.onclick = () => { t.remove(); ui.alTab = 'chk'; if(data) renderAlerts(); syncTabs(); const al = document.querySelector('.p-al'); if(al) al.scrollIntoView({ behavior:'smooth', block:'center' }); };
+    document.body.appendChild(t); setTimeout(() => t.remove(), 15000);
   }
 
   /* ---------- controls ---------- */
@@ -423,7 +450,11 @@
     if(!sb.textContent.startsWith('Saving')){ sb.disabled = qn === 0; sb.textContent = '💾 Save All (' + qn + ')'; }
     const nameEl = document.getElementById('approverName'); if(nameEl.value !== ui.approver) nameEl.value = ui.approver;
     let h;
-    if(ui.alTab === 'apr'){
+    if(ui.alTab === 'chk'){
+      h = !chk ? '<div class="row"><div class="nm" style="color:var(--dim)">Checking…</div></div>'
+        : rows(chk.issues, it => `<div class="row"><div class="nm">🌸 ${esc(it.item)}<div class="mt">${esc(it.branch)} · ${esc(it.issue)}</div><div class="mt" style="opacity:.75">→ ${esc(it.fix)} <a href="${esc(it.page)}">Open</a></div></div>
+          <div class="rt"><span class="pill ${it.level === 'bad' ? 'bad' : 'warn'}">${it.level === 'bad' ? 'Fix' : 'Check'}</span></div></div>`, 'Nothing missing 👍');
+    } else if(ui.alTab === 'apr'){
       h = rows(apr, a => {
         const qd = ui.queue[a.Row], pctD = (Number(a.PercentDiff) || 0) * 100;
         return `<div class="apr"><div class="top"><div class="nm" style="font-weight:600">${esc(a.Flower)} <span class="sub2">(${esc(a.Origin || 'N/A')})</span><div class="sub2">${esc(a.ItemCode || '')} · ${esc(a.Unit || '')}</div></div>
