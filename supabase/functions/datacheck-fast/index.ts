@@ -3,6 +3,8 @@
 //   Chocolate (batches with stock): expired, no expiry date, no "entered by", no price, a piece price that looks like a per-kg price,
 //                                   Initial Stock entered but the branch not locked yet, receiving at a branch with no Initial Stock.
 //   Flower: a branch with receiving but no Flower Stock Count yet; receiving lines (last 30 days) without "received by" or with rate 0.
+// v4: flower like chocolate: bunch without stems per bunch, no invoice no. / supplier, wrong date, invoice lines + tax not equal to
+//     the invoice total, a stock count dated in the future or with a wrong year, and flowers whose stock went below 0 (short).
 // v3: Initial Stock rows open the Initial Stock page (its own Edit), receiving rows open Chocolate Receiving.
 // v2: every issue has `link` = the page + ?branch= (+ &edit=<entry ID>&field=<input>) so 'Open' lands on the entry to fix.
 // Read-only. Any logged-in user. action 'check' (branch optional, 'All' = every branch) -> { success, issues: [{level, module, branch, item, issue, fix, page}] }
@@ -41,13 +43,15 @@ async function check(branchSel: string) {
   const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
   const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const bf = branchSel && branchSel !== 'All' ? `&branch=eq.${encodeURIComponent(branchSel)}` : '';
-  const [choc, items, settings, flowerDb, counts, chocCounts] = await Promise.all([
+  const [choc, items, settings, flowerDb, counts, chocCounts, transfers, used] = await Promise.all([
     sbAll(`chocolate_database?select=id,legacy_id,branch,chocolate_name,batch_no,expiry_date,unit,price_per_kg,price_per_piece,weight_per_piece,current_stock,created_by,delivery_note_no${bf}&current_stock=gt.0&order=branch.asc,chocolate_name.asc`),
     sbGet('chocolate_item_list?select=chocolate_name,standard_price_per_kg'),
     sbGet('chocolate_settings?select=key,value'),
-    sbAll(`flower_database?select=id,legacy_id,branch,entry_date,flower_name,rate,received_by,invoice_no,type${bf}&order=id.desc`),
-    sbAll(`flower_stock_history?select=branch&item_code=eq.CONSOLIDATED${bf}`),
+    sbAll(`flower_database?select=id,legacy_id,branch,entry_date,flower_name,qty,unit,stems_per_bunch,rate,subtotal,tax,invoice_total,supplier,received_by,invoice_no,type${bf}&order=id.asc`),
+    sbAll(`flower_stock_history?select=branch,flower_name,count_date,physical_count&item_code=eq.CONSOLIDATED${bf}&order=id.asc`),
     sbGet(`chocolate_stock_count_history?select=branch${bf}&limit=1000`),
+    sbAll(`flower_transfer_history?select=flower_name,qty,from_branch,to_branch,transfer_date&order=id.asc`),
+    sbAll(`flower_arrangement_fulfillments?select=branch,flower_name,qty,fulfilled_date${bf}&order=id.asc`),
   ]);
   const issues: any[] = [];
   const add = (level: string, module: string, branch: string, item: string, issue: string, fix: string, page: string, edit = '', field = '') => {
@@ -90,11 +94,48 @@ async function check(branchSel: string) {
   for (const br of Object.keys(recvBranches)) {
     if (!counted.has(br)) add('bad', 'flower', br, 'Flower Stock Count', `${recvBranches[br]} flower receiving line(s) but no Flower Stock Count yet — the stock only shows what was received`, 'Do a Flower Stock Count for this branch.', 'flower-stock-count.html');
   }
+  const inv: Record<string, { sum: number; total: number; first: any }> = {};
   for (const r of flowerDb) {
     if (r.type === 'Supply' || String(r.entry_date || '').slice(0, 10) < since) continue;
-    const it = `${r.flower_name} · inv ${r.invoice_no || '—'} · ${dmy(r.entry_date)}`;
+    const it = `${r.flower_name} · inv ${r.invoice_no || '—'} · ${dmy(r.entry_date)}`, rid = String(r.legacy_id || r.id), yr = Number(String(r.entry_date || '').slice(0, 4));
+    if (yr < 2020 || String(r.entry_date || '').slice(0, 10) > today) add('bad', 'flower', r.branch, it, `Receiving date looks wrong: ${dmy(r.entry_date)}`, 'Fix the date.', 'flower-receiving.html', rid, 'eDate');
+    if (/bunch/i.test(String(r.unit || '')) && !(Number(r.stems_per_bunch) > 0)) add('bad', 'flower', r.branch, it, 'Bunch without "stems per bunch" — the stock in stems is wrong', 'Add how many stems are in one bunch.', 'flower-receiving.html', rid, 'eStemsPerBunch');
+    if (!String(r.invoice_no || '').trim()) add('warn', 'flower', r.branch, it, 'No invoice no.', 'Add the invoice number.', 'flower-receiving.html', rid, 'eInvoiceNo');
+    if (!String(r.supplier || '').trim()) add('warn', 'flower', r.branch, it, 'No supplier', 'Pick the supplier.', 'flower-receiving.html', rid, 'eSupplier');
+    if (String(r.invoice_no || '').trim()) {
+      const k = r.branch + '|' + String(r.invoice_no).trim() + '|' + String(r.entry_date || '').slice(0, 10);
+      const g = inv[k] || (inv[k] = { sum: 0, total: Number(r.invoice_total) || 0, first: r });
+      g.sum += (Number(r.subtotal) || 0) + (Number(r.tax) || 0);
+    }
     if (!String(r.received_by || '').trim()) add('warn', 'flower', r.branch, it, 'No "Received by" name', 'Add who received it.', 'flower-receiving.html', String(r.legacy_id || r.id), 'eReceivedBy');
     if (!(Number(r.rate) > 0)) add('warn', 'flower', r.branch, it, 'Rate is 0', 'Add the rate from the invoice.', 'flower-receiving.html', String(r.legacy_id || r.id), 'eSupplierRate');
+  }
+  // invoice lines + tax should equal the invoice total typed from the paper invoice
+  for (const k of Object.keys(inv)) {
+    const g = inv[k];
+    if (g.total > 0 && Math.abs(g.sum - g.total) > 0.011) add('warn', 'flower', g.first.branch, `Invoice ${g.first.invoice_no} · ${dmy(g.first.entry_date)}`,
+      `Lines + tax = ${g.sum.toFixed(3)} BD but the invoice total is ${g.total.toFixed(3)} BD (difference ${(g.sum - g.total).toFixed(3)})`, 'Check for a missing line, a wrong qty / rate or the tax %.', 'flower-receiving.html', String(g.first.legacy_id || g.first.id), 'eQty');
+  }
+  // stock counts dated in the future / wrong year
+  const badCount = new Set<string>();
+  for (const c of counts) {
+    const d = String(c.count_date || '').slice(0, 10), y = Number(d.slice(0, 4)), k = c.branch + '|' + d;
+    if ((y < 2020 || d > today) && !badCount.has(k)) { badCount.add(k); add('bad', 'flower', c.branch, `Stock count ${dmy(d)}`, d > today ? 'Stock count dated in the future — it is ignored until that day' : 'Stock count date looks wrong', 'Recall that count and save it with the right date.', 'flower-stock-count.html', '', ''); issues[issues.length - 1].link = 'flower-stock-count.html?' + new URLSearchParams({ branch: c.branch, date: d, recall: '1' }).toString(); }
+  }
+  // flowers whose stock went below 0 (same rule as the Flower Dashboard: last count + purchases + transfers in - out - used)
+  const now = new Date(), last: Record<string, { d: Date; q: number }> = {};
+  counts.forEach((r: any) => { const n = r.branch + '|' + String(r.flower_name || '').trim(), d = r.count_date ? new Date(r.count_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; if (!last[n] || d > last[n].d) last[n] = { d, q: Number(r.physical_count) || 0 }; });
+  const after = (n: string, d: Date | null) => !!d && !isNaN(d.getTime()) && d <= now && d > (last[n] ? last[n].d : new Date(0));
+  const stock: Record<string, number> = {}; Object.keys(last).forEach(n => { stock[n] = last[n].q; });
+  flowerDb.forEach((r: any) => { if (r.type === 'Supply') return; const n = r.branch + '|' + String(r.flower_name || '').trim(); if (!after(n, r.entry_date ? new Date(r.entry_date) : null)) return; const sp = Number(r.stems_per_bunch) || 1; stock[n] = (stock[n] || 0) + (/bunch/i.test(String(r.unit || '')) ? Number(r.qty) * sp : Number(r.qty) || 0); });
+  transfers.forEach((r: any) => { const q = Number(r.qty) || 0, d = r.transfer_date ? new Date(r.transfer_date) : null, f = String(r.flower_name || '').trim();
+    const ti = String(r.to_branch || '').trim() + '|' + f, fo = String(r.from_branch || '').trim() + '|' + f;
+    if (after(ti, d)) stock[ti] = (stock[ti] || 0) + q; if (after(fo, d)) stock[fo] = (stock[fo] || 0) - q; });
+  used.forEach((r: any) => { const n = r.branch + '|' + String(r.flower_name || '').trim(); if (!after(n, r.fulfilled_date ? new Date(r.fulfilled_date) : null)) return; stock[n] = (stock[n] || 0) - (Number(r.qty) || 0); });
+  for (const n of Object.keys(stock)) {
+    const [br, f] = n.split('|');
+    if (branchSel && branchSel !== 'All' && br !== branchSel) continue;
+    if (stock[n] < -0.0001) add('bad', 'flower', br, f, `Stock is below zero (${Math.round(stock[n] * 100) / 100} stems) — more was used/sold than received + counted`, 'Check the receiving and arrangements, or do a Flower Stock Count.', 'flower-stock-count.html');
   }
   const order: Record<string, number> = { bad: 0, warn: 1 };
   issues.sort((a, b) => order[a.level] - order[b.level] || String(a.branch).localeCompare(String(b.branch)) || a.module.localeCompare(b.module));

@@ -914,6 +914,20 @@
 </script>
 
 
-<script src="joyboy-bubble.js"></script>
+<script src="joyboy-bubble.js">
+  // "Open" from the Flower Dashboard Check list: ?branch=<b>&date=<yyyy-mm-dd>&recall=1 recalls that saved count
+  (function(){
+    const q = new URLSearchParams(location.search), d = q.get('date'), br = q.get('branch');
+    if(!d || q.get('recall') !== '1') return;
+    let n = 0;
+    const t = setInterval(() => {
+      if((!br || currentBranch === br) || ++n > 40){
+        clearInterval(t);
+        document.getElementById('countDate').value = d;
+        setTimeout(() => document.getElementById('recallBtn').click(), 300);
+      }
+    }, 250);
+  })();
+</script>
 </body>
 </html>
