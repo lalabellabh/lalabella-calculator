@@ -130,6 +130,19 @@
 
   .hist-row{ border-top:1px solid var(--line); padding:12px 0; font-size:13px; }
   .hist-row:first-child{ border-top:none; }
+  .hist-edit{ background:none; border:1px solid var(--line); border-radius:8px; padding:3px 10px; font-size:12px; cursor:pointer; color:var(--ink); }
+  .hist-edit:hover{ border-color:var(--ink); }
+  .hist-warn{ color:var(--rust); font-weight:600; }
+  .ie-back{ position:fixed; inset:0; background:rgba(30,15,20,.45); z-index:9000; display:none; align-items:center; justify-content:center; padding:16px; }
+  .ie-back.show{ display:flex; }
+  .ie-box{ background:#fff; color:#2f2024; border-radius:16px; width:100%; max-width:420px; max-height:92vh; overflow:auto; padding:18px 18px 14px; }
+  .ie-box h3{ margin:0 0 10px; font-size:17px; }
+  .ie-box label{ display:block; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin:10px 0 4px; color:#7a6268; }
+  .ie-box input, .ie-box select{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #e8d8d8; border-radius:10px; font:inherit; }
+  .ie-box .g2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .ie-hint{ font-size:11.5px; color:#7a6268; margin-top:4px; min-height:14px; }
+  .ie-btns{ display:flex; gap:8px; margin-top:14px; }
+  .ie-btns button{ flex:1; padding:12px; border-radius:10px; font-weight:700; cursor:pointer; }
   .hist-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-weight:600; }
   .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
   .hist-remarks{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; font-style:italic; }
@@ -173,6 +186,27 @@
 <script src="shared/glass-skin.js"></script>
 </head>
 <body>
+<div class="ie-back" id="ieBack">
+  <div class="ie-box">
+    <h3 id="ieTitle">Edit opening balance</h3>
+    <div class="ie-hint" id="ieSub"></div>
+    <div class="g2">
+      <div><label>Batch No.</label><input type="text" id="iBatch"></div>
+      <div><label>Expiry Date</label><input type="date" id="iExpiry"></div>
+    </div>
+    <div class="g2">
+      <div><label>Qty</label><input type="number" id="iQty" min="0" step="0.001"></div>
+      <div><label>Unit</label><select id="iUnit"></select></div>
+    </div>
+    <label id="iPriceLbl">Price / Kg (BD)</label>
+    <input type="number" id="iPrice" min="0" step="0.001">
+    <div class="ie-hint" id="iPriceHint"></div>
+    <label>Storage Location</label><select id="iStorage"></select>
+    <label>Entered By</label><input type="text" id="iBy" list="enteredByList">
+    <div class="ie-btns"><button type="button" id="ieCancel" style="background:#fff;border:1px solid #e8d8d8">Cancel</button><button type="button" id="ieSave" style="border:0;color:#fff;background:linear-gradient(135deg,#c9506b,#9e2f4a)">Save changes</button></div>
+  </div>
+</div>
+
 <script src="shared/nav.js" data-standalone></script>
 
 
@@ -447,6 +481,98 @@
     });
     return _ht;
   }
+  // ---------- edit a saved opening balance (fix expiry, price, qty, name...) ----------
+  function gramsOf(name){ const it = items.find(x => x['Chocolate Name'] === name); return it ? Number(it['Grams']) || 0 : 0; }
+  function rowPrice(e){
+    if(isPiece(e.Unit)){
+      const pp = Number(e['Price Per Piece']) || 0, g = gramsOf(e['Chocolate Name']);
+      if(!pp) return '<span class="hist-warn">⚠ no price</span>';
+      return fmtBD(pp) + '/pc' + (g ? ' <span style="color:var(--ink-dim);font-weight:400">(' + fmtBD(pp * 1000 / g) + '/kg)</span>' : '');
+    }
+    return Number(e['Price / Kg']) ? fmtBD(e['Price / Kg']) + '/kg' : '<span class="hist-warn">⚠ no price</span>';
+  }
+  function rowExpiry(e){
+    const d = String(e['Expiry Date'] || '').slice(0,10), y = Number(d.slice(0,4));
+    if(!d) return '<span class="hist-warn">⚠ none</span>';
+    if(y < 2020 || y > 2100) return '<span class="hist-warn">⚠ ' + esc(d) + ' (wrong year)</span>';
+    return fmtDate(d);
+  }
+  let ieId = null;
+  function iePriceMode(){
+    const e = entries.find(x => x.ID === ieId); if(!e) return { mode:'kg', g:0 };
+    const g = gramsOf(e['Chocolate Name']), piece = isPiece(document.getElementById('iUnit').value);
+    const mode = !piece ? 'kg' : (g > 0 ? 'kg2pc' : 'pc');
+    document.getElementById('iPriceLbl').textContent = mode === 'pc' ? 'Price / piece (BD)' : 'Price / Kg (BD)';
+    const v = parseFloat(document.getElementById('iPrice').value);
+    document.getElementById('iPriceHint').textContent = mode === 'kg2pc' ? (v > 0 ? `= ${(v * g / 1000).toFixed(3)} BD per piece (${g} g)` : `per kg — piece weight ${g} g`) : '';
+    return { mode, g };
+  }
+  function openInitEdit(id, field){
+    const e = entries.find(x => x.ID === id); if(!e) return false;
+    ieId = id;
+    document.getElementById('ieTitle').textContent = 'Edit · ' + (e['Chocolate Name'] || '');
+    document.getElementById('ieSub').textContent = (e.Branch || '') + ' · ' + (e.ID || '') + ' · opening balance';
+    document.getElementById('iUnit').innerHTML = (units.length ? units : ['Kg','Piece']).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    document.getElementById('iStorage').innerHTML = '<option value=""></option>' + storageLocations.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    document.getElementById('iBatch').value = e['Batch No.'] || '';
+    document.getElementById('iExpiry').value = String(e['Expiry Date'] || '').slice(0,10);
+    document.getElementById('iQty').value = e['Qty Received'] ?? '';
+    document.getElementById('iUnit').value = e.Unit || 'Kg';
+    document.getElementById('iStorage').value = e['Storage Location'] || '';
+    document.getElementById('iBy').value = e['Created By'] || '';
+    const g = gramsOf(e['Chocolate Name']);
+    let price = Number(e['Price / Kg']) || 0;
+    if(isPiece(e.Unit)){ const pp = Number(e['Price Per Piece']) || 0; price = g ? Math.round(pp * 1000 / g * 1000) / 1000 : pp; }
+    document.getElementById('iPrice').value = price || '';
+    iePriceMode();
+    document.getElementById('ieBack').classList.add('show');
+    const f = field && document.getElementById(field);
+    if(f) setTimeout(() => { f.focus(); f.style.outline = '3px solid #c0392b'; f.style.outlineOffset = '2px'; f.addEventListener('input', () => { f.style.outline = ''; }, { once:true }); }, 120);
+    return true;
+  }
+  ['iUnit','iPrice'].forEach(id => document.getElementById(id).addEventListener(id === 'iUnit' ? 'change' : 'input', iePriceMode));
+  document.getElementById('ieCancel').addEventListener('click', () => { document.getElementById('ieBack').classList.remove('show'); ieId = null; });
+  document.getElementById('historyList').addEventListener('click', ev => { const b = ev.target.closest('.hist-edit'); if(b) openInitEdit(b.dataset.eid); });
+  document.getElementById('ieSave').addEventListener('click', async () => {
+    const e = entries.find(x => x.ID === ieId); if(!e) return;
+    const exp = document.getElementById('iExpiry').value, qty = parseFloat(document.getElementById('iQty').value), unit = document.getElementById('iUnit').value;
+    const by = document.getElementById('iBy').value.trim();
+    let price = parseFloat(document.getElementById('iPrice').value);
+    if(isNaN(qty) || qty < 0){ alert('Please enter a valid quantity.'); return; }
+    if(exp){ const y = Number(exp.slice(0,4)); if(y < 2020 || y > 2100){ alert('The expiry date looks wrong (year ' + exp.slice(0,4) + '). Please fix the year, e.g. 2027.'); return; } }
+    if(!by){ alert('Please enter who entered it.'); document.getElementById('iBy').focus(); return; }
+    if(isNaN(price)) price = 0;
+    const pm = iePriceMode();
+    if(pm.mode === 'kg2pc') price = Math.round(price * pm.g) / 1000;
+    else if(pm.mode === 'pc' && price > 50 && !confirm(price.toFixed(3) + ' BD per PIECE? If this is the price per kg, press Cancel and change the unit to Kg.')) return;
+    const btn = document.getElementById('ieSave'); btn.disabled = true; btn.textContent = 'Saving…';
+    try{
+      const params = new URLSearchParams({ action:'editEntry', id: e.ID, branch: e.Branch || currentBranch,
+        chocolateName: e['Chocolate Name'] || '', receiveDate: String(e['Receive Date'] || '').slice(0,10), deliveryNo: e['Delivery Note No'] || 'INITIAL STOCK',
+        batchNo: document.getElementById('iBatch').value.trim(), supplier: e.Supplier || 'Initial Stock Entry', expiryDate: exp,
+        qty, unit, price, storageLocation: document.getElementById('iStorage').value, receivedBy: by, remarks: e.Remarks || '' });
+      const d = await (await fetch(`${API_URL}?${params.toString()}`)).json();
+      if(d && d.error){ alert(d.error); }
+      else {
+        Object.assign(e, { 'Batch No.': params.get('batchNo'), 'Expiry Date': exp, 'Qty Received': qty, Unit: unit, 'Storage Location': params.get('storageLocation'), 'Created By': by });
+        if(isPiece(unit)){ e['Price Per Piece'] = price; } else { e['Price / Kg'] = price; }
+        document.getElementById('ieBack').classList.remove('show'); ieId = null; renderHistory();
+      }
+    }catch(err){ alert('Could not save. Check your connection and try again.'); }
+    btn.disabled = false; btn.textContent = 'Save changes';
+  });
+  // "Open" from the dashboard Check list: ?edit=<ID>&field=<input id>
+  (function(){
+    const q = new URLSearchParams(location.search), id = q.get('edit'), field = q.get('field');
+    if(!id) return;
+    let n = 0;
+    const t = setInterval(() => {
+      const e = entries.find(x => String(x.ID) === id);
+      if(e){ clearInterval(t); openInitEdit(e.ID, field); }
+      else if(++n > 60){ clearInterval(t); alert('Could not find entry ' + id + ' (check the branch tab).'); }
+    }, 500);
+  })();
+
   function renderHistory(){
     const base = entries.filter(e => e.Branch === currentBranch && e['Delivery Note No'] === 'INITIAL STOCK');
     const el = document.getElementById('historyList');
@@ -463,10 +589,10 @@
       <div class="hist-row">
         <div class="hist-top">
           <span>${e['Chocolate Name'] || '—'} <span style="color:var(--ink-dim); font-weight:400;">(${e.ID || '—'})</span></span>
-          <span>${fmtBD(e['Price / Kg'])}/kg</span>
+          <span>${rowPrice(e)} <button class="hist-edit" data-eid="${esc(e.ID)}">Edit</button></span>
         </div>
-        <div class="hist-meta">${fmtDate(e['Receive Date'])} · ${e['Qty Received'] ?? 0} ${e.Unit || ''} · Batch: ${e['Batch No.'] || '—'}</div>
-        <div class="hist-meta">Entered by: ${e['Created By'] || '—'}</div>
+        <div class="hist-meta">${fmtDate(e['Receive Date'])} · ${e['Qty Received'] ?? 0} ${e.Unit || ''} · Batch: ${e['Batch No.'] || '—'} · Exp: ${rowExpiry(e)}</div>
+        <div class="hist-meta">Entered by: ${e['Created By'] ? esc(e['Created By']) : '<span class="hist-warn">⚠ missing</span>'}</div>
       </div>
     `).join('');
   }
