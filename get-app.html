@@ -234,6 +234,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
       <div class="panel" id="pA" role="tabpanel" aria-labelledby="tabA">
         <div class="act"><a class="btn" id="apkBtn" href="downloads/Lalabella.apk" download="Lalabella.apk">Download the app</a></div>
+        <p class="ver" id="aVer"></p>
         <ol class="steps">
           <li><span>Tap <b>Download</b>, then open <span class="k">Lalabella.apk</span> from your notifications or Downloads.</span></li>
           <li><span>If asked, allow installs from this browser.</span></li>
@@ -284,6 +285,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
 
       <div class="appPane" id="appD" hidden>
         <div class="act"><a class="btn" id="dBtn" href="downloads/LalabellaDriver.apk" download="LalabellaDriver.apk">Download Driver app</a></div>
+        <p class="ver" id="dVer"></p>
         <ol class="steps">
           <li><span>Tap <b>Download</b>, then open <span class="k">LalabellaDriver.apk</span>.</span></li>
           <li><span>Allow the install, then <b>Install anyway</b> on the Play Protect warning.</span></li>
@@ -314,8 +316,14 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(40px,6
     var i = k === 'messenger' || k === 'm' ? 1 : (k === 'driver' || k === 'd' ? 2 : 0);
     if (i) pickApp(i);
   })();
+  // the version of each file on the download page (so everyone sees which version they get)
+  [['app-version.json', 'aVer', 'apkBtn', 'Lalabella.apk'], ['driver-app-version.json', 'dVer', 'dBtn', 'LalabellaDriver.apk']].forEach(function(a){
+    fetch('downloads/' + a[0] + '?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.versionName) { $(a[1]).textContent = 'Latest version ' + j.versionName; $(a[2]).href = 'downloads/' + a[3] + '?v=' + encodeURIComponent(j.versionCode || j.versionName); $(a[2]).textContent = $(a[2]).textContent.replace(/( v[\d.]+)?$/, ' v' + j.versionName); }
+    }).catch(function(){});
+  });
   fetch('downloads/messenger-app-version.json?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-    if (j && j.versionName) { $('mVer').textContent = 'Latest version ' + j.versionName; $('mBtn').href = 'downloads/LalabellaMessenger.apk?v=' + encodeURIComponent(j.versionCode || j.versionName); }
+    if (j && j.versionName) { $('mVer').textContent = 'Latest version ' + j.versionName; $('mBtn').textContent = 'Download Messenger v' + j.versionName; $('mBtn').href = 'downloads/LalabellaMessenger.apk?v=' + encodeURIComponent(j.versionCode || j.versionName); }
   }).catch(function(){});
 
   function pick(i, focus){
