@@ -168,6 +168,10 @@
     if (own) { var op = document.getElementById('lalaBellPanel'); if (!op || !op.classList.contains('show')) own.click(); return; }
     panel.classList.add('show'); layoutPanel(); refresh();
   });
+  // opened from a phone order alert (index.html?bell=1): show the order list
+  if (/[?&]bell=1\b/.test(location.search)) setTimeout(function () {
+    try { if (own) { var op = document.getElementById('lalaBellPanel'); if (!op || !op.classList.contains('show')) own.click(); } else { panel.classList.add('show'); layoutPanel(); refresh(); } } catch (e) {}
+  }, 1200);
   var SEEN_KEY = 'lbobSeen';
   function seenSet() { try { var a = JSON.parse(sessionStorage.getItem(SEEN_KEY) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
   // Remember every order already announced (not only the ones in the last list), so a list that briefly flips
