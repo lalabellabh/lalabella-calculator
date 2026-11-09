@@ -261,6 +261,9 @@ public class MainActivity extends Activity {
             } else if (pr.optBoolean("net")) {
                 Ui.MAIN.post(() -> { /* offline: keep what we have */ });
             }
+            // the Lalabella Team group's picture (same as the website chat), kept on the phone
+            JSONObject tg = Api.http("POST", Api.BASE + "chatx", Api.o("action", "teamGet", "token", Store.token(app)).toString());
+            if (tg.optBoolean("success")) Store.sp(app).edit().putString("teamPhoto", tg.optString("photo", "")).apply();
             JSONObject gr = Api.chat(app, Api.o("action", "groups"));
             if (gr.optBoolean("success") && gr.optJSONArray("groups") != null) groups = gr.optJSONArray("groups");
             JSONObject seen = Store.seenAll(app);
@@ -381,6 +384,7 @@ public class MainActivity extends Activity {
         if (!Store.visitor(this)) {
             Row t = new Row();
             t.key = "t"; t.type = "t"; t.id = 0; t.title = "Lalabella Team"; t.sub = "Everyone in the team"; t.unread = unread.optInt("group", 0);
+            t.avatar = Store.sp(this).getString("teamPhoto", "");
             all.add(t);
         }
         for (int i = 0; i < groups.length(); i++) {
@@ -437,7 +441,7 @@ public class MainActivity extends Activity {
             int pd = Ui.dp(MainActivity.this, 10);
             l.setPadding(pd, pd, pd + Ui.dp(MainActivity.this, 4), pd);
             AvatarView a = new AvatarView(MainActivity.this);
-            if (r.type.equals("t")) a.set("LT", 3, ""); else a.set(r.title, r.id, r.avatar);
+            if (r.type.equals("t")) a.set("LT", 3, r.avatar); else a.set(r.title, r.id, r.avatar);
             a.setOnline(r.online);
             if (r.type.equals("d")) {
                 boolean has = false;

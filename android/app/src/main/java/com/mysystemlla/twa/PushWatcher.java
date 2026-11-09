@@ -95,7 +95,7 @@ public class PushWatcher extends NotificationListenerService {
         if ((m = DM.matcher(tag)).find()) { path = "chatbox.html?dm=" + m.group(1); key = "lb-dm-" + m.group(1); peer = Integer.parseInt(m.group(1)); }
         else if ((m = GRP.matcher(tag)).find()) { path = "chatbox.html?g=" + m.group(1); key = "lb-g-" + m.group(1); grp = Integer.parseInt(m.group(1)); }
         else if (tag.contains("chat-team") || title.contains(" · Team chat")) { path = "chatbox.html?team=1"; key = "lb-team"; team = true; }
-        else if (tag.contains("orders") || title.contains("to assign")) { path = "index.html"; chat = false; key = "lb-orders"; }
+        else if (tag.contains("orders") || tag.contains("shopify") || title.contains("to assign") || title.toLowerCase().contains("shopify order")) { path = "index.html?bell=1"; chat = false; key = "lb-orders"; }
         else if (title.equals("Lalabella")) return; // test notification: leave Chrome's own
         else path = "chatbox.html";
 

@@ -1,4 +1,5 @@
 // LALABELLA — Web Push (Supabase Edge Function)  v10
+// v11: Shopify alert tag is 'orders-shopify' so the Android app (PushWatcher) treats it as an order, not a chat.
 // v10: order alerts show the order's product picture (Shopify CDN only) and open the home page with the order list (?bell=1), not the last page (chat).
 // v9: Shopify order alerts show the order number + total only (no branch); the Tampermonkey decides the branch.
 // v8: approvalNotify is SILENT (no phone push). Approvals only show in the in-app bell.
@@ -152,7 +153,7 @@ Deno.serve(async (req) => {
         ? (orders.length === 1 ? 'New Shopify order' : `${orders.length} new Shopify orders`)
         : (orders.length === 1 ? 'New order to assign' : `${orders.length} new orders to assign`);
       const pic = String((orders.find((o: any) => /^https:\/\/cdn\.shopify\.com\/[^\s"'<>]{1,400}$/.test(String(o.thumb || ''))) || {}).thumb || '');
-      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html?bell=1', tag: allShop ? 'shopify' : 'orders', icon: pic, image: pic, kind: 'order' });
+      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html?bell=1', tag: allShop ? 'orders-shopify' : 'orders', icon: pic, image: pic, kind: 'order' });
       return json({ success: true, ...r });
     }
 
