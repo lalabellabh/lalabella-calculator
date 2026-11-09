@@ -47,7 +47,9 @@ self.addEventListener('push', (e) => {
   const title = d.title || 'Lalabella';
   const opts = {
     body: d.body || '',
-    icon: '/icons/icon-192.png',
+    // order alerts: the product picture of the order (never a person's photo); everything else: the app logo
+    icon: /^https:\/\/cdn\.shopify\.com\//.test(String(d.icon || '')) ? d.icon : '/icons/icon-192.png',
+    image: /^https:\/\/cdn\.shopify\.com\//.test(String(d.image || '')) ? d.image : undefined,
     badge: '/icons/icon-192.png',
     tag: d.tag || undefined,
     renotify: !!d.tag,
@@ -108,8 +110,12 @@ function openTarget(n) {
     for (const c of list) {
       if (c.url === target && 'focus' in c) return c.focus();
     }
-    for (const c of list) {
-      if ('navigate' in c && 'focus' in c) return c.navigate(target).then((x) => x && x.focus());
+    // an open app window: go to the notification's page (not just bring back the last page, e.g. the chat)
+    const c = list.find((x) => 'focus' in x);
+    if (c) {
+      try { c.postMessage({ type: 'lb-go', url: target }); } catch (x) {}
+      const nav = 'navigate' in c ? c.navigate(target).catch(() => null) : Promise.resolve(null);
+      return nav.then((x) => (x || c).focus()).catch(() => self.clients.openWindow(target));
     }
     return self.clients.openWindow(target);
   });

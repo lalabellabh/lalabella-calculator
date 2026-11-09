@@ -191,3 +191,18 @@ window.LB_CONFIG = Object.freeze({
     }, 250);
   } catch (e) {}
 })();
+
+// A tapped phone notification asks the open app window to go to its page (sw.js 'lb-go'), so an order alert never just
+// re-opens the last page (e.g. the chat).
+(function () {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      var d = e.data || {};
+      if (d.type !== 'lb-go' || !d.url) return;
+      var u = new URL(d.url, location.href);
+      if (u.origin !== location.origin) return;
+      if (u.pathname + u.search !== location.pathname + location.search) location.href = u.href;
+    });
+  } catch (e) {}
+})();
