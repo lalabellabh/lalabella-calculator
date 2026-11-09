@@ -110,7 +110,7 @@ public class ChatActivity extends Activity {
         back.setOnClickListener(v -> finish());
         head.addView(back);
         AvatarView av = new AvatarView(this);
-        if (type.equals("t")) av.set("LT", 3, ""); else av.set(title, convId, avatar);
+        if (type.equals("t")) av.set("LT", 3, avatar.length() > 0 ? avatar : Store.sp(this).getString("teamPhoto", "")); else av.set(title, convId, avatar);
         head.addView(av, new LinearLayout.LayoutParams(Ui.dp(this, 42), Ui.dp(this, 42)));
         LinearLayout tt = new LinearLayout(this);
         tt.setOrientation(LinearLayout.VERTICAL);
