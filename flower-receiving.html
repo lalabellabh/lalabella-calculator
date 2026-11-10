@@ -1024,7 +1024,7 @@ body::after{
     }
     el.innerHTML = list.map(e => `
       <div class="hist-row">
-        <div class="hist-name">${lbEsc(e.Type === 'Supply' ? '🎀 ' : '')}${lbEsc(e.Flower || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.Type === 'Supply' ? 'Supply' : (e.Origin || 'N/A'))})</span></div>
+        <div class="hist-name">${lbEsc(e.Type === 'Supply' ? '🎀 ' : '')}${lbEsc(e.Flower || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.Type === 'Supply' ? 'Supply' : (e.Origin || 'N/A'))})</span>${e['Approval Status'] === 'Pending' ? ' <span style="font-size:11px;font-weight:700;color:#c68a1f">⏳ Waiting approval</span>' : (e['Approval Status'] === 'Rejected' ? ' <span style="font-size:11px;font-weight:700;color:#b0442e">✕ Rejected</span>' : '')}</div>
         <div class="hist-meta">${lbEsc(fmtDate(e.Date))} · Qty ${lbEsc(e.Qty)} ${lbEsc(e.Unit || '')} · Rate ${fmtBD(e.Rate)}/${lbEsc(e.Unit || 'unit')}</div>
         <div class="hist-meta">Amount: <b>${fmtBD(e.Amount)}</b> <span style="color:var(--ink-dim); font-weight:400;">(VAT ${e['Tax%']||0}%: ${fmtBD(e.Tax)}, not included)</span></div>
         <div class="hist-meta">Supplier: ${lbEsc(e.Supplier || '—')} · Received by: ${lbEsc(e['Received By'] || '—')} · Invoice #${lbEsc(e['Invoice No'] || '—')}</div>
@@ -1252,7 +1252,8 @@ body::after{
       invoiceNo: document.getElementById('fInvoiceNo').value.trim(),
       receivedBy: document.getElementById('fReceivedBy').value.trim(),
       date: document.getElementById('fDate').value,
-      taxPercent: taxPercent
+      taxPercent: taxPercent,
+      paperTotal: document.getElementById('fPaperTotal').value
     });
 
     try{
@@ -1262,9 +1263,7 @@ body::after{
         alert(data.error);
       } else {
         const pendingCount = data.results.filter(r => r.approvalStatus === 'Pending Approval').length;
-        const msg = pendingCount > 0
-          ? `Saved ${data.results.length} item(s)! ${pendingCount} rate(s) need approval before they become official — Rate stays at the Legacy/existing value until then.`
-          : `Saved ${data.results.length} item(s) — first-time entries with nothing to compare against were saved as Approved.`;
+        const msg = `Saved ${data.results.length} item(s) ✅\n\n⏳ Waiting for Admin approval — it goes into stock after an Admin checks and approves it.` + (pendingCount > 0 ? `\n(${pendingCount} new company rate(s) will be approved together.)` : '');
         alert(msg);
 
         // Snapshot the invoice before the cart clears, so Print/Share

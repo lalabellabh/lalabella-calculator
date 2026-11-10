@@ -47,7 +47,7 @@ async function check(branchSel: string) {
     sbAll(`chocolate_database?select=id,legacy_id,branch,chocolate_name,batch_no,expiry_date,unit,price_per_kg,price_per_piece,weight_per_piece,current_stock,created_by,delivery_note_no${bf}&current_stock=gt.0&order=branch.asc,chocolate_name.asc`),
     sbGet('chocolate_item_list?select=chocolate_name,standard_price_per_kg'),
     sbGet('chocolate_settings?select=key,value'),
-    sbAll(`flower_database?select=id,legacy_id,branch,entry_date,flower_name,qty,unit,stems_per_bunch,rate,subtotal,tax,invoice_total,supplier,received_by,invoice_no,type${bf}&order=id.asc`),
+    sbAll(`flower_database?select=id,legacy_id,branch,entry_date,flower_name,qty,unit,stems_per_bunch,rate,subtotal,tax,invoice_total,supplier,received_by,invoice_no,type&approval_status=neq.Rejected${bf}&order=id.asc`),
     sbAll(`flower_stock_history?select=branch,flower_name,count_date,physical_count&item_code=eq.CONSOLIDATED${bf}&order=id.asc`),
     sbGet(`chocolate_stock_count_history?select=branch${bf}&limit=1000`),
     sbAll(`flower_transfer_history?select=flower_name,qty,from_branch,to_branch,transfer_date&order=id.asc`),

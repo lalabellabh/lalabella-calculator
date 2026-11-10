@@ -45,6 +45,7 @@
       ['chocolate-release.html', '📤', 'Release'],
       ['stock-count.html', '📋', 'Stock Count'],
       ['stock-approval.html', '✅', 'Stock Approval'],
+      ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],
       ['chocolate-barcode.html', '🏷️', 'Barcode'],
       ['chocolate-calc.html', '🍫', 'Chocolate Calculator'],
@@ -56,6 +57,7 @@
     flower: { title: 'Flower Tools', home: 'flower-tools.html', homeLabel: 'Flower Tools', items: [
       ['flower-dashboard.html', '📊', 'Dashboard'],
       ['flower-receiving.html', '🛒', 'Flower Receiving'],
+      ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['flower-purchase.html', '🧾', 'Flower Purchase'],
       ['flower-stock-count.html', '📋', 'Stock Count'],
       ['flower-catalog.html', '📚', 'Flower Catalog'],
@@ -150,6 +152,7 @@
   function moduleOf(p) {
     if (p === 'index.html' || p === 'dashboard.html' || p.indexOf('chocolate-') === 0 ||
         p === 'stock-count.html' || p === 'stock-approval.html' || p === 'initial-stock.html') return 'chocolate';
+    if (p === 'receiving-approval.html') return (new URLSearchParams(location.search).get('m') === 'chocolate') ? 'chocolate' : 'flower';
     if (p.indexOf('flower-') === 0) return 'flower';
     if (p.indexOf('item-') === 0) return 'item';
     return null;

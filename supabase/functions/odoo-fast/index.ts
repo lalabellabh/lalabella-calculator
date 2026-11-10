@@ -102,7 +102,7 @@ async function undoOrder(order: string) {
     for (const d of (row.details || [])) {
       if (d.kind !== 'chocolate') continue;
       for (const t of (d.taken || [])) {
-        const b = (await sbGetJ(`chocolate_database?select=id,current_stock,qty_used&branch=eq.${encodeURIComponent(branch)}&chocolate_name=eq.${encodeURIComponent(d.item)}&batch_no=eq.${encodeURIComponent(t.batch)}&limit=1`))[0];
+        const b = (await sbGetJ(`chocolate_database?select=id,current_stock,qty_used&branch=eq.${encodeURIComponent(branch)}&chocolate_name=eq.${encodeURIComponent(d.item)}&batch_no=eq.${encodeURIComponent(t.batch)}&approval_status=eq.Approved&limit=1`))[0];
         if (b) await sbPatchJ('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) + Number(t.qty)), qty_used: r3(Number(b.qty_used || 0) - Number(t.qty)) });
       }
     }
@@ -173,7 +173,7 @@ async function runSync() {
     const batches = await sbGetJ(`chocolate_database?select=*&branch=eq.${encodeURIComponent(branch)}&chocolate_name=eq.${encodeURIComponent(name)}&current_stock=gt.0&order=expiry_date.asc.nullslast,id.asc`);
     const back = (a.grams ?? a.pcs) < 0;   // refund: put it back on the newest batch
     if (back) {
-      const all = await sbGetJ(`chocolate_database?select=*&branch=eq.${encodeURIComponent(branch)}&chocolate_name=eq.${encodeURIComponent(name)}&order=id.desc&limit=1`);
+      const all = await sbGetJ(`chocolate_database?select=*&branch=eq.${encodeURIComponent(branch)}&chocolate_name=eq.${encodeURIComponent(name)}&approval_status=eq.Approved&order=id.desc&limit=1`);
       if (!all.length) return { short: 'no batch to return to' };
       const b = all[0], kgUnit = /kg/i.test(b.unit || ''), q = kgUnit ? (a.grams ?? 0) / 1000 : (a.pcs ?? 0);
       await sbPatchJ('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) - q), qty_used: r3(Number(b.qty_used || 0) + q) });
@@ -250,7 +250,7 @@ async function sbGetAllJ(q: string) {   // pages past the 1000-row limit
 // Same rule as the Flower Dashboard: last CONSOLIDATED count + purchases (bunch -> stems) + transfers in - out - used, after that count.
 async function ourFlowerStock(branch: string) {
   const [db, hist, tr, ful] = await Promise.all([
-    sbGetAllJ(`flower_database?select=flower_name,qty,unit,stems_per_bunch,entry_date,type&branch=eq.${encodeURIComponent(branch)}&order=id.asc`),
+    sbGetAllJ(`flower_database?select=flower_name,qty,unit,stems_per_bunch,entry_date,type&approval_status=eq.Approved&branch=eq.${encodeURIComponent(branch)}&order=id.asc`),
     sbGetAllJ(`flower_stock_history?select=flower_name,count_date,physical_count&branch=eq.${encodeURIComponent(branch)}&item_code=eq.CONSOLIDATED&order=id.asc`),
     sbGetAllJ(`flower_transfer_history?select=flower_name,qty,from_branch,to_branch,transfer_date&order=id.asc`),
     sbGetAllJ(`flower_arrangement_fulfillments?select=flower_name,qty,fulfilled_date&branch=eq.${encodeURIComponent(branch)}&order=id.asc`),

@@ -908,7 +908,7 @@
       return `
         <div class="hist-row">
           <div class="hist-top">
-            <span>${lbEsc(e['Chocolate Name'] || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.ID || '—')})</span></span>
+            <span>${lbEsc(e['Chocolate Name'] || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.ID || '—')})</span>${e['Approval Status'] === 'Pending' ? '<span style="font-size:11px;font-weight:700;color:#c68a1f;margin-left:6px">⏳ Waiting approval</span>' : (e['Approval Status'] === 'Rejected' ? '<span style="font-size:11px;font-weight:700;color:#b0442e;margin-left:6px">✕ Rejected</span>' : '')}</span>
             <span class="status-pill ${st.cls}">${lbEsc(st.label)}</span>
           </div>
           <div class="hist-meta">${lbEsc(fmtDate(e['Receive Date']))} · ${e['Qty Received'] ?? e['Current Stock'] ?? 0} ${lbEsc(e.Unit || '')} · ${fmtBD(e['Price / Kg'])}/kg · Batch: ${lbEsc(e['Batch No.'] || '—')}</div>
@@ -1107,7 +1107,7 @@
         ID: data.id, 'Receive Date': receiveDate, Supplier: supplier,
         'Chocolate Name': chocolateName, 'Delivery Note No': deliveryNo, 'Batch No.': batchNo, 'Expiry Date': expiryDate,
         'Qty Received': qty, Unit: unit, 'Price / Kg': price, Branch: currentBranch,
-        Remarks: remarks, 'Created By': receivedBy
+        Remarks: remarks, 'Created By': receivedBy, 'Approval Status': data && data.waitingApproval ? 'Pending' : 'Approved'
       });
 
       if(receivedBy && !receivedByNames.includes(receivedBy)){
@@ -1132,11 +1132,19 @@
       renderHistory();
       updatePulseStats();
       if(soundEnabled) successChime();
+      if(data && data.waitingApproval) showApprovalNote();
     }catch(e){
       alert('Could not log this delivery. Check your connection and try again.');
     }
     logBtn.disabled = false; logBtn.textContent = 'Log Receiving';
   });
+
+  // Receiving approval (Nov 2026): tell the staff once per visit that new receiving waits for an Admin.
+  let approvalNoteShown = false;
+  function showApprovalNote(){
+    if(approvalNoteShown) return; approvalNoteShown = true;
+    alert('Saved ✅\n\n⏳ Waiting for Admin approval — it goes into stock after an Admin checks and approves it.');
+  }
 
   function populateReceivingPrintView(){
     const list = entries

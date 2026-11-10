@@ -204,7 +204,8 @@ function mapDbRow(r: any) {
   return { 'ID': r.legacy_id || String(r.id), 'Date': r.entry_date, 'Branch': r.branch, 'Invoice No': r.invoice_no, 'Supplier': r.supplier,
     'Flower': r.flower_name, 'Item Code': r.item_code, 'Origin': r.origin, 'Unit': r.unit, 'Stems per Bunch': r.stems_per_bunch, 'Qty': r.qty,
     'Rate': r.rate, 'Subtotal': r.subtotal, 'Tax%': r.tax_percent, 'Tax': r.tax, 'Amount': r.amount, 'StandardRate': r.standard_rate,
-    'Invoice Total': r.invoice_total, 'Received By': r.received_by, 'Type': 'Flower' };
+    'Invoice Total': r.invoice_total, 'Received By': r.received_by, 'Type': r.type || 'Flower',
+    'Approval Status': r.approval_status || 'Approved', 'Batch': r.batch_ref || '', 'Paper Total': r.paper_total };
 }
 function arrangementRateMap(flowerRows: any[]) {
   const legacy: Record<string, number> = {}, holland: Record<string, number> = {};
@@ -252,7 +253,8 @@ async function processSupplyItem(item: any, ctx: any) {
   const subtotal = qty * cost, tax = subtotal * (ctx.taxPercent / 100);
   await sbPost('flower_database', [{ entry_date: ctx.date, branch: ctx.branch, invoice_no: ctx.invoiceNo, supplier: ctx.supplier, flower_name: supplyName,
     item_code: itemCode, origin: '', unit, stems_per_bunch: null, qty, rate: cost, subtotal, tax_percent: ctx.taxPercent, tax, amount: subtotal,
-    standard_rate: cost, invoice_total: ctx.invoiceTotal, received_by: ctx.receivedBy, type: 'Supply' }]);
+    standard_rate: cost, invoice_total: ctx.invoiceTotal, received_by: ctx.receivedBy, type: 'Supply',
+    approval_status: 'Pending', batch_ref: ctx.batchRef, paper_total: ctx.paperTotal }]);
   return { flowerName: supplyName, itemCode, approvalStatus: 'N/A', suggestedRate: cost, finalRate: cost, amount: subtotal, type: 'Supply' };
 }
 async function processFlowerItem(item: any, ctx: any) {
@@ -289,18 +291,21 @@ async function processFlowerItem(item: any, ctx: any) {
       suggested_rate: suggestedRate, supplier_rate_used: supplierRate }]);
   }
 
+  const subtotal = qty * supplierRate, tax = subtotal * (ctx.taxPercent / 100);
+  // Receiving approval (Nov 2026): saved as Pending — not in stock until an Admin approves the whole invoice.
+  const ins = await sbPost('flower_database', [{ entry_date: ctx.date, branch: ctx.branch, invoice_no: ctx.invoiceNo, supplier: ctx.supplier, flower_name: flowerName,
+    item_code: itemCode, origin, unit, stems_per_bunch: stemsPerBunch, qty, rate: supplierRate, subtotal, tax_percent: ctx.taxPercent, tax, amount: subtotal,
+    standard_rate: finalRate, invoice_total: ctx.invoiceTotal, received_by: ctx.receivedBy, type: 'Flower',
+    approval_status: 'Pending', batch_ref: ctx.batchRef, paper_total: ctx.paperTotal }]);
+  const sourceId = ins && ins[0] ? ins[0].id : null;
+
   if (approvalStatus === 'Pending Approval') {
     const diff = suggestedRate - (compareRate || 0);
     const marginPercent = compareRate ? (diff / compareRate) * 100 : 0;
     await sbPost('flower_rate_change_history', [{ change_date: new Date().toISOString(), flower_name: flowerName, origin, item_code: itemCode,
       old_company_rate: compareRate || 0, new_company_rate: suggestedRate, supplier_rate_used: supplierRate, difference: diff, margin_percent: marginPercent,
-      margin_status: Math.abs(marginPercent) > 5 ? 'High Change' : 'Normal', approval_status: 'Pending Approval', approved_by: '', remarks: '' }]);
+      margin_status: Math.abs(marginPercent) > 5 ? 'High Change' : 'Normal', approval_status: 'Pending Approval', approved_by: '', remarks: '', source_id: sourceId }]);
   }
-
-  const subtotal = qty * supplierRate, tax = subtotal * (ctx.taxPercent / 100);
-  await sbPost('flower_database', [{ entry_date: ctx.date, branch: ctx.branch, invoice_no: ctx.invoiceNo, supplier: ctx.supplier, flower_name: flowerName,
-    item_code: itemCode, origin, unit, stems_per_bunch: stemsPerBunch, qty, rate: supplierRate, subtotal, tax_percent: ctx.taxPercent, tax, amount: subtotal,
-    standard_rate: finalRate, invoice_total: ctx.invoiceTotal, received_by: ctx.receivedBy, type: 'Flower' }]);
   return { flowerName, itemCode, approvalStatus, suggestedRate, finalRate, amount: subtotal, type: 'Flower' };
 }
 async function saveReceiving(p: Record<string, any>) {
@@ -310,10 +315,12 @@ async function saveReceiving(p: Record<string, any>) {
   const taxPercent = Number(p.taxPercent) || 10;
   let invoiceGrandTotal = 0;
   items.forEach(it => { const rate = it.type === 'Supply' ? (Number(it.cost) || 0) : (Number(it.supplierRate) || 0); const qty = Number(it.qty) || 0; const subtotal = qty * rate; invoiceGrandTotal += subtotal + (subtotal * (taxPercent / 100)); });
-  const ctx = { branch: p.branch, supplier: p.supplier || '', invoiceNo: p.invoiceNo || '', receivedBy: p.receivedBy || '', date: p.date || new Date().toISOString().slice(0, 10), taxPercent, invoiceTotal: invoiceGrandTotal };
+  const batchRef = 'FR-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  const paperTotal = (p.paperTotal === undefined || p.paperTotal === '' || isNaN(Number(p.paperTotal))) ? null : Number(p.paperTotal);
+  const ctx = { branch: p.branch, supplier: p.supplier || '', invoiceNo: p.invoiceNo || '', receivedBy: p.receivedBy || '', date: p.date || new Date().toISOString().slice(0, 10), taxPercent, invoiceTotal: invoiceGrandTotal, batchRef, paperTotal };
   const results = [];
   for (const it of items) results.push(it.type === 'Supply' ? await processSupplyItem(it, ctx) : await processFlowerItem(it, ctx));
-  return { success: true, results };
+  return { success: true, results, batchRef, waitingApproval: true };
 }
 async function editEntry(p: Record<string, any>) {
   const id = p.id, qty = Number(p.qty) || 0, supplierRate = Number(p.supplierRate) || 0, taxPercent = Number(p.taxPercent) || 10;
@@ -322,9 +329,20 @@ async function editEntry(p: Record<string, any>) {
   let existing = await sbGet('flower_database', `select=id&${query}`);
   if (!existing.length && /^\d+$/.test(String(id))) { query = `id=eq.${id}`; existing = await sbGet('flower_database', `select=id&${query}`); }
   if (!existing.length) return { error: 'Entry not found' };
-  await sbPatch('flower_database', query, { entry_date: p.date || null, invoice_no: p.invoiceNo || '', supplier: p.supplier || '', flower_name: p.flowerName || '',
+  const upd = await sbPatch('flower_database', query, { entry_date: p.date || null, invoice_no: p.invoiceNo || '', supplier: p.supplier || '', flower_name: p.flowerName || '',
     origin: p.origin || '', unit: p.unit || '', stems_per_bunch: Number(p.stemsPerBunch) || 1, qty, rate: supplierRate, subtotal, tax_percent: taxPercent, tax,
     amount: subtotal, received_by: p.receivedBy || '' });
+  // Keep the waiting rate approval of this line in step with the edit (the 19.800 Rose case, Nov 2026).
+  const rowId = upd && upd[0] && upd[0].id;
+  if (rowId && String(upd[0].type || 'Flower') !== 'Supply') {
+    const rc = await sbGet('flower_rate_change_history', `select=id,old_company_rate&approval_status=eq.Pending%20Approval&source_id=eq.${rowId}&limit=1`);
+    if (rc.length) {
+      const newRate = calculateCompanyRate(supplierRate, p.unit, Number(p.stemsPerBunch) || 1);
+      const oldRate = Number(rc[0].old_company_rate) || 0;
+      const diff = newRate - oldRate, pct = oldRate ? diff / oldRate * 100 : 0;
+      await sbPatch('flower_rate_change_history', `id=eq.${rc[0].id}`, { new_company_rate: newRate, supplier_rate_used: supplierRate, difference: diff, margin_percent: pct, margin_status: Math.abs(pct) > 5 ? 'High Change' : 'Normal' });
+    }
+  }
   return { success: true };
 }
 
@@ -387,6 +405,56 @@ async function setMinStockBulk(p: Record<string, any>) {
 }
 
 // ---------------------------------------------------------------
+// RECEIVING APPROVAL (Nov 2026): a saved invoice waits here until an Admin approves it.
+// Approve = goes into stock + its rate changes are approved together. Reject = never counts.
+// ---------------------------------------------------------------
+const batchKey = (r: any) => String(r.batch_ref || ('ROW-' + r.id));
+async function getPendingReceiving(p: Record<string, any>) {
+  let q = 'select=*&approval_status=eq.Pending&order=id.asc';
+  if (p.batch) q += `&batch_ref=eq.${encodeURIComponent(String(p.batch))}`;
+  const rows = await sbGet('flower_database', q);
+  if (!rows.length) return { success: true, batches: [] };
+  const ids = rows.map((r: any) => r.id);
+  const [rcs, hist] = await Promise.all([
+    sbGet('flower_rate_change_history', `select=id,source_id,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&source_id=in.(${ids.join(',')})`),
+    sbGet('flower_database', 'select=supplier,flower_name,origin,unit,stems_per_bunch,rate,entry_date&approval_status=eq.Approved&order=id.desc&limit=600'),
+  ]);
+  const rcBy: Record<string, any> = {}; rcs.forEach((r: any) => { rcBy[r.source_id] = r; });
+  const low = (v: any) => String(v || '').trim().toLowerCase();
+  const out: Record<string, any> = {};
+  for (const r of rows) {
+    const k = batchKey(r);
+    const b = out[k] = out[k] || { batch: k, kind: 'flower', branch: r.branch, date: r.entry_date, supplier: r.supplier || '', invoiceNo: r.invoice_no || '', receivedBy: r.received_by || '', paperTotal: r.paper_total == null ? null : Number(r.paper_total), taxPercent: Number(r.tax_percent) || 10, lines: [], typedSubtotal: 0 };
+    const same = hist.filter((h: any) => low(h.supplier) === low(r.supplier) && low(h.flower_name) === low(r.flower_name) && low(h.unit) === low(r.unit) && (!r.origin || low(h.origin) === low(r.origin)));
+    const warns: string[] = [];
+    if (r.type !== 'Supply') {
+      const last = same.find((h: any) => Number(h.stems_per_bunch) > 1);
+      if (low(r.unit) === 'bunch' && last && Number(last.stems_per_bunch) !== Number(r.stems_per_bunch)) warns.push(`Stems ${Number(r.stems_per_bunch)} — last time ${Number(last.stems_per_bunch)}`);
+      const rates = same.map((h: any) => Number(h.rate) || 0).filter((x: number) => x > 0);
+      if (rates.length) { const mn = Math.min(...rates), mx = Math.max(...rates); if (Number(r.rate) > mx * 1.5 || Number(r.rate) < mn * 0.5) warns.push(`Price ${Number(r.rate).toFixed(3)} — usual ${mn.toFixed(3)}–${mx.toFixed(3)}`); }
+    }
+    const rc = rcBy[r.id];
+    b.lines.push({ id: r.id, type: r.type || 'Flower', name: r.flower_name, origin: r.origin || '', unit: r.unit || '', stems: Number(r.stems_per_bunch) || null, qty: Number(r.qty) || 0, rate: Number(r.rate) || 0, subtotal: Number(r.subtotal) || 0,
+      rateChange: rc ? { oldRate: Number(rc.old_company_rate) || 0, newRate: Number(rc.new_company_rate) || 0 } : null, warnings: warns });
+    b.typedSubtotal += Number(r.subtotal) || 0;
+  }
+  const batches = Object.values(out).map((b: any) => { b.typedTotal = Math.round(b.typedSubtotal * (1 + b.taxPercent / 100) * 1000) / 1000; b.tally = b.paperTotal == null ? null : Math.abs(b.typedTotal - b.paperTotal) <= 0.01; return b; });
+  return { success: true, batches };
+}
+async function decideReceiving(p: Record<string, any>, authUser: any, approve: boolean) {
+  const batch = String(p.batch || '').trim();
+  if (!batch) return { success: false, error: 'No receiving selected.' };
+  const filter = batch.startsWith('ROW-') ? `id=eq.${Number(batch.slice(4)) || 0}` : `batch_ref=eq.${encodeURIComponent(batch)}`;
+  const who = currentUserName(authUser);
+  const done = await sbPatch('flower_database', `${filter}&approval_status=eq.Pending`, { approval_status: approve ? 'Approved' : 'Rejected', approved_by: who, approved_at: new Date().toISOString() });
+  if (!done.length) return { success: false, error: 'This receiving was already checked by someone else.' };
+  const ids = done.map((r: any) => r.id);
+  const rcs = await sbGet('flower_rate_change_history', `select=id&approval_status=eq.Pending%20Approval&source_id=in.(${ids.join(',')})`);
+  for (const rc of rcs) await approveRejectRate({ row: rc.id, approvedBy: who }, approve ? 'approveRate' : 'rejectRate');
+  return { success: true, lines: done.length, rates: rcs.length };
+}
+
+// ---------------------------------------------------------------
 // STOCK COUNT
 // ---------------------------------------------------------------
 async function saveStockCount(p: Record<string, any>) {
@@ -399,7 +467,7 @@ async function saveStockCount(p: Record<string, any>) {
 
   const [allHist, allDb, allTransfers, allFulfillments, allActiveItems] = await Promise.all([
     sbGet('flower_stock_history', 'select=*&item_code=eq.CONSOLIDATED'),
-    sbGet('flower_database', 'select=*'),
+    sbGet('flower_database', 'select=*&approval_status=eq.Approved'),
     sbGet('flower_transfer_history', 'select=*'),
     sbGet('flower_arrangement_fulfillments', 'select=*'),
     sbGet('flower_item', 'select=flower_name,origin,rate,status&status=eq.Active'),
@@ -506,7 +574,7 @@ async function getWeeklyBudget(p: Record<string, any>) {
   const now = new Date(Date.UTC(nowBH.getUTCFullYear(), nowBH.getUTCMonth(), nowBH.getUTCDate())); const day = now.getDay();
   const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(now.getDate() - day);
   const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999);
-  const dbRows = await sbGet('flower_database', `select=amount,entry_date&branch=eq.${encodeURIComponent(branch)}`);
+  const dbRows = await sbGet('flower_database', `select=amount,entry_date&approval_status=neq.Rejected&branch=eq.${encodeURIComponent(branch)}`);
   let actual = 0;
   dbRows.forEach((r: any) => { const d = new Date(r.entry_date); if (isNaN(d.getTime()) || d < start || d > end) return; actual += Number(r.amount) || 0; });
   return { branch, weeklyLimit, actual, remaining: weeklyLimit - actual, percentUsed: weeklyLimit > 0 ? Math.round((actual / weeklyLimit) * 100) : 0 };
@@ -519,7 +587,7 @@ async function getFlowerDashboard(selBranch: string) {
   const branches = ['ModaMall', 'Hamala', 'Galali'];
   const activeBranches = selBranch === 'All' ? branches : [selBranch];
   const [dbRows, itemRows, histRows, transferRows, budgetRows, rateRows, fulfillmentRows] = await Promise.all([
-    sbGetAll('flower_database', 'select=*&order=id.asc'), sbGet('flower_item', 'select=*&status=eq.Active'), sbGetAll('flower_stock_history', 'select=*&order=id.asc'),
+    sbGetAll('flower_database', 'select=*&approval_status=neq.Rejected&order=id.asc'), sbGet('flower_item', 'select=*&status=eq.Active'), sbGetAll('flower_stock_history', 'select=*&order=id.asc'),
     sbGetAll('flower_transfer_history', 'select=*&order=id.asc'), sbGet('flower_budgets', 'select=*'), sbGet('flower_rate_change_history', 'select=*'),
     sbGetAll('flower_arrangement_fulfillments', 'select=*&order=id.asc'),
   ]);
@@ -535,7 +603,7 @@ async function getFlowerDashboard(selBranch: string) {
   const lastConsolidatedIndex: Record<string, { found: boolean; lastDate: Date; qty: number }> = {};
   histRows.forEach((row: any) => { if (String(row.item_code || '').trim() !== 'CONSOLIDATED') return; const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); if (!branch || !flower) return; const d = row.count_date ? new Date(row.count_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const key = branch + '|' + flower; const prev = lastConsolidatedIndex[key]; if (!prev || d > prev.lastDate) lastConsolidatedIndex[key] = { found: true, lastDate: d, qty: Number(row.physical_count) || 0 }; });
   const purchasedIndex: Record<string, number> = {}, purchasedCostIndex: Record<string, number> = {};
-  dbFlowerRows.forEach((row: any) => { const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); if (!branch || !flower || activeBranches.indexOf(branch) === -1) return; const d = row.entry_date ? new Date(row.entry_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const key = branch + '|' + flower; const last = lastConsolidatedIndex[key]; const fromDate = last ? last.lastDate : new Date(0); if (!(d > fromDate && d <= now)) return; const qty = Number(row.qty) || 0; const stockQty = getStockEquivalent(qty, row.unit, row.stems_per_bunch); const rate = Number(row.rate) || 0; const companyCost = qty * rate * 3 * 1.10; purchasedIndex[key] = (purchasedIndex[key] || 0) + stockQty; purchasedCostIndex[key] = (purchasedCostIndex[key] || 0) + companyCost; });
+  dbFlowerRows.forEach((row: any) => { if (String(row.approval_status || 'Approved') !== 'Approved') return; const branch = String(row.branch || '').trim(); const flower = String(row.flower_name || '').trim(); if (!branch || !flower || activeBranches.indexOf(branch) === -1) return; const d = row.entry_date ? new Date(row.entry_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const key = branch + '|' + flower; const last = lastConsolidatedIndex[key]; const fromDate = last ? last.lastDate : new Date(0); if (!(d > fromDate && d <= now)) return; const qty = Number(row.qty) || 0; const stockQty = getStockEquivalent(qty, row.unit, row.stems_per_bunch); const rate = Number(row.rate) || 0; const companyCost = qty * rate * 3 * 1.10; purchasedIndex[key] = (purchasedIndex[key] || 0) + stockQty; purchasedCostIndex[key] = (purchasedCostIndex[key] || 0) + companyCost; });
   const transferIndex: Record<string, { In: number; Out: number }> = {};
   transferRows.forEach((row: any) => { const d = row.transfer_date ? new Date(row.transfer_date) : null; if (!d || isNaN(d.getTime()) || d > now) return; const flower = String(row.flower_name || '').trim(); const qty = Number(row.qty) || 0; if (!flower || !qty) return; const toBranch = String(row.to_branch || '').trim(); if (toBranch && activeBranches.indexOf(toBranch) !== -1) { const key = toBranch + '|' + flower; const last = lastConsolidatedIndex[key]; if (d > (last ? last.lastDate : new Date(0))) { transferIndex[key] = transferIndex[key] || { In: 0, Out: 0 }; transferIndex[key].In += qty; } } const fromBranch = String(row.from_branch || '').trim(); if (fromBranch && activeBranches.indexOf(fromBranch) !== -1) { const key = fromBranch + '|' + flower; const last = lastConsolidatedIndex[key]; if (d > (last ? last.lastDate : new Date(0))) { transferIndex[key] = transferIndex[key] || { In: 0, Out: 0 }; transferIndex[key].Out += qty; } } });
   // Transfers in the selected scope (a transfer counts once even if both its branches are in scope), by transfer number.
@@ -583,7 +651,7 @@ async function getFlowerDashboard(selBranch: string) {
   dbFlowerRows.forEach((row: any) => { const d = row.entry_date ? new Date(row.entry_date) : null; if (!d || isNaN(d.getTime())) return; if (!lastPurchase || d > new Date(lastPurchase.Date)) lastPurchase = { Date: row.entry_date, Supplier: row.supplier, Flower: row.flower_name, Qty: row.qty }; });
   let lastStockCount: any = null;
   { let bestDate: Date | null = null; const scopeBranches = selBranch === 'All' ? branches : [selBranch]; scopeBranches.forEach(b => { let localBestDate: Date | null = null, totalPhysical = 0, totalWastage = 0, totalCost = 0; histRows.forEach((row: any) => { if (String(row.branch || '').trim() !== b) return; if (String(row.item_code || '').trim() !== 'CONSOLIDATED') return; const d = row.count_date ? new Date(row.count_date) : null; if (!d || isNaN(d.getTime())) return; if (!localBestDate || d > localBestDate) localBestDate = d; }); if (localBestDate) { histRows.forEach((row: any) => { if (String(row.branch || '').trim() !== b) return; if (String(row.item_code || '').trim() !== 'CONSOLIDATED') return; const d = row.count_date ? new Date(row.count_date) : null; if (!d || isNaN(d.getTime()) || d.getTime() !== (localBestDate as Date).getTime()) return; const flowerName = String(row.flower_name || '').trim(); const rate = (flowerMaster[flowerName] && flowerMaster[flowerName].legacyRate) || 0; totalPhysical += Number(row.physical_count) || 0; totalWastage += Number(row.wastage) || 0; totalCost += (Number(row.physical_count) || 0) * rate; }); if (!bestDate || localBestDate > bestDate) { bestDate = localBestDate; lastStockCount = { Branch: b, Date: (localBestDate as Date).toISOString(), TotalPhysicalCount: totalPhysical, TotalWastage: totalWastage, TotalCostLegacyRate: totalCost }; } } }); }
-  const pendingApprovals = rateRows.filter((r: any) => String(r.approval_status || '').trim() === 'Pending Approval').map((r: any) => { const matchItem = itemRows.find((ir: any) => String(ir.item_code || '').trim() === String(r.item_code || '').trim()); const unit = matchItem ? (matchItem.unit || '') : ''; const oldRate = Number(r.old_company_rate) || 0; const newRate = Number(r.new_company_rate) || 0; const diff = Number(r.difference) || (newRate - oldRate); const pctDiff = oldRate !== 0 ? diff / oldRate : 0; return { Row: r.id, Flower: r.flower_name, Origin: r.origin, ItemCode: r.item_code, Unit: unit, CurrentRate: oldRate, SupplierRateUsed: Number(r.supplier_rate_used) || 0, Difference: diff, PercentDiff: pctDiff, SuggestedRate: newRate, MarginAmt: diff, MarginPercent: Number(r.margin_percent) || 0, MarginStatus: r.margin_status || '', ApprovalStatus: 'PENDING' }; });
+  const pendingApprovals = rateRows.filter((r: any) => String(r.approval_status || '').trim() === 'Pending Approval' && !r.source_id).map((r: any) => { const matchItem = itemRows.find((ir: any) => String(ir.item_code || '').trim() === String(r.item_code || '').trim()); const unit = matchItem ? (matchItem.unit || '') : ''; const oldRate = Number(r.old_company_rate) || 0; const newRate = Number(r.new_company_rate) || 0; const diff = Number(r.difference) || (newRate - oldRate); const pctDiff = oldRate !== 0 ? diff / oldRate : 0; return { Row: r.id, Flower: r.flower_name, Origin: r.origin, ItemCode: r.item_code, Unit: unit, CurrentRate: oldRate, SupplierRateUsed: Number(r.supplier_rate_used) || 0, Difference: diff, PercentDiff: pctDiff, SuggestedRate: newRate, MarginAmt: diff, MarginPercent: Number(r.margin_percent) || 0, MarginStatus: r.margin_status || '', ApprovalStatus: 'PENDING' }; });
   const pendingApprovalsCount = pendingApprovals.length;
   const branchSummary = branches.map(b => { let branchAvailable = 0, branchValue = 0, lowStockCount = 0; Object.keys(flowerMaster).forEach(name => { const qty = availableStock(b, name); branchAvailable += qty; branchValue += qty * (flowerMaster[name].legacyRate || 0); const minStock = flowerMaster[name].minStock; if (minStock !== null && minStock > 0 && qty < minStock) lowStockCount++; }); let lastCountDate = 'Never'; let bestDate: Date | null = null; histRows.forEach((row: any) => { if (String(row.branch || '').trim() !== b) return; const d = row.count_date ? new Date(row.count_date) : null; if (!d || isNaN(d.getTime())) return; if (!bestDate || d > bestDate) bestDate = d; }); if (bestDate) lastCountDate = (bestDate as Date).toISOString(); const limit = limitByBranch[b]; const actual = weekAmountByBranch[b]; const pct = limit > 0 ? Math.round((actual / limit) * 100) : 0; return { branch: b, availableFlowers: branchAvailable, inventoryValue: branchValue, lowStockItems: lowStockCount, lastStockCount: lastCountDate, weeklyBudget: limit, actualThisWeek: actual, percentUsed: pct, status: pct >= 100 ? 'OVER BUDGET' : (pct >= 85 ? 'WARNING' : 'OK') }; });
   const lowStockList: any[] = [];
@@ -665,7 +733,7 @@ async function fulfillFlowerArrangement(p: Record<string, any>, authUser: any) {
   const flowerNamesLower = itemRows.map((it: any) => String(it.flower_name || '').trim().toLowerCase());
   const [histRows, dbRows, transferRows, fulfillRows] = await Promise.all([
     sbGet('flower_stock_history', `select=*&item_code=eq.CONSOLIDATED&branch=eq.${encodeURIComponent(branch)}`),
-    sbGet('flower_database', `select=*&branch=eq.${encodeURIComponent(branch)}`),
+    sbGet('flower_database', `select=*&approval_status=eq.Approved&branch=eq.${encodeURIComponent(branch)}`),
     sbGet('flower_transfer_history', 'select=*'),
     sbGet('flower_arrangement_fulfillments', `select=*&branch=eq.${encodeURIComponent(branch)}`),
   ]);
@@ -710,7 +778,7 @@ Deno.serve(async (req) => {
     const authUser = await isValidToken(p.token);
     if (!authUser) return json({ error: 'Unauthorized. Please log in again.' }, 401);
     // Security audit 2026-11-10: Admin only on the server (not only on the page). Approver name comes from the login.
-    if (['approveRate', 'rejectRate', 'updateFlowerRates', 'addFlowerItem', 'setWeeklyBudget'].includes(action) && String(authUser.role || '') !== 'Admin')
+    if (['approveRate', 'rejectRate', 'updateFlowerRates', 'addFlowerItem', 'setWeeklyBudget', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving'].includes(action) && String(authUser.role || '') !== 'Admin')
       return json({ error: 'Admin only. Please ask an Admin.' }, 403);
     if (action === 'approveRate' || action === 'rejectRate') p.approvedBy = String(authUser.full_name || authUser.username || '');
 
@@ -780,6 +848,9 @@ Deno.serve(async (req) => {
     if (action === 'updateFlowerRates') return json(await updateFlowerRates(p));
     if (action === 'setMinStockBulk') return json(await setMinStockBulk(p));
     if (action === 'deleteFlowerArrangement') return json(await deleteFlowerArrangement(p, authUser));
+    if (action === 'getPendingReceiving') return json(await getPendingReceiving(p));
+    if (action === 'approveReceiving') return json(await decideReceiving(p, authUser, true));
+    if (action === 'rejectReceiving') return json(await decideReceiving(p, authUser, false));
 
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {
