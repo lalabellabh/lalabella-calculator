@@ -120,7 +120,6 @@
     ['flower-tools.html', '🌸', 'Flower Home'],
     ['chatbox.html', '💬', 'Staff Chat'],
     ['initial-stock.html', '📦', 'Initial Stock Entry'],
-    ['supply-log.html', '🚚', 'Supply Receiving Log'],
     ['attendance-admin.html', '🗂️', 'Attendance Records', 'admin'],
     ['schedule-admin.html', '📤', 'Upload New Schedule', 'admin'],
     ['get-app.html', '📲', 'Get the App'],
