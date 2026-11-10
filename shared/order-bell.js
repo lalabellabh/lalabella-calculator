@@ -99,7 +99,21 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 20000);
     try { beep(); } catch (e) {}
   }
+  // Receiving waiting for Admin approval (Nov 2026): one row per invoice, each with a direct Open link.
+  function recvHtml(rv) {
+    if (!rv.length) return '';
+    return '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px;margin-bottom:6px"><b>📝 ' + rv.length + ' receiving' + (rv.length > 1 ? 's' : '') + ' waiting for approval</b>' +
+      rv.slice(0, 6).map(function (r) {
+        var href = 'receiving-approval.html?m=' + encodeURIComponent(r.module || '') + '&batch=' + encodeURIComponent(r.batch || '');
+        return '<div style="font-size:12px;margin-top:4px;display:flex;justify-content:space-between;gap:6px;align-items:center"><span>' + (r.module === 'chocolate' ? '🍫 ' : '🌸 ') + esc(r.branch) + ' · ' + esc(r.supplier || '—') + (r.invoice ? ' #' + esc(r.invoice) : '') + ' · ' + Number(r.total || 0).toFixed(3) + ' BD</span>' +
+          '<a href="' + href + '" style="flex:none;padding:3px 10px;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:11.5px;font-weight:700">Open</a></div>';
+      }).join('') + (rv.length > 6 ? '<a href="receiving-approval.html" style="display:block;text-align:center;margin-top:6px;font-size:12px">See all ' + rv.length + '</a>' : '') + '</div>';
+  }
   function apprHtml(rows) {
+    var rv = rows.filter(function (r) { return r.kind === 'recv'; }); rows = rows.filter(function (r) { return r.kind !== 'recv'; });
+    return recvHtml(rv) + apprHtmlRest(rows);
+  }
+  function apprHtmlRest(rows) {
     var cr = rows.filter(function(r){return r.kind==='choc';}); rows = rows.filter(function(r){return r.kind!=='choc';}); var chocHtml = cr.length ? '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px;margin-top:6px"><b>🍫 ' + cr[0].n + ' chocolate stock approval' + (cr[0].n > 1 ? 's' : '') + ' waiting</b><a href="stock-approval.html" style="display:block;text-align:center;margin-top:6px;padding:6px 0;border-radius:8px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;text-decoration:none;font-size:12px;font-weight:700">Review stock counts</a></div>' : ''; if(!rows.length) return chocHtml;
     return '<div class="o" style="background:#fff7f8;border-radius:8px;padding:8px"><b>🌸 ' + rows.length + ' rate approval' + (rows.length > 1 ? 's' : '') + ' waiting</b>' +
       rows.slice(0, 5).map(function (r) {

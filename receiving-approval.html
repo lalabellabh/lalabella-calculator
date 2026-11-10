@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="shared/history-tools.js"></script>
+<script src="auth-guard.js"></script>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Receiving Approval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#e9e0c8;
+    --ink:#1c2b45;
+    --ink-dim:#5c6a83;
+    --rust:#b0442e;
+    --gold:#c68a1f;
+    --line:#c9bfa0;
+    --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:28px 18px 60px; }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--ink-dim); text-decoration:none; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px;
+    transition:color .12s ease;
+  }
+  .back-link:hover{ color:var(--rust); }
+
+  header{ text-align:center; margin-bottom:24px; position:relative; }
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:900;
+    font-size:clamp(1.8rem,7vw,2.6rem); margin:0 0 6px; line-height:1;
+  }
+  .sub{ color:var(--ink-dim); font-size:13px; }
+
+  .megaphone{
+    font-size:34px; display:inline-block; margin-bottom:6px;
+  }
+  .megaphone.alert{ animation: megaphonePulse 1s ease-in-out infinite; }
+  @keyframes megaphonePulse{
+    0%,100%{ transform:scale(1) rotate(0deg); }
+    50%{ transform:scale(1.15) rotate(-6deg); }
+  }
+
+  .refresh-link{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:7px 12px; border-radius:3px; cursor:pointer; margin-bottom:14px;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:4px;
+    padding:20px; margin-bottom:18px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px;
+    margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .pending-card{ border:2px solid var(--rust); }
+
+  .pending-row{
+    border-top:1px solid var(--line); padding:14px 0;
+  }
+  .pending-row:first-child{ border-top:none; }
+  .pending-top{ display:flex; justify-content:space-between; align-items:baseline; font-weight:600; font-size:14px; }
+  .pending-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:3px; }
+  .variance-amt{ font-family:'Space Mono',monospace; font-weight:700; }
+  .variance-pos{ color:var(--ok); }
+  .variance-neg{ color:var(--rust); }
+
+  .action-row{ display:flex; gap:8px; margin-top:12px; }
+  .action-btn{
+    flex:1; padding:10px 0; border-radius:3px; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;
+    cursor:pointer; border:1px solid; position:relative; overflow:hidden;
+  }
+  .action-btn.approve{ background:transparent; border-color:var(--ok); color:var(--ok); }
+  .action-btn.reject{ background:transparent; border-color:var(--rust); color:var(--rust); }
+  .action-btn.recount{ background:transparent; border-color:var(--gold); color:var(--gold); }
+
+  @keyframes stampIn{
+    0%{ opacity:0; transform:scale(2.2) rotate(-15deg); }
+    60%{ opacity:1; transform:scale(0.9) rotate(-8deg); }
+    100%{ opacity:1; transform:scale(1) rotate(-8deg); }
+  }
+  .stamp-overlay{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Space Mono',monospace; font-weight:700; font-size:42px;
+    letter-spacing:0.1em; padding:14px 28px; border:5px solid;
+    border-radius:8px; z-index:999; pointer-events:none;
+    animation: stampIn .4s cubic-bezier(.2,1.6,.4,1) forwards, stampFade .3s ease 1s forwards;
+  }
+  .stamp-overlay.approved{ color:var(--ok); border-color:var(--ok); background:rgba(61,122,79,0.08); }
+  .stamp-overlay.rejected{ color:var(--rust); border-color:var(--rust); background:rgba(176,68,46,0.08); }
+  @keyframes stampFade{ to{ opacity:0; } }
+
+  @keyframes shakeCard{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(6px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(4px); }
+  }
+  .shake{ animation: shakeCard .5s ease; }
+
+  .hist-row{ border-top:1px solid var(--line); padding:12px 0; font-size:13px; }
+  .hist-row:first-child{ border-top:none; }
+  .hist-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-weight:600; }
+  .hist-meta{ color:var(--ink-dim); font-size:11.5px; margin-top:3px; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:20px 0; }
+</style>
+
+<meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
+<link rel="stylesheet" href="shared/glass-skin.css">
+<script src="shared/glass-skin.js"></script>
+
+<style>
+  .rcv{ border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:12px; background:rgba(255,255,255,.55); }
+  .rcv.focus{ outline:3px solid var(--gold); }
+  .rcv-top{ display:flex; justify-content:space-between; gap:8px; font-weight:700; font-size:14px; }
+  .rcv-meta{ font-size:12px; color:var(--ink-dim); margin-top:3px; }
+  .ln{ border-top:1px dashed var(--line); padding:7px 0; font-size:13px; }
+  .ln:first-of-type{ border-top:none; }
+  .ln-meta{ font-size:11.5px; color:var(--ink-dim); }
+  .warn{ font-size:11.5px; color:#b0442e; font-weight:600; margin-top:2px; }
+  .rate{ font-size:11.5px; color:#6b4ca3; margin-top:2px; }
+  .tally{ font-size:12.5px; font-weight:700; margin-top:8px; }
+  .tally.ok{ color:var(--ok); } .tally.bad{ color:#b0442e; } .tally.none{ color:var(--ink-dim); }
+  .edit-link{ font-size:12px; color:var(--rust); margin-left:6px; }
+  .tabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+  .tabs button{ border:1px solid var(--line); background:transparent; border-radius:20px; padding:5px 12px; font:inherit; font-size:12px; cursor:pointer; }
+  .tabs button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+
+
+<div class="wrap">
+  <a class="back-link" href="index.html">&larr; Back to Tools</a>
+  <header>
+    <div class="eyebrow">Lalabella · Admin</div>
+    <h1>Receiving Approval</h1>
+    <p class="sub">New receiving goes into stock only after you approve it</p>
+  </header>
+  <button class="refresh-link" id="refreshBtn">↻ Refresh</button>
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-f="all" class="on">All</button><button data-f="flower">🌸 Flower</button><button data-f="chocolate">🍫 Chocolate</button>
+    </div>
+    <div class="card-title">Waiting for approval <span id="cnt" style="color:var(--rust); font-family:'Space Mono',monospace;"></span></div>
+    <div id="list"><div class="empty-note">Loading…</div></div>
+  </div>
+</div>
+
+<script>
+  const FL = LB_CONFIG.FLOWER_FAST_API, CH = LB_CONFIG.CHOCOLATE_FAST_API;
+  const qs = new URLSearchParams(location.search);
+  const focusBatch = qs.get('batch') || '';
+  let all = [], filt = qs.get('m') || 'all';
+  const f3 = n => Number(n || 0).toFixed(3);
+  const esc = window.lbEsc;
+  async function load(){
+    const el = document.getElementById('list');
+    el.innerHTML = '<div class="empty-note">Loading…</div>';
+    try{
+      const [a, b] = await Promise.all([
+        fetch(FL + '?action=getPendingReceiving&_ts=' + Date.now()).then(r => r.json()),
+        fetch(CH + '?action=getPendingReceiving&_ts=' + Date.now()).then(r => r.json()),
+      ]);
+      if((a && a.error) || (b && b.error)){ el.innerHTML = '<div class="empty-note">' + esc((a && a.error) || b.error) + '</div>'; return; }
+      all = [].concat((a && a.batches) || [], (b && b.batches) || []).sort((x, y) => String(x.date).localeCompare(String(y.date)));
+      render();
+    }catch(e){ el.innerHTML = '<div class="empty-note">Could not load. Please refresh.</div>'; }
+  }
+  function editLink(b, ln){
+    return b.kind === 'flower'
+      ? 'flower-receiving.html?branch=' + encodeURIComponent(b.branch) + '&edit=' + encodeURIComponent(ln.id) + '&back=approval'
+      : 'chocolate-receiving.html?branch=' + encodeURIComponent(b.branch) + '&edit=' + encodeURIComponent(ln.legacyId || ln.id) + '&back=approval';
+  }
+  function render(){
+    document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.f === filt));
+    const rows = all.filter(b => filt === 'all' || b.kind === filt);
+    document.getElementById('cnt').textContent = rows.length ? '(' + rows.length + ')' : '';
+    const el = document.getElementById('list');
+    if(!rows.length){ el.innerHTML = '<div class="empty-note">Nothing waiting. ✅</div>'; return; }
+    el.innerHTML = rows.map(b => {
+      const icon = b.kind === 'flower' ? '🌸' : '🍫';
+      const warnCount = b.lines.reduce((s, l) => s + (l.warnings || []).length, 0);
+      let tally;
+      if(b.paperTotal == null) tally = '<div class="tally none">Typed total: ' + f3(b.typedTotal) + ' BD' + (b.kind === 'flower' ? ' · no invoice total typed — check the paper' : ' · check against the delivery note') + '</div>';
+      else if(b.tally) tally = '<div class="tally ok">✓ Tally — typed ' + f3(b.typedTotal) + ' BD = invoice ' + f3(b.paperTotal) + ' BD</div>';
+      else tally = '<div class="tally bad">⚠ Not tally — typed ' + f3(b.typedTotal) + ' BD, invoice ' + f3(b.paperTotal) + ' BD (diff ' + f3(Math.abs(b.typedTotal - b.paperTotal)) + ')</div>';
+      const lines = b.lines.map(l => {
+        const what = b.kind === 'flower'
+          ? esc(l.qty) + ' ' + esc(l.unit) + (String(l.unit).toLowerCase() === 'bunch' && l.stems ? ' × ' + esc(l.stems) + ' stems' : '') + ' · ' + f3(l.rate) + ' BD/' + esc(l.unit) + ' = ' + f3(l.subtotal) + ' BD'
+          : esc(l.qty) + ' ' + esc(l.unit) + ' · ' + f3(l.rate) + ' BD · batch ' + esc(l.batchNo) + (l.expiry ? ' · exp ' + esc(String(l.expiry).slice(0, 10)) : '') + ' = ' + f3(l.subtotal) + ' BD';
+        return '<div class="ln"><b>' + esc(l.name) + '</b>' + (l.origin ? ' <span class="ln-meta">(' + esc(l.origin) + ')</span>' : '') +
+          '<a class="edit-link" href="' + editLink(b, l) + '">✎ Edit</a>' +
+          '<div class="ln-meta">' + what + '</div>' +
+          (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem</div>' : '') +
+          (l.warnings || []).map(w => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') + '</div>';
+      }).join('');
+      return '<div class="rcv' + (b.batch === focusBatch ? ' focus' : '') + '" id="b_' + esc(b.batch).replace(/[^A-Za-z0-9_-]/g, '_') + '">' +
+        '<div class="rcv-top"><span>' + icon + ' ' + esc(b.branch) + ' · ' + esc(b.supplier || '—') + '</span><span>' + esc(String(b.date || '').slice(0, 10)) + '</span></div>' +
+        '<div class="rcv-meta">Invoice / note: ' + esc(b.invoiceNo || '—') + ' · Received by: ' + esc(b.receivedBy || '—') + ' · ' + b.lines.length + ' line(s)' + (warnCount ? ' · <b style="color:#b0442e">' + warnCount + ' to check</b>' : '') + '</div>' +
+        lines + tally +
+        '<div class="action-row"><button class="action-btn approve" data-act="approve" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✓ Approve · add to stock</button>' +
+        '<button class="action-btn reject" data-act="reject" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✕ Reject</button></div></div>';
+    }).join('');
+    if(focusBatch){ const t = document.querySelector('.rcv.focus'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }
+  document.getElementById('list').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-act]'); if(!btn) return;
+    const approve = btn.dataset.act === 'approve';
+    const b = all.find(x => x.batch === btn.dataset.batch && x.kind === btn.dataset.kind);
+    const warn = b ? b.lines.reduce((s, l) => s + (l.warnings || []).length, 0) : 0;
+    const msg = approve
+      ? (warn ? '⚠ This receiving has ' + warn + ' thing(s) to check.\nApprove anyway and add to stock?' : 'Approve and add to stock?')
+      : 'Reject this receiving? It will NOT go into stock.';
+    if(!confirm(msg)) return;
+    btn.disabled = true;
+    try{
+      const api = btn.dataset.kind === 'flower' ? FL : CH;
+      const r = await fetch(api + '?action=' + (approve ? 'approveReceiving' : 'rejectReceiving') + '&batch=' + encodeURIComponent(btn.dataset.batch)).then(x => x.json());
+      if(!r || r.success === false || r.error){ alert((r && r.error) || 'Something went wrong.'); btn.disabled = false; return; }
+      load();
+    }catch(err){ alert('Connection problem. Please try again.'); btn.disabled = false; }
+  });
+  document.getElementById('tabs').addEventListener('click', e => { const t = e.target.closest('button[data-f]'); if(t){ filt = t.dataset.f; render(); } });
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  load();
+</script>
+</body>
+</html>

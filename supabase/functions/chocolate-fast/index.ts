@@ -73,7 +73,7 @@ async function isValidToken(token: string) {
   return (!!created && Date.now() - created <= SESSION_MAX_AGE_MS) ? u : null;
 }
 // Security audit 2026-11-10: these actions are Admin only on the server (not only on the page).
-const ADMIN_ONLY = new Set(['approveCount', 'rejectCount', 'requestRecount', 'addChocolateItem', 'updateChocolateItem', 'updateChocolateRates', 'backfillItemList', 'checkFixBarcodes']);
+const ADMIN_ONLY = new Set(['approveCount', 'rejectCount', 'requestRecount', 'addChocolateItem', 'updateChocolateItem', 'updateChocolateRates', 'backfillItemList', 'checkFixBarcodes', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving']);
 
 const DUP_WRITE_ACTIONS = new Set([
   'saveRelease', 'addEntry', 'editEntry', 'addInitialStock', 'saveCountSession',
@@ -165,6 +165,7 @@ function mapDbRow(r: any) {
     'Storage Location': r.storage_location, 'Remarks': r.remarks, 'Created Date & Time': r.created_at, 'Created By': r.created_by,
     'Last Updated Date & Time': r.updated_at, 'Updated By': r.updated_by, 'Weight Per Piece': r.weight_per_piece, 'Price Per Piece': r.price_per_piece,
     'Unit Price': priceForRow(r),
+    'Approval Status': r.approval_status || 'Approved', 'Batch Ref': r.batch_ref || '',
   };
 }
 function mapCountRow(r: any) {
@@ -235,21 +236,24 @@ async function addEntry(p: Record<string, any>) {
     legacy_id: newID, receive_date: p.receiveDate || null, delivery_date: p.receiveDate || null,
     delivery_note_no: p.deliveryNo || '', supplier: p.supplier || '', chocolate_name: p.chocolateName || '',
     product_code: p.productCode || '', brand: p.brand || '', category: p.category || '', batch_no: p.batchNo || '',
-    expiry_date: p.expiryDate || null, qty_received: qty, qty_used: 0, current_stock: qty, unit: p.unit || '',
+    expiry_date: p.expiryDate || null, qty_received: qty, qty_used: 0, current_stock: 0, unit: p.unit || '',
     [priceField]: price, total_amount: qty * price, status: 'GOOD', branch, storage_location: p.storageLocation || '',
     tray_colour_code: p.trayCode || '', remarks: p.remarks || '', created_by: p.receivedBy || '', updated_by: p.receivedBy || '',
     updated_at: new Date().toISOString(), weight_per_piece: numOrNull(p.weightPerPiece),
+    // Receiving approval (Nov 2026): not in stock (current_stock 0) until an Admin approves the delivery note.
+    approval_status: 'Pending', batch_ref: 'CH|' + branch + '|' + (p.deliveryNo || newID),
   }]);
-  return { success: true, id: newID };
+  return { success: true, id: newID, waitingApproval: true };
 }
 async function editEntry(p: Record<string, any>) {
   const id = String(p.id || '').trim();
   let query = `legacy_id=eq.${encodeURIComponent(id)}`;
-  let existingRows = await sbGet('chocolate_database', `select=qty_used,unit&${query}`);
+  let existingRows = await sbGet('chocolate_database', `select=qty_used,unit,approval_status&${query}`);
   if (!existingRows.length && /^\d+$/.test(id)) {
     query = `id=eq.${id}`;
-    existingRows = await sbGet('chocolate_database', `select=qty_used,unit&${query}`);
+    existingRows = await sbGet('chocolate_database', `select=qty_used,unit,approval_status&${query}`);
   }
+  const stillPending = String(existingRows[0] && existingRows[0].approval_status || 'Approved') !== 'Approved';
   if (!existingRows.length) return { error: 'Entry not found' };
   const qtyUsed = Number(existingRows[0].qty_used) || 0;
   const newQty = Number(p.qty) || 0;
@@ -262,7 +266,7 @@ async function editEntry(p: Record<string, any>) {
   await sbPatch('chocolate_database', query, {
     receive_date: p.receiveDate || null, delivery_date: p.receiveDate || null, delivery_note_no: p.deliveryNo || '',
     supplier: p.supplier || '', chocolate_name: p.chocolateName || '', batch_no: p.batchNo || '', expiry_date: p.expiryDate || null,
-    qty_received: newQty, current_stock: newQty - qtyUsed, unit: p.unit || '', [priceField]: newPrice, total_amount: newQty * newPrice,
+    qty_received: newQty, current_stock: stillPending ? 0 : newQty - qtyUsed, unit: p.unit || '', [priceField]: newPrice, total_amount: newQty * newPrice,
     branch: p.branch || '', storage_location: p.storageLocation || '', remarks: p.remarks || '', updated_by: p.receivedBy || '',
     updated_at: new Date().toISOString(),
   });
@@ -475,6 +479,49 @@ async function updateChocolateRates(p: Record<string, any>) {
   return { success: true, updated: updatedCount };
 }
 
+// ---------------------------------------------------------------
+// RECEIVING APPROVAL (Nov 2026): grouped by delivery note; Approve puts it into stock.
+// ---------------------------------------------------------------
+async function getPendingReceivingChoc(p: Record<string, any>) {
+  let q = 'select=*&approval_status=eq.Pending&order=id.asc';
+  if (p.batch) q += `&batch_ref=eq.${encodeURIComponent(String(p.batch))}`;
+  const rows = await sbGet('chocolate_database', q);
+  if (!rows.length) return { success: true, batches: [] };
+  const hist = await sbGet('chocolate_database', 'select=supplier,chocolate_name,unit,price_per_kg,price_per_piece&approval_status=eq.Approved&order=id.desc&limit=600');
+  const low = (v: any) => String(v || '').trim().toLowerCase();
+  const out: Record<string, any> = {};
+  for (const r of rows) {
+    const k = String(r.batch_ref || ('ROW-' + r.id));
+    const b = out[k] = out[k] || { batch: k, kind: 'chocolate', branch: r.branch, date: r.receive_date, supplier: r.supplier || '', invoiceNo: r.delivery_note_no || '', receivedBy: r.created_by || '', paperTotal: null, lines: [], typedTotal: 0 };
+    const price = priceForRow(r);
+    const warns: string[] = [];
+    if (!r.expiry_date) warns.push('No expiry date');
+    else { const y = Number(String(r.expiry_date).slice(0, 4)); if (y < 2020 || y > 2100) warns.push('Expiry year looks wrong'); }
+    const prev = hist.filter((h: any) => low(h.chocolate_name) === low(r.chocolate_name) && low(h.unit) === low(r.unit)).map((h: any) => priceForRow(h)).filter((x: number) => x > 0);
+    if (prev.length && price > 0) { const mn = Math.min(...prev), mx = Math.max(...prev); if (price > mx * 1.5 || price < mn * 0.5) warns.push(`Price ${price.toFixed(3)} — usual ${mn.toFixed(3)}–${mx.toFixed(3)}`); }
+    if (!(price > 0)) warns.push('No price');
+    b.lines.push({ id: r.id, legacyId: r.legacy_id || String(r.id), type: 'Chocolate', name: r.chocolate_name, batchNo: r.batch_no || '', expiry: r.expiry_date || '', unit: r.unit || '', qty: Number(r.qty_received) || 0, rate: price, subtotal: Number(r.total_amount) || 0, warnings: warns });
+    b.typedTotal = Math.round((b.typedTotal + (Number(r.total_amount) || 0)) * 1000) / 1000;
+  }
+  return { success: true, batches: Object.values(out) };
+}
+async function decideReceivingChoc(p: Record<string, any>, me: any, approve: boolean) {
+  const batch = String(p.batch || '').trim();
+  if (!batch) return { success: false, error: 'No receiving selected.' };
+  const filter = batch.startsWith('ROW-') ? `id=eq.${Number(batch.slice(4)) || 0}` : `batch_ref=eq.${encodeURIComponent(batch)}`;
+  const rows = await sbGet('chocolate_database', `select=id,qty_received,qty_used&${filter}&approval_status=eq.Pending`);
+  if (!rows.length) return { success: false, error: 'This receiving was already checked by someone else.' };
+  const who = String(me.full_name || me.username || '');
+  let n = 0;
+  for (const r of rows) {
+    const done = await sbPatch('chocolate_database', `id=eq.${r.id}&approval_status=eq.Pending`, approve
+      ? { approval_status: 'Approved', approved_by: who, approved_at: new Date().toISOString(), current_stock: (Number(r.qty_received) || 0) - (Number(r.qty_used) || 0) }
+      : { approval_status: 'Rejected', approved_by: who, approved_at: new Date().toISOString(), current_stock: 0 });
+    n += done.length;
+  }
+  return { success: true, lines: n };
+}
+
 async function getLastInventoryCount(selBranch: string) {
   let q = 'select=*&order=id.desc&limit=300';
   if (selBranch !== 'All') q += `&branch=eq.${encodeURIComponent(selBranch)}`;
@@ -637,7 +684,7 @@ async function saveRelease(p: Record<string, any>) {
     const newUsed = Number(src.qty_used) + Number(it.qty), newStock = Number(src.current_stock) - Number(it.qty);
     await sbPatch('chocolate_database', `id=eq.${it.databaseId}`, { qty_used: newUsed, current_stock: newStock });
     if (transactionType === 'Transfer' && toBranch && toBranch !== branch) {
-      const destRows = await sbGet('chocolate_database', `select=id,current_stock&chocolate_name=eq.${encodeURIComponent(it.chocolateName)}&batch_no=eq.${encodeURIComponent(it.batch)}&branch=eq.${encodeURIComponent(toBranch)}`);
+      const destRows = await sbGet('chocolate_database', `select=id,current_stock&chocolate_name=eq.${encodeURIComponent(it.chocolateName)}&batch_no=eq.${encodeURIComponent(it.batch)}&branch=eq.${encodeURIComponent(toBranch)}&approval_status=eq.Approved`);
       if (destRows.length) { await sbPatch('chocolate_database', `id=eq.${destRows[0].id}`, { current_stock: Number(destRows[0].current_stock) + Number(it.qty) }); }
       else {
         const branchPrefixMap: Record<string, string> = { ModaMall: 'MM', Hamala: 'HM', Galali: 'GL' };
@@ -762,6 +809,9 @@ Deno.serve(async (req) => {
     if (action === 'updateChocolateRates') return json(await updateChocolateRates(p));
     if (action === 'backfillItemList') return json(await backfillItemList());
     if (action === 'checkFixBarcodes') return json(await checkFixBarcodes());
+    if (action === 'getPendingReceiving') return json(await getPendingReceivingChoc(p));
+    if (action === 'approveReceiving') return json(await decideReceivingChoc(p, me, true));
+    if (action === 'rejectReceiving') return json(await decideReceivingChoc(p, me, false));
 
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {

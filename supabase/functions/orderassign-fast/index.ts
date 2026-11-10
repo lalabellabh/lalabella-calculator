@@ -119,7 +119,8 @@ async function reportUnassignedStatus(p: any) {
 
 // Approvals waiting for an Admin (bell, Admin only): flower rate changes + chocolate stock counts.
 async function pendingApprovals() {
-  const rows = await sbGet('flower_rate_change_history', 'select=id,flower_name,origin,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&order=id.asc&limit=50');
+  // Rate changes from a receiving are approved with that receiving (kind 'recv' below), so only the loose ones are listed here.
+  const rows = await sbGet('flower_rate_change_history', 'select=id,flower_name,origin,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&source_id=is.null&order=id.asc&limit=50');
   const out: any[] = (rows || []).map((r: any) => ({
     flower: clip(r.flower_name, 60), origin: clip(r.origin, 40),
     oldRate: Number(r.old_company_rate) || 0, newRate: Number(r.new_company_rate) || 0,
@@ -128,6 +129,17 @@ async function pendingApprovals() {
     const ch = await sbGet('chocolate_stock_count_history', 'select=status&status=eq.Pending%20Approval&limit=500');
     if (ch && ch.length) out.push({ kind: 'choc', n: ch.length });
   } catch (e) { console.error('choc approvals', e); }
+  // Receiving waiting for approval (Nov 2026): one row per invoice / delivery note, with a direct link.
+  try {
+    const [fr, cr] = await Promise.all([
+      sbGet('flower_database', 'select=id,batch_ref,branch,supplier,invoice_no,entry_date,subtotal&approval_status=eq.Pending&order=id.asc&limit=300'),
+      sbGet('chocolate_database', 'select=id,batch_ref,branch,supplier,delivery_note_no,receive_date,total_amount&approval_status=eq.Pending&order=id.asc&limit=300'),
+    ]);
+    const groups: Record<string, any> = {};
+    (fr || []).forEach((r: any) => { const k = 'flower|' + (r.batch_ref || 'ROW-' + r.id); const g = groups[k] = groups[k] || { kind: 'recv', module: 'flower', batch: r.batch_ref || 'ROW-' + r.id, branch: clip(r.branch, 30), supplier: clip(r.supplier, 40), invoice: clip(r.invoice_no, 30), date: r.entry_date, lines: 0, total: 0 }; g.lines++; g.total += Number(r.subtotal) || 0; });
+    (cr || []).forEach((r: any) => { const k = 'choc|' + (r.batch_ref || 'ROW-' + r.id); const g = groups[k] = groups[k] || { kind: 'recv', module: 'chocolate', batch: r.batch_ref || 'ROW-' + r.id, branch: clip(r.branch, 30), supplier: clip(r.supplier, 40), invoice: clip(r.delivery_note_no, 30), date: r.receive_date, lines: 0, total: 0 }; g.lines++; g.total += Number(r.total_amount) || 0; });
+    Object.values(groups).forEach((g: any) => { g.total = Math.round(g.total * 1000) / 1000; out.push(g); });
+  } catch (e) { console.error('receiving approvals', e); }
   return out;
 }
 
