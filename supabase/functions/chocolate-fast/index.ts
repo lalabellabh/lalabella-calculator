@@ -61,16 +61,19 @@ async function sbRpc(fn: string, args: Record<string, unknown>) {
   return text ? JSON.parse(text) : null;
 }
 
+// Returns the logged-in user (role, name) or null.
 async function isValidToken(token: string) {
   const t = String(token || '').trim();
-  if (!t) return false;
-  const rows = await sbGet('users', `select=status,token_created&limit=1&token=eq.${encodeURIComponent(t)}`);
+  if (!t) return null;
+  const rows = await sbGet('users', `select=status,token_created,role,full_name,username&limit=1&token=eq.${encodeURIComponent(t)}`);
   const u = rows && rows[0];
-  if (!u) return false;
-  if (String(u.status || 'Active') === 'Inactive') return false;
+  if (!u) return null;
+  if (String(u.status || 'Active') === 'Inactive') return null;
   const created = u.token_created ? new Date(u.token_created).getTime() : 0;
-  return !!created && Date.now() - created <= SESSION_MAX_AGE_MS;
+  return (!!created && Date.now() - created <= SESSION_MAX_AGE_MS) ? u : null;
 }
+// Security audit 2026-11-10: these actions are Admin only on the server (not only on the page).
+const ADMIN_ONLY = new Set(['approveCount', 'rejectCount', 'requestRecount', 'addChocolateItem', 'updateChocolateItem', 'updateChocolateRates', 'backfillItemList', 'checkFixBarcodes']);
 
 const DUP_WRITE_ACTIONS = new Set([
   'saveRelease', 'addEntry', 'editEntry', 'addInitialStock', 'saveCountSession',
@@ -614,6 +617,7 @@ async function saveRelease(p: Record<string, any>) {
   try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
   try { extras = JSON.parse(p.extras || '[]'); } catch { extras = []; }
   if (!items.length) return { error: 'No items to save.' };
+  if (items.some((it: any) => !(Number(it && it.qty) > 0))) return { error: 'Quantity must be more than 0.' };
   const branch = p.branch, toBranch = p.toBranch || '', transactionType = p.transactionType, customerDept = p.customerDept || '',
     preparedBy = p.preparedBy || '', remarks = p.remarks || '', releaseDate = p.releaseDate;
   const neededIds = [...new Set(items.map(it => String(it.databaseId)))];
@@ -675,7 +679,13 @@ Deno.serve(async (req) => {
   try {
     const p = await readParams(req);
     const action = p.action || '';
-    if (!(await isValidToken(p.token))) return json({ error: 'Unauthorized. Please log in again.' }, 401);
+    const me = await isValidToken(p.token);
+    if (!me) return json({ error: 'Unauthorized. Please log in again.' }, 401);
+    const isAdmin = String(me.role || '') === 'Admin';
+    const unlocking = action === 'setLock' && String(p.value || '').trim() !== 'Yes';
+    if ((ADMIN_ONLY.has(action) || unlocking) && !isAdmin) return json({ error: 'Admin only. Please ask an Admin.' }, 403);
+    // The approver name always comes from the login, not from the page.
+    if (action === 'approveCount') p.approvedBy = String(me.full_name || me.username || '');
 
     if (action === 'getDashboardData') return json(await getDashboardData(p.branch || 'All'));
     if (action === 'getDisplayList') return json((await sbGet('chocolate_display', 'select=*&order=id.desc')).map((r: any) => ({ Date: r.created_at, 'Display Code': r.display_code, 'Display Name': r.display_name, Items: r.items || [], 'Total Price': r.total_price, 'Created By': r.created_by })));

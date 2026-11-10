@@ -709,6 +709,10 @@ Deno.serve(async (req) => {
     const action = p.action || '';
     const authUser = await isValidToken(p.token);
     if (!authUser) return json({ error: 'Unauthorized. Please log in again.' }, 401);
+    // Security audit 2026-11-10: Admin only on the server (not only on the page). Approver name comes from the login.
+    if (['approveRate', 'rejectRate', 'updateFlowerRates', 'addFlowerItem', 'setWeeklyBudget'].includes(action) && String(authUser.role || '') !== 'Admin')
+      return json({ error: 'Admin only. Please ask an Admin.' }, 403);
+    if (action === 'approveRate' || action === 'rejectRate') p.approvedBy = String(authUser.full_name || authUser.username || '');
 
     // ---- READ-ONLY ----
     if (action === 'getFlowerDashboard') return json(await getFlowerDashboard(p.branch || 'All'));

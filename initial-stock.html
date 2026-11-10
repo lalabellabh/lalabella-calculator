@@ -610,7 +610,8 @@
   document.getElementById('unlockBtn').addEventListener('click', async ()=>{
     if(!confirm(`Unlock Initial Stock entry for ${currentBranch}?`)) return;
     try{
-      await fetch(`${API_URL}?action=setLock&branch=${currentBranch}&value=No`);
+      const r = await fetch(`${API_URL}?action=setLock&branch=${currentBranch}&value=No`).then(x=>x.json()).catch(()=>({}));
+      if(r && r.error){ alert(r.error); return; }
       lockStatus[currentBranch] = false;
       renderBranchTabs();
       applyLockState();
