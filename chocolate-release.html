@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
@@ -573,12 +574,12 @@ body{background:
     [items, preparedByNames, history, savedDisplays] = results;
 
     document.getElementById('itemList').innerHTML =
-      items.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+      items.map(it => `<option value="${lbEsc(it['Chocolate Name'])}"></option>`).join('');
     document.getElementById('preparedByList').innerHTML =
-      preparedByNames.map(n => `<option value="${n}"></option>`).join('');
+      preparedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
     document.getElementById('fDisplayPicker').innerHTML =
       '<option value="">Select a display…</option>' +
-      savedDisplays.map((d, i) => `<option value="${i}">${d['Display Name']} — ${fmtBD(d['Total Price'])}${d['Created By'] ? ' · by ' + d['Created By'] : ''}</option>`).join('');
+      savedDisplays.map((d, i) => `<option value="${i}">${lbEsc(d['Display Name'])} — ${lbEsc(fmtBD(d['Total Price']))}${lbEsc(d['Created By'] ? ' · by ' + d['Created By'] : '')}</option>`).join('');
 
     renderHistory();
   }
@@ -688,7 +689,7 @@ body{background:
       return;
     }
     sel.innerHTML = '<option value="">Select batch...</option>' +
-      batches.map((b, i) => `<option value="${i}">${b.Batch || '—'} (${b.AvailableStock} ${b.Unit})</option>`).join('');
+      batches.map((b, i) => `<option value="${i}">${lbEsc(b.Batch || '—')} (${lbEsc(b.AvailableStock)} ${lbEsc(b.Unit)})</option>`).join('');
   }
 
   document.getElementById('fSearch').addEventListener('input', function(){
@@ -881,8 +882,8 @@ body{background:
       el.innerHTML = cart.map((c, i) => `
         <div class="cart-row">
           <div class="cart-row-main">
-            <div class="cart-row-title">${c.chocolateName}</div>
-            <div class="cart-row-meta">${c.qty} ${c.unit} × ${fmtBD(c.price)} · Batch: ${c.batch || '—'}</div>
+            <div class="cart-row-title">${lbEsc(c.chocolateName)}</div>
+            <div class="cart-row-meta">${lbEsc(c.qty)} ${lbEsc(c.unit)} × ${fmtBD(c.price)} · Batch: ${lbEsc(c.batch || '—')}</div>
           </div>
           <div style="text-align:right;">
             <div class="cart-row-amt">${fmtBD(c.total)}</div>
@@ -921,7 +922,7 @@ body{background:
     const el = document.getElementById('extrasList');
     el.innerHTML = extras.map((ex, i) => `
       <div class="cart-row">
-        <div class="cart-row-main"><div class="cart-row-title">${ex.description}</div></div>
+        <div class="cart-row-main"><div class="cart-row-title">${lbEsc(ex.description)}</div></div>
         <div style="text-align:right;">
           <div class="cart-row-amt">${fmtBD(ex.amount)}</div>
           <button class="remove-btn" data-idx="${i}">✕</button>
@@ -988,11 +989,11 @@ body{background:
       return `
         <div class="hist-row">
           <div class="hist-top">
-            <span>${rn}</span>
+            <span>${lbEsc(rn)}</span>
             <span>${fmtBD(r.total)}</span>
           </div>
-          <div class="hist-meta">${fmtDate(r.date)} · ${r.type} · ${r.count} item(s)</div>
-          <button class="reprint-btn" data-rn="${rn}" data-date="${r.date}">🖨 Reprint</button>
+          <div class="hist-meta">${lbEsc(fmtDate(r.date))} · ${lbEsc(r.type)} · ${lbEsc(r.count)} item(s)</div>
+          <button class="reprint-btn" data-rn="${lbEsc(rn)}" data-date="${lbEsc(r.date)}">🖨 Reprint</button>
         </div>
       `;
     }).join('');
@@ -1054,7 +1055,7 @@ body{background:
       if(preparedBy && !preparedByNames.includes(preparedBy)){
         preparedByNames.push(preparedBy);
         document.getElementById('preparedByList').innerHTML =
-          preparedByNames.map(n => `<option value="${n}"></option>`).join('');
+          preparedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
       }
 
       alert('Release saved: ' + data.releaseNo);
@@ -1112,15 +1113,15 @@ body{background:
         if(!isNaN(d) && (earliestExpiry === null || d < earliestExpiry)) earliestExpiry = d;
       }
       itemsHtml += `
-        <div class="r-item">${c.chocolateName}</div>
-        <div class="r-line r-sub"><span>${String(c.unit).toLowerCase() === 'piece' ? qty : qty.toFixed(2)} x ${fmtBD(price)} / ${c.unit}</span><span>${fmtBD(total)}</span></div>
+        <div class="r-item">${lbEsc(c.chocolateName)}</div>
+        <div class="r-line r-sub"><span>${String(c.unit).toLowerCase() === 'piece' ? qty : qty.toFixed(2)} x ${fmtBD(price)} / ${lbEsc(c.unit)}</span><span>${fmtBD(total)}</span></div>
       `;
     });
     extraLines.forEach(ex=>{
       const amount = Number(ex.amount);
       subtotal += amount;
       itemsHtml += `
-        <div class="r-item">${ex.description}</div>
+        <div class="r-item">${lbEsc(ex.description)}</div>
         <div class="r-line r-sub"><span>1.00 x ${fmtBD(amount)} / Unit</span><span>${fmtBD(amount)}</span></div>
       `;
     });

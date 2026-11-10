@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <script src="shared/admin-gate.js" data-title="Chocolate Admin"></script>
@@ -432,7 +433,7 @@ async function loadEditableItems(){
   try{
     editableItems = lalabellaCheckResponse(await (await fetch(CHOCOLATE_API + '?action=getItems&_ts=' + Date.now())).json());
     document.getElementById('editItemDatalist').innerHTML =
-      editableItems.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+      editableItems.map(it => `<option value="${lbEsc(it['Chocolate Name'])}"></option>`).join('');
   }catch(e){ console.error('[Lalabella] loadEditableItems failed:', e.message); }
 }
 loadEditableItems();

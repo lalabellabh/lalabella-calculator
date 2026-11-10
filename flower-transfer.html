@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
@@ -337,14 +338,14 @@
         if(!(name in flowerLegacyRates)) flowerLegacyRates[name] = Number(it.Rate) || 0;
       });
 
-    flowerOptionsHtml = [...names, ...hollandNames].map(n => `<option value="${n}"></option>`).join('');
-    supplyOptionsHtml = [...supplyNames].map(n => `<option value="${n}"></option>`).join('');
+    flowerOptionsHtml = [...names, ...hollandNames].map(n => `<option value="${lbEsc(n)}"></option>`).join('');
+    supplyOptionsHtml = [...supplyNames].map(n => `<option value="${lbEsc(n)}"></option>`).join('');
     applyType();
   }
 
   async function loadStaff(){
     const staff = await fetch(API_URL + '?action=getStaff&_ts=' + Date.now()).then(r=>r.json()).catch(()=>[]);
-    document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${s}"></option>`).join('');
+    document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${lbEsc(s)}"></option>`).join('');
   }
 
   let lastTransfers = [];
@@ -393,9 +394,9 @@
       }
       return `
         <div class="hist-row">
-          <div class="hist-name">${t.Flower}${badge}</div>
-          <div class="hist-meta">${fmtDate(t.Date)} · ${t['From Branch']} → ${t['To Branch']} · Qty ${t.Qty}</div>
-          <div class="hist-meta">${t['Transfer No.'] || ''} · ${fmtBD(t.Value)} · ni ${t['Transferred By'] || '—'}</div>
+          <div class="hist-name">${lbEsc(t.Flower)}${badge}</div>
+          <div class="hist-meta">${lbEsc(fmtDate(t.Date))} · ${lbEsc(t['From Branch'])} → ${lbEsc(t['To Branch'])} · Qty ${lbEsc(t.Qty)}</div>
+          <div class="hist-meta">${lbEsc(t['Transfer No.'] || '')} · ${fmtBD(t.Value)} · ni ${lbEsc(t['Transferred By'] || '—')}</div>
         </div>
       `;
     }).join('');

@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 
@@ -126,7 +127,7 @@ function addBranch(name = '', lat = '', lng = '', keywords = ''){
 function renderBranches(){
   const list = document.getElementById('branchesList');
   list.innerHTML = branches.map(b => `
-    <div class="branch" data-id="${b.id}">
+    <div class="branch" data-id="${lbEsc(b.id)}">
       ${branches.length > 1 ? '<button class="remove-branch" title="Remove">✕</button>' : ''}
       <div class="fields">
         <div class="field full">
@@ -138,11 +139,11 @@ function renderBranches(){
             <option value="Hamala" ${b.name === 'Hamala' ? 'selected' : ''}>Hamala</option>
           </select>
         </div>
-        <div class="field"><label>Latitude</label><input class="b-lat" value="${b.lat}" placeholder="e.g. 26.2285" inputmode="decimal"></div>
-        <div class="field"><label>Longitude</label><input class="b-lng" value="${b.lng}" placeholder="e.g. 50.5860" inputmode="decimal"></div>
+        <div class="field"><label>Latitude</label><input class="b-lat" value="${lbEsc(b.lat)}" placeholder="e.g. 26.2285" inputmode="decimal"></div>
+        <div class="field"><label>Longitude</label><input class="b-lng" value="${lbEsc(b.lng)}" placeholder="e.g. 50.5860" inputmode="decimal"></div>
         <div class="field full">
           <label>Nearby Area Keywords</label>
-          <input class="b-keywords" value="${b.keywords}" placeholder="e.g. Seef, Juffair, Adliya (comma-separated)">
+          <input class="b-keywords" value="${lbEsc(b.keywords)}" placeholder="e.g. Seef, Juffair, Adliya (comma-separated)">
           <div class="hint">Used as a text-match backup if exact coordinates aren't available for an order.</div>
         </div>
       </div>

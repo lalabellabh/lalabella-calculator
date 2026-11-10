@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 
@@ -331,8 +332,8 @@
     searchResults.innerHTML = matches.length === 0
       ? '<div class="empty-note">No results found.</div>'
       : matches.map(f => `
-          <div class="result-item" data-name="${f.name}" data-origin="${f.origin}" data-rate="${f.rate}" data-code="${f.itemCode}">
-            <span class="result-name">${f.name} <span style="color:var(--ink-dim); font-weight:400;">(${f.origin})</span></span>
+          <div class="result-item" data-name="${lbEsc(f.name)}" data-origin="${lbEsc(f.origin)}" data-rate="${lbEsc(f.rate)}" data-code="${lbEsc(f.itemCode)}">
+            <span class="result-name">${lbEsc(f.name)} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(f.origin)})</span></span>
             <span class="result-rate">${fmtBD(f.rate)}</span>
           </div>
         `).join('');
@@ -431,8 +432,8 @@
     document.getElementById('labelCartList').innerHTML = cart.map((c, i) => `
       <div class="cart-row">
         <div>
-          <div class="cart-row-name">${c.name} <span style="color:var(--ink-dim); font-weight:400;">(${c.origin})</span></div>
-          <div class="cart-row-meta">${c.qty} label${c.qty>1?'s':''} · ${c.itemCode}</div>
+          <div class="cart-row-name">${lbEsc(c.name)} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(c.origin)})</span></div>
+          <div class="cart-row-meta">${lbEsc(c.qty)} label${c.qty>1?'s':''} · ${lbEsc(c.itemCode)}</div>
         </div>
         <button class="remove-btn" data-idx="${i}">✕</button>
       </div>
@@ -456,10 +457,10 @@
         const svgId = 'lbl-' + Math.random().toString(36).slice(2);
         cells += `
           <div class="label-cell">
-            <div class="l-name">${c.name} (${c.origin})</div>
+            <div class="l-name">${lbEsc(c.name)} (${lbEsc(c.origin)})</div>
             <div class="l-price">${fmtBD(c.rate)}</div>
             <svg class="${svgId}"></svg>
-            <div class="l-code">${c.itemCode}</div>
+            <div class="l-code">${lbEsc(c.itemCode)}</div>
           </div>
         `;
       }
@@ -504,8 +505,8 @@
       resultEl.innerHTML = matches.map(m => `
         <div class="cart-row">
           <div>
-            <div class="cart-row-name">${m['Flower']}</div>
-            <div class="cart-row-meta">${m['Date']} · Qty ${m['Qty']} · ${m['Item Code']} · ${m['Origin']||''}</div>
+            <div class="cart-row-name">${lbEsc(m['Flower'])}</div>
+            <div class="cart-row-meta">${lbEsc(m['Date'])} · Qty ${lbEsc(m['Qty'])} · ${lbEsc(m['Item Code'])} · ${lbEsc(m['Origin']||'')}</div>
           </div>
         </div>
       `).join('');

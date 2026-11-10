@@ -4,6 +4,13 @@
  * All backends are Supabase Edge Functions now. The old Google Apps Script
  * links were removed (security audit 2026-11-10) — do not add them back.
  */
+// Safe text for HTML: every page uses lbEsc(value) when it puts saved data (names, remarks...) into innerHTML.
+// Security audit 2026-11-10 — stops typed text from running as code.
+window.lbEsc = function (v) {
+  return String(v === null || v === undefined ? '' : v).replace(/[&<>"'`]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c];
+  });
+};
 window.LB_CONFIG = Object.freeze({
   SESSION_KEEP_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/sessionkeep-fast',
   AUTH_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/auth-fast',

@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/best-before.js"></script>
 <script src="shared/scanner.js"></script>
@@ -1367,10 +1368,10 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   function renderResultsByCategory(cat){
     const matches = DATA.filter(r => r.category === cat);
     resultsEl.innerHTML = matches.map(r => `
-      <div class="result-item" data-id="${r.id}">
+      <div class="result-item" data-id="${lbEsc(r.id)}">
         <div>
-          <div class="result-name">${r.name}</div>
-          <div class="result-meta">${r.category} · ${r.code} · ${r.grams}g/pc</div>
+          <div class="result-name">${lbEsc(r.name)}</div>
+          <div class="result-meta">${lbEsc(r.category)} · ${lbEsc(r.code)} · ${lbEsc(r.grams)}g/pc</div>
         </div>
         <div class="result-price">${fmtBD(r.pricePerKg)}/kg</div>
       </div>
@@ -1443,8 +1444,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
           row.className = 'result-item';
           row.innerHTML = `
             <div>
-              <div class="result-name">${r.name}</div>
-              <div class="result-meta">${r.category} · ${r.code} · ${r.grams}g/pc</div>
+              <div class="result-name">${lbEsc(r.name)}</div>
+              <div class="result-meta">${lbEsc(r.category)} · ${lbEsc(r.code)} · ${lbEsc(r.grams)}g/pc</div>
             </div>
             <div class="result-price">${fmtBD(r.pricePerKg)}/kg</div>
           `;
@@ -1542,7 +1543,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       row.className = 'list-row';
       row.innerHTML = `
         <div>
-          <div class="list-row-name">${entry.name}</div>
+          <div class="list-row-name">${lbEsc(entry.name)}</div>
           <div class="list-row-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</div>
         </div>
         <div class="list-row-right">
@@ -1568,7 +1569,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'extra-row';
       row.innerHTML = `
-        <div>${extra.description}</div>
+        <div>${lbEsc(extra.description)}</div>
         <div class="extra-row-right">
           <div class="extra-price">${fmtBD(extra.amount)}</div>
           <button class="extra-remove" data-extra-idx="${idx}" aria-label="Remove extra">&times;</button>
@@ -1860,7 +1861,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
+        <div class="r-name">${lbEsc(entry.name)}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -1871,7 +1872,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name"><span class="r-ex">${extra.description}</span><span class="r-meta">Extra</span></div>
+        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra</span></div>
         <div>${fmtBD(extra.amount)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -1904,7 +1905,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name">${entry.name}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
+        <div class="r-name">${lbEsc(entry.name)}<span class="r-meta">${qtyLabel(entry.amount, entry.mode)}${entryEq(entry) ? ' · ' + entryEq(entry) : ''}</span></div>
         <div>${fmtBD(entry.total)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -1915,7 +1916,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name"><span class="r-ex">${extra.description}</span><span class="r-meta">Extra</span></div>
+        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra</span></div>
         <div>${fmtBD(extra.amount)}</div>
       `;
       rItemsEl.appendChild(row);

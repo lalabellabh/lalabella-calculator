@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <script src="shared/admin-gate.js" data-title="Chocolate Odoo Price Import"></script>
@@ -271,8 +272,8 @@ function renderComparison(){
   tbody.innerHTML = comparisonRows.map((r, i) => `
     <tr class="${r.isDifferent ? 'diff' : ''}">
       <td>${r.isDifferent ? `<input type="checkbox" class="row-select" data-idx="${i}">` : ''}</td>
-      <td>${r.itemCode}</td>
-      <td>${r.flowerName}<div style="font-size:11px;color:var(--ink-dim);">Odoo price is ${r.soldAs}</div></td>
+      <td>${lbEsc(r.itemCode)}</td>
+      <td>${lbEsc(r.flowerName)}<div style="font-size:11px;color:var(--ink-dim);">Odoo price is ${lbEsc(r.soldAs)}</div></td>
       <td class="${r.isDifferent ? 'old-rate' : ''}">${r.currentOdoo.toFixed(3)}</td>
       <td class="${r.isDifferent ? 'new-rate' : ''}">${r.isDifferent ? r.odooRate.toFixed(3) + (r.soldAs === 'per piece' ? '<div style="font-size:11px;font-weight:400;">saves ' + r.newPerKg.toFixed(3) + ' / kg</div>' : '') : '(same)'}</td>
     </tr>
