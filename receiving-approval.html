@@ -150,6 +150,15 @@
   .tabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
   .tabs button{ border:1px solid var(--line); background:transparent; border-radius:20px; padding:5px 12px; font:inherit; font-size:12px; cursor:pointer; }
   .tabs button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .edit-btn{ font-size:12px; color:var(--rust); margin-left:6px; background:none; border:1px solid var(--rust); border-radius:8px; padding:1px 8px; cursor:pointer; font:inherit; font-size:12px; }
+  .mback{ position:fixed; inset:0; background:rgba(20,20,30,.45); display:none; align-items:center; justify-content:center; z-index:9999; padding:16px; }
+  .mback.show{ display:flex; }
+  .mbox{ background:#fff; color:#1c2b45; border-radius:14px; width:100%; max-width:420px; max-height:90vh; overflow:auto; padding:16px; }
+  .mbox h3{ margin:0 0 4px; font-size:16px; }
+  .mbox label{ display:block; font-size:12px; font-weight:600; margin-top:9px; color:#5c6a83; }
+  .mbox input, .mbox select{ width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid #c9bfa0; border-radius:8px; font:inherit; font-size:14px; }
+  .mgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .mprev{ font-size:12.5px; margin-top:10px; color:#6b4ca3; font-weight:600; }
 </style>
 </head>
 <body>
@@ -170,6 +179,31 @@
     </div>
     <div class="card-title">Waiting for approval <span id="cnt" style="color:var(--rust); font-family:'Space Mono',monospace;"></span></div>
     <div id="list"><div class="empty-note">Loading…</div></div>
+  </div>
+</div>
+
+<div class="mback" id="mBack">
+  <div class="mbox">
+    <h3 id="mTitle">Edit line</h3>
+    <div class="rcv-meta" id="mSub"></div>
+    <div id="mFlower">
+      <label>Flower</label><input id="eFName">
+      <div class="mgrid"><div><label>Origin</label><input id="eOrigin"></div>
+        <div><label>Unit</label><select id="eUnit"><option>Bunch</option><option>Stem</option><option>Piece</option><option>Plant</option><option>Pot</option><option>Box</option></select></div></div>
+      <div class="mgrid"><div><label>Stems per bunch</label><input id="eStems" type="number" min="1" step="1"></div>
+        <div><label>Quantity</label><input id="eFQty" type="number" min="0" step="1"></div></div>
+      <label>Supplier price per unit (BD)</label><input id="eFRate" type="number" min="0" step="0.001">
+    </div>
+    <div id="mChoc">
+      <label>Chocolate</label><input id="eCName">
+      <div class="mgrid"><div><label>Quantity</label><input id="eCQty" type="number" min="0" step="0.001"></div>
+        <div><label>Unit</label><input id="eCUnit" list="cUnits"><datalist id="cUnits"><option>Piece</option><option>Kg</option></datalist></div></div>
+      <label>Price (BD per piece, or per kg)</label><input id="eCPrice" type="number" min="0" step="0.001">
+      <div class="mgrid"><div><label>Batch no.</label><input id="eBatch"></div>
+        <div><label>Expiry</label><input id="eExpiry" type="date"></div></div>
+    </div>
+    <div class="mprev" id="mPrev"></div>
+    <div class="action-row"><button class="action-btn approve" id="mSave">💾 Save</button><button class="action-btn reject" id="mCancel">Cancel</button></div>
   </div>
 </div>
 
@@ -216,7 +250,7 @@
           ? esc(l.qty) + ' ' + esc(l.unit) + (String(l.unit).toLowerCase() === 'bunch' && l.stems ? ' × ' + esc(l.stems) + ' stems' : '') + ' · ' + f3(l.rate) + ' BD/' + esc(l.unit) + ' = ' + f3(l.subtotal) + ' BD'
           : esc(l.qty) + ' ' + esc(l.unit) + ' · ' + f3(l.rate) + ' BD · batch ' + esc(l.batchNo) + (l.expiry ? ' · exp ' + esc(String(l.expiry).slice(0, 10)) : '') + ' = ' + f3(l.subtotal) + ' BD';
         return '<div class="ln"><b>' + esc(l.name) + '</b>' + (l.origin ? ' <span class="ln-meta">(' + esc(l.origin) + ')</span>' : '') +
-          '<a class="edit-link" href="' + editLink(b, l) + '">✎ Edit</a>' +
+          '<button class="edit-btn" data-edit="' + esc(b.kind) + '" data-batch="' + esc(b.batch) + '" data-line="' + esc(l.id) + '">✎ Edit</button>' +
           '<div class="ln-meta">' + what + '</div>' +
           (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem</div>' : '') +
           (l.warnings || []).map(w => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') + '</div>';
@@ -247,6 +281,63 @@
       load();
     }catch(err){ alert('Connection problem. Please try again.'); btn.disabled = false; }
   });
+  // ---- Edit a line before approving (fix wrong input) ----
+  let editing = null;
+  const $ = id => document.getElementById(id);
+  function flowerPreview(){
+    const unit = $('eUnit').value, stems = Number($('eStems').value) || 1, rate = Number($('eFRate').value) || 0, qty = Number($('eFQty').value) || 0;
+    const perStem = unit === 'Bunch' && stems > 0 ? rate / stems : rate;
+    $('mPrev').textContent = 'Line total ' + f3(qty * rate) + ' BD · company rate ' + f3(Math.round((perStem * 3 * 1.10 + 1e-9) * 1000) / 1000) + ' per ' + (unit === 'Bunch' ? 'stem' : unit.toLowerCase());
+  }
+  ['eUnit','eStems','eFRate','eFQty'].forEach(id => $(id).addEventListener('input', flowerPreview));
+  $('eUnit').addEventListener('change', flowerPreview);
+  document.getElementById('list').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-edit]'); if(!btn) return;
+    const kind = btn.dataset.edit, batch = btn.dataset.batch, lineId = btn.dataset.line;
+    const b = all.find(x => x.kind === kind && x.batch === batch); if(!b) return;
+    const l = b.lines.find(x => String(x.id) === lineId); if(!l) return;
+    editing = { b, l };
+    $('mTitle').textContent = '✎ Edit ' + l.name;
+    $('mSub').textContent = b.branch + ' · ' + (b.supplier || '—') + ' · ' + (b.invoiceNo || '—');
+    $('mFlower').style.display = kind === 'flower' ? 'block' : 'none';
+    $('mChoc').style.display = kind === 'chocolate' ? 'block' : 'none';
+    if(kind === 'flower'){
+      $('eFName').value = l.name; $('eOrigin').value = l.origin || ''; $('eUnit').value = l.unit || 'Bunch';
+      $('eStems').value = l.stems || 1; $('eFQty').value = l.qty; $('eFRate').value = l.rate; flowerPreview();
+    } else {
+      $('eCName').value = l.name; $('eCQty').value = l.qty; $('eCUnit').value = l.unit || 'Piece'; $('eCPrice').value = l.rate;
+      $('eBatch').value = l.batchNo || ''; $('eExpiry').value = String(l.expiry || '').slice(0, 10); $('mPrev').textContent = '';
+    }
+    $('mBack').classList.add('show');
+  });
+  $('mCancel').addEventListener('click', () => { $('mBack').classList.remove('show'); editing = null; });
+  $('mSave').addEventListener('click', async () => {
+    if(!editing) return;
+    const { b, l } = editing;
+    let api, params;
+    if(b.kind === 'flower'){
+      if(!$('eFName').value.trim() || !(Number($('eFQty').value) > 0) || !(Number($('eFRate').value) >= 0)){ alert('Please fill in flower, quantity and price.'); return; }
+      api = FL; params = { action: 'editEntry', id: l.id, date: String(b.date || '').slice(0, 10), invoiceNo: b.invoiceNo || '', supplier: b.supplier || '',
+        flowerName: $('eFName').value.trim(), origin: $('eOrigin').value.trim(), unit: $('eUnit').value, stemsPerBunch: Number($('eStems').value) || 1,
+        qty: $('eFQty').value, supplierRate: $('eFRate').value, taxPercent: b.taxPercent || 10, receivedBy: b.receivedBy || '' };
+    } else {
+      const ex = $('eExpiry').value;
+      if(ex){ const y = Number(ex.slice(0, 4)); if(y < 2020 || y > 2100){ alert('The expiry year looks wrong.'); return; } }
+      if(!$('eCName').value.trim() || !(Number($('eCQty').value) > 0)){ alert('Please fill in chocolate and quantity.'); return; }
+      const me = (window.LALABELLA_USER && (window.LALABELLA_USER.fullName || window.LALABELLA_USER.username)) || b.receivedBy || '';
+      api = CH; params = { action: 'editEntry', id: l.legacyId || l.id, receiveDate: String(b.date || '').slice(0, 10), deliveryNo: b.invoiceNo || '', supplier: b.supplier || '',
+        chocolateName: $('eCName').value.trim(), batchNo: $('eBatch').value.trim(), expiryDate: ex, qty: $('eCQty').value, unit: $('eCUnit').value.trim() || 'Piece',
+        price: $('eCPrice').value || 0, branch: b.branch, storageLocation: l.storageLocation || '', remarks: l.remarks || '', receivedBy: me, weightPerPiece: (l.weightPerPiece == null ? '' : l.weightPerPiece) };
+    }
+    $('mSave').disabled = true;
+    try{
+      const r = await fetch(api + '?' + new URLSearchParams(params).toString()).then(x => x.json());
+      if(!r || r.error || r.success === false){ alert((r && r.error) || 'Could not save.'); return; }
+      $('mBack').classList.remove('show'); editing = null; load();
+    }catch(err){ alert('Connection problem. Please try again.'); }
+    finally{ $('mSave').disabled = false; }
+  });
+
   document.getElementById('tabs').addEventListener('click', e => { const t = e.target.closest('button[data-f]'); if(t){ filt = t.dataset.f; render(); } });
   document.getElementById('refreshBtn').addEventListener('click', load);
   load();
