@@ -483,21 +483,26 @@ async function updateChocolateRates(p: Record<string, any>) {
 // RECEIVING APPROVAL (Nov 2026): grouped by delivery note; Approve puts it into stock.
 // ---------------------------------------------------------------
 async function getPendingReceivingChoc(p: Record<string, any>) {
-  let q = 'select=*&approval_status=eq.Pending&order=id.asc';
+  // status: Pending (default) | History = approved + rejected receiving of the last N days (not Initial Stock), to edit old mistakes.
+  const history = String(p.status || '') === 'History';
+  const days = Math.min(120, Math.max(1, parseInt(p.days, 10) || 30));
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  let q = history ? `select=*&approval_status=neq.Pending&delivery_note_no=neq.INITIAL%20STOCK&receive_date=gte.${since}&order=id.desc&limit=400` : 'select=*&approval_status=eq.Pending&order=id.asc';
   if (p.batch) q += `&batch_ref=eq.${encodeURIComponent(String(p.batch))}`;
   const rows = await sbGet('chocolate_database', q);
   if (!rows.length) return { success: true, batches: [] };
-  const hist = await sbGet('chocolate_database', 'select=supplier,chocolate_name,unit,price_per_kg,price_per_piece&approval_status=eq.Approved&order=id.desc&limit=600');
+  const hist = await sbGet('chocolate_database', 'select=id,supplier,chocolate_name,unit,price_per_kg,price_per_piece&approval_status=eq.Approved&order=id.desc&limit=600');
   const low = (v: any) => String(v || '').trim().toLowerCase();
   const out: Record<string, any> = {};
   for (const r of rows) {
-    const k = String(r.batch_ref || ('ROW-' + r.id));
-    const b = out[k] = out[k] || { batch: k, kind: 'chocolate', branch: r.branch, date: r.receive_date, supplier: r.supplier || '', invoiceNo: r.delivery_note_no || '', receivedBy: r.created_by || '', paperTotal: null, lines: [], typedTotal: 0 };
+    const k = String(r.batch_ref || (r.delivery_note_no ? 'CH|' + r.branch + '|' + r.delivery_note_no : 'ROW-' + r.id));
+    const b = out[k] = out[k] || { batch: k, kind: 'chocolate', branch: r.branch, date: r.receive_date, supplier: r.supplier || '', invoiceNo: r.delivery_note_no || '', receivedBy: r.created_by || '', paperTotal: null, lines: [], typedTotal: 0,
+      status: r.approval_status || 'Approved', approvedBy: r.approved_by || '', approvedAt: r.approved_at || '' };
     const price = priceForRow(r);
     const warns: string[] = [];
     if (!r.expiry_date) warns.push('No expiry date');
     else { const y = Number(String(r.expiry_date).slice(0, 4)); if (y < 2020 || y > 2100) warns.push('Expiry year looks wrong'); }
-    const prev = hist.filter((h: any) => low(h.chocolate_name) === low(r.chocolate_name) && low(h.unit) === low(r.unit)).map((h: any) => priceForRow(h)).filter((x: number) => x > 0);
+    const prev = hist.filter((h: any) => h.id < r.id && low(h.chocolate_name) === low(r.chocolate_name) && low(h.unit) === low(r.unit)).map((h: any) => priceForRow(h)).filter((x: number) => x > 0);
     if (prev.length && price > 0) { const mn = Math.min(...prev), mx = Math.max(...prev); if (price > mx * 1.5 || price < mn * 0.5) warns.push(`Price ${price.toFixed(3)} — usual ${mn.toFixed(3)}–${mx.toFixed(3)}`); }
     if (!(price > 0)) warns.push('No price');
     b.lines.push({ id: r.id, legacyId: r.legacy_id || String(r.id), type: 'Chocolate', name: r.chocolate_name, batchNo: r.batch_no || '', expiry: r.expiry_date || '', unit: r.unit || '', qty: Number(r.qty_received) || 0, rate: price, subtotal: Number(r.total_amount) || 0, warnings: warns,
