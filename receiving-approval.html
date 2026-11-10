@@ -159,6 +159,7 @@
   .mbox input, .mbox select{ width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid #c9bfa0; border-radius:8px; font:inherit; font-size:14px; }
   .mgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .mprev{ font-size:12.5px; margin-top:10px; color:#6b4ca3; font-weight:600; }
+  #histBar input, #histBar select{ width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:13px; background:rgba(255,255,255,.8); }
 </style>
 </head>
 <body>
@@ -174,10 +175,17 @@
   </header>
   <button class="refresh-link" id="refreshBtn">↻ Refresh</button>
   <div class="card">
+    <div class="tabs" id="views">
+      <button data-v="wait" class="on">⏳ Waiting</button><button data-v="hist">📚 History · edit old input</button>
+    </div>
     <div class="tabs" id="tabs">
       <button data-f="all" class="on">All</button><button data-f="flower">🌸 Flower</button><button data-f="chocolate">🍫 Chocolate</button>
     </div>
-    <div class="card-title">Waiting for approval <span id="cnt" style="color:var(--rust); font-family:'Space Mono',monospace;"></span></div>
+    <div id="histBar" style="display:none; margin:6px 0;">
+      <div class="mgrid"><select id="hDays"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
+        <input id="hSearch" placeholder="Search item, supplier, invoice"></div>
+    </div>
+    <div class="card-title"><span id="listTitle">Waiting for approval</span> <span id="cnt" style="color:var(--rust); font-family:'Space Mono',monospace;"></span></div>
     <div id="list"><div class="empty-note">Loading…</div></div>
   </div>
 </div>
@@ -211,19 +219,20 @@
   const FL = LB_CONFIG.FLOWER_FAST_API, CH = LB_CONFIG.CHOCOLATE_FAST_API;
   const qs = new URLSearchParams(location.search);
   const focusBatch = qs.get('batch') || '';
-  let all = [], filt = qs.get('m') || 'all';
+  let all = [], filt = qs.get('m') || 'all', view = qs.get('view') === 'hist' ? 'hist' : 'wait';
   const f3 = n => Number(n || 0).toFixed(3);
   const esc = window.lbEsc;
   async function load(){
     const el = document.getElementById('list');
     el.innerHTML = '<div class="empty-note">Loading…</div>';
     try{
+      const extra = view === 'hist' ? '&status=History&days=' + encodeURIComponent(document.getElementById('hDays').value) : '';
       const [a, b] = await Promise.all([
-        fetch(FL + '?action=getPendingReceiving&_ts=' + Date.now()).then(r => r.json()),
-        fetch(CH + '?action=getPendingReceiving&_ts=' + Date.now()).then(r => r.json()),
+        fetch(FL + '?action=getPendingReceiving' + extra + '&_ts=' + Date.now()).then(r => r.json()),
+        fetch(CH + '?action=getPendingReceiving' + extra + '&_ts=' + Date.now()).then(r => r.json()),
       ]);
       if((a && a.error) || (b && b.error)){ el.innerHTML = '<div class="empty-note">' + esc((a && a.error) || b.error) + '</div>'; return; }
-      all = [].concat((a && a.batches) || [], (b && b.batches) || []).sort((x, y) => String(x.date).localeCompare(String(y.date)));
+      all = [].concat((a && a.batches) || [], (b && b.batches) || []).sort((x, y) => view === 'hist' ? String(y.date).localeCompare(String(x.date)) : String(x.date).localeCompare(String(y.date)));
       render();
     }catch(e){ el.innerHTML = '<div class="empty-note">Could not load. Please refresh.</div>'; }
   }
@@ -234,10 +243,14 @@
   }
   function render(){
     document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.f === filt));
-    const rows = all.filter(b => filt === 'all' || b.kind === filt);
+    document.querySelectorAll('#views button').forEach(x => x.classList.toggle('on', x.dataset.v === view));
+    document.getElementById('histBar').style.display = view === 'hist' ? 'block' : 'none';
+    document.getElementById('listTitle').textContent = view === 'hist' ? 'Already checked (tap ✎ Edit to fix a mistake)' : 'Waiting for approval';
+    const term = view === 'hist' ? document.getElementById('hSearch').value.trim().toLowerCase() : '';
+    const rows = all.filter(b => (filt === 'all' || b.kind === filt) && (!term || [b.supplier, b.invoiceNo, b.branch, b.receivedBy].concat(b.lines.map(l => l.name)).join(' ').toLowerCase().indexOf(term) !== -1));
     document.getElementById('cnt').textContent = rows.length ? '(' + rows.length + ')' : '';
     const el = document.getElementById('list');
-    if(!rows.length){ el.innerHTML = '<div class="empty-note">Nothing waiting. ✅</div>'; return; }
+    if(!rows.length){ el.innerHTML = '<div class="empty-note">' + (view === 'hist' ? 'No receiving found.' : 'Nothing waiting. ✅') + '</div>'; return; }
     el.innerHTML = rows.map(b => {
       const icon = b.kind === 'flower' ? '🌸' : '🍫';
       const warnCount = b.lines.reduce((s, l) => s + (l.warnings || []).length, 0);
@@ -259,8 +272,10 @@
         '<div class="rcv-top"><span>' + icon + ' ' + esc(b.branch) + ' · ' + esc(b.supplier || '—') + '</span><span>' + esc(String(b.date || '').slice(0, 10)) + '</span></div>' +
         '<div class="rcv-meta">Invoice / note: ' + esc(b.invoiceNo || '—') + ' · Received by: ' + esc(b.receivedBy || '—') + ' · ' + b.lines.length + ' line(s)' + (warnCount ? ' · <b style="color:#b0442e">' + warnCount + ' to check</b>' : '') + '</div>' +
         lines + tally +
-        '<div class="action-row"><button class="action-btn approve" data-act="approve" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✓ Approve · add to stock</button>' +
-        '<button class="action-btn reject" data-act="reject" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✕ Reject</button></div></div>';
+        (view === 'hist'
+          ? '<div class="rcv-meta" style="margin-top:8px;font-weight:700;color:' + (b.status === 'Rejected' ? '#b0442e' : 'var(--ok)') + '">' + (b.status === 'Rejected' ? '✕ Rejected' : '✓ In stock') + (b.approvedBy ? ' · by ' + esc(b.approvedBy) : (b.status === 'Approved' ? ' · (before approval was needed)' : '')) + '</div></div>'
+          : '<div class="action-row"><button class="action-btn approve" data-act="approve" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✓ Approve · add to stock</button>' +
+            '<button class="action-btn reject" data-act="reject" data-kind="' + b.kind + '" data-batch="' + esc(b.batch) + '">✕ Reject</button></div></div>');
     }).join('');
     if(focusBatch){ const t = document.querySelector('.rcv.focus'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   }
@@ -329,6 +344,7 @@
         chocolateName: $('eCName').value.trim(), batchNo: $('eBatch').value.trim(), expiryDate: ex, qty: $('eCQty').value, unit: $('eCUnit').value.trim() || 'Piece',
         price: $('eCPrice').value || 0, branch: b.branch, storageLocation: l.storageLocation || '', remarks: l.remarks || '', receivedBy: me, weightPerPiece: (l.weightPerPiece == null ? '' : l.weightPerPiece) };
     }
+    if(b.status === 'Approved' && view === 'hist' && !confirm('This receiving is already in stock. Saving will change the stock too. Continue?')) return;
     $('mSave').disabled = true;
     try{
       const r = await fetch(api + '?' + new URLSearchParams(params).toString()).then(x => x.json());
@@ -340,6 +356,9 @@
 
   document.getElementById('tabs').addEventListener('click', e => { const t = e.target.closest('button[data-f]'); if(t){ filt = t.dataset.f; render(); } });
   document.getElementById('refreshBtn').addEventListener('click', load);
+  document.getElementById('views').addEventListener('click', e => { const t = e.target.closest('button[data-v]'); if(t && t.dataset.v !== view){ view = t.dataset.v; load(); } });
+  document.getElementById('hDays').addEventListener('change', load);
+  document.getElementById('hSearch').addEventListener('input', render);
   load();
 </script>
 </body>

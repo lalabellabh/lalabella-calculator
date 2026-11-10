@@ -408,24 +408,30 @@ async function setMinStockBulk(p: Record<string, any>) {
 // RECEIVING APPROVAL (Nov 2026): a saved invoice waits here until an Admin approves it.
 // Approve = goes into stock + its rate changes are approved together. Reject = never counts.
 // ---------------------------------------------------------------
-const batchKey = (r: any) => String(r.batch_ref || ('ROW-' + r.id));
+// Old receiving (before Nov 2026) has no batch_ref: group it by branch + date + invoice instead.
+const batchKey = (r: any) => String(r.batch_ref || (r.invoice_no ? 'INV|' + r.branch + '|' + r.entry_date + '|' + r.invoice_no : 'ROW-' + r.id));
 async function getPendingReceiving(p: Record<string, any>) {
-  let q = 'select=*&approval_status=eq.Pending&order=id.asc';
+  // status: Pending (default) | History = approved + rejected of the last N days (to edit old mistakes).
+  const history = String(p.status || '') === 'History';
+  const days = Math.min(120, Math.max(1, parseInt(p.days, 10) || 30));
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  let q = history ? `select=*&approval_status=neq.Pending&entry_date=gte.${since}&order=id.desc&limit=400` : 'select=*&approval_status=eq.Pending&order=id.asc';
   if (p.batch) q += `&batch_ref=eq.${encodeURIComponent(String(p.batch))}`;
   const rows = await sbGet('flower_database', q);
   if (!rows.length) return { success: true, batches: [] };
   const ids = rows.map((r: any) => r.id);
   const [rcs, hist] = await Promise.all([
     sbGet('flower_rate_change_history', `select=id,source_id,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&source_id=in.(${ids.join(',')})`),
-    sbGet('flower_database', 'select=supplier,flower_name,origin,unit,stems_per_bunch,rate,entry_date&approval_status=eq.Approved&order=id.desc&limit=600'),
+    sbGet('flower_database', 'select=id,supplier,flower_name,origin,unit,stems_per_bunch,rate,entry_date&approval_status=eq.Approved&order=id.desc&limit=600'),
   ]);
   const rcBy: Record<string, any> = {}; rcs.forEach((r: any) => { rcBy[r.source_id] = r; });
   const low = (v: any) => String(v || '').trim().toLowerCase();
   const out: Record<string, any> = {};
   for (const r of rows) {
     const k = batchKey(r);
-    const b = out[k] = out[k] || { batch: k, kind: 'flower', branch: r.branch, date: r.entry_date, supplier: r.supplier || '', invoiceNo: r.invoice_no || '', receivedBy: r.received_by || '', paperTotal: r.paper_total == null ? null : Number(r.paper_total), taxPercent: Number(r.tax_percent) || 10, lines: [], typedSubtotal: 0 };
-    const same = hist.filter((h: any) => low(h.supplier) === low(r.supplier) && low(h.flower_name) === low(r.flower_name) && low(h.unit) === low(r.unit) && (!r.origin || low(h.origin) === low(r.origin)));
+    const b = out[k] = out[k] || { batch: k, kind: 'flower', branch: r.branch, date: r.entry_date, supplier: r.supplier || '', invoiceNo: r.invoice_no || '', receivedBy: r.received_by || '', paperTotal: r.paper_total == null ? null : Number(r.paper_total), taxPercent: Number(r.tax_percent) || 10, lines: [], typedSubtotal: 0,
+      status: r.approval_status || 'Approved', approvedBy: r.approved_by || '', approvedAt: r.approved_at || '' };
+    const same = hist.filter((h: any) => h.id !== r.id && h.id < r.id && low(h.supplier) === low(r.supplier) && low(h.flower_name) === low(r.flower_name) && low(h.unit) === low(r.unit) && (!r.origin || low(h.origin) === low(r.origin)));
     const warns: string[] = [];
     if (r.type !== 'Supply') {
       const last = same.find((h: any) => Number(h.stems_per_bunch) > 1);
