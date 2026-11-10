@@ -37,6 +37,34 @@ async function hashPassword(password: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password + PEPPER));
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+// Security audit 2026-11-10: passwords are saved salted (PBKDF2). Old SHA-256 hashes still work and are upgraded on the next login.
+const PBKDF2_ITER = 100000;
+const b64e = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+const b64d = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pbkdf2Bits(password: string, salt: Uint8Array, iter: number) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password + PEPPER), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, key, 256));
+}
+function sameText(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+async function makePasswordHash(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return `pbkdf2$${PBKDF2_ITER}$${b64e(salt)}$${b64e(await pbkdf2Bits(password, salt, PBKDF2_ITER))}`;
+}
+// true = correct, 'upgrade' = correct but old format (save the new hash), false = wrong.
+async function checkPassword(stored: any, password: string): Promise<boolean | 'upgrade'> {
+  const s = String(stored || '');
+  if (!s || !password) return false;
+  if (s.startsWith('pbkdf2$')) {
+    const parts = s.split('$');
+    if (parts.length !== 4) return false;
+    try { return sameText(b64e(await pbkdf2Bits(password, b64d(parts[2]), Number(parts[1]) || PBKDF2_ITER)), parts[3]); } catch { return false; }
+  }
+  return sameText(s, await hashPassword(password)) ? 'upgrade' : false;
+}
 const newToken = () => (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '');
 async function findUser(username: string) {
   const rows = await rest('POST', 'rpc/auth_get_user_by_username', { p_username: String(username) });
@@ -59,7 +87,7 @@ async function signup(p: any) {
   const pending = await rest('GET', 'users?select=id&role=eq.Visitor&status=eq.Pending&limit=' + (MAX_PENDING + 1));
   if ((pending || []).length >= MAX_PENDING) return { success: false, error: 'Sign-ups are busy right now. Please try again later.' };
   try {
-    await rest('POST', 'users', { username, password_hash: await hashPassword(password), full_name: fullName, role: 'Visitor', status: 'Pending' });
+    await rest('POST', 'users', { username, password_hash: await makePasswordHash(password), full_name: fullName, role: 'Visitor', status: 'Pending' });
   } catch (e: any) {
     if (String(e.message).includes('409')) return { success: false, error: 'That username is already taken.' };
     throw e;
@@ -76,7 +104,8 @@ async function login(p: any) {
   if (u.locked_until && Date.now() < new Date(u.locked_until).getTime()) {
     return { success: false, error: `Too many failed attempts. Try again in ${Math.ceil((new Date(u.locked_until).getTime() - Date.now()) / 60000)} minute(s).` };
   }
-  if (u.password_hash !== await hashPassword(password)) {
+  const pwOk = await checkPassword(u.password_hash, password);
+  if (!pwOk) {
     const attempts = (Number(u.failed_attempts) || 0) + 1;
     const patch: any = { failed_attempts: attempts };
     const locking = attempts >= MAX_FAILED;
@@ -88,7 +117,9 @@ async function login(p: any) {
   if (st === 'Pending') return { success: false, pending: true, error: 'Your account is waiting for admin approval. Please try again later.' };
   if (st !== 'Active') return { success: false, error: 'This account is disabled. Please contact the admin.' };
   const token = newToken();
-  await rest('PATCH', `users?id=eq.${u.id}`, { vtoken: token, vtoken_created: new Date().toISOString(), failed_attempts: 0, locked_until: null });
+  const vPatch: any = { vtoken: token, vtoken_created: new Date().toISOString(), failed_attempts: 0, locked_until: null };
+  if (pwOk === 'upgrade') vPatch.password_hash = await makePasswordHash(password);
+  await rest('PATCH', `users?id=eq.${u.id}`, vPatch);
   return {
     success: true, token, visitor: true,
     user: { username: u.username, fullName: u.full_name, role: 'Visitor', branch: u.branch || '', position: '', photo: photoUrl(u.photo_link), canManageUsers: false },

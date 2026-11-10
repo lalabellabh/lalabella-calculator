@@ -171,6 +171,12 @@ Deno.serve(async (req) => {
     let p: Record<string, any> = {};
     if (req.method === 'GET') p = Object.fromEntries(new URL(req.url).searchParams.entries());
     else { try { p = await req.json(); } catch { p = {}; } }
+    // Security audit 2026-11-10: only the cron (internal key) may run this.
+    {
+      const kr = await rest('GET', 'push_config?select=internal_key&id=eq.1&limit=1');
+      const ik = kr && kr[0] && kr[0].internal_key;
+      if (!ik || String(p.key || '') !== String(ik)) return json({ success: false, error: 'Unauthorized.' }, 401);
+    }
     if (p.action === 'probe') return json(await probe(Math.max(1, Math.min(45, parseInt(p.days, 10) || 2))));
     if (p.action === 'sync') return json(await sync(Math.max(1, Math.min(45, parseInt(p.days, 10) || 2)), String(p.backfill) === '1'));
     return json({ success: false, error: 'Unknown action' });
