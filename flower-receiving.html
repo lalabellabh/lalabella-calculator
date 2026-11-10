@@ -631,6 +631,9 @@ body::after{
         <div class="cart-total-row" style="border-top:1px dashed var(--line); padding-top:8px;"><span>Subtotal</span><span id="cartSubtotal">0.000 BD</span></div>
         <div class="cart-total-row" style="font-size:12px; color:var(--ink-dim);"><span>VAT (10%)</span><span id="cartVat">0.000 BD</span></div>
         <div class="cart-total-row"><span>Total</span><span id="cartGrandTotal">0.000 BD</span></div>
+        <label style="margin-top:10px;">Invoice total on the supplier paper (BD, with VAT)</label>
+        <input type="number" id="fPaperTotal" min="0" step="0.001" placeholder="Type the total printed on the invoice" />
+        <div id="tallyNote" style="font-size:12.5px; margin-top:6px; font-weight:600;"></div>
       </div>
 
       <div class="card">
@@ -778,6 +781,63 @@ body::after{
   document.getElementById('fUnit').addEventListener('change', ()=>{ toggleStemsField(); updateRatePreview(); });
   toggleStemsField();
 
+  // ---- Supplier habits: usual stems per bunch + usual price (warns on typos) ----
+  // Known supplier rules (Bench, Nov 2026): Fresh Blooms = 25 stems per bunch.
+  const SUPPLIER_STEMS = { 'fresh blooms': 25 };
+  const low = v => String(v || '').trim().toLowerCase();
+  function supplierHabit(supplier, flower, origin, unit){
+    const sup = low(supplier), fl = low(flower), org = low(origin), un = low(unit);
+    const rows = (Array.isArray(entries) ? entries : []).filter(e => low(e['Flower']) === fl && low(e['Unit']) === un && (!org || low(e['Origin']) === org));
+    const same = rows.filter(e => sup && low(e['Supplier']) === sup);
+    const stemCount = {};
+    (same.length ? same : rows).forEach(e => { const n = Number(e['Stems per Bunch']) || 0; if(n > 1) stemCount[n] = (stemCount[n] || 0) + 1; });
+    let stems = SUPPLIER_STEMS[sup] || 0;
+    if(!stems){ const best = Object.keys(stemCount).sort((a,b)=>stemCount[b]-stemCount[a])[0]; stems = best ? Number(best) : 0; }
+    if(!stems && un === 'bunch'){
+      const it = (flowerItems || []).find(x => low(x['Flowers']) === fl && (!org || low(x['Origin']) === org) && Number(x['Stems per Bunch']) > 1);
+      if(it) stems = Number(it['Stems per Bunch']);
+    }
+    const rates = same.map(e => Number(e['Rate']) || 0).filter(r => r > 0);
+    return { stems, rates, lastRate: rates.length ? rates[0] : 0, minRate: rates.length ? Math.min(...rates) : 0, maxRate: rates.length ? Math.max(...rates) : 0 };
+  }
+  function lineWarnings(it, supplier){
+    const out = [];
+    if(it.type === 'Supply') return out;
+    const h = supplierHabit(supplier, it.flowerName, it.origin, it.unit);
+    if(low(it.unit) === 'bunch' && h.stems && Number(it.stemsPerBunch) !== h.stems)
+      out.push(`${it.flowerName}: ${supplier || 'this supplier'} usually has ${h.stems} stems per bunch — you typed ${it.stemsPerBunch}.`);
+    if(h.rates.length && it.supplierRate > 0){
+      if(it.supplierRate > h.maxRate * 1.5) out.push(`${it.flowerName}: price ${fmtBD(it.supplierRate)} is much higher than usual (${fmtBD(h.minRate)}–${fmtBD(h.maxRate)}). Is it the total instead of the price per ${it.unit}?`);
+      else if(it.supplierRate < h.minRate * 0.5) out.push(`${it.flowerName}: price ${fmtBD(it.supplierRate)} is much lower than usual (${fmtBD(h.minRate)}–${fmtBD(h.maxRate)}).`);
+    }
+    return out;
+  }
+  // Fill the usual stems per bunch automatically (only when the box was not typed by hand).
+  let stemsTouched = false;
+  document.getElementById('fStemsPerBunch').addEventListener('input', ()=>{ stemsTouched = true; });
+  function autoStems(){
+    if(stemsTouched || document.getElementById('fUnit').value !== 'Bunch') return;
+    const h = supplierHabit(document.getElementById('fSupplier').value, document.getElementById('fFlowerName').value, document.getElementById('fOrigin').value, 'Bunch');
+    if(h.stems){ document.getElementById('fStemsPerBunch').value = h.stems; updateRatePreview(); updateStockEqPreview(); }
+  }
+  ['fFlowerName','fOrigin','fSupplier'].forEach(id => { const el = document.getElementById(id); el.addEventListener('change', autoStems); el.addEventListener('blur', autoStems); });
+  document.getElementById('fUnit').addEventListener('change', autoStems);
+
+  // Invoice paper total vs what was typed.
+  function cartGrand(){
+    const sub = cart.reduce((s, it) => s + it.qty * (it.type === 'Supply' ? it.cost : it.supplierRate), 0);
+    return sub + sub * (parseFloat(document.getElementById('fTaxPercent').value || 10) / 100);
+  }
+  function updateTally(){
+    const el = document.getElementById('tallyNote'); if(!el) return;
+    const raw = document.getElementById('fPaperTotal').value;
+    if(raw === '' || !cart.length){ el.textContent = ''; return; }
+    const diff = Math.round((cartGrand() - Number(raw)) * 1000) / 1000;
+    if(Math.abs(diff) <= 0.01){ el.style.color = 'var(--leaf, #2e7d32)'; el.textContent = '✓ Tally — matches the invoice.'; }
+    else { el.style.color = '#c0392b'; el.textContent = `⚠ Not tally: typed items are ${fmtBD(Math.abs(diff))} ${diff > 0 ? 'MORE' : 'LESS'} than the invoice. Check qty, price and stems.`; }
+  }
+  document.getElementById('fPaperTotal').addEventListener('input', updateTally);
+
   function computeSuggestedRate(rate, unit, stems){
     // Company policy:
     // Bunch = Supplier Rate ÷ Stems per Bunch × 3 × 1.10 VAT
@@ -916,6 +976,7 @@ body::after{
     document.getElementById('cartSubtotal').textContent = fmtBD(cartSubtotal);
     document.getElementById('cartVat').textContent = fmtBD(cartVat);
     document.getElementById('cartGrandTotal').textContent = fmtBD(grandTotal);
+    updateTally();
 
     document.querySelectorAll('.cart-remove-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1143,14 +1204,18 @@ body::after{
       return;
     }
 
-    cart.push({
+    const newLine = {
       type: 'Flower',
       flowerName,
       origin,
       unit: document.getElementById('fUnit').value,
       stemsPerBunch: parseFloat(document.getElementById('fStemsPerBunch').value) || 1,
       qty, supplierRate
-    });
+    };
+    const warns = lineWarnings(newLine, document.getElementById('fSupplier').value.trim());
+    if(warns.length && !confirm('⚠ Please check:\n\n' + warns.join('\n\n') + '\n\nPress OK if it is correct (as on the invoice), or Cancel to fix it.')) return;
+    cart.push(newLine);
+    stemsTouched = false;
     renderCart();
 
     document.getElementById('fFlowerName').value = '';
@@ -1166,6 +1231,15 @@ body::after{
   document.getElementById('submitBtn').addEventListener('click', async ()=>{
     if(cart.length === 0) return;
     if(!document.getElementById('fReceivedBy').value.trim()){ alert('Please enter your name in "Received By" before saving.'); document.getElementById('fReceivedBy').focus(); return; }
+    {
+      const paper = document.getElementById('fPaperTotal').value;
+      if(paper === ''){
+        if(!confirm('You did not type the invoice total from the supplier paper.\nIt helps catch typing mistakes.\n\nSave anyway?')){ document.getElementById('fPaperTotal').focus(); return; }
+      } else {
+        const diff = Math.round((cartGrand() - Number(paper)) * 1000) / 1000;
+        if(Math.abs(diff) > 0.01 && !confirm(`⚠ Not tally with the invoice.\nTyped total: ${fmtBD(cartGrand())}\nInvoice total: ${fmtBD(Number(paper))}\nDifference: ${fmtBD(Math.abs(diff))}\n\nSave anyway?`)) return;
+      }
+    }
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -1212,6 +1286,8 @@ body::after{
 
         cart = [];
         renderCart();
+        document.getElementById('fPaperTotal').value = '';
+        updateTally();
         document.getElementById('fInvoiceNo').value = '';
         await loadData();
       }
