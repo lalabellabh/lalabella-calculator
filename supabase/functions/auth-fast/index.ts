@@ -119,6 +119,34 @@ async function hashPassword(password: string) {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+// Security audit 2026-11-10: passwords are saved salted (PBKDF2). Old SHA-256 hashes still work and are upgraded on the next login.
+const PBKDF2_ITER = 100000;
+const b64e = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+const b64d = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pbkdf2Bits(password: string, salt: Uint8Array, iter: number) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password + PEPPER), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, key, 256));
+}
+function sameText(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+async function makePasswordHash(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return `pbkdf2$${PBKDF2_ITER}$${b64e(salt)}$${b64e(await pbkdf2Bits(password, salt, PBKDF2_ITER))}`;
+}
+// true = correct, 'upgrade' = correct but old format (save the new hash), false = wrong.
+async function checkPassword(stored: any, password: string): Promise<boolean | 'upgrade'> {
+  const s = String(stored || '');
+  if (!s || !password) return false;
+  if (s.startsWith('pbkdf2$')) {
+    const parts = s.split('$');
+    if (parts.length !== 4) return false;
+    try { return sameText(b64e(await pbkdf2Bits(password, b64d(parts[2]), Number(parts[1]) || PBKDF2_ITER)), parts[3]); } catch { return false; }
+  }
+  return sameText(s, await hashPassword(password)) ? 'upgrade' : false;
+}
 function generateToken() {
   return (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '');
 }
@@ -249,7 +277,8 @@ async function handleLogin(p: any) {
       return json({ success: false, error: `Too many failed attempts. Try again in ${minutesLeft} minute(s).` });
     }
   }
-  if (user.password_hash !== await hashPassword(password)) {
+  const pwOk = await checkPassword(user.password_hash, password);
+  if (!pwOk) {
     if (ip) await rateHit(ipKey);
     const attempts = (Number(user.failed_attempts) || 0) + 1;
     const patch: any = { failed_attempts: attempts };
@@ -260,7 +289,9 @@ async function handleLogin(p: any) {
   }
   if (String(user.status || 'Active') === 'Inactive') return json({ success: false, error: 'This account is disabled. Please contact your admin.' });
   const token = generateToken();
-  await rest('PATCH', `users?id=eq.${user.id}`, { token, token_created: new Date().toISOString(), failed_attempts: 0, locked_until: null });
+  const loginPatch: any = { token, token_created: new Date().toISOString(), failed_attempts: 0, locked_until: null };
+  if (pwOk === 'upgrade') loginPatch.password_hash = await makePasswordHash(password);
+  await rest('PATCH', `users?id=eq.${user.id}`, loginPatch);
   return json({ success: true, token, user: await publicUser(user) });
 }
 async function handleRegister(p: any) {
@@ -280,7 +311,7 @@ async function handleRegister(p: any) {
   if (password.length < MIN_PASSWORD_LENGTH) return json({ success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
   if (await findUserByUsername(username)) return json({ success: false, error: 'That username is already taken.' });
   try {
-    await rest('POST', 'users', { username, password_hash: await hashPassword(password), full_name: fullName, role: 'Staff', branch, position });
+    await rest('POST', 'users', { username, password_hash: await makePasswordHash(password), full_name: fullName, role: 'Staff', branch, position });
   } catch (e: any) {
     if (String(e.message).includes('409')) return json({ success: false, error: 'That username is already taken.' });
     throw e;
@@ -326,8 +357,8 @@ async function handleChangePassword(token: string, p: any) {
   const newPassword = String(p.newPassword || '');
   if (!currentPassword || !newPassword) return { success: false, error: 'Current and new password are both required.' };
   if (newPassword.length < MIN_PASSWORD_LENGTH) return { success: false, error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
-  if (user.password_hash !== await hashPassword(currentPassword)) return { success: false, error: 'Current password is incorrect.' };
-  await rest('PATCH', `users?id=eq.${user.id}`, { password_hash: await hashPassword(newPassword) });
+  if (!(await checkPassword(user.password_hash, currentPassword))) return { success: false, error: 'Current password is incorrect.' };
+  await rest('PATCH', `users?id=eq.${user.id}`, { password_hash: await makePasswordHash(newPassword) });
   return { success: true, message: 'Password changed successfully.' };
 }
 
@@ -457,7 +488,7 @@ async function handleAdminUnlock(p: any, admin: any) {
   const fails = failResetOk ? (row.fail_count || 0) : 0;
   if (fails >= ADMIN_UNLOCK_MAX_TRIES) return { success: false, error: 'Too many wrong passwords. Try again in 15 minutes.' };
   const pw = String(p.password || '');
-  if (!pw || await hashPassword(pw) !== admin.password_hash) {
+  if (!pw || !(await checkPassword(admin.password_hash, pw))) {
     const newFails = fails + 1;
     await restUpsert('admin_unlock', { unlock_key: key, fail_count: newFails, fail_reset_at: new Date(now + 15 * 60000).toISOString() }, 'unlock_key', 'resolution=merge-duplicates,return=minimal');
     const left = ADMIN_UNLOCK_MAX_TRIES - newFails;
@@ -532,7 +563,7 @@ async function adminResetPassword(p: any) {
   if (!target) return { success: false, error: 'User not found.' };
   const pw = String(p.newPassword || '');
   if (pw.length < MIN_PASSWORD_LENGTH) return { success: false, error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
-  await rest('PATCH', `users?id=eq.${target.id}`, { password_hash: await hashPassword(pw), token: null, failed_attempts: 0, locked_until: null });
+  await rest('PATCH', `users?id=eq.${target.id}`, { password_hash: await makePasswordHash(pw), token: null, failed_attempts: 0, locked_until: null });
   return { success: true, message: `Password reset. Give the new password to ${target.username}.` };
 }
 async function adminSetCanManageUsers(p: any, admin: any) {

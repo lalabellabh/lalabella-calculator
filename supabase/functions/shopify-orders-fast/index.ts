@@ -217,7 +217,15 @@ Deno.serve(async (req) => {
     let p: Record<string, any> = {};
     if (req.method === 'GET') p = Object.fromEntries(new URL(req.url).searchParams.entries());
     else { try { p = await req.json(); } catch { p = {}; } }
-    if (p.action === 'sweepAbandoned') return json(await sweepAbandoned());
+    if (p.action === 'sweepAbandoned') {
+      // Security audit 2026-11-10: only the cron (internal key) may run this.
+        {
+          const kr = await rest('GET', 'push_config?select=internal_key&id=eq.1&limit=1');
+          const ik = kr && kr[0] && kr[0].internal_key;
+          if (!ik || String(p.key || '') !== String(ik)) return json({ success: false, error: 'Unauthorized.' }, 401);
+        }
+      return json(await sweepAbandoned());
+    }
     if (!(await isValidSession(p.token))) return json({ success: false, error: 'Unauthorized. Please log in again.' });
     if (p.action === 'getRecentOrders') {
       const rows = (await rest('GET', 'shopify_orders?select=shopify_id,order_no,placed_at,received_at,customer,address,total,currency,items,delivery_type,due_date,due_time,branch,thumb&order=id.desc&limit=20')) || [];

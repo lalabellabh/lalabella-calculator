@@ -11,6 +11,11 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } });
   try {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    // Security audit 2026-11-10: only the cron (internal key) may run this.
+    let body: any = {}; try { body = await req.json(); } catch { body = {}; }
+    const { data: kr } = await sb.from('push_config').select('internal_key').eq('id', 1).limit(1);
+    const ik = kr && kr[0] && kr[0].internal_key;
+    if (!ik || String(body.key || '') !== String(ik)) return json({ ok: false, error: 'Unauthorized.' }, 401);
     const gh = { headers: { 'accept': 'application/vnd.github+json', 'user-agent': 'lalabella-brain' } };
     const r = await fetch('https://api.github.com/repos/' + REPO + '/commits?per_page=15', gh);
     if (!r.ok) return json({ ok: false, step: 'list', status: r.status, text: (await r.text()).slice(0, 200) }, 200);
