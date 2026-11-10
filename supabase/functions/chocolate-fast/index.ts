@@ -500,7 +500,8 @@ async function getPendingReceivingChoc(p: Record<string, any>) {
     const prev = hist.filter((h: any) => low(h.chocolate_name) === low(r.chocolate_name) && low(h.unit) === low(r.unit)).map((h: any) => priceForRow(h)).filter((x: number) => x > 0);
     if (prev.length && price > 0) { const mn = Math.min(...prev), mx = Math.max(...prev); if (price > mx * 1.5 || price < mn * 0.5) warns.push(`Price ${price.toFixed(3)} — usual ${mn.toFixed(3)}–${mx.toFixed(3)}`); }
     if (!(price > 0)) warns.push('No price');
-    b.lines.push({ id: r.id, legacyId: r.legacy_id || String(r.id), type: 'Chocolate', name: r.chocolate_name, batchNo: r.batch_no || '', expiry: r.expiry_date || '', unit: r.unit || '', qty: Number(r.qty_received) || 0, rate: price, subtotal: Number(r.total_amount) || 0, warnings: warns });
+    b.lines.push({ id: r.id, legacyId: r.legacy_id || String(r.id), type: 'Chocolate', name: r.chocolate_name, batchNo: r.batch_no || '', expiry: r.expiry_date || '', unit: r.unit || '', qty: Number(r.qty_received) || 0, rate: price, subtotal: Number(r.total_amount) || 0, warnings: warns,
+      storageLocation: r.storage_location || '', remarks: r.remarks || '', weightPerPiece: r.weight_per_piece == null ? '' : Number(r.weight_per_piece) });
     b.typedTotal = Math.round((b.typedTotal + (Number(r.total_amount) || 0)) * 1000) / 1000;
   }
   return { success: true, batches: Object.values(out) };
