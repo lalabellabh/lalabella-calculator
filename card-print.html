@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <meta name="lb-theme-keep" content="#card, .card, #printSheet, .textArea, .placeholder, .image-item, #centerGuideV, #userGuidesLayer, .plain-color-swatch, .plain-sticker-preview">
 <script src="auth-guard.js"></script>
@@ -956,7 +957,7 @@ function updateStickerCountOptions(){
   } else {
     return; // not a circle size right now — leave the dropdown as-is
   }
-  sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  sel.innerHTML = options.map(o => `<option value="${lbEsc(o.value)}">${lbEsc(o.label)}</option>`).join('');
   sel.value = String(options[options.length-1].value); // default to the fullest sheet
 }
 
@@ -1075,8 +1076,8 @@ const STICKER_DESIGNS = [
 
 const designGrid = document.getElementById('designStickerGrid');
 designGrid.innerHTML = STICKER_DESIGNS.map(d => `
-  <button type="button" class="sticker-thumb" data-src="${d.src}" title="${d.name}">
-    <img src="${d.src}" alt="${d.name}" loading="lazy">
+  <button type="button" class="sticker-thumb" data-src="${lbEsc(d.src)}" title="${lbEsc(d.name)}">
+    <img src="${lbEsc(d.src)}" alt="${lbEsc(d.name)}" loading="lazy">
   </button>
 `).join('');
 
@@ -1167,12 +1168,12 @@ const plainList = document.getElementById('plainStickerList');
 plainList.innerHTML = PLAIN_DESIGNS.map((d, di) => {
   plainSelectedColor[d.name] = GOLD_SRC_COLOR;
   return `
-    <div class="plain-sticker-row" data-name="${d.name}" data-src="${d.src}">
+    <div class="plain-sticker-row" data-name="${lbEsc(d.name)}" data-src="${lbEsc(d.src)}">
       <div class="plain-sticker-preview" title="Click to add to card">
-        <img src="${d.src}" alt="${d.name}">
+        <img src="${lbEsc(d.src)}" alt="${lbEsc(d.name)}">
       </div>
       <div class="plain-color-swatches">
-        ${PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${p.hex===GOLD_SRC_COLOR?' active':''}" data-color="${p.hex}" style="background:${p.hex};" title="${p.title}"></span>`).join('')}
+        ${PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${p.hex===GOLD_SRC_COLOR?' active':''}" data-color="${lbEsc(p.hex)}" style="background:${lbEsc(p.hex)};" title="${lbEsc(p.title)}"></span>`).join('')}
         <input type="color" class="plainCustomColor" id="plainCustom${di}" value="${GOLD_SRC_COLOR}" title="Custom color">
       </div>
     </div>
@@ -1496,7 +1497,7 @@ function showImageToolbar(el){
   const swatchSpan = document.getElementById('imgColorSwatches');
   if(el.dataset.plainSrc){
     swatchSpan.style.display = 'flex';
-    swatchSpan.innerHTML = PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${el.dataset.plainColor===p.hex?' active':''}" data-color="${p.hex}" style="width:16px;height:16px;background:${p.hex};" title="${p.title}"></span>`).join('')
+    swatchSpan.innerHTML = PLAIN_PRESETS.map(p => `<span class="plain-color-swatch${el.dataset.plainColor===p.hex?' active':''}" data-color="${lbEsc(p.hex)}" style="width:16px;height:16px;background:${lbEsc(p.hex)};" title="${lbEsc(p.title)}"></span>`).join('')
       + `<input type="color" class="plainCustomColor" id="imgToolbarCustomColor" value="${el.dataset.plainColor||GOLD_SRC_COLOR}" title="Custom color" style="width:18px;height:18px;padding:0;border:none;cursor:pointer;">`;
 
     async function applyToolbarColor(hex){

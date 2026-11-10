@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
@@ -334,7 +335,7 @@
     try{
       const staff = await fetch(API_URL + '?action=getStaff&_ts=' + Date.now()).then(r=>r.json());
       document.getElementById('countedByList').innerHTML =
-        (Array.isArray(staff) ? staff : []).map(s => `<option value="${s}"></option>`).join('');
+        (Array.isArray(staff) ? staff : []).map(s => `<option value="${lbEsc(s)}"></option>`).join('');
     }catch(e){ console.error(e); }
   }
   loadCountedByList();
@@ -466,7 +467,7 @@
     const sx = document.getElementById('searchClear'), si = document.getElementById('searchFlower');
     sx.classList.toggle('on', !!filter); sx.style.top = (si.offsetTop + si.offsetHeight / 2) + 'px';   // the scan row sits under the search box
     const extra = (filter && !isReadOnlyView) ? addableFlowers().filter(m => m.flowerName.toLowerCase().includes(filter) || (m.contributingItemCodes||'').toLowerCase().includes(filter)).slice(0, 15) : [];
-    const extraHtml = extra.map((m, i) => `<div class="add-row"><div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(m.flowerName):''}${m.flowerName} <span style="font-size:11px">— not in this count</span></div><button type="button" data-add="${i}">+ Add</button></div>`).join('');
+    const extraHtml = extra.map((m, i) => `<div class="add-row"><div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(m.flowerName):''}${lbEsc(m.flowerName)} <span style="font-size:11px">— not in this count</span></div><button type="button" data-add="${i}">+ Add</button></div>`).join('');
     if(visible.length === 0){
       el.innerHTML = extraHtml || '<div class="empty-note">No matching flowers.</div>';
     } else {
@@ -476,13 +477,13 @@
         return `
         <div class="flower-row">
           <div class="flower-info">
-            <div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(b.flowerName):''}${b.flowerName}</div>
-            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD <select class="unit-sel ${b.unit==='bunch'?'bunch':''}" data-idx="${idx}" ${isReadOnlyView?'disabled':''}><option value="pcs" ${b.unit==='pcs'?'selected':''}>pcs</option><option value="bunch" ${b.unit==='bunch'?'selected':''}>bunch</option></select>${b.unit==='bunch'?' <span class="spb-note" data-idx="'+idx+'">1 bunch = '+b.spb+' pcs ✎</span>':''}${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+sb.count+' pcs'+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
+            <div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(b.flowerName):''}${lbEsc(b.flowerName)}</div>
+            <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD <select class="unit-sel ${b.unit==='bunch'?'bunch':''}" data-idx="${idx}" ${isReadOnlyView?'disabled':''}><option value="pcs" ${b.unit==='pcs'?'selected':''}>pcs</option><option value="bunch" ${b.unit==='bunch'?'selected':''}>bunch</option></select>${b.unit==='bunch'?' <span class="spb-note" data-idx="'+idx+'">1 bunch = '+lbEsc(b.spb)+' pcs ✎</span>':''}${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+lbEsc(sb.count)+' pcs'+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
           </div>
           <div class="flower-inputs">
-            <input type="text" inputmode="decimal" placeholder="${b.unit==='bunch'?'Bunch':'Count'}" value="${b.physicalCount}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="${b.unit==='bunch'?'Bunch':'Count'}" value="${lbEsc(b.physicalCount)}" data-idx="${idx}" data-field="physicalCount" id="count-${idx}" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="+" class="add-input" data-idx="${idx}" data-field="addCount" ${isReadOnlyView?'disabled':''} />
-            <input type="text" inputmode="decimal" placeholder="Waste" value="${b.wastage}" data-idx="${idx}" data-field="wastage" id="waste-${idx}" ${isReadOnlyView?'disabled':''} />
+            <input type="text" inputmode="decimal" placeholder="Waste" value="${lbEsc(b.wastage)}" data-idx="${idx}" data-field="wastage" id="waste-${idx}" ${isReadOnlyView?'disabled':''} />
             <input type="text" inputmode="decimal" placeholder="+" class="add-input add-waste" data-idx="${idx}" data-field="addWaste" ${isReadOnlyView?'disabled':''} />
           </div>
         </div>`;
@@ -686,7 +687,7 @@
       const o = toPrint[i], isB = mult(o) !== 1, note = (v) => isB ? ' (' + v + ' bunch)' : '';
       return `
       <tr>
-        <td>${i+1}</td><td>${b.flowerName}</td>
+        <td>${i+1}</td><td>${lbEsc(b.flowerName)}</td>
         <td>${b.physicalCount === '' ? 'N/A' : b.physicalCount + note(o.physicalCount)}</td>
         <td>${b.wastage === '' || Number(b.wastage) === 0 ? '' : b.wastage + note(o.wastage)}</td>
       </tr>`; }).join('') + countedByRow;
@@ -758,7 +759,7 @@
     });
     if(d.by){ const cb=document.getElementById('countedByInput'); if(cb && !cb.value) cb.value=d.by; }
     hasBeenEdited=true; renderFlowerList(); renderSummary();
-    document.getElementById('statusLabel').innerHTML='<span class="badge baseline">🤖 Nova filled '+filled+' flowers for '+d.branch+' — review, then press Save</span>';
+    document.getElementById('statusLabel').innerHTML='<span class="badge baseline">🤖 Nova filled '+filled+' flowers for '+lbEsc(d.branch)+' — review, then press Save</span>';
   })();
 
   // If this same browser tab is left open across midnight (very

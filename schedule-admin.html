@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <script src="shared/admin-gate.js" data-title="Schedule Admin"></script>
@@ -484,7 +485,7 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
       const foundSet = new Set(res.employees.map(e => e.name.toLowerCase()));
       const missingNames = STAFF_ROSTER.map(schedName).filter(n => !foundSet.has(n.toLowerCase()));
       const mo = monthOf(sun);
-      let html = '✓ Found <b>' + res.employees.length + ' people</b> in the PDF. Check the table, then press <b>Save the whole month</b> — this week is copied to every week of ' + MONTHS[mo.m] + ' ' + mo.y + '.';
+      let html = '✓ Found <b>' + res.employees.length + ' people</b> in the PDF. Check the table, then press <b>Save the whole month</b> — this week is copied to every week of ' + MONTHS[mo.m] + ' ' + lbEsc(mo.y) + '.';
       if(missingNames.length) html += '<br>Not found in the PDF (left blank): ' + escH(missingNames.join(', ')) + '.';
       if(unknown.length) html += '<br>Not on your staff list (added as new rows): ' + escH(unknown.join(', ')) + '.';
       if(res.warnings.length) html += '<div style="color:#a05a00;margin-top:6px;">⚠ Please check:<ul style="margin:4px 0 0 18px;padding:0;">' + res.warnings.map(w => '<li>' + escH(w) + '</li>').join('') + '</ul></div>';
@@ -508,7 +509,7 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
   function weeksToSave(){ return $('wkRepeat').checked ? monthSundays(curSunday()) : [curSunday()]; }
   function refreshRepeatText(){
     const sun = curSunday(), mo = monthOf(sun), ws = monthSundays(sun);
-    $('wkRepeatTxt').innerHTML = 'Save for the <b>whole month of ' + MONTHS[mo.m] + ' ' + mo.y + '</b> (' + ws.length + ' weeks: ' + ymd(ws[0]) + ' … ' + ymd(ws[ws.length-1]) + ') — the same schedule every week, replacing what is saved for those weeks. Untick to save only this week.';
+    $('wkRepeatTxt').innerHTML = 'Save for the <b>whole month of ' + MONTHS[mo.m] + ' ' + lbEsc(mo.y) + '</b> (' + ws.length + ' weeks: ' + ymd(ws[0]) + ' … ' + ymd(ws[ws.length-1]) + ') — the same schedule every week, replacing what is saved for those weeks. Untick to save only this week.';
     $('wkSave').textContent = $('wkRepeat').checked ? 'Save the whole month' : 'Save this week';
   }
   $('wkRepeat').addEventListener('change', refreshRepeatText);
@@ -542,11 +543,11 @@ document.getElementById('patGenerateBtn').addEventListener('click', async ()=>{
     await loadAll();
     const g = gapMonth();
     const title = MONTHS[g.mo.m] + ' ' + g.mo.y + ' — weeks ' + g.ws.map(w => ymd(w).slice(5)).join(', ');
-    if(!g.lines.length){ out.innerHTML = '<span style="color:var(--ok)">✓ Everyone has all 7 days in every week of ' + title + '.</span>'; return; }
-    out.innerHTML = '<div style="color:var(--muted);margin-bottom:6px;">' + title + '. A missing day means nothing is saved for that day. Click a week to open it.</div>';
+    if(!g.lines.length){ out.innerHTML = '<span style="color:var(--ok)">✓ Everyone has all 7 days in every week of ' + lbEsc(title) + '.</span>'; return; }
+    out.innerHTML = '<div style="color:var(--muted);margin-bottom:6px;">' + lbEsc(title) + '. A missing day means nothing is saved for that day. Click a week to open it.</div>';
     g.lines.forEach(l => {
       const row = document.createElement('div');
-      row.innerHTML = '<b>' + l.n + '</b> — ';
+      row.innerHTML = '<b>' + lbEsc(l.n) + '</b> — ';
       l.bits.forEach((b, i) => {
         const a = document.createElement('a'); a.href = '#'; a.textContent = b.txt; a.style.color = 'var(--rose-dark,#9e2f4a)';
         a.addEventListener('click', ev => { ev.preventDefault(); goWeek(b.w); $('weekGridCard').scrollIntoView({ behavior:'smooth' }); });

@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 <script src="shared/dayoff-fx.js"></script>
@@ -473,7 +474,7 @@ async function loadEmployees(){
     allEmployees = data.employees;
     const sel = document.getElementById('employeeSelect');
     sel.innerHTML = '<option value="">— Select a name —</option>' +
-      allEmployees.map(e => `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`).join('');
+      allEmployees.map(e => `<option value="${lbEsc(e.name)}">${lbEsc(e.name)}${e.role ? ' ('+lbEsc(e.role)+')' : ''}</option>`).join('');
   }catch(e){
     document.getElementById('employeeSelect').innerHTML = '<option value="">Could not load — check connection</option>';
   }
@@ -534,7 +535,7 @@ async function loadScheduleFor(employeeName){
     if(!currentSchedule){
       showCalEmptyMessage('Connection error', 'Could not load schedule — check your connection.');
       const t3 = document.getElementById('calTitleText');
-      if(t3) t3.innerHTML = 'Could not load ' + employeeName + '\u2019s schedule <span style="color:#c0392b;font-size:12px;">(tap the name again to retry)</span>';
+      if(t3) t3.innerHTML = 'Could not load ' + lbEsc(employeeName) + '\u2019s schedule <span style="color:#c0392b;font-size:12px;">(tap the name again to retry)</span>';
     }
   }
 }
@@ -637,7 +638,7 @@ function paintSummary_(){
   if(!cells.length){ lg.style.display = 'none'; no.style.display = 'none'; return; }
   const off = cells.filter(c => c.classList.contains('off')).length, work = cells.length - off;
   lg.style.display = 'flex';
-  lg.innerHTML = '<span class="chip"><i style="background:var(--rose)"></i>Working <b>' + work + '</b></span><span class="chip"><i style="background:#3fae75"></i>Day off <b>' + off + '</b></span><span class="chip"><i style="background:#d99a00"></i>Today</span>';
+  lg.innerHTML = '<span class="chip"><i style="background:var(--rose)"></i>Working <b>' + lbEsc(work) + '</b></span><span class="chip"><i style="background:#3fae75"></i>Day off <b>' + lbEsc(off) + '</b></span><span class="chip"><i style="background:#d99a00"></i>Today</span>';
   if(!viewingIsMe){ no.style.display = 'none'; return; }
   const t0 = ymdLocal_(new Date());
   const nxt = Array.from(document.querySelectorAll('.month-grid .date-cell.hit.off')).map(c => c.getAttribute('data-date')).filter(d => d && d >= t0).sort()[0];
@@ -645,7 +646,7 @@ function paintSummary_(){
   const days = Math.round((parseDateOnly_(nxt) - parseDateOnly_(t0)) / 86400000);
   const label = parseDateOnly_(nxt).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
   no.style.display = 'flex';
-  no.innerHTML = days === 0 ? '🌴 <span><b>Today is your day off!</b></span>' : '🌴 <span>Next day off: <b>' + label + '</b> · in ' + days + ' day' + (days === 1 ? '' : 's') + '</span>';
+  no.innerHTML = days === 0 ? '🌴 <span><b>Today is your day off!</b></span>' : '🌴 <span>Next day off: <b>' + lbEsc(label) + '</b> · in ' + lbEsc(days) + ' day' + (days === 1 ? '' : 's') + '</span>';
 }
 
 document.getElementById('employeeSelect').addEventListener('change', (e) => {

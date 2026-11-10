@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 
@@ -218,7 +219,7 @@
       return `
         <div class="flower-row">
           <div class="flower-info">
-            <div class="flower-name">${f.name}</div>
+            <div class="flower-name">${lbEsc(f.name)}</div>
             <div class="flower-meta">Legacy: ${f.rate.toFixed(3)} BD</div>
           </div>
           <input

@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/scanner.js"></script>
 <script src="shared/theme.js"></script>
@@ -768,7 +769,7 @@
     populateSelect('fStorageLocation', storageLocations);
     populateSelect('fUnit', units);
     document.getElementById('eSupplier').innerHTML =
-      suppliers.map(s => `<option value="${s}">${s}</option>`).join('');
+      suppliers.map(s => `<option value="${lbEsc(s)}">${lbEsc(s)}</option>`).join('');
     populateSelect('eUnit', units);
     populateSelect('eStorageLocation', storageLocations);
     renderHistory();
@@ -783,7 +784,7 @@
     el.innerHTML =
       `<button class="cat-pill${activeCategory === null ? ' active' : ''}" data-cat="">All</button>` +
       categories.map(c =>
-        `<button class="cat-pill${c === activeCategory ? ' active' : ''}" data-cat="${c}">${c}</button>`
+        `<button class="cat-pill${c === activeCategory ? ' active' : ''}" data-cat="${lbEsc(c)}">${lbEsc(c)}</button>`
       ).join('');
     el.querySelectorAll('.cat-pill').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -797,26 +798,26 @@
   function populateItemList(){
     const filtered = activeCategory ? items.filter(it => it['Category'] === activeCategory) : items;
     document.getElementById('itemList').innerHTML =
-      filtered.map(it => `<option value="${it['Chocolate Name']}"></option>`).join('');
+      filtered.map(it => `<option value="${lbEsc(it['Chocolate Name'])}"></option>`).join('');
   }
 
   function populateSupplierDropdown(){
     const sel = document.getElementById('fSupplier');
     const currentVal = sel.value;
     sel.innerHTML = '<option value="">Select supplier...</option>' +
-      suppliers.map(s => `<option value="${s}">${s}</option>`).join('') +
+      suppliers.map(s => `<option value="${lbEsc(s)}">${lbEsc(s)}</option>`).join('') +
       '<option value="__add_new__">+ Add new supplier</option>';
     if(suppliers.includes(currentVal)) sel.value = currentVal;
   }
 
   function populateReceivedByList(){
     document.getElementById('receivedByList').innerHTML =
-      receivedByNames.map(n => `<option value="${n}"></option>`).join('');
+      receivedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
   }
 
   function populateSelect(id, values){
     const sel = document.getElementById(id);
-    sel.innerHTML = values.map(v => `<option value="${v}">${v}</option>`).join('');
+    sel.innerHTML = values.map(v => `<option value="${lbEsc(v)}">${lbEsc(v)}</option>`).join('');
   }
 
   document.getElementById('fSearch').addEventListener('input', function(){
@@ -907,13 +908,13 @@
       return `
         <div class="hist-row">
           <div class="hist-top">
-            <span>${e['Chocolate Name'] || '—'} <span style="color:var(--ink-dim); font-weight:400;">(${e.ID || '—'})</span></span>
-            <span class="status-pill ${st.cls}">${st.label}</span>
+            <span>${lbEsc(e['Chocolate Name'] || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.ID || '—')})</span></span>
+            <span class="status-pill ${st.cls}">${lbEsc(st.label)}</span>
           </div>
-          <div class="hist-meta">${fmtDate(e['Receive Date'])} · ${e['Qty Received'] ?? e['Current Stock'] ?? 0} ${e.Unit || ''} · ${fmtBD(e['Price / Kg'])}/kg · Batch: ${e['Batch No.'] || '—'}</div>
-          <div class="hist-meta">Supplier: ${e.Supplier || '—'} · Received by: ${e['Created By'] || '—'}</div>
-          ${e.Remarks ? `<div class="hist-remarks">${e.Remarks}</div>` : ''}
-          ${e.ID ? `<div class="hist-row-actions"><button class="edit-link" data-id="${e.ID}">Edit</button></div>` : ''}
+          <div class="hist-meta">${lbEsc(fmtDate(e['Receive Date']))} · ${e['Qty Received'] ?? e['Current Stock'] ?? 0} ${lbEsc(e.Unit || '')} · ${fmtBD(e['Price / Kg'])}/kg · Batch: ${lbEsc(e['Batch No.'] || '—')}</div>
+          <div class="hist-meta">Supplier: ${lbEsc(e.Supplier || '—')} · Received by: ${lbEsc(e['Created By'] || '—')}</div>
+          ${e.Remarks ? `<div class="hist-remarks">${lbEsc(e.Remarks)}</div>` : ''}
+          ${e.ID ? `<div class="hist-row-actions"><button class="edit-link" data-id="${lbEsc(e.ID)}">Edit</button></div>` : ''}
         </div>
       `;
     }).join('');
@@ -1147,16 +1148,16 @@
       const st = statusFor(e['Expiry Date']);
       return `
         <tr>
-          <td>${e.ID || '—'}</td>
-          <td>${fmtDate(e['Receive Date'])}</td>
-          <td>${e['Chocolate Name'] || '—'}</td>
-          <td>${e['Batch No.'] || '—'}</td>
+          <td>${lbEsc(e.ID || '—')}</td>
+          <td>${lbEsc(fmtDate(e['Receive Date']))}</td>
+          <td>${lbEsc(e['Chocolate Name'] || '—')}</td>
+          <td>${lbEsc(e['Batch No.'] || '—')}</td>
           <td>${e['Qty Received'] ?? '—'}</td>
-          <td>${e.Unit || '—'}</td>
+          <td>${lbEsc(e.Unit || '—')}</td>
           <td>${fmtBD(e['Price / Kg'])}</td>
-          <td>${fmtDate(e['Expiry Date'])}</td>
-          <td>${st.label}</td>
-          <td>${e['Created By'] || '—'}</td>
+          <td>${lbEsc(fmtDate(e['Expiry Date']))}</td>
+          <td>${lbEsc(st.label)}</td>
+          <td>${lbEsc(e['Created By'] || '—')}</td>
         </tr>
       `;
     }).join('');

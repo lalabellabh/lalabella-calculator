@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
@@ -308,10 +309,10 @@
       return `
         <div class="hist-row">
           <div class="hist-top">
-            <span>${a['Chocolate Name'] || a['Chocolate'] || '—'}</span>
+            <span>${lbEsc(a['Chocolate Name'] || a['Chocolate'] || '—')}</span>
             <span class="variance-amt ${varCls}">${sign}${qty}</span>
           </div>
-          <div class="hist-meta">${a['Branch'] || '—'} · ${fmtDate(a['Date'])} · Reason: ${a['Reason'] || '—'} · By: ${a['Approved By'] || '—'}</div>
+          <div class="hist-meta">${lbEsc(a['Branch'] || '—')} · ${lbEsc(fmtDate(a['Date']))} · Reason: ${lbEsc(a['Reason'] || '—')} · By: ${lbEsc(a['Approved By'] || '—')}</div>
         </div>
       `;
     }).join('');
@@ -329,14 +330,14 @@
       const varCls = variance >= 0 ? 'variance-pos' : 'variance-neg';
       const varSign = variance > 0 ? '+' : '';
       return `
-        <div class="pending-row" data-count-id="${p['Count ID']}">
+        <div class="pending-row" data-count-id="${lbEsc(p['Count ID'])}">
           <div class="pending-top">
-            <span>${p['Chocolate Name'] || p['Chocolate'] || '—'}</span>
+            <span>${lbEsc(p['Chocolate Name'] || p['Chocolate'] || '—')}</span>
             <span class="variance-amt ${varCls}">${varSign}${variance}</span>
           </div>
-          <div class="pending-meta">${p['Branch'] || '—'} · ${fmtDate(p['Count Date'] || p['Date'])} · Batch: ${p['Batch No.'] || p['Batch No'] || '—'}</div>
-          <div class="pending-meta">System: ${p['System Stock']} · Physical: ${p['Physical Count']} · Reason: ${p['Reason'] || p['Variance Reason'] || '—'}</div>
-          <div class="pending-meta">Counted by: ${p['Counted By'] || '—'}</div>
+          <div class="pending-meta">${lbEsc(p['Branch'] || '—')} · ${lbEsc(fmtDate(p['Count Date'] || p['Date']))} · Batch: ${lbEsc(p['Batch No.'] || p['Batch No'] || '—')}</div>
+          <div class="pending-meta">System: ${lbEsc(p['System Stock'])} · Physical: ${lbEsc(p['Physical Count'])} · Reason: ${lbEsc(p['Reason'] || p['Variance Reason'] || '—')}</div>
+          <div class="pending-meta">Counted by: ${lbEsc(p['Counted By'] || '—')}</div>
           <div class="action-row">
             <button class="action-btn approve" data-action="approve">Approve</button>
             <button class="action-btn reject" data-action="reject">Reject</button>

@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
 
@@ -369,8 +370,8 @@
       searchResults.innerHTML = '<div class="empty-note">No results found.</div>';
     } else {
       searchResults.innerHTML = matches.map(f => `
-        <div class="result-item" data-name="${f.name}" data-rate="${f.rate}">
-          <span class="result-name">${f.name}</span>
+        <div class="result-item" data-name="${lbEsc(f.name)}" data-rate="${lbEsc(f.rate)}">
+          <span class="result-name">${lbEsc(f.name)}</span>
           <span class="result-rate">${fmtBD(f.rate)}</span>
         </div>
       `).join('');
@@ -440,8 +441,8 @@
       el.innerHTML = cart.map((c, i) => `
         <div class="cart-row">
           <div>
-            <div class="cart-row-name">${c.name}</div>
-            <div class="cart-row-meta">${c.qty} × ${fmtBD(c.rate)} = ${fmtBD(c.qty * c.rate)}</div>
+            <div class="cart-row-name">${lbEsc(c.name)}</div>
+            <div class="cart-row-meta">${lbEsc(c.qty)} × ${fmtBD(c.rate)} = ${fmtBD(c.qty * c.rate)}</div>
           </div>
           <button class="remove-btn" data-idx="${i}" data-kind="cart">✕</button>
         </div>
@@ -452,7 +453,7 @@
     exEl.innerHTML = extras.map((x, i) => `
       <div class="cart-row">
         <div>
-          <div class="cart-row-name">${x.desc}</div>
+          <div class="cart-row-name">${lbEsc(x.desc)}</div>
           <div class="cart-row-meta">${fmtBD(x.price)}</div>
         </div>
         <button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button>
@@ -513,18 +514,18 @@
     document.getElementById('a4Date').textContent = dateStr;
     document.getElementById('a4Customer').textContent = customer ? 'For: ' + customer : '';
     document.getElementById('a4Rows').innerHTML = cart.map(c => `
-      <tr><td>${c.name}</td><td>${c.qty}</td><td>${fmtBD(c.rate)}</td><td>${fmtBD(c.qty*c.rate)}</td></tr>
+      <tr><td>${lbEsc(c.name)}</td><td>${lbEsc(c.qty)}</td><td>${fmtBD(c.rate)}</td><td>${fmtBD(c.qty*c.rate)}</td></tr>
     `).join('') + extras.map(x => `
-      <tr><td colspan="3">${x.desc}</td><td>${fmtBD(x.price)}</td></tr>
+      <tr><td colspan="3">${lbEsc(x.desc)}</td><td>${fmtBD(x.price)}</td></tr>
     `).join('');
     document.getElementById('a4Grand').textContent = fmtBD(grand);
 
     document.getElementById('tDate').textContent = dateStr;
     document.getElementById('tCustomer').textContent = customer ? 'For: ' + customer : '';
     document.getElementById('tRows').innerHTML = cart.map(c => `
-      <div class="t-row"><span>${c.name} x${c.qty}</span><span>${fmtBD(c.qty*c.rate)}</span></div>
+      <div class="t-row"><span>${lbEsc(c.name)} x${lbEsc(c.qty)}</span><span>${fmtBD(c.qty*c.rate)}</span></div>
     `).join('') + extras.map(x => `
-      <div class="t-row"><span>${x.desc}</span><span>${fmtBD(x.price)}</span></div>
+      <div class="t-row"><span>${lbEsc(x.desc)}</span><span>${fmtBD(x.price)}</span></div>
     `).join('');
     document.getElementById('tGrand').textContent = fmtBD(grand);
   }

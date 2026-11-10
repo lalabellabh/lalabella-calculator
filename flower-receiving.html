@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
@@ -869,7 +870,7 @@ body::after{
     const pct = Math.min(100, data.percentUsed);
     const over = data.actual > data.weeklyLimit;
     el.innerHTML = `
-      <div class="budget-text"><span>${fmtBD(data.actual)} of ${fmtBD(data.weeklyLimit)}</span><span>${data.percentUsed}%</span></div>
+      <div class="budget-text"><span>${fmtBD(data.actual)} of ${fmtBD(data.weeklyLimit)}</span><span>${lbEsc(data.percentUsed)}%</span></div>
       <div class="budget-bar"><div class="budget-fill ${over?'over':''}" style="width:${pct}%"></div></div>
       <div class="budget-text"><span>Remaining</span><span>${fmtBD(data.remaining)}</span></div>
     `;
@@ -902,8 +903,8 @@ body::after{
       return `
         <div class="cart-row">
           <div>
-            <div class="cart-row-name">${name} <span style="color:var(--ink-dim); font-weight:400;">(${sub})</span></div>
-            <div class="cart-row-meta">${it.qty} ${it.unit} × ${fmtBD(rate)} = ${fmtBD(subtotal)}</div>
+            <div class="cart-row-name">${lbEsc(name)} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(sub)})</span></div>
+            <div class="cart-row-meta">${lbEsc(it.qty)} ${lbEsc(it.unit)} × ${fmtBD(rate)} = ${fmtBD(subtotal)}</div>
           </div>
           <button class="cart-remove-btn" data-idx="${i}">✕</button>
         </div>
@@ -964,12 +965,12 @@ body::after{
     }
     el.innerHTML = list.map(e => `
       <div class="hist-row">
-        <div class="hist-name">${e.Type === 'Supply' ? '🎀 ' : ''}${e.Flower || '—'} <span style="color:var(--ink-dim); font-weight:400;">(${e.Type === 'Supply' ? 'Supply' : (e.Origin || 'N/A')})</span></div>
-        <div class="hist-meta">${fmtDate(e.Date)} · Qty ${e.Qty} ${e.Unit || ''} · Rate ${fmtBD(e.Rate)}/${e.Unit || 'unit'}</div>
+        <div class="hist-name">${lbEsc(e.Type === 'Supply' ? '🎀 ' : '')}${lbEsc(e.Flower || '—')} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(e.Type === 'Supply' ? 'Supply' : (e.Origin || 'N/A'))})</span></div>
+        <div class="hist-meta">${lbEsc(fmtDate(e.Date))} · Qty ${lbEsc(e.Qty)} ${lbEsc(e.Unit || '')} · Rate ${fmtBD(e.Rate)}/${lbEsc(e.Unit || 'unit')}</div>
         <div class="hist-meta">Amount: <b>${fmtBD(e.Amount)}</b> <span style="color:var(--ink-dim); font-weight:400;">(VAT ${e['Tax%']||0}%: ${fmtBD(e.Tax)}, not included)</span></div>
-        <div class="hist-meta">Supplier: ${e.Supplier || '—'} · Received by: ${e['Received By'] || '—'} · Invoice #${e['Invoice No'] || '—'}</div>
+        <div class="hist-meta">Supplier: ${lbEsc(e.Supplier || '—')} · Received by: ${lbEsc(e['Received By'] || '—')} · Invoice #${lbEsc(e['Invoice No'] || '—')}</div>
         ${e['Invoice Total'] ? `<div class="hist-meta">Whole Invoice Total: <b>${fmtBD(e['Invoice Total'])}</b></div>` : ''}
-        ${e.ID ? `<div class="hist-actions"><button class="edit-link" data-id="${e.ID}">Edit</button></div>` : ''}
+        ${e.ID ? `<div class="hist-actions"><button class="edit-link" data-id="${lbEsc(e.ID)}">Edit</button></div>` : ''}
       </div>
     `).join('');
 
@@ -1076,15 +1077,15 @@ body::after{
     // old HollandTracking sheet), so this already naturally includes
     // them — no separate merge needed anymore.
     document.getElementById('flowerList').innerHTML =
-      [...new Set(items.map(it => it.Flowers))].filter(Boolean).map(n => `<option value="${n}"></option>`).join('');
+      [...new Set(items.map(it => it.Flowers))].filter(Boolean).map(n => `<option value="${lbEsc(n)}"></option>`).join('');
     document.getElementById('originList').innerHTML =
-      origins.map(o => `<option value="${o}"></option>`).join('');
+      origins.map(o => `<option value="${lbEsc(o)}"></option>`).join('');
     document.getElementById('supplierList').innerHTML =
-      suppliers.map(s => `<option value="${s}"></option>`).join('');
+      suppliers.map(s => `<option value="${lbEsc(s)}"></option>`).join('');
     document.getElementById('staffList').innerHTML =
-      staff.map(s => `<option value="${s}"></option>`).join('');
+      staff.map(s => `<option value="${lbEsc(s)}"></option>`).join('');
     document.getElementById('supplyList').innerHTML =
-      [...new Set(supplyItems.map(it => it['Supply Name']))].filter(Boolean).map(n => `<option value="${n}"></option>`).join('');
+      [...new Set(supplyItems.map(it => it['Supply Name']))].filter(Boolean).map(n => `<option value="${lbEsc(n)}"></option>`).join('');
 
     renderHistory();
     if(budget) renderBudget(budget);
@@ -1231,7 +1232,7 @@ body::after{
       const isSupply = it.type === 'Supply';
       const rate = isSupply ? it.cost : it.supplierRate;
       const name = isSupply ? it.supplyName : it.flowerName;
-      return `<tr><td>${name}</td><td>${it.qty} ${it.unit}</td><td>${fmtBD(rate)}</td><td>${fmtBD(it.qty * rate)}</td></tr>`;
+      return `<tr><td>${lbEsc(name)}</td><td>${lbEsc(it.qty)} ${lbEsc(it.unit)}</td><td>${lbEsc(fmtBD(rate))}</td><td>${lbEsc(fmtBD(it.qty * rate))}</td></tr>`;
     }).join('');
     document.getElementById('pvTotal').textContent =
       `Subtotal: ${fmtBD(s.subtotal)}   VAT: ${fmtBD(s.vat)}   Total: ${fmtBD(s.grandTotal)}`;

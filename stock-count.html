@@ -3,6 +3,7 @@
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/scanner.js"></script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
@@ -617,7 +618,7 @@
     if (results.some(r => !Array.isArray(r))) console.warn('stock-count: some lists did not load', results.map(r => Array.isArray(r) ? 'ok' : r));
 
     document.getElementById('countedByList').innerHTML =
-      countedByNames.map(n => `<option value="${n}"></option>`).join('');
+      countedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
 
     activeCategory = null;
     itemSearchText = '';
@@ -634,7 +635,7 @@
     el.innerHTML =
       `<button class="cat-pill${activeCategory === null ? ' active' : ''}" data-cat="">All</button>` +
       cats.map(c =>
-        `<button class="cat-pill${c === activeCategory ? ' active' : ''}" data-cat="${c}">${c}</button>`
+        `<button class="cat-pill${c === activeCategory ? ' active' : ''}" data-cat="${lbEsc(c)}">${lbEsc(c)}</button>`
       ).join('');
     el.querySelectorAll('.cat-pill').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -711,13 +712,13 @@
     el.innerHTML = visible.map(({it, idx}) => `
       <div class="count-row" data-idx="${idx}">
         <div class="count-row-head">
-          <span>${it.ChocolateName}</span>
-          <span>System: ${it.SystemStock} ${it.Unit || ''}</span>
+          <span>${lbEsc(it.ChocolateName)}</span>
+          <span>System: ${lbEsc(it.SystemStock)} ${lbEsc(it.Unit || '')}</span>
         </div>
-        <div class="count-row-meta">${scCode(it) ? 'Code: ' + scCode(it) + ' · ' : ''}Batch: ${it.Batch || '—'} · Expiry: ${fmtDate(it.ExpiryDate)}</div>
+        <div class="count-row-meta">${lbEsc(scCode(it) ? 'Code: ' + scCode(it) + ' · ' : '')}Batch: ${lbEsc(it.Batch || '—')} · Expiry: ${lbEsc(fmtDate(it.ExpiryDate))}</div>
         <div class="count-inputs">
           <div>
-            <label>Physical Count ${it.Unit ? `(${it.Unit})` : ''}</label>
+            <label>Physical Count ${it.Unit ? `(${lbEsc(it.Unit)})` : ''}</label>
             <input type="number" min="0" step="0.01" class="physicalInput" id="physical-${idx}" placeholder="0" value="${enteredCounts[idx] && enteredCounts[idx].physical !== undefined ? enteredCounts[idx].physical : ''}" />
           </div>
           <div>
@@ -727,7 +728,7 @@
           <div>
             <label>Variance Reason</label>
             <select class="reasonSelect">
-              ${REASONS.map(r => `<option value="${r}"${enteredCounts[idx] && enteredCounts[idx].reason === r ? ' selected' : ''}>${r || 'Select if variance...'}</option>`).join('')}
+              ${REASONS.map(r => `<option value="${lbEsc(r)}"${lbEsc(enteredCounts[idx] && enteredCounts[idx].reason === r ? ' selected' : '')}>${lbEsc(r || 'Select if variance...')}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -845,10 +846,10 @@
     el.innerHTML = sorted.map(h => `
       <div class="hist-row">
         <div class="hist-top">
-          <span>${h['Chocolate'] || '—'}</span>
-          <span class="status-pill ${statusClass[h['Status']] || ''}">${h['Status'] || '—'}</span>
+          <span>${lbEsc(h['Chocolate'] || '—')}</span>
+          <span class="status-pill ${statusClass[h['Status']] || ''}">${lbEsc(h['Status'] || '—')}</span>
         </div>
-        <div class="hist-meta">${fmtDate(h['Date'])} · System: ${h['System Stock']} · Physical: ${h['Physical Count']} · Variance: ${h['Variance']}</div>
+        <div class="hist-meta">${lbEsc(fmtDate(h['Date']))} · System: ${lbEsc(h['System Stock'])} · Physical: ${lbEsc(h['Physical Count'])} · Variance: ${lbEsc(h['Variance'])}</div>
       </div>
     `).join('');
   }
@@ -896,12 +897,12 @@
       const variance = l.physicalCount - Number(l.systemStock || 0);
       return `
         <tr>
-          <td>${l.chocolateName}</td>
-          <td>${l.batch || '—'}</td>
-          <td>${l.systemStock}</td>
-          <td>${l.physicalCount}</td>
+          <td>${lbEsc(l.chocolateName)}</td>
+          <td>${lbEsc(l.batch || '—')}</td>
+          <td>${lbEsc(l.systemStock)}</td>
+          <td>${lbEsc(l.physicalCount)}</td>
           <td>${variance}</td>
-          <td>${l.reason || ''}</td>
+          <td>${lbEsc(l.reason || '')}</td>
         </tr>
       `;
     }).join('');
