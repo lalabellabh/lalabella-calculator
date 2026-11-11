@@ -219,7 +219,7 @@
   const FL = LB_CONFIG.FLOWER_FAST_API, CH = LB_CONFIG.CHOCOLATE_FAST_API;
   const qs = new URLSearchParams(location.search);
   const focusBatch = qs.get('batch') || '';
-  let all = [], filt = qs.get('m') || 'all', view = qs.get('view') === 'hist' ? 'hist' : 'wait';
+  let all = [], rates = [], filt = qs.get('m') || 'all', view = qs.get('view') === 'hist' ? 'hist' : 'wait';
   const f3 = n => Number(n || 0).toFixed(3);
   const esc = window.lbEsc;
   async function load(){
@@ -232,6 +232,7 @@
         fetch(CH + '?action=getPendingReceiving' + extra + '&_ts=' + Date.now()).then(r => r.json()),
       ]);
       if((a && a.error) || (b && b.error)){ el.innerHTML = '<div class="empty-note">' + esc((a && a.error) || b.error) + '</div>'; return; }
+      rates = view === 'hist' ? [] : ((a && a.rates) || []);
       all = [].concat((a && a.batches) || [], (b && b.batches) || []).sort((x, y) => view === 'hist' ? String(y.date).localeCompare(String(x.date)) : String(x.date).localeCompare(String(y.date)));
       render();
     }catch(e){ el.innerHTML = '<div class="empty-note">Could not load. Please refresh.</div>'; }
@@ -248,10 +249,18 @@
     document.getElementById('listTitle').textContent = view === 'hist' ? 'Already checked (tap ✎ Edit to fix a mistake)' : 'Waiting for approval';
     const term = view === 'hist' ? document.getElementById('hSearch').value.trim().toLowerCase() : '';
     const rows = all.filter(b => (filt === 'all' || b.kind === filt) && (!term || [b.supplier, b.invoiceNo, b.branch, b.receivedBy].concat(b.lines.map(l => l.name)).join(' ').toLowerCase().indexOf(term) !== -1));
-    document.getElementById('cnt').textContent = rows.length ? '(' + rows.length + ')' : '';
+    const rv = (view === 'wait' && filt !== 'chocolate') ? rates : [];
+    document.getElementById('cnt').textContent = (rows.length + rv.length) ? '(' + (rows.length + rv.length) + ')' : '';
     const el = document.getElementById('list');
-    if(!rows.length){ el.innerHTML = '<div class="empty-note">' + (view === 'hist' ? 'No receiving found.' : 'Nothing waiting. ✅') + '</div>'; return; }
-    el.innerHTML = rows.map(b => {
+    const rateHtml = rv.length ? '<div class="rcv" style="border-color:#8a63c9;background:rgba(246,240,255,.7)"><div class="rcv-top"><span>💲 New company rate — waiting for approval</span><span>' + rv.length + '</span></div>' +
+      '<div class="rcv-meta">Stock is already in. Approve = use the new rate · Keep old = rate stays the same.</div>' +
+      rv.map(r => '<div class="ln"><b>' + esc(r.flower) + '</b>' + (r.origin ? ' <span class="ln-meta">(' + esc(r.origin) + ')</span>' : '') +
+        '<div class="ln-meta">' + (r.branch ? esc(r.branch) + ' · ' : '') + (r.supplier ? esc(r.supplier) + ' · ' : '') + (r.invoiceNo ? 'Inv ' + esc(r.invoiceNo) + ' · ' : '') + esc(String(r.date || '').slice(0, 10)) + (r.supplierRate ? ' · supplier ' + f3(r.supplierRate) + ' BD' + (r.unit ? '/' + esc(r.unit) : '') : '') + '</div>' +
+        '<div class="rate" style="font-size:13px;font-weight:700">' + f3(r.oldRate) + ' ➜ ' + f3(r.newRate) + ' per stem</div>' +
+        '<div class="action-row" style="margin-top:6px"><button class="action-btn approve" data-ract="approve" data-rate="' + esc(r.id) + '">✓ Use new rate ' + f3(r.newRate) + '</button>' +
+        '<button class="action-btn reject" data-ract="reject" data-rate="' + esc(r.id) + '">✕ Keep old ' + f3(r.oldRate) + '</button></div></div>').join('') + '</div>' : '';
+    if(!rows.length){ el.innerHTML = rateHtml + (rateHtml ? '' : '<div class="empty-note">' + (view === 'hist' ? 'No receiving found.' : 'Nothing waiting. ✅') + '</div>'); return; }
+    el.innerHTML = rateHtml + rows.map(b => {
       const icon = b.kind === 'flower' ? '🌸' : '🍫';
       const warnCount = b.lines.reduce((s, l) => s + (l.warnings || []).length, 0);
       let tally;
@@ -265,7 +274,7 @@
         return '<div class="ln"><b>' + esc(l.name) + '</b>' + (l.origin ? ' <span class="ln-meta">(' + esc(l.origin) + ')</span>' : '') +
           '<button class="edit-btn" data-edit="' + esc(b.kind) + '" data-batch="' + esc(b.batch) + '" data-line="' + esc(l.id) + '">✎ Edit</button>' +
           '<div class="ln-meta">' + what + '</div>' +
-          (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem · approve it separately in Rate Approval</div>' : '') +
+          (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem · after you approve the stock, decide the rate at the top of this page</div>' : '') +
           (l.warnings || []).map(w => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') + '</div>';
       }).join('');
       return '<div class="rcv' + (b.batch === focusBatch ? ' focus' : '') + '" id="b_' + esc(b.batch).replace(/[^A-Za-z0-9_-]/g, '_') + '">' +
@@ -280,6 +289,19 @@
     if(focusBatch){ const t = document.querySelector('.rcv.focus'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   }
   document.getElementById('list').addEventListener('click', async e => {
+    const rb = e.target.closest('button[data-ract]');
+    if(rb){
+      const r0 = rates.find(x => String(x.id) === rb.dataset.rate);
+      const yes = rb.dataset.ract === 'approve';
+      if(!confirm(yes ? 'Use the new company rate ' + f3(r0 && r0.newRate) + ' for ' + ((r0 && r0.flower) || 'this flower') + '?' : 'Keep the old rate ' + f3(r0 && r0.oldRate) + '?')) return;
+      rb.disabled = true;
+      try{
+        const r = await fetch(FL + '?action=' + (yes ? 'approveRate' : 'rejectRate') + '&row=' + encodeURIComponent(rb.dataset.rate)).then(x => x.json());
+        if(!r || r.success === false || r.error){ alert((r && r.error) || 'Something went wrong.'); rb.disabled = false; return; }
+        load();
+      }catch(err){ alert('Connection problem. Please try again.'); rb.disabled = false; }
+      return;
+    }
     const btn = e.target.closest('button[data-act]'); if(!btn) return;
     const approve = btn.dataset.act === 'approve';
     const b = all.find(x => x.batch === btn.dataset.batch && x.kind === btn.dataset.kind);

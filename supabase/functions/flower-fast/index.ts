@@ -361,13 +361,8 @@ async function approveRejectRate(p: Record<string, any>, action: string) {
   if (action === 'approveRate') {
     await sbPatch('flower_item', `item_code=eq.${encodeURIComponent(rc.item_code)}`, { rate: rc.new_company_rate, rate_status: 'Approved', last_updated_date: new Date().toISOString() });
   } else {
-    const matchingRows = await sbGet('flower_item', `select=*&flower_name=eq.${encodeURIComponent(rc.flower_name)}`);
-    let legacyRate: number | null = null, hollandFallbackRate: number | null = null;
-    matchingRows.forEach((r: any) => { const rowOrigin = String(r.origin || '').trim(); if (rowOrigin === 'Legacy' || rowOrigin === 'Unknown Origin' || rowOrigin === 'Legacy/Unknown') legacyRate = Number(r.rate); if (rowOrigin === 'Holland' && hollandFallbackRate === null) hollandFallbackRate = Number(r.rate); });
-    if (legacyRate === null && hollandFallbackRate !== null) legacyRate = hollandFallbackRate;
-    const fields: Record<string, any> = { rate_status: 'Approved', last_updated_date: new Date().toISOString() };
-    if (legacyRate !== null && !isNaN(legacyRate)) fields.rate = legacyRate;
-    await sbPatch('flower_item', `item_code=eq.${encodeURIComponent(rc.item_code)}`, fields);
+    // Rejected = keep the current company rate as it is (Nov 2026, Bench: "mananatili sa original").
+    await sbPatch('flower_item', `item_code=eq.${encodeURIComponent(rc.item_code)}`, { rate_status: 'Approved', last_updated_date: new Date().toISOString() });
   }
   return { success: true };
 }
@@ -418,7 +413,22 @@ async function getPendingReceiving(p: Record<string, any>) {
   let q = history ? `select=*&approval_status=neq.Pending&entry_date=gte.${since}&order=id.desc&limit=400` : 'select=*&approval_status=eq.Pending&order=id.asc';
   if (p.batch) q += `&batch_ref=eq.${encodeURIComponent(String(p.batch))}`;
   const rows = await sbGet('flower_database', q);
-  if (!rows.length) return { success: true, batches: [] };
+  // Rate approval lives on this page too (Nov 2026, Bench): pending company-rate changes that are ready to decide
+  // (loose ones, or ones whose receiving is already approved = in stock).
+  const rates: any[] = [];
+  if (!history && !p.batch) {
+    const rr = await sbGet('flower_rate_change_history', 'select=id,source_id,flower_name,origin,item_code,old_company_rate,new_company_rate,supplier_rate_used,change_date&approval_status=eq.Pending%20Approval&order=id.asc&limit=100');
+    const sids = rr.filter((r: any) => r.source_id).map((r: any) => Number(r.source_id));
+    const src = sids.length ? await sbGet('flower_database', `select=id,branch,supplier,invoice_no,entry_date,unit,approval_status&id=in.(${sids.join(',')})`) : [];
+    const sBy: Record<string, any> = {}; src.forEach((r: any) => { sBy[r.id] = r; });
+    rr.forEach((r: any) => {
+      const s0 = r.source_id ? sBy[r.source_id] : null;
+      if (r.source_id && (!s0 || s0.approval_status !== 'Approved')) return;
+      rates.push({ id: r.id, flower: r.flower_name || '', origin: r.origin || '', oldRate: Number(r.old_company_rate) || 0, newRate: Number(r.new_company_rate) || 0,
+        supplierRate: Number(r.supplier_rate_used) || 0, date: s0 ? s0.entry_date : r.change_date, branch: s0 ? s0.branch : '', supplier: s0 ? s0.supplier : '', invoiceNo: s0 ? s0.invoice_no : '', unit: s0 ? s0.unit : '' });
+    });
+  }
+  if (!rows.length) return { success: true, batches: [], rates };
   const ids = rows.map((r: any) => r.id);
   const [rcs, hist] = await Promise.all([
     sbGet('flower_rate_change_history', `select=id,source_id,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&source_id=in.(${ids.join(',')})`),
@@ -445,7 +455,7 @@ async function getPendingReceiving(p: Record<string, any>) {
     b.typedSubtotal += Number(r.subtotal) || 0;
   }
   const batches = Object.values(out).map((b: any) => { b.typedTotal = Math.round(b.typedSubtotal * (1 + b.taxPercent / 100) * 1000) / 1000; b.tally = b.paperTotal == null ? null : Math.abs(b.typedTotal - b.paperTotal) <= 0.01; return b; });
-  return { success: true, batches };
+  return { success: true, batches, rates };
 }
 async function decideReceiving(p: Record<string, any>, authUser: any, approve: boolean) {
   const batch = String(p.batch || '').trim();
