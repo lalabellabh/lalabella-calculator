@@ -230,8 +230,26 @@
   #o3d.full .o3-main{height:100dvh;min-height:0} #o3d.full .o3-side{max-height:100dvh}
   body.o3full{overflow:hidden}
   #o3d.full .o3-top{left:64px}
-  @media (orientation:landscape){ #o3d.full{grid-template-columns:minmax(0,1fr) 250px;grid-template-rows:1fr} #o3d.full .o3-main{height:100dvh;min-height:0} #o3d.full .o3-side{max-height:100dvh;font-size:12px;padding:10px} }
-  @media (orientation:landscape) and (max-height:520px){ #o3d.full{grid-template-columns:minmax(0,1fr) 210px} #o3d.full .o3-side{font-size:11.5px;padding:8px} #o3d.full .o3-side h4{font-size:13px} #o3d.full .o3-zoom button{width:32px;height:32px} #o3d.full .o3-top{gap:5px} #o3d.full .o3-clock{font-size:9px;padding:5px 7px} }
+  /* full screen = the whole screen is the office; the panel slides in from the right (👥 or swipe from the right edge) */
+  #o3d.full{grid-template-columns:1fr !important;grid-template-rows:1fr !important}
+  #o3d.full .o3-main{height:100dvh !important;min-height:0}
+  #o3d.full .o3-side{position:absolute;right:0;top:0;bottom:0;width:min(320px,86vw);max-height:none !important;min-height:0;z-index:20;transform:translateX(105%);transition:transform .28s ease;box-shadow:-10px 0 30px #0006;border-radius:16px 0 0 16px}
+  #o3d.full.dopen .o3-side{transform:none}
+  #o3d.full .o3-zoom{flex-direction:row;bottom:10px;right:10px}
+  #o3d.full .o3-zoom [data-o3=full]{display:none}
+  #o3d.full .snd{display:none}
+  #o3d.full.snd-open .snd{display:flex;top:56px;right:10px}
+  .o3-tr{position:absolute;right:10px;top:10px;z-index:25;display:none;gap:6px}
+  #o3d.full .o3-side{padding-top:58px}
+  #o3d.full .o3-tr{display:flex}
+  .o3-tr>button{width:38px;height:38px;border-radius:50%;border:1px solid #5d4f95;background:#171230e6;color:#f1ecff;font-size:17px;cursor:pointer}
+  .o3-tr .o3-exit{background:#7a1f3a;border-color:#b0446a}
+  .o3-menu{display:none;position:absolute;right:0;top:46px;background:#fbf8ff;border-radius:12px;box-shadow:0 10px 30px #0008;padding:6px;min-width:200px;flex-direction:column}
+  #o3d.menu-open .o3-menu{display:flex}
+  .o3-menu button{all:unset;cursor:pointer;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:#2a2140 !important}
+  .o3-menu button:hover{background:#efe8fb}
+  #o3d.nonames .o3-tag b{display:none} #o3d.nonames .o3-tag{padding:3px}
+  @media (max-height:520px){ #o3d.full .o3-top{gap:5px} #o3d.full .o3-clock{font-size:9px;padding:5px 7px} #o3d.full .o3-zoom button,#o3d.full .o3-tr>button{width:34px;height:34px;font-size:15px} }
   #o3d .snd{top:50px}
   .o3-side *{color:inherit}
   @media (min-width:900px){ body.v3d #o3d{min-height:0} body.v3d .o3-main{height:auto;min-height:0} body.v3d .o3-side{max-height:none;min-height:0} }
@@ -248,6 +266,7 @@
     <section id="o3d">
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
+        <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
         <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
       <div class="o3-side">Loading…</div>
     </section>
@@ -758,7 +777,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=2'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=3'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
