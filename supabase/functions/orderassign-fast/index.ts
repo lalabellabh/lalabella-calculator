@@ -131,9 +131,16 @@ async function reportUnassignedStatus(p: any) {
 
 // Approvals waiting for an Admin (bell, Admin only): flower rate changes + chocolate stock counts.
 async function pendingApprovals() {
-  // Rate changes from a receiving are approved with that receiving (kind 'recv' below), so only the loose ones are listed here.
-  const rows = await sbGet('flower_rate_change_history', 'select=id,flower_name,origin,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&source_id=is.null&order=id.asc&limit=50');
-  const out: any[] = (rows || []).map((r: any) => ({
+  // Rate changes are approved separately (Nov 2026, Bench). A rate change from a receiving shows here only
+  // after that receiving is approved (while it waits, it is part of the 'recv' card below).
+  let rows: any[] = await sbGet('flower_rate_change_history', 'select=id,source_id,flower_name,origin,old_company_rate,new_company_rate&approval_status=eq.Pending%20Approval&order=id.asc&limit=50') || [];
+  const srcIds = rows.filter((r: any) => r.source_id).map((r: any) => Number(r.source_id));
+  if (srcIds.length) {
+    const ok = await sbGet('flower_database', `select=id&approval_status=eq.Approved&id=in.(${srcIds.join(',')})`) || [];
+    const okSet = new Set(ok.map((r: any) => Number(r.id)));
+    rows = rows.filter((r: any) => !r.source_id || okSet.has(Number(r.source_id)));
+  }
+  const out: any[] = rows.map((r: any) => ({
     flower: clip(r.flower_name, 60), origin: clip(r.origin, 40),
     oldRate: Number(r.old_company_rate) || 0, newRate: Number(r.new_company_rate) || 0,
   }));

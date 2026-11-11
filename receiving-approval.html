@@ -265,7 +265,7 @@
         return '<div class="ln"><b>' + esc(l.name) + '</b>' + (l.origin ? ' <span class="ln-meta">(' + esc(l.origin) + ')</span>' : '') +
           '<button class="edit-btn" data-edit="' + esc(b.kind) + '" data-batch="' + esc(b.batch) + '" data-line="' + esc(l.id) + '">✎ Edit</button>' +
           '<div class="ln-meta">' + what + '</div>' +
-          (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem</div>' : '') +
+          (l.rateChange ? '<div class="rate">New company rate: ' + f3(l.rateChange.oldRate) + ' ➜ ' + f3(l.rateChange.newRate) + ' per stem · approve it separately in Rate Approval</div>' : '') +
           (l.warnings || []).map(w => '<div class="warn">⚠ ' + esc(w) + '</div>').join('') + '</div>';
       }).join('');
       return '<div class="rcv' + (b.batch === focusBatch ? ' focus' : '') + '" id="b_' + esc(b.batch).replace(/[^A-Za-z0-9_-]/g, '_') + '">' +
