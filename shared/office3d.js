@@ -208,7 +208,7 @@
   function placeCam(){ if(!DIR) DIR = new T.Vector3(1, 1.18, 1.05).normalize(); camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
   var zoomGoal = 1, targetGoal = null;
   function setZoom(z){ zoomGoal = Math.max(.6, Math.min(6, z)); }
-  function wholeOffice(){ follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : 1); renderSide(); }
+  function wholeOffice(){ follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
   function select(k){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); }
 
@@ -233,13 +233,25 @@
     root.querySelector('[data-o3=in]').onclick = function(){ setZoom(zoomGoal * 1.35); };
     root.querySelector('[data-o3=out]').onclick = function(){ setZoom(zoomGoal / 1.35); };
     root.querySelector('[data-o3=all]').onclick = wholeOffice;
-    root.querySelector('[data-o3=full]').onclick = function(){ root.classList.toggle('full'); document.body.classList.toggle('o3full', root.classList.contains('full')); setTimeout(resize, 60); };
+    root.querySelector('[data-o3=full]').onclick = function(){ goFull(!root.classList.contains('full')); };
+    document.addEventListener('fullscreenchange', function(){ if(!document.fullscreenElement && root.classList.contains('full')) goFull(false, true); });
     side.addEventListener('click', function(e){ var b = e.target.closest('[data-pick]'); if(b){ select(b.getAttribute('data-pick')); return; }
       var r = e.target.closest('[data-room]'); if(r){ var R = ROOMS.filter(function(x){ return x.id === r.getAttribute('data-room'); })[0]; if(R) zoomRoom(R); return; }
       if(e.target.closest('[data-stop]')) wholeOffice();
       if(e.target.closest('[data-more]')){ var k = e.target.closest('[data-more]').getAttribute('data-more'); var rw = document.querySelector('#roster .rw[data-k="' + k + '"]'); if(rw) rw.click(); } });
   }
 
+  // Full screen + turn the phone sideways (landscape). Same as the Classic view's Landscape button.
+  function goFull(on, fromEvent){
+    root.classList.toggle('full', on); document.body.classList.toggle('o3full', on);
+    var b = root.querySelector('[data-o3=full]'); if(b){ b.textContent = on ? '✕' : '⛶'; b.title = on ? 'Exit' : 'Landscape / full screen'; }
+    try{
+      if(on){ var el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+        if(rq) Promise.resolve(rq.call(el)).then(function(){ try{ screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(function(){}); }catch(e){} }).catch(function(){}); }
+      else if(!fromEvent){ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){} }
+    }catch(e){}
+    setTimeout(resize, 80); setTimeout(resize, 600);
+  }
   // ---------- behaviour ----------
   var CAFE = function(i){ return new T.Vector3(29.5 + (i % 3) * 1.2, 0, 15 + (i % 2) * 1.4); };
   function hallPath(from, to, a){
@@ -345,7 +357,7 @@
   var vtmp = null, scrT = 0, lastFrame = 0, perf = [], lowMode = false;
   function loop(){
     requestAnimationFrame(loop);
-    if(document.hidden || !root.offsetParent || document.documentElement.classList.contains('lbgate-locked')) return;
+    if(document.hidden || !root.offsetWidth || document.documentElement.classList.contains('lbgate-locked')) return;
     var nowMs = performance.now(); if(nowMs - lastFrame < 30) return;            // ~30 fps is enough and saves battery
     var spent = nowMs - lastFrame; lastFrame = nowMs;
     if(spent < 1000){ perf.push(spent); if(perf.length > 40) perf.shift(); }
@@ -369,7 +381,7 @@
       if(show){ a.tag.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(-50%,-100%)'; a.tag.classList.toggle('mini', camera.zoom < .9 && follow !== k); } });
     roomTags.forEach(function(r){ vtmp.copy(r.v).project(camera); var x = (vtmp.x + 1) / 2 * W, y = (1 - vtmp.y) / 2 * H; r.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'; r.el.style.display = (follow || x < -100 || x > W + 50 || y < -20 || y > H) ? 'none' : ''; });
   }
-  setInterval(function(){ if(!root.offsetParent) return; liveTick();
+  setInterval(function(){ if(!root.offsetWidth) return; liveTick();
     var c = root.querySelector('.o3-clock'); if(c){ var d = new Date(Date.now() + 3 * 3600000); c.textContent = String(d.getUTCHours() % 12 || 12).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ':' + String(d.getUTCSeconds()).padStart(2, '0') + ' ' + (d.getUTCHours() < 12 ? 'AM' : 'PM'); } }, 1000);
 
   // ---------- public API ----------
@@ -383,7 +395,7 @@
       paintTags(); apply(); renderSide();
     },
     say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
-    select:select, whole:wholeOffice
+    select:select, whole:wholeOffice, full:function(on){ if(T) goFull(on); }
   };
   function paintTags(){
       var d = DATA; if(!d) return;
