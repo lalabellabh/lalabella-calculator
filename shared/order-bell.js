@@ -93,7 +93,7 @@
     var one = rows.slice(0, 2).map(function (r) {
       return '<div><b style="display:inline;font-size:12.5px">' + esc(r.flower) + '</b>' + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
     }).join('');
-    toast.firstChild.textContent = '🌸'; toast.setAttribute('data-go', 'flower-dashboard.html');
+    toast.firstChild.textContent = '🌸'; toast.setAttribute('data-go', 'receiving-approval.html?m=flower');
     toast.querySelector('.tt').innerHTML = '<b>' + (n === 1 ? 'Rate approval needed' : n + ' rate approvals needed') + '</b>' + one + '<div style="color:#8a7078;margin-top:2px">Tap to review</div>';
     toast.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 20000);
@@ -119,7 +119,7 @@
       rows.slice(0, 5).map(function (r) {
         return '<div style="font-size:12px;margin-top:3px">' + esc(r.flower) + (r.origin ? ' (' + esc(r.origin) + ')' : '') + ' · ' + Number(r.oldRate || 0).toFixed(3) + ' ➜ ' + Number(r.newRate || 0).toFixed(3) + '</div>';
       }).join('') + (rows.length > 5 ? '<div style="font-size:11px;color:#8a7078">+ ' + (rows.length - 5) + ' more</div>' : '') +
-      '<a href="flower-dashboard.html" style="margin-top:6px;padding:6px 0">Review approvals</a></div>' + chocHtml;
+      '<a href="receiving-approval.html?m=flower" style="margin-top:6px;padding:6px 0">Review approvals</a></div>' + chocHtml;
   }
   var APPR_KEY = 'lbobAppr';   // last approval count this browser tab saw (so moving between pages does not pop up again)
   function apprSeen() { try { var v = sessionStorage.getItem(APPR_KEY); return v === null ? null : parseInt(v, 10); } catch (e) { return null; } }
