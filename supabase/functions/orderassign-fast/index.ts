@@ -8,7 +8,19 @@
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const AUTOMATION_KEY = 'REDACTED_SET_IN_SUPABASE';
+// The Tampermonkey automation key is NOT in the code (the repo is public). It is read from the secret
+// ORDER_AUTOMATION_KEY, else from order_settings 'automation_key' (saved by an Admin in Branch Config).
+const ENV_AUTOMATION_KEY = Deno.env.get('ORDER_AUTOMATION_KEY') || '';
+let keyCache = { v: '', at: 0 };
+async function automationKey(): Promise<string> {
+  if (ENV_AUTOMATION_KEY) return ENV_AUTOMATION_KEY;
+  if (Date.now() - keyCache.at < 60000) return keyCache.v;
+  try {
+    const r = await sbGet('order_settings', 'select=value&key=eq.automation_key&limit=1');
+    keyCache = { v: String((r && r[0] && r[0].value) || ''), at: Date.now() };
+  } catch (e) { console.error('automation key', e); }
+  return keyCache.v;
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -187,7 +199,8 @@ Deno.serve(async (req) => {
     const p = await readParams(req);
     const action = p.action || '';
 
-    const viaAutomation = AUTOMATION_ACTIONS.has(action) && String(p.automationKey || '') === AUTOMATION_KEY;
+    const autoKey = AUTOMATION_ACTIONS.has(action) ? await automationKey() : '';
+    const viaAutomation = !!autoKey && String(p.automationKey || '') === autoKey;
     if (action === 'reportUnassignedStatus') console.log('reportUnassignedStatus', viaAutomation ? 'key ok' : 'key MISSING/WRONG', 'count=' + String(p.count ?? ''), 'orders=' + String(p.orderNumbers ?? p.orderId ?? ''));
     const me = viaAutomation ? null : await sessionUser(p.token);
     if (!viaAutomation && !me) {
@@ -200,6 +213,18 @@ Deno.serve(async (req) => {
     if (action === 'getUnassignedStatus') return json(await getUnassignedStatus(!!me && String(me.role || '').toLowerCase() === 'admin'));
     if (action === 'logAssignedOrder') return json(await logAssignedOrder(p));
     if (action === 'getAssignedLog') return json(await getAssignedLog());
+    if (action === 'setAutomationKey') {
+      if (!me || String(me.role || '').toLowerCase() !== 'admin') return json({ success: false, error: 'Admin only.' });
+      const k = String(p.key || '').trim();
+      if (k.length < 8) return json({ success: false, error: 'The key looks too short. Copy it from the Tampermonkey script.' });
+      await sbUpsert('order_settings', [{ key: 'automation_key', value: k }], 'key');
+      keyCache = { v: k, at: Date.now() };
+      return json({ success: true });
+    }
+    if (action === 'getAutomationInfo') {
+      const st = await sbGet('unassigned_status', 'select=last_updated&order=id.desc&limit=1');
+      return json({ success: true, keySet: !!(await automationKey()), lastReport: (st && st[0] && st[0].last_updated) || null });
+    }
 
     return json({ success: false, error: 'Unknown action' });
   } catch (err) {
