@@ -86,6 +86,14 @@
       <span id="apiUrlText">…</span>?action=getBranchConfig
     </div>
   </div>
+
+  <div class="card" id="autoKeyCard">
+    <b>🔑 Tampermonkey connection</b>
+    <div id="autoKeyInfo" style="font-size:13px;margin:6px 0;color:#5c6a83">Checking…</div>
+    <div style="font-size:12.5px;margin-bottom:6px">Admin: copy the automation key from the Tampermonkey script (Lalabella Order Assistant, line 15) and paste it here once. It is saved on the server only and never shown again.</div>
+    <input type="password" id="autoKeyInput" autocomplete="off" placeholder="Paste the key here" style="width:100%;box-sizing:border-box;padding:9px 10px;border-radius:8px;border:1px solid #c9bfa0;font:inherit">
+    <div class="actions"><button class="btn btn-primary" id="autoKeySave">Save key</button></div>
+  </div>
 </div>
 
 <script>
@@ -168,6 +176,29 @@ function renderBranches(){
 }
 
 document.getElementById('addBranchBtn').addEventListener('click', ()=> addBranch());
+
+// ---- Tampermonkey connection (automation key + last report) ----
+function loadAutoInfo(){
+  fetch(FLOWER_API + '?action=getAutomationInfo&_ts=' + Date.now()).then(r => r.json()).then(d => {
+    const el = document.getElementById('autoKeyInfo');
+    if(!d || d.success === false){ el.textContent = (d && d.error) || 'Could not check.'; return; }
+    const last = d.lastReport ? new Date(d.lastReport) : null;
+    const mins = last ? Math.round((Date.now() - last.getTime()) / 60000) : null;
+    el.innerHTML = (d.keySet ? '✓ Key is saved.' : '⚠ No key saved yet — the Tampermonkey cannot report, so Shopify orders keep ringing.') +
+      '<br>Last report from Tampermonkey: ' + (last ? lbEsc(last.toLocaleString()) + (mins !== null && mins > 10 ? ' <b style="color:#b0442e">(' + mins + ' min ago — not reporting)</b>' : ' ✓') : 'never');
+  }).catch(() => {});
+}
+document.getElementById('autoKeySave').addEventListener('click', () => {
+  const k = document.getElementById('autoKeyInput').value.trim();
+  if(!k){ alert('Paste the key first.'); return; }
+  fetch(FLOWER_API, { method: 'POST', body: new URLSearchParams({ action: 'setAutomationKey', key: k }) }).then(r => r.json()).then(d => {
+    if(!d || d.success === false){ alert((d && d.error) || 'Could not save.'); return; }
+    document.getElementById('autoKeyInput').value = '';
+    alert('Saved ✓ The Tampermonkey will connect again on its next report (about 1 minute).');
+    setTimeout(loadAutoInfo, 70000); loadAutoInfo();
+  }).catch(() => alert('Connection problem. Please try again.'));
+});
+if(!API_NOT_SET) loadAutoInfo();
 
 function loadBranches(){
   if(API_NOT_SET){
