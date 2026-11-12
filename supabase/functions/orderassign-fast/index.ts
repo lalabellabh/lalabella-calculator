@@ -210,17 +210,20 @@ async function reportNewOrders(p: any) {
   try { list = JSON.parse(p.orders || '[]'); } catch { return { success: false, error: 'bad list' }; }
   list = (Array.isArray(list) ? list : []).map(cleanLive).filter((o) => o.orderNo).slice(0, 200);
   const now = new Date().toISOString();
-  const cur: any[] = await sbGet('live_orders', 'select=id,order_no,branch,section&source=eq.web') || [];
+  const cur: any[] = await sbGet('live_orders', 'select=id,order_no,branch,section,ack_at&source=eq.web') || [];
   const byNo: Record<string, any> = {}; cur.forEach((r) => { byNo[r.order_no] = r; });
   const seen = new Set<string>();
   const inserts: any[] = [];
   for (const o of list) {
     if (seen.has(o.orderNo)) continue; seen.add(o.orderNo);
     const r = byNo[o.orderNo];
-    if (!r) { inserts.push({ source: 'web', order_no: o.orderNo, branch: o.branch, section: 'new', details: o, first_seen_at: now, assigned_at: now, last_seen_at: now }); continue; }
+    // v2.2: an order already in "Processed Orders" was accepted by the branch on the web -> show it, but no alarm
+    const accepted = o.stage === 'processed';
+    if (!r) { inserts.push({ source: 'web', order_no: o.orderNo, branch: o.branch, section: 'new', details: o, first_seen_at: now, assigned_at: now, last_seen_at: now, ...(accepted ? { ack_at: now, ack_by: 'Accepted on web' } : {}) }); continue; }
     const patch: any = { details: o, last_seen_at: now, section: 'new', gone_at: null };
     if (T(r.branch, 40).toLowerCase() !== o.branch.toLowerCase()) { patch.branch = o.branch; patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }
     else if (r.section !== 'new') { patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }   // came back to New
+    if (accepted && (patch.ack_at === null || !r.ack_at)) { patch.ack_at = now; patch.ack_by = 'Accepted on web'; }
     await sbPatch('live_orders', `id=eq.${r.id}`, patch);
   }
   if (inserts.length) await sbPost('live_orders', inserts);
