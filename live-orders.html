@@ -11,13 +11,11 @@
 <title>Live Orders</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<meta name="lb-theme-keep" content=".wrap, .gift, .ord">
-<link rel="stylesheet" href="shared/glass-skin.css">
-<script src="shared/glass-skin.js"></script>
+<meta name="lb-theme-keep" content=".wrap, .gift, .ord, .card">
 <style>
   :root{ --ink:#2a1c22; --dim:#7a6670; --rose:#c9506b; --red:#d32f2f; --ok:#2f7a4f; --line:#ecdfe3; }
   *{ box-sizing:border-box; }
-  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:#f7eef0; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#fbeff2,#f3e6f5); min-height:100vh; }
   .wrap{ max-width:1100px; margin:0 auto; padding:16px 16px 60px; }
   header{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin:6px 0 14px; padding-left:56px; }
   h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
@@ -33,7 +31,7 @@
   h2 .n{ background:var(--ink); color:#fff !important; border-radius:99px; padding:1px 9px; font-size:12px; }
   h2 .n.red{ background:var(--red); }
   .card{ background:rgba(255,255,255,.88); border:1px solid var(--line); border-radius:14px; padding:4px 12px; }
-  .ord{ display:grid; grid-template-columns:120px 1fr 1fr 1.3fr 90px 110px; gap:10px; align-items:center; padding:11px 0; border-top:1px solid var(--line); font-size:13px; background:transparent; }
+  .ord{ display:grid; grid-template-columns:130px 150px 170px minmax(0,1fr) 100px 120px; gap:10px; align-items:center; padding:11px 0; border-top:1px solid var(--line); font-size:13px; background:transparent; }
   .ord:first-child{ border-top:0; }
   .ord .no{ font-weight:800; font-size:16px; }
   .ord .br{ font-size:11.5px; font-weight:700; color:var(--rose); }
