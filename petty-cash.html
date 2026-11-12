@@ -378,8 +378,9 @@
   <!-- CASH TAB -->
   <div class="tab-panel" id="cashTab">
     <div class="balance-card">
-      <div class="label">Cash On Hand (not yet sent)</div>
+      <div class="label">Cash On Hand (latest count)</div>
       <div class="amount" id="cashBalance">—</div>
+      <div id="cashBalanceFrom" style="font-size:11.5px;color:var(--dim);margin-top:6px"></div>
     </div>
 
     <div class="split">
@@ -1153,6 +1154,8 @@ async function loadCashCounts(){
     const data = await res.json();
     if(data.error) throw new Error(data.error);
     document.getElementById('cashBalance').textContent = fmtBD(data.balance);
+    { const bf = document.getElementById('cashBalanceFrom'); if(bf){ const L0 = data.balanceFrom || [];
+      bf.textContent = L0.length ? L0.map(x => x.branch + ': count on ' + fmtDate(x.date) + (x.sent ? ' (sent)' : '')).join(' · ') : ''; } }
     window.lastCashCounts = data.counts; // for the print button below
 
     if(!data.counts.length){ hist.innerHTML = '<div class="empty">No counts logged yet.</div>'; return; }
