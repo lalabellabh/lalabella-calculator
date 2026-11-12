@@ -264,6 +264,10 @@ async function syncBleemsLive() {
       await sbPatch('live_orders', `id=eq.${r.id}`, patch);
     }
     if (ins.length) await sbPost('live_orders', ins);
+    // older than 3 days (Bleems no longer re-checked) -> leave the list so nothing gets stuck
+    const keep = new Set((bl || []).map((b: any) => b.order_no));
+    const old = (cur || []).filter((r: any) => r.section === 'new' && !keep.has(r.order_no)).map((r: any) => r.id);
+    if (old.length) await sbPatch('live_orders', `id=in.(${old.join(',')})`, { section: 'gone', gone_at: now });
   } catch (e) { console.error('bleems live', e); }
 }
 async function getLiveOrders() {
