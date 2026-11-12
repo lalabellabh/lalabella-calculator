@@ -146,7 +146,7 @@
       '<div><div>' + esc(o.receiver || o.sender || '') + '</div><div class="m">' + esc(o.receiverPhone || o.senderPhone || '') + (o.sender && o.receiver && o.sender !== o.receiver ? '<br>from ' + esc(o.sender) : '') + '</div></div>' +
       '<div class="addr m">' + esc(o.address || '') + '</div>' +
       '<div><b>' + esc(o.price || '') + '</b></div>' +
-      '<div class="act">' + (isDone ? '' : isNew ? '<button class="ack" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<span class="seen">✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') + '</span>') +
+      '<div class="act">' + (isDone ? '' : isNew ? '<button class="ack" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<span class="seen">' + (o.ackBy === 'Accepted on web' ? '✓ Accepted on web' : '✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '')) + '</span>') +
         (!isDone && o.source === 'bleems' ? '<button class="ack" data-done="' + esc(o.id) + '" data-no="' + esc(o.orderNo) + '" style="margin-top:6px;background:#7a4f8a">✓ Done (filled on Bleems)</button>' : '') + '</div></div>';
   }
   function render(){
