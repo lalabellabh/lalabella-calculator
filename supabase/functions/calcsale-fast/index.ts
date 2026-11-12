@@ -98,7 +98,7 @@ async function saveFlowerSale(p: any, u: any) {
   const avail = await flowerAvailable(branch, names);
   const short = names.filter((n) => avail[n] < sum[n]).map((n) => ({ name: n, need: sum[n], have: avail[n] }));
   const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (Number(p.extras) || 0));
-  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u) }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
@@ -116,7 +116,7 @@ async function saveChocolateSale(p: any, u: any) {
   items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u) }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   let releaseNo = '';
   const deducted: any[] = [], short: any[] = [];
@@ -198,7 +198,14 @@ Deno.serve(async (req) => {
     if (a === 'getMode') return json({ success: true, mode: await mode(), userBranch: u.branch || '' });
     if (a === 'saveFlowerSale' || a === 'saveChocolateSale') {
       if ((await mode()) !== 'calc') return json({ success: false, error: 'Odoo is now the one that takes sales out of stock. The calc is for quotes only.' });
-      return json(a === 'saveFlowerSale' ? await saveFlowerSale(p, u) : await saveChocolateSale(p, u));
+      // no double save: the page sends one key per sale; the same key again (double tap, retry after a lost reply) = the first sale
+      const key = /^[A-Za-z0-9_-]{8,64}$/.test(String(p.reqKey || '')) ? String(p.reqKey) : '';
+      const same = async () => { if (!key) return null; const r = await sbGet(`calc_sales?select=sale_no,branch,release_no,short&req_key=eq.${key}&limit=1`); return r && r[0]; };
+      const was = await same();
+      if (was) return json({ success: true, duplicate: true, saleNo: was.sale_no, releaseNo: was.release_no || '', branch: was.branch, short: was.short || [] });
+      p._reqKey = key;   // per request (not a shared variable)
+      try { return json(a === 'saveFlowerSale' ? await saveFlowerSale(p, u) : await saveChocolateSale(p, u)); }
+      catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
     if (a === 'listSales') return json(await listSales(p));
     if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
