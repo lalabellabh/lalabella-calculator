@@ -34,8 +34,21 @@
   .tag.f{ background:#fde3ea; } .tag.c{ background:#efe1d4; } .tag.x{ background:#eee; color:#888; }
   .items{ margin-top:4px; font-size:12.5px; }
   .short{ color:#a8560b; font-size:12px; margin-top:3px; }
-  .cxbtn{ margin-left:auto; border:1px solid var(--bad); color:var(--bad); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .cxbtn{ border:1px solid var(--bad); color:var(--bad); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
   .empty{ color:var(--dim); text-align:center; padding:18px 0; font-size:13px; }
+  .pbtn{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; color:var(--ink); }
+  #rp{ display:none; }
+  @media print{
+    html, body{ margin:0 !important; padding:0 !important; height:0 !important; min-height:0 !important; overflow:hidden !important; background:#fff !important; }
+    body *{ visibility:hidden !important; }
+    #rp, #rp *{ visibility:visible !important; }
+    #rp{ display:block !important; position:fixed; top:0; left:0; color:#000; font-family:'Space Grotesk',Arial,sans-serif; }
+    #rp.th{ width:72mm; padding:2mm; font-family:'Courier New',monospace; font-size:11px; }
+    #rp.a4{ width:100%; padding:0; font-size:13px; }
+  }
+  #rp h2{ margin:0; text-align:center; } #rp .c{ text-align:center; } #rp .l{ border-top:1px dashed #000; margin:5px 0; }
+  #rp .r{ display:flex; justify-content:space-between; gap:8px; padding:2px 0; } #rp .t{ font-weight:800; font-size:1.25em; }
+  #rp.a4 h2{ font-size:26px; } #rp.a4 .r{ padding:7px 0; border-bottom:1px solid #ddd; } #rp.a4 .l{ border-top:1px solid #bbb; margin:10px 0; }
 </style>
 </head>
 <body>
@@ -53,6 +66,7 @@
   </div>
   <div class="card" id="list"><div class="empty">Loading…</div></div>
 </div>
+<div id="rp"></div>
 <script>
 (function(){
   var API = (window.LB_CONFIG && LB_CONFIG.CALC_SALE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast';
@@ -67,15 +81,36 @@
       return esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg');
     }).join(' · ');
   }
+  var SALES = [];
+  function f3(n){ return (Number(n) || 0).toFixed(3); }
+  // Reprint a sale (copy of the receipt) — Thermal or A4, one page
+  function reprint(s, mode){
+    var rows = (s.items || []).map(function(it){
+      if(s.kind === 'flower') return '<div class="r"><span>' + esc(it.name) + ' x' + esc(it.qty) + '</span><span>' + f3((Number(it.qty) || 0) * (Number(it.rate) || 0)) + ' BD</span></div>';
+      return '<div class="r"><span>' + esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : f3(it.kg) + ' kg') + '</span><span>' + f3(it.total) + ' BD</span></div>';
+    }).join('');
+    $('rp').className = mode;
+    $('rp').innerHTML = '<h2>' + (s.kind === 'flower' ? 'Lalabella Flowers' : 'Lalabella') + '</h2><div class="c">' + esc(s.branch) + ' · ' + when(s.at) + '</div>' +
+      '<div class="c">' + esc(s.saleNo) + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + '</div>' +
+      '<div class="c">' + esc(s.source || '') + (s.ref && s.ref !== s.source ? ' · ' + esc(s.ref) : '') + '</div><div class="l"></div>' + rows +
+      '<div class="l"></div><div class="r t"><span>TOTAL</span><span>' + f3(s.total) + ' BD</span></div>' + (s.status !== 'Active' ? '<div class="c">** CANCELLED **</div>' : '') + '<div class="c" style="margin-top:6px">Thank you!</div>';
+    var st = $('rpPage'); if(!st){ st = document.createElement('style'); st.id = 'rpPage'; document.head.appendChild(st); }
+    if(mode === 'a4') st.textContent = '@page{ size:A4; margin:14mm; }';
+    else { var r = $('rp'); r.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;width:72mm;padding:2mm;box-sizing:border-box;font-family:Courier New,monospace;font-size:11px';
+      var mm = Math.max(50, Math.ceil(r.getBoundingClientRect().height * 25.4 / 96) + 8); r.removeAttribute('style'); st.textContent = '@page{ size:76mm ' + mm + 'mm; margin:2mm; }'; }
+    window.print();
+  }
   function load(){
     var q = new URLSearchParams({ action:'listSales', token:token(), branch:$('br').value, kind:$('kind').value, limit:'200' });
     fetch(API + '?' + q).then(function(r){ return r.json(); }).then(function(d){
       if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
       if(admin){ $('modeBox').style.display = 'flex'; document.querySelectorAll('#modeBox button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-mode') === d.mode); }); }
-      $('list').innerHTML = d.sales.length ? d.sales.map(function(s){
+      SALES = d.sales;
+      $('list').innerHTML = d.sales.length ? d.sales.map(function(s, i){
         var cx = s.status !== 'Active';
         return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' + (s.source ? '<span class="tag">' + esc(s.source) + '</span>' : '') +
           (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
+          '<span style="display:flex;gap:6px;margin-left:auto"><button class="pbtn" data-pr="th" data-i="' + i + '">🧾 Thermal</button><button class="pbtn" data-pr="a4" data-i="' + i + '">🖨️ A4</button></span>' +
           (admin && !cx ? '<button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
           '<div class="items">' + itemText(s) + '</div>' +
           (s.short && s.short.length ? '<div class="short">⚠ Not enough in the system: ' + s.short.map(function(x){ return esc(x.name) + ' (needed ' + esc(x.need) + ', had ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
@@ -83,6 +118,7 @@
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
   document.addEventListener('click', function(e){
+    var pr = e.target.closest('[data-pr]'); if(pr){ var sv = SALES[Number(pr.getAttribute('data-i'))]; if(sv) reprint(sv, pr.getAttribute('data-pr')); return; }
     var b = e.target.closest('[data-cx]');
     if(b){ if(!confirm('Cancel ' + b.getAttribute('data-no') + '? Everything it took out goes back into stock.')) return; b.disabled = true;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'cancelSale', id:b.getAttribute('data-cx'), token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); return; }
