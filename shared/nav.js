@@ -88,6 +88,7 @@
     ['profile.html', '👤', 'My Profile'],
     ['petty-cash.html', '💰', 'Petty Cash & Cash'],
     ['notes.html', '📝', 'Notes'],
+    ['live-orders.html', '🎁', 'Live Orders'],
     ['order-form.html', '🧾', 'Order Form'],
     ['card-print.html', '💌', 'Card Print'],
     ['seeds-card.html', '🌱', 'Seeds of Success Card'],

@@ -76,7 +76,7 @@ async function sbUpsert(table: string, rows: unknown[], onConflict: string) {
 async function sessionUser(token: string) {
   const t = String(token || '').trim();
   if (!t) return null;
-  const rows = await sbGet('users', `select=id,status,token_created,role&limit=1&token=eq.${encodeURIComponent(t)}`);
+  const rows = await sbGet('users', `select=id,username,full_name,branch,status,token_created,role&limit=1&token=eq.${encodeURIComponent(t)}`);
   const u = rows && rows[0];
   if (!u) return null;
   if (String(u.status || 'Active') === 'Inactive') return null;
@@ -167,7 +167,10 @@ async function getUnassignedStatus(isAdmin: boolean) {
   let appr: any[] = [];
   if (isAdmin) { try { appr = await pendingApprovals(); } catch (e) { console.error('approvals', e); } }
   const total = appr.reduce((s: number, r: any) => s + (r.kind === 'choc' ? Number(r.n) || 0 : 1), 0);
-  const extra = { pendingApprovals: total, approvalsDetail: appr };
+  // Live Orders (Nov 2026): orders just given to a branch that nobody marked "seen" yet -> gift alarm in the bell.
+  let newAssigned: any[] = [];
+  try { newAssigned = ((await sbGet('live_orders', 'select=id,order_no,branch,assigned_at&section=eq.new&ack_at=is.null&order=assigned_at.desc&limit=20')) || []).map((r: any) => ({ id: r.id, orderNo: r.order_no, branch: r.branch, assignedAt: r.assigned_at })); } catch (e) { console.error('live orders', e); }
+  const extra = { pendingApprovals: total, approvalsDetail: appr, newAssigned };
   if (!rows.length) return { count: 0, ordersDetail: [], ...extra };
   const row = rows[0];
   const det: any[] = Array.isArray(row.details) ? row.details : [];
@@ -190,6 +193,74 @@ async function getAssignedLog() {
   return (rows || []).map((r: any) => ({ OrderId: r.order_id, Branch: r.branch, AssignedTo: r.assigned_to, AssignedAt: r.assigned_at }));
 }
 
+// ---------- LIVE ORDERS (Nov 2026) ----------
+// The Tampermonkey script reads the "New Orders" list of lalabella.web.app (orders already given to a branch)
+// and sends the whole list every few seconds (reportNewOrders). live-orders.html shows it per branch:
+// newest assignment on top with a red NEW + gift alarm until someone taps "Nakita ko" (ackLiveOrder).
+const T = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+function cleanLive(o: any) {
+  return { orderNo: T(o && o.orderNo, 30), branch: T(o && o.branch, 40), tag: T(o && o.tag, 40), method: T(o && o.method, 20), date: T(o && o.date, 40), time: T(o && o.time, 40),
+    sender: T(o && o.sender, 60), senderPhone: T(o && o.senderPhone, 30), receiver: T(o && o.receiver, 60), receiverPhone: T(o && o.receiverPhone, 30), address: T(o && o.address, 200), price: T(o && o.price, 30) };
+}
+async function reportNewOrders(p: any) {
+  if (String(p.found || '') !== '1') return { success: true, skipped: 'list not on screen' };
+  let list: any[] = [];
+  try { list = JSON.parse(p.orders || '[]'); } catch { return { success: false, error: 'bad list' }; }
+  list = (Array.isArray(list) ? list : []).map(cleanLive).filter((o) => o.orderNo).slice(0, 200);
+  const now = new Date().toISOString();
+  const cur: any[] = await sbGet('live_orders', 'select=id,order_no,branch,section&source=eq.web') || [];
+  const byNo: Record<string, any> = {}; cur.forEach((r) => { byNo[r.order_no] = r; });
+  const seen = new Set<string>();
+  const inserts: any[] = [];
+  for (const o of list) {
+    if (seen.has(o.orderNo)) continue; seen.add(o.orderNo);
+    const r = byNo[o.orderNo];
+    if (!r) { inserts.push({ source: 'web', order_no: o.orderNo, branch: o.branch, section: 'new', details: o, first_seen_at: now, assigned_at: now, last_seen_at: now }); continue; }
+    const patch: any = { details: o, last_seen_at: now, section: 'new', gone_at: null };
+    if (T(r.branch, 40).toLowerCase() !== o.branch.toLowerCase()) { patch.branch = o.branch; patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }
+    else if (r.section !== 'new') { patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }   // came back to New
+    await sbPatch('live_orders', `id=eq.${r.id}`, patch);
+  }
+  if (inserts.length) await sbPost('live_orders', inserts);
+  const goneIds = cur.filter((r) => r.section === 'new' && !seen.has(r.order_no)).map((r) => r.id);
+  if (goneIds.length) await sbPatch('live_orders', `id=in.(${goneIds.join(',')})`, { section: 'gone', gone_at: now });
+  // keep the table small: forget orders gone for more than 3 days
+  try { await fetch(`${SB_URL}/rest/v1/live_orders?section=eq.gone&gone_at=lt.${new Date(Date.now() - 3 * 86400000).toISOString()}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); } catch (_) { /* ignore */ }
+  return { success: true, now: list.length, added: inserts.length, gone: goneIds.length };
+}
+function liveOut(r: any) {
+  const d = r.details || {};
+  return { id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, section: r.section, assignedAt: r.assigned_at, goneAt: r.gone_at, ackAt: r.ack_at, ackBy: r.ack_by || '',
+    tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '' };
+}
+async function getLiveOrders() {
+  const since = new Date(Date.now() - 6 * 3600000).toISOString();
+  const [rows, gone, st] = await Promise.all([
+    sbGet('live_orders', 'select=*&section=eq.new&order=assigned_at.desc&limit=200'),
+    sbGet('live_orders', `select=*&section=eq.gone&gone_at=gte.${since}&order=gone_at.desc&limit=30`),
+    sbGet('unassigned_status', 'select=order_numbers,details,last_updated&order=id.desc&limit=1'),
+  ]);
+  const u = st && st[0];
+  const det: any[] = u && Array.isArray(u.details) ? u.details : [];
+  const unassigned = ((u && u.order_numbers) || []).map((o: string) => { const d = det.find((x: any) => x && x.orderNo === o) || {}; return { orderNo: o, address: d.address || '', branch: d.branch || '', note: d.note || '' }; });
+  const lastSeen = (rows || []).reduce((m: string, r: any) => (r.last_seen_at > m ? r.last_seen_at : m), '');
+  return { success: true, serverTime: new Date().toISOString(), unassigned, unassignedUpdated: (u && u.last_updated) || null, lastReport: lastSeen || null,
+    orders: (rows || []).map(liveOut), recentlyDone: (gone || []).map(liveOut) };
+}
+async function ackLiveOrder(p: any, me: any) {
+  const id = Number(p.id);
+  const who = T(me && (me.full_name || me.username), 60) || 'staff';
+  if (String(p.all || '') === '1') {
+    const br = T(p.branch, 40);
+    const q = 'section=eq.new&ack_at=is.null' + (br && br !== 'All' ? `&branch=ilike.${encodeURIComponent(br)}` : '');
+    await sbPatch('live_orders', q, { ack_at: new Date().toISOString(), ack_by: who });
+    return { success: true };
+  }
+  if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid order.' };
+  await sbPatch('live_orders', `id=eq.${id}&ack_at=is.null`, { ack_at: new Date().toISOString(), ack_by: who });
+  return { success: true, by: who };
+}
+
 async function readParams(req: Request): Promise<Record<string, any>> {
   if (req.method === 'GET') { const u = new URL(req.url); return Object.fromEntries(u.searchParams.entries()); }
   const ct = req.headers.get('content-type') || '';
@@ -198,7 +269,7 @@ async function readParams(req: Request): Promise<Record<string, any>> {
   return Object.fromEntries(new URLSearchParams(t));
 }
 
-const AUTOMATION_ACTIONS = new Set(['getBranchConfig', 'reportUnassignedStatus']);
+const AUTOMATION_ACTIONS = new Set(['getBranchConfig', 'reportUnassignedStatus', 'reportNewOrders']);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight(req);
@@ -218,6 +289,9 @@ Deno.serve(async (req) => {
     if (action === 'saveBranchConfig') return json(await saveBranchConfig(p));
     if (action === 'reportUnassignedStatus') return json(await reportUnassignedStatus(p));
     if (action === 'getUnassignedStatus') return json(await getUnassignedStatus(!!me && String(me.role || '').toLowerCase() === 'admin'));
+    if (action === 'reportNewOrders') { if (!viaAutomation) return json({ success: false, error: 'Automation key needed.' }); return json(await reportNewOrders(p)); }
+    if (action === 'getLiveOrders') return json(await getLiveOrders());
+    if (action === 'ackLiveOrder') return json(await ackLiveOrder(p, me));
     if (action === 'logAssignedOrder') return json(await logAssignedOrder(p));
     if (action === 'getAssignedLog') return json(await getAssignedLog());
     if (action === 'setAutomationKey') {
