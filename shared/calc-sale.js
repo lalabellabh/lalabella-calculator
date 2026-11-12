@@ -64,7 +64,7 @@
       var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), reqKey: pendKey, branch: branch, source: src, ref: refVal, customer: g.customer || (refVal === src ? src : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
       fetch(API, { method: 'POST', body: body }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
-        lastSig = sig; lastNo = d.saleNo; pendSig = ''; pendKey = '';
+        if (!d.saleNo) d.saleNo = 'already saved'; lastSig = sig; lastNo = d.saleNo; pendSig = ''; pendKey = '';
         var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': needed ' + esc(s.need) + ', the system has only ' + esc(s.have) + '</div>'; }).join('');
         res.innerHTML = '<div class="ok">✓ ' + esc(src) + (refVal !== src ? ' · sold to ' + esc(refVal) : '') + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
         box.querySelector('[data-ref]').value = ''; srcSel.value = '';
