@@ -283,11 +283,17 @@ async function handleGetCashCounts(p: any) {
   const denomsByCount: Record<string, any[]> = {};
   (allDenoms || []).forEach((d: any) => { (denomsByCount[d.cash_count_id] = denomsByCount[d.cash_count_id] || []).push({ value: Number(d.denomination_value), label: d.denomination_label, count: d.piece_count }); });
 
-  const balance = (rows || []).filter((r: any) => !r.sent_to_qalali).reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+  // Nov 2026 (Bench): each daily count is the WHOLE cash in the drawer that day (same amount = cash not touched),
+  // so Cash On Hand = the LATEST count of each branch (not the total of all counts). If that latest count was sent, it is 0.
+  const latest: Record<string, any> = {};
+  (rows || []).forEach((r: any) => { if (!latest[r.branch]) latest[r.branch] = r; });   // rows are newest first
+  const latestRows = Object.values(latest);
+  const balance = latestRows.filter((r: any) => !r.sent_to_qalali).reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+  const balanceFrom = latestRows.map((r: any) => ({ branch: r.branch, date: r.count_date, amount: Number(r.amount), sent: !!r.sent_to_qalali }));
   const signed = await signPettyPhotos(rows || []);
 
   return {
-    balance,
+    balance, balanceFrom,
     counts: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.count_date, amount: Number(r.amount), countedBy: r.counted_by, sentToQalali: r.sent_to_qalali, sentDate: r.sent_date, breakdown: denomsByCount[r.id] || [], photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '' })),
   };
 }
