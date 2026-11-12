@@ -93,7 +93,10 @@
 
   /* ================= PRINT STYLES ================= */
   @media print{
+    /* Nov 2026: hidden page content must not make extra blank pages -> only ONE page prints */
+    html, body{ margin:0 !important; padding:0 !important; height:0 !important; min-height:0 !important; overflow:hidden !important; background:#fff !important; }
     body *{ visibility:hidden; }
+    body.print-a4 .receipt-a4, body.print-thermal .receipt-thermal{ position:fixed !important; }
 
     body.print-a4 .receipt-a4,
     body.print-a4 .receipt-a4 *{ visibility:visible; }
@@ -105,7 +108,6 @@
     body.print-a4 .receipt-a4 th, body.print-a4 .receipt-a4 td{ padding:8px 6px; border-bottom:1px solid #ddd; text-align:left; font-size:13px; }
     body.print-a4 .receipt-a4 th{ font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
     body.print-a4 .receipt-a4 .r-total{ text-align:right; font-size:20px; font-weight:800; margin-top:14px; }
-    @page{ size:A4; margin:14mm; }
 
     body.print-thermal .receipt-thermal,
     body.print-thermal .receipt-thermal *{ visibility:visible; }
@@ -116,7 +118,6 @@
     body.print-thermal .receipt-thermal .t-line{ border-top:1px dashed #000; margin:5px 0; }
     body.print-thermal .receipt-thermal .t-row{ display:flex; justify-content:space-between; padding:2px 0; }
     body.print-thermal .receipt-thermal .t-total{ font-weight:800; font-size:14px; }
-    @page{ size:72mm auto; margin:2mm; }
   }
 </style>
 <style id="chocoSharedNavStyles">
@@ -535,6 +536,20 @@
     populateReceipts();
     document.body.classList.remove('print-a4', 'print-thermal');
     document.body.classList.add(mode === 'a4' ? 'print-a4' : 'print-thermal');
+    // page size: A4, or a thermal strip exactly as long as the receipt (one page, no blank page)
+    let st = document.getElementById('lbPageSize');
+    if(!st){ st = document.createElement('style'); st.id = 'lbPageSize'; document.head.appendChild(st); }
+    if(mode === 'a4') st.textContent = '@page{ size:A4; margin:14mm; }';
+    else {
+      let mm = 80;
+      try{
+        const r = document.getElementById('receiptThermal') || document.querySelector('.receipt-thermal'), keep = r.getAttribute('style');
+        r.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;width:72mm;padding:2mm;box-sizing:border-box;visibility:hidden;font-family:"Space Mono",monospace;font-size:11px';
+        mm = Math.max(50, Math.ceil(r.getBoundingClientRect().height * 25.4 / 96) + 8);
+        if(keep === null) r.removeAttribute('style'); else r.setAttribute('style', keep);
+      }catch(e){}
+      st.textContent = '@page{ size:76mm ' + mm + 'mm; margin:2mm; }';
+    }
     window.print();
   }
 
