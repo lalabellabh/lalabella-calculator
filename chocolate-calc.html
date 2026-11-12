@@ -628,6 +628,17 @@
   #receipt .r-bc .r-code{ font-size:8px; color:#555; letter-spacing:.08em; }
 
   @page{ size:80mm 200mm; margin:0; }   /* top level: valid in every browser */
+  /* Nov 2026: A4 choice — same receipt, printed on a full A4 page */
+  @media print{
+    body.print-a4 #receipt{ width:180mm !important; max-width:180mm !important; left:15mm !important; top:12mm !important; padding:0 !important; }
+    body.print-a4, html.print-a4{ width:210mm !important; }
+    body.print-a4 #receipt h1{ font-size:28px !important; margin-bottom:6px !important; }
+    body.print-a4 #receipt .r-sub{ font-size:12px !important; }
+    body.print-a4 #receipt .r-row{ font-size:14px !important; margin-bottom:8px !important; padding-bottom:6px; border-bottom:1px solid #eee; }
+    body.print-a4 #receipt .r-row .r-meta{ font-size:11.5px !important; }
+    body.print-a4 #receipt .r-grand{ font-size:18px !important; }
+    body.print-a4 #receipt .r-sum, body.print-a4 #receipt .r-footer, body.print-a4 #receipt .r-code{ font-size:12px !important; }
+  }
   @media print{
     html, body{
       margin:0 !important;
@@ -1187,7 +1198,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div class="grand-total-amount" id="grandTotal">0.000 BD</div>
       </div>
 
-      <button class="print-btn" id="printBtn">Print / Save as PDF</button>
+      <div style="display:flex;gap:8px;"><button class="print-btn" id="printA4Btn" style="flex:1">🖨️ Print A4</button><button class="print-btn" id="printBtn" style="flex:1">🧾 Thermal</button></div>
       <button class="share-btn" id="shareBtn" style="display:none;">📤 Send to WhatsApp</button>
     </div>
 
@@ -1845,7 +1856,9 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     }catch(e){ alert('Could not open that list. Check your internet and try again.'); }
   }
 
-  printBtn.addEventListener('click', async ()=>{
+  printBtn.addEventListener('click', ()=> doPrint(false));
+  document.getElementById('printA4Btn').addEventListener('click', ()=> doPrint(true));
+  async function doPrint(a4){
     if(cart.length === 0 && extras.length === 0) return;
 
     rDateEl.textContent = new Date().toLocaleString('en-GB', {
@@ -1882,9 +1895,15 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     document.getElementById('rSummary').textContent = listSummary() + ' vat inclusive';
     printBtn.disabled = true;
     try{ await addListBarcode(); }finally{ printBtn.disabled = false; }
-    fitThermalPage();
+    document.body.classList.toggle('print-a4', !!a4); document.documentElement.classList.toggle('print-a4', !!a4);
+    if(a4){
+      let st = document.getElementById('lbPageSize');
+      if(!st){ st = document.createElement('style'); st.id = 'lbPageSize'; document.head.appendChild(st); }
+      st.textContent = '@page{ size:A4; margin:0; }';
+    } else fitThermalPage();
     window.print();
-  });
+  }
+  window.addEventListener('afterprint', ()=>{ document.body.classList.remove('print-a4'); document.documentElement.classList.remove('print-a4'); });
 
   // ---- Mobile: render the same receipt to an image and send it
   // through the native share sheet, so WhatsApp can be selected. ----
@@ -2096,6 +2115,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   document.getElementById('clearBtn').addEventListener('click', soundClearBtn);
   document.getElementById('clearListBtn').addEventListener('click', soundClearListBtn);
   document.getElementById('printBtn').addEventListener('click', soundPrintBtn);
+  document.getElementById('printA4Btn').addEventListener('click', soundPrintBtn);
   // Category pills are rendered dynamically, so attach via delegation.
   document.getElementById('categoryPills').addEventListener('click', (e)=>{
     const pill = e.target.closest('.cat-pill');
