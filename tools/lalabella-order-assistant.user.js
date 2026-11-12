@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Lalabella Order Assistant
 // @namespace    lalabella-order-assistant
-// @version      2.0
-// @description  v2.0 also sends the New Orders list (orders given to a branch) to the Lalabella system for the Live Orders page. SAFE MODE — watches an opened order for its delivery address, calculates the nearest branch from your Branch Config list, and shows a recommendation. Does NOT auto-click Assign. Diagnostic panel is hidden by default (Ctrl+Shift+L to reveal).
+// @version      2.1
+// @description  v2.1 also sends the New Orders list (orders given to a branch) to the Lalabella system for the Live Orders page. SAFE MODE — watches an opened order for its delivery address, calculates the nearest branch from your Branch Config list, and shows a recommendation. Does NOT auto-click Assign. Diagnostic panel is hidden by default (Ctrl+Shift+L to reveal).
 // @match        https://lalabella.web.app/*
 // @grant        none
 // ==/UserScript==
@@ -692,8 +692,9 @@
     if(['qalali', 'modamall', 'hamala'].indexOf(k) !== -1) return true;
     return branches.some(b => brKey(b.name) === k);
   }
-  function parseNewRow(r){
-    const o = { orderNo: r.orderNo, tag: '', branch: '', method: '', date: '', time: '', sender: '', senderPhone: '', receiver: '', receiverPhone: '', address: '', price: '' };
+  function parseNewRow(r, scope){
+    const preset = scope && !r.raw.some(isBranchName) ? scope : '';   // branch page without a Branch column
+    const o = { orderNo: r.orderNo, tag: '', branch: preset, method: '', date: '', time: '', sender: '', senderPhone: '', receiver: '', receiverPhone: '', address: '', price: '' };
     const dateRx = /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/, timeRx = /\d{1,2}:\d{2}\s*(AM|PM)/i, priceRx = /^[\d.,]+\s*(BHD|BD)$/i;
     const methodRx = /^(delivery|pick ?up|pickup|collection|walk[- ]?in|in[- ]?store)$/i, phoneRx = /^\+?[\d\s-]{7,}$/;
     const rest = [], tag = [];
@@ -726,8 +727,11 @@
     const unIdx = lines.findIndex(l => /^unassigned orders\s*:?\s*\d*$/i.test(l));
     const h = lines.findIndex(l => /^new orders\s*:?\s*\d*$/i.test(l));
     if(h === -1) return { found: false, why: '"New Orders" heading not on screen', orders: [] };
+    // v2.1: the MAIN dashboard shows all branch names at the top (buttons); a BRANCH page shows only its own name
+    // (e.g. "MODA MALL"). On a branch page we still report, but only for that branch (scope), so the others stay.
     const top = lines.slice(0, unIdx !== -1 ? unIdx : h);
-    if(top.some(l => isBranchName(l))) return { found: false, why: 'single-branch page (' + top.filter(isBranchName)[0] + ') — open the main dashboard', orders: [] };
+    const names = [...new Set(top.filter(isBranchName).map(brKey))];
+    const scope = names.length === 1 ? top.filter(isBranchName)[0] : '';
     const end0 = lines.findIndex((l, i) => i > h && /^(processed orders|completed orders|unassigned orders)\s*:?\s*\d*$/i.test(l));
     const end = end0 !== -1 ? end0 : lines.length;
     const rows = []; let cur = null;
@@ -737,7 +741,7 @@
       if(ORDER_START.test(l) && !isBranchName(l)){ cur = { orderNo: l, raw: [] }; rows.push(cur); continue; }
       if(cur) cur.raw.push(l);
     }
-    return { found: true, orders: rows.map(parseNewRow) };
+    return { found: true, scope, orders: rows.map(r => parseNewRow(r, scope)) };
   }
   let reportingNew = false;
   async function reportNewOrders(){
@@ -747,7 +751,7 @@
       if(Date.now() - LOADED_AT < 8000) return;   // let the dashboard draw first
       const r = collectNewOrders();
       if(!r.found) return;
-      const body = new URLSearchParams({ action: 'reportNewOrders', automationKey: AUTOMATION_KEY, found: '1', orders: JSON.stringify(r.orders) });
+      const body = new URLSearchParams({ action: 'reportNewOrders', automationKey: AUTOMATION_KEY, found: '1', scope: r.scope || '', orders: JSON.stringify(r.orders) });
       await fetch(BRANCH_API, { method: 'POST', body });
     }catch(e){} finally { reportingNew = false; }
   }
@@ -757,7 +761,7 @@
     out.style.display = 'block';
     document.getElementById('loa-copy-btn').style.display = 'block';
     const r = collectNewOrders();
-    let text = r.found ? ('New Orders found: ' + r.orders.length + '\n\n' + r.orders.map((o, i) => (i + 1) + '. ' + o.orderNo + ' → ' + (o.branch || '(no branch)') + ' | ' + o.method + ' | ' + o.date + ' ' + o.time + ' | ' + o.sender + ' ' + o.senderPhone + ' → ' + o.receiver + ' ' + o.receiverPhone + ' | ' + o.address + ' | ' + o.price + (o.tag ? ' | tag: ' + o.tag : '')).join('\n')) : ('NOT reporting: ' + r.why);
+    let text = r.found ? ((r.scope ? 'Branch page: ' + r.scope + ' (reports this branch only)\n' : 'Main dashboard (all branches)\n') + 'New Orders found: ' + r.orders.length + '\n\n' + r.orders.map((o, i) => (i + 1) + '. ' + o.orderNo + ' → ' + (o.branch || '(no branch)') + ' | ' + o.method + ' | ' + o.date + ' ' + o.time + ' | ' + o.sender + ' ' + o.senderPhone + ' → ' + o.receiver + ' ' + o.receiverPhone + ' | ' + o.address + ' | ' + o.price + (o.tag ? ' | tag: ' + o.tag : '')).join('\n')) : ('NOT reporting: ' + r.why);
     out.textContent = text;
   });
 
