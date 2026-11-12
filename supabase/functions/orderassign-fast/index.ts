@@ -222,7 +222,10 @@ async function reportNewOrders(p: any) {
     await sbPatch('live_orders', `id=eq.${r.id}`, patch);
   }
   if (inserts.length) await sbPost('live_orders', inserts);
-  const goneIds = cur.filter((r) => r.section === 'new' && !seen.has(r.order_no)).map((r) => r.id);
+  // v2.1: a report from a single-branch page (scope) only closes orders of THAT branch
+  const sk = (b: string) => { const k = String(b || '').toLowerCase().replace(/[^a-z]/g, ''); return k === 'galali' ? 'qalali' : k; };
+  const scope = sk(T(p.scope, 40));
+  const goneIds = cur.filter((r) => r.section === 'new' && !seen.has(r.order_no) && (!scope || sk(r.branch) === scope)).map((r) => r.id);
   if (goneIds.length) await sbPatch('live_orders', `id=in.(${goneIds.join(',')})`, { section: 'gone', gone_at: now });
   // keep the table small: forget orders gone for more than 3 days
   try { await fetch(`${SB_URL}/rest/v1/live_orders?section=eq.gone&gone_at=lt.${new Date(Date.now() - 3 * 86400000).toISOString()}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); } catch (_) { /* ignore */ }

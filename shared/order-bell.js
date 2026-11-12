@@ -333,7 +333,9 @@
           return o.source === 'bleems' && seen.indexOf(String(o.shopify_id)) === -1 && (Date.now() - new Date(o.received_at).getTime()) < 15 * 60000;
         });
         var pend = shopPending(d.orders);
-        var all = seen.concat(d.orders.map(function (o) { return String(o.shopify_id); }));
+        // Bleems that arrive while a Shopify order is still ringing must NOT be marked seen yet, or their alert is lost (Nov 2026)
+        var holdBl = pend.length ? fresh.map(function (o) { return String(o.shopify_id); }) : [];
+        var all = seen.concat(d.orders.map(function (o) { return String(o.shopify_id); }).filter(function (id) { return holdBl.indexOf(id) === -1; }));
         var uniq = all.filter(function (v, i) { return all.indexOf(v) === i; });
         try { localStorage.setItem(SHOP_SEEN, JSON.stringify(uniq.slice(-100))); } catch (e) {}
         if (pend.length) shopAlarm(pend);
