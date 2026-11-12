@@ -285,6 +285,15 @@ async function getLiveOrders() {
   return { success: true, serverTime: new Date().toISOString(), unassigned, unassignedUpdated: (u && u.last_updated) || null, lastReport: lastSeen || null,
     orders: (rows || []).map(liveOut), recentlyDone: (gone || []).map(liveOut) };
 }
+// Bleems API keeps saying "Pending" after the shop fills the order on the Bleems site -> staff close it here by hand.
+async function doneLiveOrder(p: any, me: any) {
+  const id = Number(p.id);
+  if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid order.' };
+  const who = T(me && (me.full_name || me.username), 60) || 'staff';
+  const now = new Date().toISOString();
+  await sbPatch('live_orders', `id=eq.${id}&source=eq.bleems&section=eq.new`, { section: 'gone', gone_at: now, ack_at: now, ack_by: who });
+  return { success: true, by: who };
+}
 async function ackLiveOrder(p: any, me: any) {
   const id = Number(p.id);
   const who = T(me && (me.full_name || me.username), 60) || 'staff';
@@ -330,6 +339,7 @@ Deno.serve(async (req) => {
     if (action === 'reportNewOrders') { if (!viaAutomation) return json({ success: false, error: 'Automation key needed.' }); return json(await reportNewOrders(p)); }
     if (action === 'getLiveOrders') return json(await getLiveOrders());
     if (action === 'ackLiveOrder') return json(await ackLiveOrder(p, me));
+    if (action === 'doneLiveOrder') return json(await doneLiveOrder(p, me));
     if (action === 'logAssignedOrder') return json(await logAssignedOrder(p));
     if (action === 'getAssignedLog') return json(await getAssignedLog());
     if (action === 'setAutomationKey') {
