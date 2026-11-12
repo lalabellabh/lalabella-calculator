@@ -61,9 +61,13 @@
   <div class="bar">
     <select id="br"><option value="">All branches</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
     <select id="kind"><option value="">Flower + Chocolate</option><option value="flower">🌸 Flower</option><option value="chocolate">🍫 Chocolate</option></select>
+    <label style="font-size:12.5px">From <input type="date" id="from" style="font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:6px 8px"></label>
+    <label style="font-size:12.5px">To <input type="date" id="to" style="font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:6px 8px"></label>
+    <input id="q" placeholder="Search sale no., name, source…" style="font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:180px">
     <button id="ref">↻ Refresh</button>
     <span class="mode" id="modeBox" style="display:none">Stock is taken out by: <button data-mode="calc">Calc</button><button data-mode="odoo">Odoo</button></span>
   </div>
+  <div id="sum" style="font-size:12.5px;color:var(--dim);margin:0 0 8px"></div>
   <div class="card" id="list"><div class="empty">Loading…</div></div>
 </div>
 <div id="rp"></div>
@@ -101,11 +105,15 @@
     window.print();
   }
   function load(){
-    var q = new URLSearchParams({ action:'listSales', token:token(), branch:$('br').value, kind:$('kind').value, limit:'200' });
+    var q = new URLSearchParams({ action:'listSales', token:token(), branch:$('br').value, kind:$('kind').value, from:$('from').value, to:$('to').value, limit:($('from').value || $('to').value) ? '1000' : '200' });
     fetch(API + '?' + q).then(function(r){ return r.json(); }).then(function(d){
       if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
       if(admin){ $('modeBox').style.display = 'flex'; document.querySelectorAll('#modeBox button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-mode') === d.mode); }); }
+      var term = $('q').value.trim().toLowerCase();
+      d.sales = d.sales.filter(function(s){ return !term || [s.saleNo, s.ref, s.source, s.branch, s.by, s.releaseNo].concat((s.items || []).map(function(it){ return it.name; })).join(' ').toLowerCase().indexOf(term) !== -1; });
       SALES = d.sales;
+      var act = d.sales.filter(function(s){ return s.status === 'Active'; }), tot = act.reduce(function(a, s){ return a + (Number(s.total) || 0); }, 0);
+      $('sum').textContent = d.sales.length + ' sale(s)' + (($('from').value || $('to').value) ? ' · ' + ($('from').value || '…') + ' to ' + ($('to').value || 'today') : ' · latest') + ' · Total (not cancelled): ' + tot.toFixed(3) + ' BD';
       $('list').innerHTML = d.sales.length ? d.sales.map(function(s, i){
         var cx = s.status !== 'Active';
         return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' + (s.source ? '<span class="tag">' + esc(s.source) + '</span>' : '') +
@@ -126,7 +134,8 @@
     if(m){ var v = m.getAttribute('data-mode'); if(!confirm(v === 'odoo' ? 'Let Odoo take sales out of stock? The "Sold" button in the calcs will stop.' : 'Let the calcs take sales out of stock again?')) return;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'setMode', mode:v, token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); }
   });
-  $('br').onchange = load; $('kind').onchange = load; $('ref').onclick = load;
+  $('br').onchange = load; $('kind').onchange = load; $('ref').onclick = load; $('from').onchange = load; $('to').onchange = load;
+  var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(load, 350); };
   load();
 })();
 </script>

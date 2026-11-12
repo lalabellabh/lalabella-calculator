@@ -153,7 +153,11 @@ async function saveChocolateSale(p: any, u: any) {
 
 // ---------------- LIST / CANCEL ----------------
 async function listSales(p: any) {
-  let q = 'calc_sales?select=*&order=id.desc&limit=' + Math.min(300, Number(p.limit) || 100);
+  const dRx = /^\d{4}-\d{2}-\d{2}$/, from = String(p.from || ''), to = String(p.to || '');
+  let q = 'calc_sales?select=*&order=id.desc&limit=' + Math.min(dRx.test(from) || dRx.test(to) ? 1000 : 300, Number(p.limit) || 100);
+  // back-track by date (Bahrain day, UTC+3)
+  if (dRx.test(from)) q += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00+03:00');
+  if (dRx.test(to)) { const n = new Date(to + 'T00:00:00Z'); n.setUTCDate(n.getUTCDate() + 1); q += '&created_at=lt.' + encodeURIComponent(n.toISOString().slice(0, 10) + 'T00:00:00+03:00'); }
   if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
   if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
   const rows = await sbGet(q);
