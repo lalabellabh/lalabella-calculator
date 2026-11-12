@@ -74,7 +74,7 @@
       if(admin){ $('modeBox').style.display = 'flex'; document.querySelectorAll('#modeBox button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-mode') === d.mode); }); }
       $('list').innerHTML = d.sales.length ? d.sales.map(function(s){
         var cx = s.status !== 'Active';
-        return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' +
+        return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' + (s.source ? '<span class="tag">' + esc(s.source) + '</span>' : '') +
           (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
           (admin && !cx ? '<button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
           '<div class="items">' + itemText(s) + '</div>' +
