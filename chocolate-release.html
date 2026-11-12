@@ -6,7 +6,7 @@
 <script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/scanner.js"></script>
-<script src="shared/disp-guard.js?v=1"></script>
+<script src="shared/disp-guard.js?v=2"></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
@@ -585,7 +585,7 @@ body{background:
       preparedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
     document.getElementById('fDisplayPicker').innerHTML =
       '<option value="">Select a display…</option>' +
-      savedDisplays.map((d, i) => `<option value="${i}">${lbEsc(d['Display Name'])} — ${lbEsc(fmtBD(d['Total Price']))}${lbEsc(d['Created By'] ? ' · by ' + d['Created By'] : '')}</option>`).join('');
+      savedDisplays.map((d, i) => `<option value="${i}">${lbEsc(d['Display Code'] || '')} · ${lbEsc(d['Display Name'])} — ${lbEsc(fmtBD(d['Total Price']))}${lbEsc(d.Date ? ' · made ' + new Date(d.Date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '')}${lbEsc(d['Created By'] ? ' · by ' + d['Created By'] : '')}</option>`).join('');
 
     renderHistory();
   }

@@ -1385,7 +1385,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
     if(data.error){
       alert(data.error);
     } else {
-      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary() };
+      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary(), made: new Date() };
       const bbVal = document.getElementById('displayBestBefore').value || '';
       if(bbVal){ try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code:data.displayCode, value:bbVal }).toString()); }catch(e){ console.error('[Lalabella] best before not saved'); } }
       document.getElementById('dpName').textContent = displayName;
@@ -1420,6 +1420,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
       ${lastSavedDisplay.sum ? `<div class="l-price">${lastSavedDisplay.sum}</div>` : ''}
       <svg id="printDpBarcode"></svg>
       <div class="l-code">${lastSavedDisplay.code}</div>
+      <div class="l-code" style="font-size:9px">Made ${(lastSavedDisplay.made || new Date()).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}</div>
     </div>
   `;
   try{

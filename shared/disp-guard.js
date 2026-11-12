@@ -16,7 +16,8 @@
       var lines = (d.sales || []).map(function (x) { return '• SOLD in calc: ' + x.no + ' (' + x.branch + ', ' + day(x.at) + (x.by ? ', ' + x.by : '') + ')'; })
         .concat((d.releases || []).map(function (x) { return '• RELEASED: ' + x.no + ' (' + x.branch + ', ' + (x.date || '') + (x.by ? ', ' + x.by : '') + ')'; }));
       if (!lines.length) return true;
-      return confirm('⚠ ' + code + ' was already taken out of stock:\n\n' + lines.join('\n') + '\n\nUse it again? (only if this is really a second box)');
+      var mk = d.made ? '\n(' + (d.made.name || '') + ' — made ' + day(d.made.at) + (d.made.by ? ' by ' + d.made.by : '') + ')' : '';
+      return confirm('⚠ ' + code + ' was already taken out of stock:' + mk + '\n\n' + lines.join('\n') + '\n\nUse it again? (only if this is really a second box)');
     }).catch(function () { return true; });
   }
   window.LBDispGuard = { ok: ok };
