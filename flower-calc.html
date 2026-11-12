@@ -740,6 +740,8 @@
 
 
 <script src="shared/calc-sale.js?v=4"></script>
+<script src="shared/extras-pick.js?v=1"></script>
+<script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
   try{ LBCalcSale.mount({ kind:'flower', anchor: document.getElementById('shareBtn'),

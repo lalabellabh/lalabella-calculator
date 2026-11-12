@@ -208,6 +208,14 @@ Deno.serve(async (req) => {
       catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
     if (a === 'listSales') return json(await listSales(p));
+    // Extras picker: Item Inventory names only (no price — prices there are not reliable yet)
+    if (a === 'itemNames') {
+      const rows = await sbGet('item_inventory?select=item_code,item_name,size,photo_link&order=item_name.asc&limit=2000');
+      const seen: Record<string, boolean> = {}; const items: any[] = [];
+      (rows || []).forEach((r: any) => { const n = String(r.item_name || '').trim(); if (!n || seen[n.toLowerCase()]) return; seen[n.toLowerCase()] = true;
+        items.push({ code: r.item_code || '', name: n, size: r.size || '', photo: /^https:\/\/mysystemlla\.com\/[^\s"'<>]{1,200}$/.test(String(r.photo_link || '')) ? r.photo_link : '' }); });
+      return json({ success: true, items });
+    }
     if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
     if (a === 'setMode') {
       if (!admin) return json({ success: false, error: 'Admin only.' });
