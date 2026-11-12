@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Lalabella Order Assistant
 // @namespace    lalabella-order-assistant
-// @version      2.1
-// @description  v2.1 also sends the New Orders list (orders given to a branch) to the Lalabella system for the Live Orders page. SAFE MODE — watches an opened order for its delivery address, calculates the nearest branch from your Branch Config list, and shows a recommendation. Does NOT auto-click Assign. Diagnostic panel is hidden by default (Ctrl+Shift+L to reveal).
+// @version      2.2
+// @description  v2.2 also sends the New Orders list (orders given to a branch) to the Lalabella system for the Live Orders page. SAFE MODE — watches an opened order for its delivery address, calculates the nearest branch from your Branch Config list, and shows a recommendation. Does NOT auto-click Assign. Diagnostic panel is hidden by default (Ctrl+Shift+L to reveal).
 // @match        https://lalabella.web.app/*
 // @grant        none
 // ==/UserScript==
@@ -719,7 +719,10 @@
     } else if(ph.length === 1){
       o.sender = rest[ph[0] - 1] || ''; o.senderPhone = rest[ph[0]];
       o.receiver = rest[ph[0] + 1] || ''; o.address = rest.slice(ph[0] + 2).join(', ');
-    } else { o.sender = rest[0] || ''; o.receiver = rest[1] || ''; o.address = rest.slice(2).join(', '); }
+    } else if(rest.length <= 1){ o.address = rest[0] || ''; }   // branch-page card: number, time, address only
+    else { o.sender = rest[0] || ''; o.receiver = rest[1] || ''; o.address = rest.slice(2).join(', '); }
+    // several "Walk-in" cards have no number -> make each one unique with its day + time
+    if(/^walk[- ]?in$/i.test(o.orderNo)){ const d = (o.date.match(/\d{1,2}\s+[A-Za-z]{3}/) || [''])[0], t = (o.time.match(/\d{1,2}:\d{2}\s*(AM|PM)/i) || [''])[0]; o.orderNo = ('Walk-in ' + d + ' ' + t).trim(); }
     return o;
   }
   function collectNewOrders(){
@@ -732,16 +735,19 @@
     const top = lines.slice(0, unIdx !== -1 ? unIdx : h);
     const names = [...new Set(top.filter(isBranchName).map(brKey))];
     const scope = names.length === 1 ? top.filter(isBranchName)[0] : '';
-    const end0 = lines.findIndex((l, i) => i > h && /^(processed orders|completed orders|unassigned orders)\s*:?\s*\d*$/i.test(l));
-    const end = end0 !== -1 ? end0 : lines.length;
-    const rows = []; let cur = null;
-    for(let i = h + 1; i < end; i++){
+    // v2.2: also read "Processed Orders" (the branch already accepted it but it is not ready yet).
+    // Some orders are accepted within seconds and never stay in "New Orders", so they were missed.
+    const SEC = /^(new orders|processed orders|completed orders|unassigned orders)\s*:?\s*\d*$/i;
+    const rows = []; let cur = null, stage = '';
+    for(let i = h; i < lines.length; i++){
       const l = lines[i];
+      if(SEC.test(l)){ const k = l.toLowerCase(); stage = k.startsWith('new') ? 'new' : k.startsWith('processed') ? 'processed' : ''; cur = null; if(!stage && i > h) break; continue; }
+      if(!stage) continue;
       if(HEADER_WORDS.test(l) || ACTION_WORDS.test(l)) continue;
-      if(ORDER_START.test(l) && !isBranchName(l)){ cur = { orderNo: l, raw: [] }; rows.push(cur); continue; }
+      if(ORDER_START.test(l) && !isBranchName(l)){ cur = { orderNo: l, raw: [], stage }; rows.push(cur); continue; }
       if(cur) cur.raw.push(l);
     }
-    return { found: true, scope, orders: rows.map(r => parseNewRow(r, scope)) };
+    return { found: true, scope, orders: rows.map(r => Object.assign(parseNewRow(r, scope), { stage: r.stage })) };
   }
   let reportingNew = false;
   async function reportNewOrders(){
@@ -761,7 +767,7 @@
     out.style.display = 'block';
     document.getElementById('loa-copy-btn').style.display = 'block';
     const r = collectNewOrders();
-    let text = r.found ? ((r.scope ? 'Branch page: ' + r.scope + ' (reports this branch only)\n' : 'Main dashboard (all branches)\n') + 'New Orders found: ' + r.orders.length + '\n\n' + r.orders.map((o, i) => (i + 1) + '. ' + o.orderNo + ' → ' + (o.branch || '(no branch)') + ' | ' + o.method + ' | ' + o.date + ' ' + o.time + ' | ' + o.sender + ' ' + o.senderPhone + ' → ' + o.receiver + ' ' + o.receiverPhone + ' | ' + o.address + ' | ' + o.price + (o.tag ? ' | tag: ' + o.tag : '')).join('\n')) : ('NOT reporting: ' + r.why);
+    let text = r.found ? ((r.scope ? 'Branch page: ' + r.scope + ' (reports this branch only)\n' : 'Main dashboard (all branches)\n') + 'New + Processed orders found: ' + r.orders.length + '\n\n' + r.orders.map((o, i) => (i + 1) + '. [' + o.stage + '] ' + o.orderNo + ' → ' + (o.branch || '(no branch)') + ' | ' + o.method + ' | ' + o.date + ' ' + o.time + ' | ' + o.sender + ' ' + o.senderPhone + ' → ' + o.receiver + ' ' + o.receiverPhone + ' | ' + o.address + ' | ' + o.price + (o.tag ? ' | tag: ' + o.tag : '')).join('\n')) : ('NOT reporting: ' + r.why);
     out.textContent = text;
   });
 
