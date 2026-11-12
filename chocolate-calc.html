@@ -601,6 +601,10 @@
     transition:all .12s ease;
   }
   .print-btn:hover{background:var(--foil); color:var(--cacao);}
+  /* Nov 2026: A4 + Thermal side by side, Excel full width under them (phone + desktop) */
+  .print-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .print-row .print-btn{ margin:0 !important; width:100%; white-space:nowrap; padding:14px 6px; }
+  .print-row [data-lb-excel="btn"]{ grid-column:1 / -1; margin:0 !important; }
 
   .share-btn{
     width:100%;
@@ -1198,7 +1202,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         <div class="grand-total-amount" id="grandTotal">0.000 BD</div>
       </div>
 
-      <div style="display:flex;gap:8px;"><button class="print-btn" id="printA4Btn" style="flex:1">🖨️ Print A4</button><button class="print-btn" id="printBtn" style="flex:1">🧾 Thermal</button></div>
+      <div class="print-row"><button class="print-btn" id="printA4Btn" data-no-excel>🖨️ Print A4</button><button class="print-btn" id="printBtn">🧾 Thermal</button></div>
       <button class="share-btn" id="shareBtn" style="display:none;">📤 Send to WhatsApp</button>
     </div>
 
