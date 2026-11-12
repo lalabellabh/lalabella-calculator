@@ -98,7 +98,7 @@ async function saveFlowerSale(p: any, u: any) {
   const avail = await flowerAvailable(branch, names);
   const short = names.filter((n) => avail[n] < sum[n]).map((n) => ({ name: n, need: sum[n], have: avail[n] }));
   const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (Number(p.extras) || 0));
-  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
@@ -116,7 +116,7 @@ async function saveChocolateSale(p: any, u: any) {
   items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   let releaseNo = '';
   const deducted: any[] = [], short: any[] = [];
@@ -208,6 +208,18 @@ Deno.serve(async (req) => {
       catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
     if (a === 'listSales') return json(await listSales(p));
+    // Guard: was this display (DISP-…) already sold in a calc or released? (so it is not taken out of stock twice)
+    if (a === 'dispUsed') {
+      const code = String(p.code || '').toUpperCase();
+      if (!/^DISP-\d{1,8}$/.test(code)) return json({ success: false, error: 'Invalid code.' });
+      const [cs, rel] = await Promise.all([
+        sbGet(`calc_sales?select=sale_no,branch,created_at,created_by&disp_code=eq.${code}&status=eq.Active&order=id.desc&limit=5`),
+        sbGet(`chocolate_release_database?select=release_no,branch,release_date,prepared_by&remarks=ilike.*${code}*&order=id.desc&limit=50`),
+      ]);
+      const seen: Record<string, boolean> = {}; const releases: any[] = [];
+      (rel || []).forEach((r: any) => { if (seen[r.release_no]) return; seen[r.release_no] = true; releases.push({ no: r.release_no, branch: r.branch, date: r.release_date, by: r.prepared_by }); });
+      return json({ success: true, sales: (cs || []).map((r: any) => ({ no: r.sale_no, branch: r.branch, at: r.created_at, by: r.created_by })), releases });
+    }
     // Extras picker: Item Inventory names only (no price — prices there are not reliable yet)
     if (a === 'itemNames') {
       const rows = await sbGet('item_inventory?select=item_code,item_name,size,photo_link&order=item_name.asc&limit=2000');
