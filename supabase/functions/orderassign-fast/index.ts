@@ -200,7 +200,8 @@ async function getAssignedLog() {
 const T = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 function cleanLive(o: any) {
   return { orderNo: T(o && o.orderNo, 30), branch: T(o && o.branch, 40), tag: T(o && o.tag, 40), method: T(o && o.method, 20), date: T(o && o.date, 40), time: T(o && o.time, 40),
-    sender: T(o && o.sender, 60), senderPhone: T(o && o.senderPhone, 30), receiver: T(o && o.receiver, 60), receiverPhone: T(o && o.receiverPhone, 30), address: T(o && o.address, 200), price: T(o && o.price, 30) };
+    sender: T(o && o.sender, 60), senderPhone: T(o && o.senderPhone, 30), receiver: T(o && o.receiver, 60), receiverPhone: T(o && o.receiverPhone, 30), address: T(o && o.address, 200), price: T(o && o.price, 30),
+    stage: (o && o.stage) === 'processed' ? 'processed' : 'new' };
 }
 async function reportNewOrders(p: any) {
   if (String(p.found || '') !== '1') return { success: true, skipped: 'list not on screen' };
@@ -234,7 +235,7 @@ async function reportNewOrders(p: any) {
 function liveOut(r: any) {
   const d = r.details || {};
   return { id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, section: r.section, assignedAt: r.assigned_at, goneAt: r.gone_at, ackAt: r.ack_at, ackBy: r.ack_by || '',
-    tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '' };
+    tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '', stage: d.stage || 'new' };
 }
 async function getLiveOrders() {
   const since = new Date(Date.now() - 6 * 3600000).toISOString();

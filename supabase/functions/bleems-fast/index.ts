@@ -82,7 +82,8 @@ async function pickBranch(addr: string) {
   }
   return { name: '', source: '' };
 }
-async function pushAlert(orders: { orderNo: string; branch: string; address: string }[]) {
+async function pushAlert(orders0: { orderNo: string; branch: string; address: string }[]) {
+  const orders = orders0.map((o) => ({ ...o, source: 'bleems' }));
   const cfg = await rest('GET', 'push_config?select=internal_key&id=eq.1&limit=1');
   const key = cfg && cfg[0] && cfg[0].internal_key;
   if (!key) return;

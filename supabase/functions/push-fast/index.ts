@@ -149,11 +149,13 @@ Deno.serve(async (req) => {
         if (o.source === 'shopify') return no + (o.total ? ' · BHD ' + clip(o.total, 12) : '');
         return `${no} ${o.branch ? '➜ ' + clip(o.branch, 40) : '⚠ For manual assign'}`;
       });
+      const allBl = orders.every((o: any) => o.source === 'bleems');   // Nov 2026: say clearly it is Bleems
       const title = allShop
         ? (orders.length === 1 ? 'New Shopify order' : `${orders.length} new Shopify orders`)
+        : allBl ? (orders.length === 1 ? '🌸 New Bleems order' : `🌸 ${orders.length} new Bleems orders`)
         : (orders.length === 1 ? 'New order to assign' : `${orders.length} new orders to assign`);
       const pic = String((orders.find((o: any) => /^https:\/\/cdn\.shopify\.com\/[^\s"'<>]{1,400}$/.test(String(o.thumb || ''))) || {}).thumb || '');
-      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html?bell=1', tag: allShop ? 'orders-shopify' : 'orders', icon: pic, image: pic, kind: 'order' });
+      const r = await sendTo(subs, { title, body: clip(lines.join(' · '), 160), url: 'index.html?bell=1', tag: allShop ? 'orders-shopify' : allBl ? 'orders-bleems' : 'orders', icon: pic, image: pic, kind: 'order' });
       return json({ success: true, ...r });
     }
 
