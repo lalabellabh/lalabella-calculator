@@ -60,7 +60,7 @@
     var html = un.slice(0, 3).map(function (o) { return '<div class="r n"><b style="color:#d32f2f">' + esc(o.orderNo) + '</b> <span class="m">unassigned</span><div class="m">' + esc(o.address || 'no address') + (o.branch ? ' → ' + esc(o.branch) : '') + '</div></div>'; }).join('') +
       rows.slice(0, 6).map(function (o) {
         var n = !o.ackAt;
-        return '<div class="r' + (n ? ' n' : '') + '"><b>' + esc(o.orderNo) + '</b>' + (n ? '<span class="bd">NEW</span>' : '') + (all ? ' <span class="m">· ' + esc(o.branch) + '</span>' : '') +
+        return '<div class="r' + (n ? ' n' : '') + '"><b>' + (o.source === 'bleems' ? '🌸 ' : '') + esc(o.orderNo) + '</b>' + (n ? '<span class="bd">NEW</span>' : '') + (all ? ' <span class="m">· ' + esc(o.branch) + '</span>' : '') +
           '<div>' + esc(o.receiver || o.sender || '') + (o.price ? ' · <b style="font-size:12.5px">' + esc(o.price) + '</b>' : '') + '</div>' +
           '<div class="m">' + esc(o.method || '') + ' · ' + esc(o.date || '') + ' ' + esc(o.time || '') + ' · given ' + ago(o.assignedAt) + ' ago</div>' +
           (n ? '<button class="ok" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<div class="m" style="color:#2f7a4f">✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') + '</div>') + '</div>';

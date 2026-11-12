@@ -169,7 +169,8 @@ async function getUnassignedStatus(isAdmin: boolean) {
   const total = appr.reduce((s: number, r: any) => s + (r.kind === 'choc' ? Number(r.n) || 0 : 1), 0);
   // Live Orders (Nov 2026): orders just given to a branch that nobody marked "seen" yet -> gift alarm in the bell.
   let newAssigned: any[] = [];
-  try { newAssigned = ((await sbGet('live_orders', 'select=id,order_no,branch,assigned_at&section=eq.new&ack_at=is.null&order=assigned_at.desc&limit=20')) || []).map((r: any) => ({ id: r.id, orderNo: r.order_no, branch: r.branch, assignedAt: r.assigned_at })); } catch (e) { console.error('live orders', e); }
+  await syncBleemsLive();
+  try { newAssigned = ((await sbGet('live_orders', 'select=id,source,order_no,branch,assigned_at&section=eq.new&ack_at=is.null&order=assigned_at.desc&limit=20')) || []).map((r: any) => ({ id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, assignedAt: r.assigned_at })); } catch (e) { console.error('live orders', e); }
   const extra = { pendingApprovals: total, approvalsDetail: appr, newAssigned };
   if (!rows.length) return { count: 0, ordersDetail: [], ...extra };
   const row = rows[0];
@@ -237,7 +238,36 @@ function liveOut(r: any) {
   return { id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, section: r.section, assignedAt: r.assigned_at, goneAt: r.gone_at, ackAt: r.ack_at, ackBy: r.ack_by || '',
     tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '', stage: d.stage || 'new' };
 }
+// Bleems orders (bleems-fast) also go into Live Orders, per branch, so the branch sees them with NEW + "Nakita ko".
+// Throttled: runs at most every 20 s, from getLiveOrders / getUnassignedStatus.
+let bleemsSyncAt = 0;
+async function syncBleemsLive() {
+  if (Date.now() - bleemsSyncAt < 20000) return; bleemsSyncAt = Date.now();
+  try {
+    const since = new Date(Date.now() - 3 * 86400000).toISOString();
+    const [bl, cur] = await Promise.all([
+      sbGet('bleems_orders', `select=order_no,branch,status,recipient,recipient_phone,customer,phone,address,total,delivery_date,delivery_time,delivery_type&received_at=gte.${since}&limit=100`),
+      sbGet('live_orders', 'select=id,order_no,branch,section&source=eq.bleems'),
+    ]);
+    const now = new Date().toISOString();
+    const done = (st: string) => /complete|cancel|reject|deliver|declin/i.test(String(st || ''));
+    const byNo: Record<string, any> = {}; (cur || []).forEach((r: any) => { byNo[r.order_no] = r; });
+    const ins: any[] = [];
+    for (const b of (bl || [])) {
+      const r = byNo[b.order_no];
+      const d = cleanLive({ orderNo: b.order_no, branch: b.branch, tag: 'Bleems', method: b.delivery_type || 'Delivery', date: b.delivery_date, time: b.delivery_time,
+        sender: b.customer, senderPhone: b.phone, receiver: b.recipient, receiverPhone: b.recipient_phone, address: b.address, price: b.total ? b.total + ' BHD' : '' });
+      if (done(b.status)) { if (r && r.section === 'new') await sbPatch('live_orders', `id=eq.${r.id}`, { section: 'gone', gone_at: now }); continue; }
+      if (!r) { ins.push({ source: 'bleems', order_no: b.order_no, branch: b.branch || '', section: 'new', details: d, first_seen_at: now, assigned_at: now, last_seen_at: now }); continue; }
+      const patch: any = { details: d, last_seen_at: now };
+      if (String(r.branch || '') !== String(b.branch || '')) { patch.branch = b.branch || ''; patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }
+      await sbPatch('live_orders', `id=eq.${r.id}`, patch);
+    }
+    if (ins.length) await sbPost('live_orders', ins);
+  } catch (e) { console.error('bleems live', e); }
+}
 async function getLiveOrders() {
+  await syncBleemsLive();
   const since = new Date(Date.now() - 6 * 3600000).toISOString();
   const [rows, gone, st] = await Promise.all([
     sbGet('live_orders', 'select=*&section=eq.new&order=assigned_at.desc&limit=200'),
