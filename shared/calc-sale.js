@@ -8,6 +8,7 @@
   'use strict';
   var API = (window.LB_CONFIG && LB_CONFIG.CALC_SALE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast';
   var BR = ['ModaMall', 'Hamala', 'Galali'];
+  var SOURCES = [['Walk-in', '🚶'], ['Pick-up', '🛍️'], ['Website order', '🌐'], ['WhatsApp', '💬'], ['Corporate', '🏢'], ['Others', '📝']];
   function token() { try { return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; } catch (e) { return ''; } }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function brKey(b) { b = String(b || '').toLowerCase().replace(/[^a-z]/g, ''); return b === 'qalali' ? 'galali' : b; }
@@ -26,7 +27,8 @@
     var ownBranch = !o.branchSelect;
     box.innerHTML = '<h4>✓ Sold — take out of stock</h4><div class="s">Press only when the customer is <b>sure</b> and it is sold. For a quotation or if they are only looking, just <b>Print</b> — nothing leaves the stock.</div>' +
       '<div class="row">' + (ownBranch ? '<select data-br><option value="">— branch —</option>' + BR.map(function (b) { return '<option>' + b + '</option>'; }).join('') + '</select>' : '') +
-      '<input data-ref placeholder="Invoice no. or customer name / phone" maxlength="60"><button type="button" data-walk style="border:1px solid #b9d6c4;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:12.5px;cursor:pointer">Walk-in</button></div>' +
+      '<select data-src style="flex:0 1 170px"><option value="">Source — pick —</option>' + SOURCES.map(function (x) { return '<option value="' + x[0] + '">' + x[1] + ' ' + x[0] + '</option>'; }).join('') + '</select>' +
+      '<input data-ref placeholder="Invoice no. or customer name / phone" maxlength="60"></div>' +
       '<button class="go" type="button">✓ Sold</button><div class="res"></div>';
     o.anchor.parentNode.insertBefore(box, o.anchor.nextSibling);
     var brSel = o.branchSelect || box.querySelector('[data-br]'), btn = box.querySelector('.go'), res = box.querySelector('.res');
@@ -35,7 +37,7 @@
     function pick(v) { if (!v || brSel.value) return; for (var i = 0; i < brSel.options.length; i++) { if (brKey(brSel.options[i].value) === brKey(v)) { brSel.value = brSel.options[i].value; return; } } }
     pick(saved);
     brSel.addEventListener('change', function () { ls('lbCalcSaleBranch', brSel.value); });
-    box.querySelector('[data-walk]').addEventListener('click', function () { box.querySelector('[data-ref]').value = 'Walk-in'; });
+    var srcSel = box.querySelector('[data-src]');
     var lastSig = '', lastNo = '';
     fetch(API + '?action=getMode&token=' + encodeURIComponent(token())).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.success) return;
@@ -46,21 +48,23 @@
     btn.addEventListener('click', function () {
       var g = o.get() || {}, items = g.items || [];
       var branch = brSel.value;
-      var g0 = o.get() || {}; var refVal = (box.querySelector('[data-ref]').value || '').trim() || String(g0.customer || '').trim() || 'Walk-in';
+      var src = srcSel.value;
+      var g0 = o.get() || {}; var refVal = (box.querySelector('[data-ref]').value || '').trim() || String(g0.customer || '').trim() || src;
       if (!branch) { alert('Choose the branch first.'); brSel.focus(); return; }
+      if (!src) { alert('Choose the source first (Walk-in, Pick-up, Website order, WhatsApp, Corporate or Others).'); srcSel.focus(); return; }
       if (!items.length) { alert('The list is empty.'); return; }
       var sig = JSON.stringify([branch, items]);
       if (sig === lastSig && !confirm('This same list was already sold (' + lastNo + '). Take it out of stock again?')) return;
       var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
-      if (!confirm('Sold to: ' + refVal + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
+      if (!confirm('Source: ' + src + (refVal !== src ? '\nSold to: ' + refVal : '') + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
       btn.disabled = true; btn.textContent = 'Saving…'; res.innerHTML = '';
-      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), branch: branch, ref: refVal, customer: g.customer || (refVal === 'Walk-in' ? 'Walk-in' : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
+      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), branch: branch, source: src, ref: refVal, customer: g.customer || (refVal === src ? src : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
       fetch(API, { method: 'POST', body: body }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
         lastSig = sig; lastNo = d.saleNo;
         var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': needed ' + esc(s.need) + ', the system has only ' + esc(s.have) + '</div>'; }).join('');
-        res.innerHTML = '<div class="ok">✓ Sold to ' + esc(refVal) + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
-        box.querySelector('[data-ref]').value = '';
+        res.innerHTML = '<div class="ok">✓ ' + esc(src) + (refVal !== src ? ' · sold to ' + esc(refVal) : '') + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
+        box.querySelector('[data-ref]').value = ''; srcSel.value = '';
       }).catch(function () { res.innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
         .then(function () { btn.disabled = false; btn.textContent = '✓ Sold'; });
     });

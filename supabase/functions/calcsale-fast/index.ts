@@ -98,7 +98,7 @@ async function saveFlowerSale(p: any, u: any) {
   const avail = await flowerAvailable(branch, names);
   const short = names.filter((n) => avail[n] < sum[n]).map((n) => ({ name: n, need: sum[n], have: avail[n] }));
   const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (Number(p.extras) || 0));
-  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u) }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u) }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
@@ -116,7 +116,7 @@ async function saveChocolateSale(p: any, u: any) {
   items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u) }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u) }]))[0];
   const saleNo = await nextSaleNo(head.id);
   let releaseNo = '';
   const deducted: any[] = [], short: any[] = [];
@@ -137,7 +137,7 @@ async function saveChocolateSale(p: any, u: any) {
       if (q <= 0) continue;
       if (!releaseNo) { const n = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Release No', start_at: 1 }); releaseNo = 'REL-' + String(n).padStart(6, '0'); }
       const price = Number(kgU ? b.price_per_kg : (b.price_per_piece ?? b.price_per_kg)) || 0;
-      await sbPost('chocolate_release_database', [{ release_no: releaseNo, transaction_type: 'Sale (Calc)', branch, customer_department: txt(p.customer, 80) || 'Calc sale', chocolate_name: b.chocolate_name, product_code: b.product_code || '', batch_no: b.batch_no, qty_release: q, unit: b.unit, price, total: r3(q * price), remarks: saleNo + (p.ref ? ' · ' + txt(p.ref, 60) : ''), prepared_by: who(u), release_date: day, database_id: String(b.id), to_branch: '' }]);
+      await sbPost('chocolate_release_database', [{ release_no: releaseNo, transaction_type: 'Sale (Calc)', branch, customer_department: txt(p.customer, 80) || 'Calc sale', chocolate_name: b.chocolate_name, product_code: b.product_code || '', batch_no: b.batch_no, qty_release: q, unit: b.unit, price, total: r3(q * price), remarks: saleNo + (p.source ? ' · ' + txt(p.source, 30) : '') + (p.ref ? ' · ' + txt(p.ref, 60) : ''), prepared_by: who(u), release_date: day, database_id: String(b.id), to_branch: '' }]);
       await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) - q), qty_used: r3(Number(b.qty_used || 0) + q) });
       deducted.push({ name: b.chocolate_name, id: b.id, batch: b.batch_no, qty: q, unit: b.unit });
       if (kgU || gU) { const g = kgU ? q * 1000 : q; leftG = (leftG ?? 0) - g; if (leftP != null && grams && pcs) leftP = leftG * pcs / grams; }
@@ -157,7 +157,7 @@ async function listSales(p: any) {
   if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
   if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
   const rows = await sbGet(q);
-  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at })) };
+  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at })) };
 }
 async function cancelSale(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
