@@ -20,7 +20,7 @@ const STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024;
 // Every Edge Function of the system (this one is checked by answering, so it is left out).
 const FUNCTIONS = ['chat', 'chatx', 'auth-fast', 'applogin-fast', 'sessionkeep-fast', 'profile-fast', 'brain-fast', 'brain-autolog', 'chocolate-fast', 'chocolate-bb', 'chocphoto-fast', 'flower-fast', 'flowerfix-fast', 'item-fast',
   'schedule-fast', 'pettycash-fast', 'orderassign-fast', 'notes-fast', 'orderform-fast', 'nova-fast',
-  'backup-fast', 'push-fast', 'widget-fast', 'attendance-fast', 'delivery-fast', 'visitor-fast', 'bleems-fast', 'shopify-orders-fast', 'audit-fast', 'odoo-fast', 'branch-start', 'datacheck-fast'];
+  'backup-fast', 'push-fast', 'widget-fast', 'attendance-fast', 'delivery-fast', 'visitor-fast', 'bleems-fast', 'shopify-orders-fast', 'audit-fast', 'odoo-fast', 'branch-start', 'datacheck-fast', 'calcsale-fast'];
 
 const APP_VERSION_URL = 'https://mysystemlla.com/downloads/app-version.json';
 
