@@ -63,7 +63,7 @@
         return '<div class="r' + (n ? ' n' : '') + '"><b>' + (o.source === 'bleems' ? '🌸 ' : '') + esc(o.orderNo) + '</b>' + (n ? '<span class="bd">NEW</span>' : '') + (all ? ' <span class="m">· ' + esc(o.branch) + '</span>' : '') +
           '<div>' + esc(o.receiver || o.sender || '') + (o.price ? ' · <b style="font-size:12.5px">' + esc(o.price) + '</b>' : '') + '</div>' +
           '<div class="m">' + esc(o.method || '') + ' · ' + esc(o.date || '') + ' ' + esc(o.time || '') + ' · given ' + ago(o.assignedAt) + ' ago</div>' +
-          (n ? '<button class="ok" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<div class="m" style="color:#2f7a4f">✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') + '</div>') + '</div>';
+          (n ? '<button class="ok" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<div class="m" style="color:#2f7a4f">' + (o.ackBy === 'Accepted on web' ? '✓ Accepted on web' : '✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '')) + '</div>') + '</div>';
       }).join('');
     box.querySelector('[data-body]').innerHTML = html ? '<div class="rows">' + html + '</div>' + (rows.length > 6 ? '<div class="e">+ ' + (rows.length - 6) + ' more — open Live Orders</div>' : '') : '<div class="e">No orders for ' + esc(all ? 'any branch' : br) + ' right now.</div>';
   }
