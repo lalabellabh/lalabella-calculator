@@ -399,7 +399,12 @@ body{background:
     <div style="font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;">
       Pick a saved display and its chocolates will be added to the cart below automatically, matched to available batches.
     </div>
-    <label>Saved Display</label>
+    <label>Scan display barcode (DISP-…)</label>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="text" id="fDisplayScan" placeholder="Scan with the gun, or type DISP-00012 + Enter" autocomplete="off" style="flex:1">
+      <button class="scan-btn" id="displayScanBtn" type="button" title="Scan with the camera">📷</button>
+    </div>
+    <label>…or pick a saved display</label>
     <select id="fDisplayPicker">
       <option value="">Select a display…</option>
     </select>
@@ -1215,6 +1220,20 @@ body{background:
       alert(LBScan.message(e));
       stopScanner();
     }
+  });
+
+  // Nov 2026: Release a Display — scan the DISP barcode (camera on the phone, or a scanner gun = typed code + Enter)
+  document.getElementById('displayScanBtn').addEventListener('click', ()=> document.getElementById('scanBtn').click());
+  document.getElementById('fDisplayScan').addEventListener('keydown', e=>{
+    if(e.key !== 'Enter') return; e.preventDefault();
+    const v = e.target.value.trim(); if(!v) return;
+    if(!/^DISP-\d+$/i.test(v)){ alert('That is not a display barcode (DISP-…).'); return; }
+    e.target.value = ''; handleScanResult(v);
+  });
+  // a scanner gun in the chocolate search box: code + Enter
+  document.getElementById('fSearch').addEventListener('keydown', e=>{
+    if(e.key !== 'Enter') return; const v = e.target.value.trim();
+    if(/^DISP-\d+$/i.test(v) || /^ARR-/i.test(v) || items.some(it => String(it['Product Code']).trim() === v)){ e.preventDefault(); handleScanResult(v); }
   });
 
   function stopScanner(){
