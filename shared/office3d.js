@@ -35,6 +35,7 @@
   var ST_COL = { working:'#4fb3ff', ok:'#5be29a', warn:'#ffc24f', alert:'#ff6b6b' };
 
   var T = null, renderer, scene, camera, clock, W = 1, H = 1;
+  var LAMPS = [], WINS = [], SKY = { hemi:null, sun:null, fill:null, rain:null, wx:null, flash:0 };
   var target = null, viewSize = 26, follow = '', AG = {}, ROOMOBJ = {}, LED = [], SCOREBOARD = null, DATA = null, LOADED_AT = 0, NEXT_AT = 0;
   var lastSay = {}, lastChange = {}, roomTags = [], firstData = true;
 
@@ -67,7 +68,7 @@
     box(.25, wh, R.d, wc, left, wh / 2, R.z + R.d / 2, g); box(.3, .12, R.d, trim, left, wh + .06, R.z + R.d / 2, g);
     // windows on the back wall
     for(var i = 0; i < Math.floor(R.w / 4); i++){ var wx = R.x + 2 + i * 4; if(R.z !== 0 && Math.abs(wx - (R.x + R.w / 2)) < 1.4) continue;
-      box(1.2, 1, .05, mat('#bfe3ff', { e:'#7fb8e8', ei:.35, r:.2 }), wx, 1.45, back + .14, g); box(1.3, .08, .08, trim, wx, .93, back + .17, g); box(.06, 1, .06, '#f5ebd8', wx, 1.45, back + .17, g); }
+      var wm = mat('#bfe3ff', { e:'#7fb8e8', ei:.35, r:.2 }); WINS.push(wm); box(1.2, 1, .05, wm, wx, 1.45, back + .14, g); box(1.3, .08, .08, trim, wx, .93, back + .17, g); box(.06, 1, .06, '#f5ebd8', wx, 1.45, back + .17, g); }
     // round rug per desk
     R.slots = [];
     var n = R.agents.length, cols = n >= 3 ? 2 : n, rows = Math.ceil(n / cols);
@@ -78,7 +79,7 @@
     return g;
   }
   function plant(x, z, s, g){ s = s || 1; cyl(.22 * s, .17 * s, .35 * s, '#b4593a', x, .17 * s, z, g); ball(.32 * s, '#4f9a3a', x, .55 * s, z, g); ball(.22 * s, '#62b048', x + .12 * s, .78 * s, z - .05, g); }
-  function lamp(x, z, g){ cyl(.03, .03, 1.3, '#3a2a1a', x, .65, z, g, 6); var sh = cyl(.18, .28, .3, mat('#fff1c9', { e:'#ffd27a', ei:.9 }), x, 1.35, z, g); sh.castShadow = false; }
+  function lamp(x, z, g){ cyl(.03, .03, 1.3, '#3a2a1a', x, .65, z, g, 6); var lm = mat('#fff1c9', { e:'#ffd27a', ei:.9 }); LAMPS.push(lm); var sh = cyl(.18, .28, .3, lm, x, 1.35, z, g); sh.castShadow = false; }
   function shelf(x, z, g, rot){ var s = new T.Group(); s.position.set(x, 0, z); s.rotation.y = rot || 0; g.add(s); box(1.4, 1.9, .4, '#6b4226', 0, .95, 0, s);
     var cols = ['#e05a5a','#5a8be0','#e0c35a','#6bc26b','#a77bf0','#f0a35a']; for(var r = 0; r < 3; r++) for(var b = 0; b < 6; b++) box(.16, .38, .3, cols[(r * 3 + b) % 6], -.5 + b * .2, .35 + r * .55, .06, s); }
   function buildDecor(){
@@ -135,11 +136,15 @@
       s.lines.forEach(function(segs, i){ segs.forEach(function(sg){ g.fillStyle = sg[2]; g.fillRect(sg[0], 17 + i * 10, sg[1], 6); }); });
       if(Math.floor(t * 3) % 2){ g.fillStyle = '#ffffff'; g.fillRect(6, 17 + s.lines.length * 10, 7, 6); }
     } else if(st === 'warn'){
-      g.fillStyle = '#ffc24f'; g.font = 'bold 40px sans-serif'; g.fillText('!', 72, 64); g.font = '11px monospace'; g.fillText('please check', 40, 86);
+      g.fillStyle = (Math.floor(t * 2) % 2) ? '#ffc24f' : '#c98a1a'; g.font = 'bold 40px sans-serif'; g.fillText('!', 72, 64); g.font = '11px monospace'; g.fillText('please check', 40, 86);
     } else {
       // idle: a small live chart
-      for(var i = 0; i < 7; i++){ var bh = 12 + ((Math.sin(i * 1.7 + a.seed) + 1) * 22); g.fillStyle = i === 6 ? '#5be29a' : '#4fb3ff'; g.fillRect(14 + i * 19, 90 - bh, 12, bh); }
+      // Nov 2026: the chart moves (bars breathe, a line scrolls, a dot blinks) so the screen never looks frozen
+      for(var i = 0; i < 7; i++){ var bh = 10 + ((Math.sin(i * 1.7 + a.seed + t * 1.6) + 1) * 18) + Math.sin(t * 4.3 + i) * 3; g.fillStyle = i === 6 ? '#5be29a' : '#4fb3ff'; g.fillRect(14 + i * 19, 92 - bh, 12, bh); }
+      g.strokeStyle = '#ffd24a'; g.lineWidth = 2; g.beginPath();
+      for(var px = 0; px <= 150; px += 6){ var py = 46 + Math.sin(px * .08 + t * 2.4 + a.seed) * 9 + Math.sin(px * .21 - t * 1.3) * 4; if(px) g.lineTo(5 + px, py); else g.moveTo(5, py); } g.stroke();
       g.fillStyle = '#9a90b8'; g.font = '9px monospace'; g.fillText('all good', 6, 24);
+      if(Math.floor(t * 2) % 2){ g.fillStyle = '#5be29a'; g.beginPath(); g.arc(150, 21, 3, 0, 7); g.fill(); }
     }
     s.t.needsUpdate = true;
   }
@@ -184,10 +189,11 @@
     stage.appendChild(renderer.domElement);
     scene = new T.Scene(); clock = new T.Clock();
     camera = new T.OrthographicCamera(-1, 1, 1, -1, .1, 400); target = new T.Vector3(17, 0, 10);
-    scene.add(new T.HemisphereLight('#fff4e0', '#5a3a6a', .75));
+    var hemi = new T.HemisphereLight('#fff4e0', '#5a3a6a', .75); scene.add(hemi); SKY.hemi = hemi;
     var sun = new T.DirectionalLight('#ffe2b8', .95); sun.position.set(-14, 30, 18); sun.target.position.set(17, 0, 10); sun.castShadow = true; sun.shadow.mapSize.set(innerWidth < 700 ? 1024 : 2048, innerWidth < 700 ? 1024 : 2048);
     var sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 22; sc.bottom = -22; sc.near = 1; sc.far = 90; sun.shadow.bias = -.0008; scene.add(sun); scene.add(sun.target);
     var fill = new T.PointLight('#ffb36b', .35, 60); fill.position.set(17, 8, 24); scene.add(fill);
+    SKY.sun = sun; SKY.fill = fill; buildRain();
     ROOMS.forEach(buildRoom); buildDecor();
     ROOMS.forEach(function(R){
       R.agents.forEach(function(k, i){ var s = R.slots[i], a = buildAgent(k); a.room = R; a.desk = buildDesk(k, s[0], s[1], k === 'boss'); a.desk.rug.material.color.set(R.rug);
@@ -404,6 +410,7 @@
       a.desk.ring.scale.setScalar(a.st === 'alert' ? 1 + Math.sin(t * 6) * .12 : 1); });
     scrT += dt; if(scrT > .12){ scrT = 0; Object.keys(AG).forEach(function(k){ var a = AG[k]; var near = !follow || follow === k || camera.zoom < 2.5; if(near) drawScreen(a, a.st, t); }); }
     LED.forEach(function(l, i){ l.visible = Math.sin(t * (3 + i % 4) + i) > -.3; });
+    stepRain(dt);
     if(follow && AG[follow]){ targetGoal = AG[follow].pos.clone().add(new T.Vector3(0, .7, -.3));
       if(root.classList.contains('dopen')){ var pw = Math.min(320, W * .86) / 2; targetGoal.addScaledVector(new T.Vector3(1, 0, -1).normalize(), pw * viewSize / H / camera.zoom); } }
     if(targetGoal) target.lerp(targetGoal, Math.min(1, dt * 4));
@@ -419,6 +426,71 @@
   }
   setInterval(function(){ if(!root.offsetWidth) return; liveTick();
     var c = root.querySelector('.o3-clock'); if(c){ var d = new Date(Date.now() + 3 * 3600000); c.textContent = String(d.getUTCHours() % 12 || 12).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ':' + String(d.getUTCSeconds()).padStart(2, '0') + ' ' + (d.getUTCHours() < 12 ? 'AM' : 'PM'); } }, 1000);
+
+
+  // ---------- Nov 2026: real time of day (Bahrain) + live weather (Open-Meteo, free, no key) ----------
+  var WX = { code:-1, temp:null, isDay:null, cloud:0, at:0 };
+  function buildRain(){
+    var N = 700, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
+    for(var i = 0; i < N; i++){ var x = -3 + Math.random() * 40, y = Math.random() * 16, z = -3 + Math.random() * 27; pos.set([x, y, z, x - .05, y - .55, z + .05], i * 6); }
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    var rain = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#a9c8ff', transparent:true, opacity:.55 })); rain.visible = false; rain.frustumCulled = false; scene.add(rain); SKY.rain = rain;
+  }
+  function stepRain(dt){
+    var r = SKY.rain; if(!r || !r.visible) return;
+    var p = r.geometry.attributes.position.array, sp = (WX.code >= 95 ? 24 : WX.code >= 63 ? 20 : 14) * dt;
+    for(var i = 0; i < p.length; i += 6){ p[i + 1] -= sp; p[i + 4] -= sp; p[i] -= sp * .08; p[i + 3] -= sp * .08;
+      if(p[i + 4] < 0){ var x = -3 + Math.random() * 40, y = 13 + Math.random() * 4, z = -3 + Math.random() * 27; p[i] = x; p[i + 1] = y; p[i + 2] = z; p[i + 3] = x - .05; p[i + 4] = y - .55; p[i + 5] = z + .05; } }
+    r.geometry.attributes.position.needsUpdate = true;
+    if(WX.code >= 95){ SKY.flash = Math.max(0, SKY.flash - dt * 3); if(Math.random() < dt * .08) SKY.flash = 1; if(SKY.hemi) SKY.hemi.intensity = SKY.baseHemi + SKY.flash * 1.4; }
+  }
+  function wxInfo(c){
+    if(c < 0) return ['', ''];
+    if(c === 0) return ['clear', 'Clear']; if(c <= 2) return ['part', 'Partly cloudy']; if(c === 3) return ['cloud', 'Cloudy'];
+    if(c === 45 || c === 48) return ['fog', 'Foggy / hazy']; if(c >= 51 && c <= 57) return ['drizzle', 'Drizzle'];
+    if((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return ['rain', 'Rain']; if(c >= 71 && c <= 77) return ['cloud', 'Cold']; if(c >= 95) return ['storm', 'Thunderstorm'];
+    return ['cloud', 'Cloudy'];
+  }
+  function lerpC(a, b, f){ return new T.Color(a).lerp(new T.Color(b), Math.max(0, Math.min(1, f))); }
+  function applySky(){
+    if(!T || !SKY.hemi) return;
+    var d = new Date(Date.now() + 3 * 3600000), h = SKY.forceHour != null ? SKY.forceHour : d.getUTCHours() + d.getUTCMinutes() / 60;
+    var rise = 6, set = 17;                                            // Bahrain, roughly all year
+    var day = h <= rise - .7 || h >= set + .9 ? 0 : h < rise + .8 ? (h - (rise - .7)) / 1.5 : h > set - .6 ? 1 - (h - (set - .6)) / 1.5 : 1;
+    day = Math.max(0, Math.min(1, day));
+    var gold = Math.max(0, 1 - Math.min(Math.abs(h - rise), Math.abs(h - set)) / 1.2);   // sunrise / sunset glow
+    var kind = wxInfo(WX.code)[0], wet = kind === 'rain' || kind === 'storm' || kind === 'drizzle';
+    var cloud = kind === 'clear' ? 0 : kind === 'part' ? .25 : kind === 'fog' ? .5 : wet ? .75 : kind === 'storm' ? .9 : kind ? .55 : 0;
+    var hemi = SKY.hemi, sun = SKY.sun, fill = SKY.fill;
+    SKY.baseHemi = .28 + .5 * day * (1 - .35 * cloud); hemi.intensity = SKY.baseHemi;
+    hemi.color.copy(lerpC('#7d8fd6', '#fff4e0', day)); hemi.groundColor.copy(lerpC('#1a1432', '#5a3a6a', day));
+    sun.intensity = .14 + .82 * day * (1 - .6 * cloud);
+    var sc = lerpC('#9db4ff', '#ffe2b8', day); sc.lerp(new T.Color('#ff9a5a'), gold * .7 * (1 - cloud)); sun.color.copy(sc);
+    fill.intensity = .35 + .65 * (1 - day);
+    LAMPS.forEach(function(m){ m.emissiveIntensity = .5 + 1.6 * (1 - day) + .4 * cloud; });
+    var wc = lerpC('#1c2456', '#bfe3ff', day); wc.lerp(new T.Color('#ffb37a'), gold * .6); wc.lerp(new T.Color('#8a94a8'), cloud * .5 * day);
+    WINS.forEach(function(m){ m.color.copy(wc); m.emissive.copy(lerpC('#2c3a8a', '#7fb8e8', day)); m.emissiveIntensity = .3 + .2 * (1 - day); });
+    // the sky behind the office
+    var top = lerpC('#070a1e', '#6fa8dc', day), bot = lerpC('#1a1236', '#3a2a6a', day);
+    top.lerp(new T.Color('#ff9a6a'), gold * .55); top.lerp(new T.Color('#5a6070'), cloud * .55); bot.lerp(new T.Color('#2a2a3a'), cloud * .4);
+    stage.style.background = 'linear-gradient(180deg,#' + top.getHexString() + ',#' + bot.getHexString() + ')';
+    if(SKY.rain) SKY.rain.visible = wet;
+    var chip = root.querySelector('.o3-wx');
+    if(!chip){ var tp = root.querySelector('.o3-top'); if(tp){ chip = document.createElement('span'); chip.className = 'o3-live-pill o3-wx'; tp.appendChild(chip); } }
+    if(chip){
+      var ph = day > .6 ? (gold > .4 ? (h < 12 ? '🌅 Morning' : '🌇 Sunset') : h < 12 ? '☀️ Morning' : '☀️ Afternoon') : day > .05 ? (h < 12 ? '🌅 Sunrise' : '🌇 Sunset') : '🌙 Night';
+      var ic = { clear:day > .3 ? '☀️' : '🌙', part:'⛅', cloud:'☁️', fog:'🌫️', drizzle:'🌦️', rain:'🌧️', storm:'⛈️' }[kind] || '';
+      chip.textContent = ph + (WX.code >= 0 ? ' · ' + ic + ' ' + (WX.temp != null ? Math.round(WX.temp) + '°C ' : '') + wxInfo(WX.code)[1] : '');
+      chip.title = 'Bahrain — real time and weather (Open-Meteo)';
+    }
+  }
+  function loadWeather(){
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=26.22&longitude=50.58&current=temperature_2m,weather_code,is_day,cloud_cover&timezone=Asia%2FBahrain')
+      .then(function(r){ return r.json(); }).then(function(j){ var c = j && j.current; if(!c) return; WX.code = Number(c.weather_code); WX.temp = c.temperature_2m; WX.isDay = c.is_day; WX.at = Date.now(); applySky(); }).catch(function(){});
+  }
+  setTimeout(function(){ applySky(); loadWeather(); }, 1500);
+  setInterval(applySky, 60000); setInterval(loadWeather, 15 * 60000);
+  window.LBOfficeSky = { test:function(code, hour){ if(code != null) WX.code = code; SKY.forceHour = hour; applySky(); } };   // console preview only
 
   // ---------- public API ----------
   window.LBOffice3D = {
