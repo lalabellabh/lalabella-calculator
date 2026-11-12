@@ -2439,9 +2439,9 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 </script>
 
 <script src="joyboy-bubble.js"></script>
-<script src="shared/calc-sale.js?v=1"></script>
+<script src="shared/calc-sale.js?v=2"></script>
 <script>
-  // Nov 2026: "✓ Benta na" — the calc list is taken out of the branch stock (while Odoo is not live)
+  // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
   try{ LBCalcSale.mount({ kind:'chocolate', anchor: document.getElementById('shareBtn'), branchSelect: document.getElementById('listBranch'),
     get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0) }; } }); }catch(e){ console.error('calc sale', e); }
 </script>

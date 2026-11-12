@@ -1,4 +1,4 @@
-/* LALABELLA — "✓ Benta na" for the Flower Calc and Chocolate Calc (Nov 2026).
+/* LALABELLA — "✓ Sold" for the Flower Calc and Chocolate Calc (Nov 2026).
  * While Odoo is not live, a sale made with the calc is taken out of the chosen branch's stock.
  * The page tells us how to read its list:  LBCalcSale.mount({ kind, anchor, branchSelect?, get })
  *   get() -> { items:[...], extrasTotal:number, customer:string }
@@ -24,10 +24,10 @@
     document.head.appendChild(css);
     var box = document.createElement('div'); box.className = 'lbcs';
     var ownBranch = !o.branchSelect;
-    box.innerHTML = '<h4>✓ Benta na — ibawas sa stock</h4><div class="s">Pindutin lang kapag nabenta na talaga (hindi sa quote). Mababawas ang lahat ng nasa listahan sa stock ng branch.</div>' +
+    box.innerHTML = '<h4>✓ Sold — take out of stock</h4><div class="s">Press only when the customer is <b>sure</b> and it is sold. For a quotation or if they are only looking, just <b>Print</b> — nothing leaves the stock.</div>' +
       '<div class="row">' + (ownBranch ? '<select data-br><option value="">— branch —</option>' + BR.map(function (b) { return '<option>' + b + '</option>'; }).join('') + '</select>' : '') +
-      '<input data-ref placeholder="Invoice / order no. (optional)" maxlength="60"></div>' +
-      '<button class="go" type="button">✓ Benta na</button><div class="res"></div>';
+      '<input data-ref placeholder="Invoice no. or customer name / phone" maxlength="60"><button type="button" data-walk style="border:1px solid #b9d6c4;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:12.5px;cursor:pointer">Walk-in</button></div>' +
+      '<button class="go" type="button">✓ Sold</button><div class="res"></div>';
     o.anchor.parentNode.insertBefore(box, o.anchor.nextSibling);
     var brSel = o.branchSelect || box.querySelector('[data-br]'), btn = box.querySelector('.go'), res = box.querySelector('.res');
     // branch: remembered, else the staff's own branch
@@ -35,32 +35,34 @@
     function pick(v) { if (!v || brSel.value) return; for (var i = 0; i < brSel.options.length; i++) { if (brKey(brSel.options[i].value) === brKey(v)) { brSel.value = brSel.options[i].value; return; } } }
     pick(saved);
     brSel.addEventListener('change', function () { ls('lbCalcSaleBranch', brSel.value); });
+    box.querySelector('[data-walk]').addEventListener('click', function () { box.querySelector('[data-ref]').value = 'Walk-in'; });
     var lastSig = '', lastNo = '';
     fetch(API + '?action=getMode&token=' + encodeURIComponent(token())).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.success) return;
       pick(d.userBranch);
-      if (d.mode === 'odoo') box.innerHTML = '<div class="off">🔗 Odoo ang nagbabawas ng stock ngayon — pang-quote na lang ang calc.</div>';
+      if (d.mode === 'odoo') box.innerHTML = '<div class="off">🔗 Odoo now takes sales out of stock — this calc is for quotes and printing only.</div>';
     }).catch(function () {});
 
     btn.addEventListener('click', function () {
       var g = o.get() || {}, items = g.items || [];
       var branch = brSel.value;
-      if (!branch) { alert('Piliin muna ang branch.'); brSel.focus(); return; }
-      if (!items.length) { alert('Walang laman ang listahan.'); return; }
+      var g0 = o.get() || {}; var refVal = (box.querySelector('[data-ref]').value || '').trim() || String(g0.customer || '').trim() || 'Walk-in';
+      if (!branch) { alert('Choose the branch first.'); brSel.focus(); return; }
+      if (!items.length) { alert('The list is empty.'); return; }
       var sig = JSON.stringify([branch, items]);
-      if (sig === lastSig && !confirm('Na-benta mo na ang listahang ito (' + lastNo + '). Ibawas ulit?')) return;
+      if (sig === lastSig && !confirm('This same list was already sold (' + lastNo + '). Take it out of stock again?')) return;
       var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
-      if (!confirm('Ibawas sa stock ng ' + branch + '?\n\n' + lines)) return;
-      btn.disabled = true; btn.textContent = 'Ibinabawas…'; res.innerHTML = '';
-      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), branch: branch, ref: box.querySelector('[data-ref]').value, customer: g.customer || '', extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
+      if (!confirm('Sold to: ' + refVal + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
+      btn.disabled = true; btn.textContent = 'Saving…'; res.innerHTML = '';
+      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), branch: branch, ref: refVal, customer: g.customer || (refVal === 'Walk-in' ? 'Walk-in' : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
       fetch(API, { method: 'POST', body: body }).then(function (r) { return r.json(); }).then(function (d) {
-        if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Hindi na-save.') + '</span>'; return; }
+        if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
         lastSig = sig; lastNo = d.saleNo;
-        var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': kailangan ' + esc(s.need) + ', ' + esc(s.have) + ' lang sa system</div>'; }).join('');
-        res.innerHTML = '<div class="ok">✓ Nabawas sa ' + esc(d.branch) + ' — ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Na-save pa rin. Lalabas ito sa susunod na stock count.</div>' : '');
+        var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': needed ' + esc(s.need) + ', the system has only ' + esc(s.have) + '</div>'; }).join('');
+        res.innerHTML = '<div class="ok">✓ Sold to ' + esc(refVal) + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
         box.querySelector('[data-ref]').value = '';
-      }).catch(function () { res.innerHTML = '<span class="warn">⚠ Connection problem. Subukan ulit.</span>'; })
-        .then(function () { btn.disabled = false; btn.textContent = '✓ Benta na'; });
+      }).catch(function () { res.innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
+        .then(function () { btn.disabled = false; btn.textContent = '✓ Sold'; });
     });
   }
   window.LBCalcSale = { mount: mount };

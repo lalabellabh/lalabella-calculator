@@ -43,7 +43,7 @@
 <div class="wrap">
   <header>
     <h1>🧾 Calc Sales</h1>
-    <div class="sub">Every "✓ Benta na" from the Flower Calc and Chocolate Calc — what was taken out of each branch's stock</div>
+    <div class="sub">Every "✓ Sold" from the Flower Calc and Chocolate Calc — what was taken out of each branch's stock</div>
   </header>
   <div class="bar">
     <select id="br"><option value="">All branches</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
@@ -75,19 +75,19 @@
       $('list').innerHTML = d.sales.length ? d.sales.map(function(s){
         var cx = s.status !== 'Active';
         return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' +
-          (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · Inv ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
-          (admin && !cx ? '<button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (ibalik sa stock)</button>' : '') + '</div>' +
+          (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
+          (admin && !cx ? '<button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
           '<div class="items">' + itemText(s) + '</div>' +
-          (s.short && s.short.length ? '<div class="short">⚠ Kulang sa system: ' + s.short.map(function(x){ return esc(x.name) + ' (kailangan ' + esc(x.need) + ', ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
+          (s.short && s.short.length ? '<div class="short">⚠ Not enough in the system: ' + s.short.map(function(x){ return esc(x.name) + ' (needed ' + esc(x.need) + ', had ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
       }).join('') : '<div class="empty">No calc sales yet.</div>';
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
   document.addEventListener('click', function(e){
     var b = e.target.closest('[data-cx]');
-    if(b){ if(!confirm('Cancel ' + b.getAttribute('data-no') + '? Babalik sa stock ang lahat ng nabawas.')) return; b.disabled = true;
+    if(b){ if(!confirm('Cancel ' + b.getAttribute('data-no') + '? Everything it took out goes back into stock.')) return; b.disabled = true;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'cancelSale', id:b.getAttribute('data-cx'), token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); return; }
     var m = e.target.closest('[data-mode]');
-    if(m){ var v = m.getAttribute('data-mode'); if(!confirm(v === 'odoo' ? 'Odoo na ang magbabawas ng stock? Hihinto ang "Benta na" sa mga calc.' : 'Calc ulit ang magbabawas ng stock?')) return;
+    if(m){ var v = m.getAttribute('data-mode'); if(!confirm(v === 'odoo' ? 'Let Odoo take sales out of stock? The "Sold" button in the calcs will stop.' : 'Let the calcs take sales out of stock again?')) return;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'setMode', mode:v, token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); }
   });
   $('br').onchange = load; $('kind').onchange = load; $('ref').onclick = load;
