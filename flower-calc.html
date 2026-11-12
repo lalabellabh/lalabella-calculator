@@ -724,6 +724,12 @@
 </script>
 
 
+<script src="shared/calc-sale.js?v=1"></script>
+<script>
+  // Nov 2026: "✓ Benta na" — the calc list is taken out of the branch stock (while Odoo is not live)
+  try{ LBCalcSale.mount({ kind:'flower', anchor: document.getElementById('shareBtn'),
+    get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
+</script>
 <script src="joyboy-bubble.js"></script>
 </body>
 </html>
