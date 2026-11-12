@@ -212,13 +212,14 @@ Deno.serve(async (req) => {
     if (a === 'dispUsed') {
       const code = String(p.code || '').toUpperCase();
       if (!/^DISP-\d{1,8}$/.test(code)) return json({ success: false, error: 'Invalid code.' });
-      const [cs, rel] = await Promise.all([
+      const [cs, rel, dp] = await Promise.all([
         sbGet(`calc_sales?select=sale_no,branch,created_at,created_by&disp_code=eq.${code}&status=eq.Active&order=id.desc&limit=5`),
         sbGet(`chocolate_release_database?select=release_no,branch,release_date,prepared_by&remarks=ilike.*${code}*&order=id.desc&limit=50`),
+        sbGet(`chocolate_display?select=display_name,created_at,created_by&display_code=eq.${code}&limit=1`),
       ]);
       const seen: Record<string, boolean> = {}; const releases: any[] = [];
       (rel || []).forEach((r: any) => { if (seen[r.release_no]) return; seen[r.release_no] = true; releases.push({ no: r.release_no, branch: r.branch, date: r.release_date, by: r.prepared_by }); });
-      return json({ success: true, sales: (cs || []).map((r: any) => ({ no: r.sale_no, branch: r.branch, at: r.created_at, by: r.created_by })), releases });
+      return json({ success: true, made: dp && dp[0] ? { name: dp[0].display_name, at: dp[0].created_at, by: dp[0].created_by } : null, sales: (cs || []).map((r: any) => ({ no: r.sale_no, branch: r.branch, at: r.created_at, by: r.created_by })), releases });
     }
     // Extras picker: Item Inventory names only (no price — prices there are not reliable yet)
     if (a === 'itemNames') {
