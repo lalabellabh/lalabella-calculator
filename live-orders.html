@@ -146,7 +146,8 @@
       '<div><div>' + esc(o.receiver || o.sender || '') + '</div><div class="m">' + esc(o.receiverPhone || o.senderPhone || '') + (o.sender && o.receiver && o.sender !== o.receiver ? '<br>from ' + esc(o.sender) : '') + '</div></div>' +
       '<div class="addr m">' + esc(o.address || '') + '</div>' +
       '<div><b>' + esc(o.price || '') + '</b></div>' +
-      '<div class="act">' + (isDone ? '' : isNew ? '<button class="ack" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<span class="seen">✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') + '</span>') + '</div></div>';
+      '<div class="act">' + (isDone ? '' : isNew ? '<button class="ack" data-ack="' + esc(o.id) + '">✓ Nakita ko</button>' : '<span class="seen">✓ Seen' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') + '</span>') +
+        (!isDone && o.source === 'bleems' ? '<button class="ack" data-done="' + esc(o.id) + '" data-no="' + esc(o.orderNo) + '" style="margin-top:6px;background:#7a4f8a">✓ Done (filled on Bleems)</button>' : '') + '</div></div>';
   }
   function render(){
     if(!DATA) return;
@@ -184,6 +185,9 @@
     Promise.all(ids.map(function(id){ return ack({ id:id }); })).then(load);
   };
   $('ackAll').onclick = function(){ if(!confirm('Mark all NEW orders' + ($('br').value === 'All' ? '' : ' of ' + $('br').value) + ' as seen?')) return; ack({ all:'1', branch:$('br').value }).then(load); };
+  document.addEventListener('click', function(e){ var d = e.target.closest('[data-done]'); if(!d) return;
+    if(!confirm('Done na ang ' + d.getAttribute('data-no') + ' sa Bleems site? Aalisin ito sa listahan.')) return; d.disabled = true;
+    fetch(API, { method:'POST', body:new URLSearchParams({ action:'doneLiveOrder', id:d.getAttribute('data-done'), token:token() }) }).then(function(r){ return r.json(); }).then(function(x){ if(!x || !x.success) alert((x && x.error) || 'Failed.'); load(); }, load); });
   document.addEventListener('click', function(e){ var b = e.target.closest('[data-ack]'); if(!b) return; b.disabled = true; ack({ id:b.getAttribute('data-ack') }).then(load); });
 
   var busy = false;
