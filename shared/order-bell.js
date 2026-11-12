@@ -353,6 +353,33 @@
   setTimeout(pollShop, 2500);   // after the first dashboard check, so already-placed orders don't ring for a second
   setInterval(pollShop, 10000);
 
+  // ---- Live Orders (Nov 2026): an order was just given to a branch -> 🎁 gift pop-up + alarm until someone opens / marks it seen.
+  // Staff see only their own branch; Admin sees all. Each order pops once per browser (it stays NEW on live-orders.html).
+  var GIFT_SEEN = 'lbobGiftSeen';
+  function giftSeen() { try { var a = JSON.parse(localStorage.getItem(GIFT_SEEN) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function giftSave(ids) { try { localStorage.setItem(GIFT_SEEN, JSON.stringify(ids.slice(-300))); } catch (e) {} }
+  function brKey(b) { b = String(b || '').toLowerCase().replace(/[^a-z]/g, ''); return b === 'galali' ? 'qalali' : b; }
+  function me() { try { return JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; } catch (e) { return {}; } }
+  var giftFirst = true;
+  function handleGifts(rows) {
+    var u = me(), admin = String(u.role || '').toLowerCase() === 'admin', myBr = brKey(u.branch);
+    rows = rows.filter(function (o) { return admin || !myBr || brKey(o.branch) === myBr; });
+    var seen = giftSeen(), fresh = rows.filter(function (o) { return seen.indexOf(o.id) === -1; });
+    if (fresh.length) giftSave(seen.concat(fresh.map(function (o) { return o.id; })));
+    if (giftFirst) { giftFirst = false; if (fresh.length && Date.now() - new Date(fresh[0].assignedAt).getTime() > 10 * 60000) return; }   // do not ring for old ones on first load
+    if (!fresh.length || /live-orders\.html/.test(location.pathname)) return;
+    if (!canShow(3, function () { showGift(fresh); })) return;
+    showGift(fresh);
+  }
+  function showGift(rows) {
+    toast.firstChild.textContent = '🎁'; toast.setAttribute('data-go', 'live-orders.html');
+    toast.querySelector('.tt').innerHTML = '<b style="color:#d32f2f">NEW order' + (rows.length > 1 ? 's' : '') + ' for the branch!</b>' +
+      rows.slice(0, 3).map(function (o) { return '<div><b style="display:inline;font-size:13px">' + esc(o.orderNo) + '</b> → ' + esc(o.branch || '—') + '</div>'; }).join('') +
+      (rows.length > 3 ? '<div style="color:#8a7078">+ ' + (rows.length - 3) + ' more</div>' : '') + '<div style="color:#8a7078;margin-top:2px">Tap to open Live Orders</div>';
+    toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 120000);
+    ringLoop();
+  }
+
   var lastCount = null;
   function refresh() {
     var t = token();
@@ -365,6 +392,7 @@
         var n = Number(d.count) || 0, rows = Array.isArray(d.ordersDetail) ? d.ordersDetail : [];
         monk.at = d.lastUpdated ? new Date(d.lastUpdated).getTime() || 0 : 0;
         monk.list = rows.map(function (o) { return onum(o.orderNo); });
+        try { if (Array.isArray(d.newAssigned)) handleGifts(d.newAssigned); } catch (e) {}
         var apRows = Array.isArray(d.approvalsDetail) ? d.approvalsDetail : [], ap = Number(d.pendingApprovals) || 0;
         var shown = n + ap;
         if (shown > 0) { badge.textContent = String(shown); badge.classList.add('show'); } else badge.classList.remove('show');
