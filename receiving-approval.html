@@ -254,6 +254,7 @@
     const el = document.getElementById('list');
     const rateHtml = rv.length ? '<div class="rcv" style="border-color:#8a63c9;background:rgba(246,240,255,.7)"><div class="rcv-top"><span>💲 New company rate — waiting for approval</span><span>' + rv.length + '</span></div>' +
       '<div class="rcv-meta">Stock is already in. Approve = use the new rate · Keep old = rate stays the same.</div>' +
+      (rv.length > 1 ? '<div class="action-row" style="margin:8px 0 4px"><button class="action-btn approve" data-rall="approve">✓ Use ALL new rates (' + rv.length + ')</button><button class="action-btn reject" data-rall="reject">✕ Keep ALL old (' + rv.length + ')</button></div>' : '') +
       rv.map(r => '<div class="ln"><b>' + esc(r.flower) + '</b>' + (r.origin ? ' <span class="ln-meta">(' + esc(r.origin) + ')</span>' : '') +
         '<div class="ln-meta">' + (r.branch ? esc(r.branch) + ' · ' : '') + (r.supplier ? esc(r.supplier) + ' · ' : '') + (r.invoiceNo ? 'Inv ' + esc(r.invoiceNo) + ' · ' : '') + esc(String(r.date || '').slice(0, 10)) + (r.supplierRate ? ' · supplier ' + f3(r.supplierRate) + ' BD' + (r.unit ? '/' + esc(r.unit) : '') : '') + '</div>' +
         '<div class="rate" style="font-size:13px;font-weight:700">' + f3(r.oldRate) + ' ➜ ' + f3(r.newRate) + ' per stem</div>' +
@@ -289,6 +290,24 @@
     if(focusBatch){ const t = document.querySelector('.rcv.focus'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   }
   document.getElementById('list').addEventListener('click', async e => {
+    const ab = e.target.closest('button[data-rall]');
+    if(ab){
+      const yes = ab.dataset.rall === 'approve', list = rates.slice();
+      if(!list.length) return;
+      if(!confirm((yes ? 'Use the NEW company rate for all ' : 'Keep the OLD rate for all ') + list.length + ' flowers?\n\n' + list.map(r => '• ' + r.flower + ': ' + f3(yes ? r.newRate : r.oldRate)).join('\n'))) return;
+      document.querySelectorAll('button[data-rall],button[data-ract]').forEach(b => b.disabled = true);
+      let ok = 0, bad = 0;
+      for(const r0 of list){
+        ab.textContent = 'Saving… ' + (ok + bad + 1) + '/' + list.length;
+        try{
+          const r = await fetch(FL + '?action=' + (yes ? 'approveRate' : 'rejectRate') + '&row=' + encodeURIComponent(r0.id)).then(x => x.json());
+          if(!r || r.success === false || r.error) bad++; else ok++;
+        }catch(err){ bad++; }
+      }
+      if(bad) alert(ok + ' done, ' + bad + ' failed. Please try the rest again.');
+      load();
+      return;
+    }
     const rb = e.target.closest('button[data-ract]');
     if(rb){
       const r0 = rates.find(x => String(x.id) === rb.dataset.rate);
