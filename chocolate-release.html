@@ -6,6 +6,7 @@
 <script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/scanner.js"></script>
+<script src="shared/disp-guard.js?v=1"></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
@@ -616,10 +617,13 @@ body{background:
   // lookup the manual search box uses), then adds them all to the
   // cart at once. From here on it's an ordinary release — Save
   // Release deducts stock exactly like any other cart.
+  let releaseDisp = '';
   document.getElementById('loadDisplayBtn').addEventListener('click', async ()=>{
     const idx = document.getElementById('fDisplayPicker').value;
     if(idx === '') return;
     const display = savedDisplays[idx];
+    if(window.LBDispGuard && !(await LBDispGuard.ok(display['Display Code']))) return;
+    releaseDisp = String(display['Display Code'] || '').toUpperCase();
     const btn = document.getElementById('loadDisplayBtn');
     btn.disabled = true;
     btn.textContent = 'Loading…';
@@ -1017,7 +1021,8 @@ body{background:
     const transactionType = document.getElementById('fTransactionType').value;
     const toBranch = document.getElementById('fToBranch').value;
     const customerDept = document.getElementById('fCustomerDept').value.trim();
-    const remarks = document.getElementById('fRemarks').value.trim();
+    let remarks = document.getElementById('fRemarks').value.trim();
+    if(releaseDisp && remarks.toUpperCase().indexOf(releaseDisp) === -1) remarks = (remarks ? remarks + ' · ' : '') + releaseDisp;   // so the display guard can find it
 
     if(!releaseDate || !preparedBy){
       alert('Release date and Prepared By are required.');
@@ -1064,6 +1069,7 @@ body{background:
       }
 
       alert('Release saved: ' + data.releaseNo);
+      releaseDisp = '';
       cart = [];
       extras = [];
       renderCart();
