@@ -606,7 +606,22 @@
       L('**Status:** ', '**Status:** ') + stw + '\n' + L('**Report:** ', '**Ulat:** ') + e.say + '\n' + (e.out ? L('**Numbers:** ', '**Detalye:** ') + e.out + '\n' : '') + '\n' + close;
     return { name:e.name, role:e.role, st:e.st, text:t, speak:G + ' ' + L('This is ', 'Si ') + e.name + L(', your ', ' po, ang ') + e.role + '. ' + e.say + '. ' + close, to:ME.pres ? L('the President', 'sa President') : ME.name };
   };
-  window.LBOfficeSpeakReport = function(k, text){ if(!SND.on || SND.vol <= 0) return; speakWords(k, text, 'ok', true); };
+  // Speaks the report and tells the 3D box when the voice really starts / how far it is, so the words on screen follow the voice.
+  window.LBOfficeSpeakReport = function(k, text, ev){
+    ev = ev || {};
+    if(!SND.on || SND.vol <= 0 || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+    var clean = speechText(text), pool = bestVoices(); if(!pool.length || !/\p{L}{2,}/u.test(clean)) return false;
+    try{
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(clean), idx = Math.max(0, KEYS.indexOf(k));
+      u.voice = pool[idx % pool.length]; u.lang = u.voice.lang;
+      var v = VOICE[k] || 250; u.pitch = Math.max(.85, Math.min(1.2, .85 + (v - 120) / 900)); u.rate = SND.lang === 'tl' ? 1 : 1.05; u.volume = Math.min(1, SND.vol / 100);
+      u.onstart = function(){ if(ev.start) ev.start(); };
+      u.onboundary = function(b){ if(ev.progress && clean.length) ev.progress(Math.min(1, (b.charIndex + (b.charLength || 6)) / clean.length)); };
+      u.onend = u.onerror = function(){ if(ev.end) ev.end(); };
+      speechSynthesis.speak(u); lastSpeak = Date.now(); return true;
+    }catch(e){ return false; }
+  };
   window.LBOfficeStopVoice = function(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} };
   function speakWords(k, text, tone, force){
     if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
@@ -833,7 +848,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=15'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=16'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
