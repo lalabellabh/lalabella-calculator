@@ -42,7 +42,7 @@
   .zone{position:absolute;border-radius:10px;border:2px dashed #ffffff22;box-shadow:inset 0 calc(.8*var(--u)) 0 #ffffff0d,0 calc(.7*var(--u)) 0 #00000040}
   .zone b{position:absolute;left:6px;top:4px;max-width:calc(100% - 10px);overflow:hidden;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:.06em;opacity:.85;white-space:nowrap}
   .z-orders{background:#1b4b4a55;color:#7ff0e0}.z-front{background:#1b4b4a55;color:#7ff0e0}.z-writers{background:#4a347055;color:#d6b7ff}.z-records{background:#5a3e2255;color:#ffcf8a}.z-hr{background:#6a2a5255;color:#ffa6d2}
-  .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-deliv{background:#1d4a4466;color:#7ff0c8}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
+  .z-boss{background:#2a4a6d66;color:#8fd9ff}.z-saudi{background:#1f4a2e66;color:#8ff0b0}.z-qa{background:#5a213e55;color:#ff9fc4}.z-vault{background:#1c2f4d77;color:#9cc8ff}.z-deliv{background:#1d4a4466;color:#7ff0c8}.z-util{background:#27402a66;color:#a9f0a0}.z-kitchen{background:#4a442255;color:#ffe08a}
   .it{position:absolute;transform:translate(-50%,-50%) scale(var(--sc,1));pointer-events:none;filter:drop-shadow(0 calc(1.3*var(--u)) calc(.9*var(--u)) #00000080)}
   .chair{width:calc(8*var(--u));height:calc(9*var(--u));background:linear-gradient(90deg,#2a2f52,#3d4577 45%,#2a2f52);border-radius:calc(2*var(--u)) calc(2*var(--u)) 2px 2px;box-shadow:inset 0 calc(-1*var(--u)) 0 #1b1f3a}
   .floor::before{content:'';position:absolute;inset:0;background:linear-gradient(#00000070,#00000000 14%),radial-gradient(120% 60% at 50% 110%,#00000055,transparent 60%);pointer-events:none}
@@ -261,7 +261,7 @@
 <div class="app" data-lb-text-skip>
   <div class="head"><h1>🏢 AI OFFICE</h1><span class="tag" data-tl="Mga worker ng system mo — libreng scheduled jobs na nagbabasa ng sarili mong data. Pindutin ang kahit sino para sa detalye.">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
     <button class="pill hi" id="v3dBtn">🧊 3D</button><button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref" data-tl="↻ I-refresh">↻ Refresh</button><a class="pill" href="audit-log.html" data-tl="🕘 History">🕘 Activity History</a></div>
-  <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for the Admin who has User Management access.</p></div>
+  <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for Admin accounts.</p></div>
   <div class="main" id="mainBox">
     <section id="o3d">
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div>
@@ -299,7 +299,7 @@
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
-  if(u.canManageUsers === false){ $('mainBox').style.display = 'none'; $('denied').style.display = 'block'; return; }
+  if(u.role && u.role !== 'Admin'){ $('mainBox').style.display = 'none'; $('denied').style.display = 'block'; return; }
 
   // ---------- pixel people (two leg frames for walking) ----------
   var BODY = ['..HHHH..','.HHHHHH.','.SESSES.','..SSSS..','.BBBBBB.','SBBBBBBS','.BBBBBB.','..PPPP..'];
@@ -317,8 +317,8 @@
   var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320',tie:'#7a3f12'},
     watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a',s:'#c99a74'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1,tie:'#9e2f4a'},
     archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
-    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, shopify:{h:'#2a1b12',b:'#95bf47',p:'#2f3d1f'}, bleems:{h:'#5a1f3a',b:'#c2185b',p:'#3a1a2a',s:'#e8b48c'}, abandoned:{h:'#3b2412',b:'#ff8f00',p:'#4a3320',s:'#c99a74'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'} };
-  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','scribe','auditor','archivist','janitor'];
+    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, shopify:{h:'#2a1b12',b:'#95bf47',p:'#2f3d1f'}, bleems:{h:'#5a1f3a',b:'#c2185b',p:'#3a1a2a',s:'#e8b48c'}, abandoned:{h:'#3b2412',b:'#ff8f00',p:'#4a3320',s:'#c99a74'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'}, saudi:{h:'#f4f4f4',b:'#1b7a3e',p:'#2a3a2a',s:'#c99a74',cap:'#f4f4f4'} };
+  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','scribe','auditor','archivist','janitor','saudi'];
   var ORDK = ['shopify','bleems','abandoned'];
 
   // ---------- helpers ----------
@@ -371,6 +371,12 @@
     var jj = job('janitor-cleanup') || job('duty-schedule-monthly-cleanup'), jn = jobState(jj, 86400);
     EMP.janitor = { name:'Jun', role:'Janitor', st:jn[0], say:L('Cleaned old logs · ', 'Nalinis ang lumang logs · ') + ago((jj || {}).last_start),
       now:'Every night: deletes only old logs so the database never fills up (job history > 7 days, login history > 180 days, Activity History > 1 year, temporary rows) and moves old duty-schedule rows to the archive. Backups keep the newest 14; error log keeps 30 days.', out:jn[1], tools:['janitor-cleanup job','duty-schedule-monthly-cleanup job'], never:NEVER_ALL.concat(['Deletes orders, stock, petty cash, sales, chat or any business data']) };
+    var SA = S.saudi || {}, saL = Number(SA.still_lines) || 0, saQ = Number(SA.still_qty) || 0, saU = Number(SA.unknown_lines) || 0, saD = function(v){ return v ? String(v).slice(0, 10) : '-'; };
+    EMP.saudi = { name:'Sami', role:L('Saudi Office', 'Saudi Office'), st: age(SA.last_at) < 3600 ? 'working' : 'ok',
+      say: saL ? L(saQ + ' item' + (saQ > 1 ? 's' : '') + ' still in Saudi (' + saL + ' line' + (saL > 1 ? 's' : '') + ')', saQ + ' item pa ang nasa Saudi (' + saL + ' linya)') : L('Nothing left in Saudi 👍', 'Wala nang naiwan sa Saudi 👍'),
+      now:'Watches Saudi Transfers: what was sent to Saudi, what came back to a branch, what Saudi keeps, and what is still there.',
+      out:'Still in Saudi: ' + saQ + ' pcs on ' + saL + ' lines' + ((SA.still_names || []).length ? ' (' + SA.still_names.map(function(n){ return String(n).split('\n')[0]; }).join(', ') + ')' : '') + ' · No qty written: ' + saU + ' lines · Kept by Saudi: ' + (SA.kept_qty || 0) + ' · Last send ' + saD(SA.last_send) + ' · Last return ' + saD(SA.last_return) + ' · This week: ' + (SA.sends_7d || 0) + ' sent, ' + (SA.returns_7d || 0) + ' returns · All lines: ' + (SA.lines || 0),
+      tools:['Saudi Transfers page','saudi_transfers / saudi_returns'], never:NEVER_ALL.concat(['Sends, returns or edits a transfer by itself','Changes stock']) };
     var H = S.hr || {}, late = Number(H.late_today) || 0, noOut = Number(H.no_out_yday) || 0, blk = Number(H.blocked_today) || 0, inT = Number(H.in_today) || 0, brk = Number(H.on_break) || 0, wk = Number(H.working_now) || 0, evn = Number(H.events_today) || 0;
     var nm = function(a){ return (a || []).slice(0, 4).join(', '); };
     EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? L(late + ' late today', late + ' ang late ngayon') : (inT ? L(inT + ' of ' + (H.staff || 0) + ' staff clocked in', inT + ' sa ' + (H.staff || 0) + ' staff ang naka-in') : L('No clock-ins yet today', 'Wala pang nag-time in ngayon')),
@@ -481,9 +487,9 @@
   }
 
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
-  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[88,42], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
-  var SPOT = { boss:[84,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
-  var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['boss','BOSS',75,25,23,33],
+  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[93,42], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
+  var SPOT = { boss:[90,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
+  var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['saudi','🇸🇦 SAUDI OFFICE',75,25,11,33],['boss','BOSS',87,25,11,33],
     ['qa','QA DESK',2,63,22,34],['records','RECORDS',25,63,20,34],['vault','VAULT',46,63,12,34],['deliv','DELIVERY',59,63,15,34],['kitchen','PANTRY',75,63,23,34]];
   var P = {}, inited = false, MAP, PREV = null;
   function depth(y){ return (.8 + .32 * Math.max(0, Math.min(1, (y - 25) / 72))).toFixed(3); }
@@ -514,7 +520,7 @@
   }
 
   // ---------- sounds (made by the browser, no audio files, free) ----------
-  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160 };
+  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160, saudi:260 };
   var SND = { vol:50, mode:'words', sfx:true, alarm:true, lang:'en', on:false };
   try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
   window.__lbLang = SND.lang;
@@ -777,7 +783,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=4'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=5'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);

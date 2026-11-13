@@ -16,11 +16,12 @@
   var ROOMS = [
     { id:'orders',  en:'Orders & Dispatch', tl:'Orders at Dispatch', x:0,  z:0,  w:12, d:9, floor:['#e08a52','#d1773f'], rug:'#f2b880', agents:['dispatcher','shopify','bleems','abandoned'] },
     { id:'hr',      en:'HR & Attendance',   tl:'HR at Attendance',   x:13, z:0,  w:8,  d:9, floor:['#e3a06a','#d48b55'], rug:'#f5a3c0', agents:['hr','timekeeper'] },
-    { id:'boss',    en:"Boss's Office",     tl:'Opisina ni Boss',    x:22, z:0,  w:9,  d:9, floor:['#c97a4a','#b8693c'], rug:'#9fd3f5', agents:['boss'] },
+    { id:'boss',    en:"Boss's Office",     tl:'Opisina ni Boss',    x:22, z:0,  w:7,  d:9, floor:['#c97a4a','#b8693c'], rug:'#9fd3f5', agents:['boss'] },
     { id:'tech',    en:'Tech & Health',     tl:'Tech at Health',     x:0,  z:12, w:8,  d:8, floor:['#d9925c','#c97f4a'], rug:'#a8e6a1', agents:['watcher','doctor'] },
     { id:'records', en:'Records & Brain',   tl:'Records at Brain',   x:9,  z:12, w:10, d:8, floor:['#e09862','#cf854f'], rug:'#d4b8ff', agents:['scribe','auditor','archivist'] },
     { id:'deliv',   en:'Delivery',          tl:'Delivery',           x:20, z:12, w:6,  d:8, floor:['#e3a06a','#d48b55'], rug:'#8fe3d0', agents:['delivery','driver'] },
-    { id:'cafe',    en:'Café & Break',      tl:'Café at Pahinga',    x:27, z:12, w:7,  d:8, floor:['#c98656','#b87545'], rug:'#ffd68a', agents:['janitor'] }
+    { id:'cafe',    en:'Café & Break',      tl:'Café at Pahinga',    x:27, z:12, w:7,  d:8, floor:['#c98656','#b87545'], rug:'#ffd68a', agents:['janitor'] },
+    { id:'saudi',   en:'Saudi Office',      tl:'Saudi Office',       x:30, z:0,  w:4.5, d:9, floor:['#d9a066','#c98f55'], rug:'#8fe3a8', agents:['saudi'] }
   ];
   var LOOKS = {
     boss:{ a:'bear', fur:'#c98b4f', shirt:'#2f3a8f', crown:1 },  dispatcher:{ a:'fox', fur:'#e8762c', shirt:'#1fb5a5' },
@@ -30,7 +31,8 @@
     driver:{ a:'dog', fur:'#6b4a2f', shirt:'#ffb300', cap:'#d32f2f' }, watcher:{ a:'cat', fur:'#3a3a48', shirt:'#e0467e' },
     doctor:{ a:'bear', fur:'#f4f4f4', shirt:'#e8eef5', panda:1 }, scribe:{ a:'mouse', fur:'#b9b2c8', shirt:'#a77bf0' },
     auditor:{ a:'owl', fur:'#c9a26b', shirt:'#e0a03a' },          archivist:{ a:'bear', fur:'#7a5233', shirt:'#4f8ee0' },
-    janitor:{ a:'raccoon', fur:'#6f6f7a', shirt:'#58b84f', cap:'#2f6a2c' }
+    janitor:{ a:'raccoon', fur:'#6f6f7a', shirt:'#58b84f', cap:'#2f6a2c' },
+    saudi:{ a:'fox', fur:'#d9a066', shirt:'#1b7a3e', cap:'#f4f4f4' }
   };
   var ST_COL = { working:'#4fb3ff', ok:'#5be29a', warn:'#ffc24f', alert:'#ff6b6b' };
 
@@ -89,10 +91,10 @@
     var o = ROOMOBJ;
     plant(.8, .8, 1.1, o.orders); plant(11.3, .8, 1, o.orders); lamp(6, .7, o.orders);
     plant(20.3, .8, 1, o.hr); lamp(13.7, .7, o.hr);
-    plant(30.3, .8, 1.2, o.boss); plant(22.7, 8.2, .9, o.boss); shelf(29.6, 4, o.boss, -Math.PI / 2);
+    plant(28.4, .8, 1.1, o.boss); plant(22.7, 8.2, .9, o.boss); shelf(28.5, 5.5, o.boss, -Math.PI / 2);
     // scoreboard on the Boss wall (live numbers)
     var sc = document.createElement('canvas'); sc.width = 512; sc.height = 256; SCOREBOARD = { c:sc, t:new T.CanvasTexture(sc) };
-    var sb = new T.Mesh(new T.PlaneGeometry(4, 2), new T.MeshBasicMaterial({ map:SCOREBOARD.t })); sb.position.set(26.5, 1.45, .15); o.boss.add(sb); box(4.2, 2.2, .06, '#2e5d33', 26.5, 1.45, .1, o.boss);
+    var sb = new T.Mesh(new T.PlaneGeometry(4, 2), new T.MeshBasicMaterial({ map:SCOREBOARD.t })); sb.position.set(25.5, 1.45, .15); o.boss.add(sb); box(4.2, 2.2, .06, '#2e5d33', 25.5, 1.45, .1, o.boss);
     // tech: server racks with blinking lights
     [[1.2, 13], [2.4, 13]].forEach(function(p){ box(1, 2, .8, '#1f2638', p[0], 1, p[1], o.tech); for(var i = 0; i < 6; i++){ var l = box(.08, .08, .02, mat('#5be29a', { e:'#5be29a', ei:1.5 }), p[0] - .3 + (i % 3) * .3, .5 + Math.floor(i / 3) * .9 + (i % 2) * .3, p[1] + .41, o.tech); l.castShadow = false; LED.push(l); } });
     plant(7.3, 19.2, 1, o.tech);
