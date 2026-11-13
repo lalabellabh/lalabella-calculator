@@ -473,7 +473,7 @@
       </div>
       <div class="pc-toolbar">
         <button class="print-btn" id="slFClear" type="button" data-no-excel>This month</button>
-        <button class="print-btn" id="slPrintBtn" type="button" data-no-excel>🖨️ Print</button><button class="print-btn" id="slExcelBtn" type="button" data-no-excel style="margin-left:6px">📊 Excel</button>
+        <button class="print-btn" id="slPrintBtn" type="button" data-no-excel title="One day: sales, payments, cash count and petty cash">🖨️ Daily Report</button><button class="print-btn" id="slExcelBtn" type="button" data-no-excel style="margin-left:6px">📊 Excel</button>
       </div>
       <div class="sl-cards" id="slSum"></div>
       <div id="slHistory"><div class="empty">Loading…</div></div>
@@ -1527,6 +1527,8 @@ function slRender(){
         ${isAdminUser() ? `<button class="edit-btn" data-sid="${r.id}" title="Edit (Admin)">✏️</button><button class="delete-btn" data-sid="${r.id}" title="Delete (Admin)">🗑️</button>` : ''}
       </div></div>`).join('') + '</div>';
   }).join('');
+  if(slSearched) hist.insertAdjacentHTML('beforeend', `<div style="text-align:center;margin:14px 0 4px;"><button class="print-btn" id="slHistPrint" type="button" data-no-excel>🖨️ Print this history · ${esc(slRangeText())}${document.getElementById('slFKind').value ? ' · ' + SL_CH[document.getElementById('slFKind').value] : ''}</button><div style="font-size:11px;color:var(--muted);margin-top:4px;">Sales only — no cash count or petty cash</div></div>`);
+  const hp = document.getElementById('slHistPrint'); if(hp) hp.addEventListener('click', slPrintHistory);
   hist.querySelectorAll('.edit-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slEdit(Number(b.dataset.sid))));
   hist.querySelectorAll('.delete-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slDelete(Number(b.dataset.sid))));
 }
@@ -1558,9 +1560,11 @@ async function loadSales(){
     slRender();
   }catch(e){ hist.innerHTML = '<div class="empty">Could not load — ' + esc(e.message && e.message.length < 90 ? e.message : 'check your connection.') + '</div>'; }
 }
-['slFrom','slTo'].forEach(id=>document.getElementById(id).addEventListener('change', loadSales));
-document.getElementById('slFKind').addEventListener('change', slRender);
-document.getElementById('slFClear').addEventListener('click', ()=>{ slMonth(); document.getElementById('slFKind').value=''; loadSales(); });
+// Nov 2026: changing From / To / Source = a search (back-track) -> its own "Print this history" shows at the bottom of the list
+let slSearched = false;
+['slFrom','slTo'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{ slSearched = true; loadSales(); }));
+document.getElementById('slFKind').addEventListener('change', ()=>{ slSearched = true; slRender(); });
+document.getElementById('slFClear').addEventListener('click', ()=>{ slSearched = false; slMonth(); document.getElementById('slFKind').value=''; loadSales(); });
 function slRangeText(){ const f=document.getElementById('slFrom').value, t=document.getElementById('slTo').value; return (f||t) ? `${f?fmtDate(f):'start'} – ${t?fmtDate(t):'today'}` : 'All dates'; }
 // petty cash spent in the same branch + dates (expenses only; top-ups are not "used")
 let slPC = null;   // last petty cash answer (all entries + current balance) — for the day-by-day balance
@@ -1601,8 +1605,8 @@ function slCashCounts(){
 }
 // The cash count is a count of the SAME petty cash box (not extra money): show only the LATEST count of the period,
 // as a denomination table, next to what the petty cash should have at the end of that day — never added up.
-function slCashCountHtml(th){
-  const cc = slCashCounts();
+function slCashCountHtml(th, upTo){
+  const cc = slCashCounts().filter(c => !upTo || String(c.date).slice(0,10) <= upTo);   // daily report: that day's count (or the last one before it)
   if(!cc.length) return '';
   const c = cc[cc.length - 1], day = String(c.date).slice(0,10);
   return `<h3 style="margin-top:16px;">Cash count — ${fmtDate(c.date)} <small style="font-weight:400">· ${esc(c.branch)} · counted by ${esc(c.countedBy||'—')}</small></h3>
@@ -1630,13 +1634,39 @@ function slPettyDayHtml(pc, days, th){
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="4">USED ON ${fmtDate(day).toUpperCase()}</td><td ${th}>−${usedT.toFixed(3)} BD</td></tr></tbody></table>` + leftLine;
 }
 function slSorted(){ return slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id); }
+// Back-track print: the searched dates, sales only (per day + day total), then Payments for the whole search.
+function slPrintHistory(){
+  const list = slSorted(); if(!list.length){ alert('No sales for these dates.'); return; }
+  const th = 'style="text-align:right;"', t = slTotals(list), days = {};
+  list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
+  const k = document.getElementById('slFKind').value;
+  document.getElementById('printArea').innerHTML = `
+    <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales History</h2>
+    <p>${esc(document.getElementById('branchSelect').value)} · ${esc(slRangeText())}${k ? ' · ' + SL_CH[k] + ' only' : ''} · <b>back-track copy</b> (not a daily report)</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>My Fatoorah</th><th ${th}>Card</th><th ${th}>Fawri +</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th></tr></thead>
+      <tbody>${Object.keys(days).sort().map(d=>{ const dt = slTotals(days[d]);
+        return days[d].map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${(r.benefit||0).toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}>${r.amount.toFixed(3)}</td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td></tr>`).join('') +
+          `<tr style="border-top:1px solid #000;border-bottom:1px solid #999;font-weight:700;"><td colspan="2">${fmtDate(d)} total</td><td ${th}>${dt.cash.toFixed(3)}</td><td ${th}>${dt.mf.toFixed(3)}</td><td ${th}>${dt.card.toFixed(3)}</td><td ${th}>${dt.bn.toFixed(3)}</td><td ${th}>${dt.credit.toFixed(3)}</td><td ${th}>${dt.inv.toFixed(3)}</td><td></td></tr>`; }).join('')}</tbody></table>
+    <h3 style="margin-top:16px;">Payments</h3>
+    <table style="width:100%;max-width:520px;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Payment</th><th ${th}>Amount</th></tr></thead>
+      <tbody>${[['Cash',t.cash],['My Fatoorah',t.mf],['Card',t.card],['Fawri +',t.bn]].concat(t.credit ? [['Credit',t.credit]] : []).map(p=>`<tr><td>${p[0]}</td><td ${th}>${p[1].toFixed(3)} BD</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td>TOTAL</td><td ${th}>${t.inv.toFixed(3)} BD</td></tr></tbody></table>
+    <p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(slToday())} · ${list.length} sales entries · ${Object.keys(days).length} day(s)</p>`;
+  window.print();
+}
 document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
-  const list = slSorted();
+  let list = slSorted();
   let pc = [];
   try{ pc = await slPettyUsed(); }catch(e){ if(!confirm('Could not load the petty cash (' + (e.message||'connection') + '). Print the sales only?')) return; }
+  // Nov 2026: Daily Report = ONE day only (the "To" day, else the last day that has something). Many days = "Print this history" at the bottom.
+  const allDays = slDays(list, pc), toV = document.getElementById('slTo').value;
+  const oneDay = (toV && allDays.indexOf(toV) !== -1) ? toV : allDays[allDays.length - 1];
+  if(oneDay){ list = list.filter(r=>r.date===oneDay); pc = pc.filter(x=>x.date===oneDay); }
   // sales are optional: the cash count + petty cash still print on their own
   const t = slTotals(list), pcT = pc.reduce((s,x)=>s+Number(x.amount||0),0), th='style="text-align:right;"';
-  const days = slDays(list, pc), oneBranch = document.getElementById('branchSelect').value !== 'All';
+  const days = oneDay ? [oneDay] : [], oneBranch = document.getElementById('branchSelect').value !== 'All';
   const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
     const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
     return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.bn)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
@@ -1648,7 +1678,7 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Fawri+/Benefit</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
       <tbody>${list.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.branch)}</td><td>${r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):''}</td><td ${th}>${r.cash.toFixed(3)}</td><td ${th}>${r.card.toFixed(3)}</td><td ${th}>${r.myfatoorah.toFixed(3)}</td><td ${th}>${(r.benefit||0).toFixed(3)}</td><td ${th}>${r.credit.toFixed(3)}</td><td ${th}><b>${r.amount.toFixed(3)}</b></td><td>${esc([r.ref,r.notes].filter(Boolean).join(' · '))}</td><td>${esc(r.enteredBy)}</td></tr>`).join('')}
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.bn.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
-    slCashCountHtml(th) +
+    slCashCountHtml(th, oneDay) +
     slPettyDayHtml(pc, days, th) +
     // Nov 2026: "Payments" table — same lines/fonts as the cash count table above: Cash, My Fatoorah, Card, Fawri + (Credit only when used), TOTAL
     (list.length ? `<h3 style="margin-top:16px;">Payments</h3>
