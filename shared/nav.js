@@ -101,7 +101,7 @@
     ['brain.html', '🧠', 'Brain Vault', 'admin'],
     ['system-health.html', '🩺', 'System Health', 'admin'],
     ['audit-log.html', '🕘', 'Activity History', 'admin'],
-    ['office.html', '🏢', 'AI Office', 'admin'],
+    ['office.html', '🏢', 'Lalabella HQ', 'admin'],
     ['odoo.html', '🔗', 'Odoo (trial)', 'admin'],
     ['https://web.whatsapp.com/', '💬', 'WhatsApp Web']
   ];
