@@ -313,6 +313,10 @@
 <script>
 (function(){
   var API = LB_CONFIG.AUDIT_API, $ = function(i){ return document.getElementById(i); }, S = null, EMP = {};
+  var NOTES = [];
+  function noteWhen(v){ var d = new Date(v), t = new Date(d.getTime() + 3 * 3600000), n = new Date(Date.now() + 3 * 3600000), hm = (t.getUTCHours() % 12 || 12) + ':' + String(t.getUTCMinutes()).padStart(2, '0') + ' ' + (t.getUTCHours() < 12 ? 'AM' : 'PM');
+    var same = t.toISOString().slice(0, 10) === n.toISOString().slice(0, 10), tm = new Date(n.getTime() + 86400000).toISOString().slice(0, 10) === t.toISOString().slice(0, 10);
+    return (same ? L('Today ', 'Ngayon ') : tm ? L('Tomorrow ', 'Bukas ') : t.toISOString().slice(5, 10).split('-').reverse().join('/') + ' ') + hm; }
   function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
   function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
@@ -334,8 +338,8 @@
   var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320',tie:'#7a3f12'},
     watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a',s:'#c99a74'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1,tie:'#9e2f4a'},
     archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
-    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, shopify:{h:'#2a1b12',b:'#95bf47',p:'#2f3d1f'}, bleems:{h:'#5a1f3a',b:'#c2185b',p:'#3a1a2a',s:'#e8b48c'}, abandoned:{h:'#3b2412',b:'#ff8f00',p:'#4a3320',s:'#c99a74'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'}, saudi:{h:'#f4f4f4',b:'#1b7a3e',p:'#2a3a2a',s:'#c99a74',cap:'#f4f4f4'} };
-  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','scribe','auditor','archivist','janitor','saudi'];
+    hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, shopify:{h:'#2a1b12',b:'#95bf47',p:'#2f3d1f'}, bleems:{h:'#5a1f3a',b:'#c2185b',p:'#3a1a2a',s:'#e8b48c'}, abandoned:{h:'#3b2412',b:'#ff8f00',p:'#4a3320',s:'#c99a74'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'}, saudi:{h:'#f4f4f4',b:'#1b7a3e',p:'#2a3a2a',s:'#c99a74',cap:'#f4f4f4'}, secretary:{h:'#3a2210',b:'#8e44ad',p:'#2a1f3a',s:'#e8b48c'} };
+  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','scribe','auditor','archivist','janitor','saudi','secretary'];
   var ORDK = ['shopify','bleems','abandoned'];
 
   // ---------- helpers ----------
@@ -394,6 +398,14 @@
       now:'Watches Saudi Transfers: what was sent to Saudi, what came back to a branch, what Saudi keeps, and what is still there.',
       out:'Still in Saudi: ' + saQ + ' pcs on ' + saL + ' lines' + ((SA.still_names || []).length ? ' (' + SA.still_names.map(function(n){ return String(n).split('\n')[0]; }).join(', ') + ')' : '') + ' · No qty written: ' + saU + ' lines · Kept by Saudi: ' + (SA.kept_qty || 0) + ' · Last send ' + saD(SA.last_send) + ' · Last return ' + saD(SA.last_return) + ' · This week: ' + (SA.sends_7d || 0) + ' sent, ' + (SA.returns_7d || 0) + ' returns · All lines: ' + (SA.lines || 0),
       tools:['Saudi Transfers page','saudi_transfers / saudi_returns'], never:NEVER_ALL.concat(['Sends, returns or edits a transfer by itself','Changes stock']) };
+    // Nov 2026: Cali the Secretary — your own calendar notes; at the time she reads the note out loud (+ phone alarm)
+    var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }),
+        soon = open.filter(function(n){ var t = new Date(n.at).getTime(); return t > nowMs && t - nowMs < 3600000; }), nxt = open.filter(function(n){ return new Date(n.at).getTime() > nowMs; })[0];
+    EMP.secretary = { name:'Cali', role:L('Secretary · Calendar', 'Secretary · Calendar'), st: due.length ? 'warn' : soon.length ? 'working' : 'ok',
+      say: due.length ? L('⏰ ' + due[0].note, '⏰ ' + due[0].note) : nxt ? L('Next: ' + noteWhen(nxt.at) + ' — ' + nxt.note, 'Susunod: ' + noteWhen(nxt.at) + ' — ' + nxt.note) : L('No reminders. Tap me to add one.', 'Walang paalala. Pindutin ako para magdagdag.'),
+      now:'Keeps your calendar notes. At the time you set, she reads the note out loud here and sends a reminder to your phone.',
+      out:'Open notes: ' + open.length + ' · Due now: ' + due.length + ' · In the next hour: ' + soon.length + (nxt ? ' · Next: ' + noteWhen(nxt.at) + ' — ' + nxt.note : ''),
+      tools:['Your calendar notes (only you see yours)','Phone reminder'], never:NEVER_ALL.concat(['Shows your notes to other admins']) };
     var H = S.hr || {}, late = Number(H.late_today) || 0, noOut = Number(H.no_out_yday) || 0, blk = Number(H.blocked_today) || 0, inT = Number(H.in_today) || 0, brk = Number(H.on_break) || 0, wk = Number(H.working_now) || 0, evn = Number(H.events_today) || 0;
     var nm = function(a){ return (a || []).slice(0, 4).join(', '); };
     EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? L(late + ' late today', late + ' ang late ngayon') : (inT ? L(inT + ' of ' + (H.staff || 0) + ' staff clocked in', inT + ' sa ' + (H.staff || 0) + ' staff ang naka-in') : L('No clock-ins yet today', 'Wala pang nag-time in ngayon')),
@@ -504,8 +516,8 @@
   }
 
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
-  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[93,42], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
-  var SPOT = { boss:[90,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
+  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[91,41], secretary:[92,53.5], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
+  var SPOT = { boss:[88,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
   var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['saudi','🇸🇦 SAUDI OFFICE',75,25,11,33],['boss','BOSS',87,25,11,33],
     ['qa','QA DESK',2,63,22,34],['records','RECORDS',25,63,20,34],['vault','VAULT',46,63,12,34],['deliv','DELIVERY',59,63,15,34],['kitchen','PANTRY',75,63,23,34]];
   var P = {}, inited = false, MAP, PREV = null;
@@ -537,7 +549,7 @@
   }
 
   // ---------- sounds (made by the browser, no audio files, free) ----------
-  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160, saudi:260 };
+  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160, saudi:260, secretary:330 };
   var SND = { vol:50, mode:'words', sfx:true, alarm:true, lang:'en', on:false };
   try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
   window.__lbLang = SND.lang;
@@ -599,6 +611,27 @@
         (bad.length ? L(', and ' + bad.length + ' need your attention: ', ', at ' + bad.length + ' ang kailangang tingnan: ') + bad.map(function(x){ return EMP[x].name; }).join(', ') + '.' : L('. No problems right now.', '. Walang problema ngayon.')) +
         (apn ? L(' ' + apn + ' approvals are waiting for you.', ' May ' + apn + ' approval na naghihintay sa inyo.') : '');
       return { name:e.name, role:e.role, st:e.st, text:t, speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name };
+    }
+    if(k === 'secretary'){
+      var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }), up = open.filter(function(n){ return new Date(n.at).getTime() > nowMs; });
+      var t = G + ' ' + L('This is Cali, your secretary.', 'Si Cali po, ang secretary ninyo.') + '\n\n' +
+        (due.length ? due.map(function(n){ return '⏰ **' + L('It\'s time: ', 'Oras na po: ') + '**' + n.note + ' (' + noteWhen(n.at) + ')'; }).join('\n') + '\n' : '') +
+        (up.length ? L('**Coming up:** ', '**Susunod:** ') + up.slice(0, 3).map(function(n){ return noteWhen(n.at) + ' — ' + n.note; }).join(' · ') : (due.length ? '' : L('No reminders yet. Add one below.', 'Wala pang paalala. Magdagdag sa ibaba.')));
+      var sp = G + ' ' + (due.length ? L('Reminder: ', 'Paalala po: ') + due.map(function(n){ return n.note; }).join('. ') + '.' : up.length ? L('Your next reminder is ', 'Ang susunod ninyong paalala ay ') + noteWhen(up[0].at) + ': ' + up[0].note + '.' : L('You have no reminders.', 'Wala po kayong paalala.'));
+      var row = function(n, isDue){ return '<div class="nt' + (isDue ? ' due' : '') + '"><span class="w">' + esc(noteWhen(n.at)) + '</span><span class="m">' + esc(n.note) + '</span><button data-nd="' + n.id + '" title="Done">✓</button><button data-nx="' + n.id + '" title="Delete">🗑</button></div>'; };
+      var d0 = new Date(Date.now() + 3 * 3600000 + 30 * 60000), dv = d0.toISOString().slice(0, 10), tv = d0.toISOString().slice(11, 16);
+      var extra = '<style>.o3-notes{margin-top:8px}.o3-notes .nt{display:flex;gap:6px;align-items:center;padding:5px 6px;border-radius:8px;background:#1d1640;margin-bottom:4px;font-size:12.5px}.o3-notes .nt.due{background:#4a3a12}.o3-notes .w{flex:0 0 auto;color:#8fd9ff;font-weight:700}.o3-notes .m{flex:1;min-width:0;overflow-wrap:anywhere}.o3-notes .nt button{border:0;background:#2c2458;color:#fff;border-radius:6px;padding:3px 7px;cursor:pointer}' +
+        '.o3-notes form{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.o3-notes input{font:inherit;font-size:12.5px;border:1px solid #4a3f7a;background:#0f0b22;color:#f1ecff;border-radius:8px;padding:6px 8px}.o3-notes input[name=n]{flex:1 1 180px}.o3-notes form button{border:0;background:#8e44ad;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}.o3-notes .er{color:#ff9b9b;font-size:12px;width:100%}</style>' +
+        '<div class="o3-notes">' + due.map(function(n){ return row(n, true); }).join('') + up.slice(0, 8).map(function(n){ return row(n, false); }).join('') +
+        '<form><input name="n" maxlength="300" placeholder="' + esc(L('What should I remind you?', 'Ano ang ipapaalala ko?')) + '" required><input name="d" type="date" value="' + dv + '" required><input name="t" type="time" value="' + tv + '" required><button>' + esc(L('＋ Add', '＋ Idagdag')) + '</button><div class="er"></div></form></div>';
+      var onBox = function(box, again){
+        box.querySelectorAll('[data-nd]').forEach(function(b){ b.onclick = async function(){ b.disabled = true; await window.LBOfficeNotes.done(Number(b.getAttribute('data-nd'))); again(); }; });
+        box.querySelectorAll('[data-nx]').forEach(function(b){ b.onclick = async function(){ b.disabled = true; await window.LBOfficeNotes.del(Number(b.getAttribute('data-nx'))); again(); }; });
+        var f = box.querySelector('.o3-notes form'); if(f) f.onsubmit = async function(ev){ ev.preventDefault(); var n = f.n.value.trim(), d = f.d.value, tm = f.t.value; if(!n || !d || !tm) return;
+          var at = new Date(d + 'T' + tm + ':00+03:00').toISOString(), bt = f.querySelector('button'); bt.disabled = true;
+          var r = await window.LBOfficeNotes.add(n, at); bt.disabled = false; if(!r.success){ f.querySelector('.er').textContent = r.error || 'Not saved.'; return; } again(); };
+      };
+      return { name:e.name, role:e.role, st:e.st, text:t, speak:sp, extra:extra, onBox:onBox, to:ME.pres ? L('the President', 'sa President') : ME.name };
     }
     var stw = { working:L('working on it now', 'ginagawa ko ngayon'), ok:L('all good', 'ayos lahat'), warn:L('needs checking', 'kailangang tingnan'), alert:L('PROBLEM', 'MAY PROBLEMA') }[e.st] || '';
     var close = e.st === 'alert' ? L('This needs your attention right away, ' + ME.sir + '.', 'Kailangan po ito ng atensyon ninyo agad, ' + ME.sir + '.') : e.st === 'warn' ? L('Please take a look when you can, ' + ME.sir + '.', 'Pakitingnan po kapag may oras kayo, ' + ME.sir + '.') : L('Everything is under control, ' + ME.sir + '.', 'Kontrolado ko po ito, ' + ME.sir + '.');
@@ -841,14 +874,31 @@
         else $('deckBox').textContent = d.error || 'Could not load.';
         return;
       }
-      S = d.status; render();
+      S = d.status; await loadNotes(true); render();
     }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; setTimeout(load, 8000); }
     finally{ busy = false; }
   }
+  async function noteApi(params){ var res = await fetch(API, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) }); return res.json(); }
+  async function loadNotes(quiet){ try{ var d = await noteApi({ action:'notes' }); if(d && d.success){ NOTES = d.notes || []; if(!quiet && S) render(); } }catch(e){} }
+  window.LBOfficeNotes = { add:async function(note, at){ var d = await noteApi({ action:'noteAdd', note:note, at:at }); if(d.success) await loadNotes(); return d; },
+    done:async function(id){ var d = await noteApi({ action:'noteDone', id:id }); await loadNotes(); return d; },
+    del:async function(id){ var d = await noteApi({ action:'noteDel', id:id }); await loadNotes(); return d; } };
+  // the alarm: when a note's time comes, Cali beeps, walks you to her desk and reads it out (once per note on this device)
+  function heard(id){ try{ return (JSON.parse(localStorage.getItem('lbHqNoteHeard') || '[]') || []).indexOf(id) >= 0; }catch(e){ return false; } }
+  function markHeard(id){ try{ var a = JSON.parse(localStorage.getItem('lbHqNoteHeard') || '[]') || []; a.push(id); localStorage.setItem('lbHqNoteHeard', JSON.stringify(a.slice(-200))); }catch(e){} }
+  setInterval(function(){
+    var nowMs = Date.now(), due = (NOTES || []).filter(function(n){ var t = new Date(n.at).getTime(); return !n.done && t <= nowMs && nowMs - t < 2 * 3600000 && !heard(n.id); });
+    if(!due.length) return;
+    due.forEach(function(n){ markHeard(n.id); });
+    window.__lbNoteAlarm = due; if(S) render(); alarmBeep(); setTimeout(alarmBeep, 700);
+    try{ if(window.LBOffice3D && document.body.classList.contains('v3d')) window.LBOffice3D.select('secretary');
+      else window.LBOfficeSpeakReport && window.LBOfficeSpeakReport('secretary', (window.LBOfficeReport('secretary') || {}).speak || ''); }catch(e){}
+  }, 10000);
+  setInterval(function(){ if(!document.hidden) loadNotes(); }, 60000);
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=16'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=17'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
