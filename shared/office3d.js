@@ -37,7 +37,7 @@
   var ST_COL = { working:'#4fb3ff', ok:'#5be29a', warn:'#ffc24f', alert:'#ff6b6b' };
 
   var T = null, renderer, scene, camera, clock, W = 1, H = 1;
-  var LAMPS = [], WINS = [], SKY = { hemi:null, sun:null, fill:null, rain:null, wx:null, flash:0 };
+  var LAMPS = [], WINS = [], SKY = { hemi:null, sun:null, fill:null, rain:null, wx:null, flash:0, slant:-.08 };
   var target = null, viewSize = 26, follow = '', AG = {}, ROOMOBJ = {}, LED = [], SCOREBOARD = null, DATA = null, LOADED_AT = 0, NEXT_AT = 0;
   var lastSay = {}, lastChange = {}, roomTags = [], firstData = true;
 
@@ -195,7 +195,7 @@
     var sun = new T.DirectionalLight('#ffe2b8', .95); sun.position.set(-14, 30, 18); sun.target.position.set(17, 0, 10); sun.castShadow = true; sun.shadow.mapSize.set(innerWidth < 700 ? 1024 : 2048, innerWidth < 700 ? 1024 : 2048);
     var sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 22; sc.bottom = -22; sc.near = 1; sc.far = 90; sun.shadow.bias = -.0008; scene.add(sun); scene.add(sun.target);
     var fill = new T.PointLight('#ffb36b', .35, 60); fill.position.set(17, 8, 24); scene.add(fill);
-    SKY.sun = sun; SKY.fill = fill; buildRain();
+    SKY.sun = sun; SKY.fill = fill; buildRain(); buildOutside();
     ROOMS.forEach(buildRoom); buildDecor();
     ROOMS.forEach(function(R){
       R.agents.forEach(function(k, i){ var s = R.slots[i], a = buildAgent(k); a.room = R; a.desk = buildDesk(k, s[0], s[1], k === 'boss'); a.desk.rug.material.color.set(R.rug);
@@ -412,7 +412,7 @@
       a.desk.ring.scale.setScalar(a.st === 'alert' ? 1 + Math.sin(t * 6) * .12 : 1); });
     scrT += dt; if(scrT > .12){ scrT = 0; Object.keys(AG).forEach(function(k){ var a = AG[k]; var near = !follow || follow === k || camera.zoom < 2.5; if(near) drawScreen(a, a.st, t); }); }
     LED.forEach(function(l, i){ l.visible = Math.sin(t * (3 + i % 4) + i) > -.3; });
-    stepRain(dt);
+    stepRain(dt); stepOutside(dt, t);
     if(follow && AG[follow]){ targetGoal = AG[follow].pos.clone().add(new T.Vector3(0, .7, -.3));
       if(root.classList.contains('dopen')){ var pw = Math.min(320, W * .86) / 2; targetGoal.addScaledVector(new T.Vector3(1, 0, -1).normalize(), pw * viewSize / H / camera.zoom); } }
     if(targetGoal) target.lerp(targetGoal, Math.min(1, dt * 4));
@@ -431,18 +431,18 @@
 
 
   // ---------- Nov 2026: real time of day (Bahrain) + live weather (Open-Meteo, free, no key) ----------
-  var WX = { code:-1, temp:null, isDay:null, cloud:0, at:0 };
+  var WX = { code:-1, temp:null, isDay:null, cloud:0, wind:0, at:0 };
   function buildRain(){
-    var N = 700, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
-    for(var i = 0; i < N; i++){ var x = -3 + Math.random() * 40, y = Math.random() * 16, z = -3 + Math.random() * 27; pos.set([x, y, z, x - .05, y - .55, z + .05], i * 6); }
+    var N = 1000, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
+    for(var i = 0; i < N; i++){ var x = -9 + Math.random() * 52, y = Math.random() * 16, z = -15 + Math.random() * 50; pos.set([x, y, z, x - .05, y - .55, z + .05], i * 6); }
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
     var rain = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#a9c8ff', transparent:true, opacity:.55 })); rain.visible = false; rain.frustumCulled = false; scene.add(rain); SKY.rain = rain;
   }
   function stepRain(dt){
     var r = SKY.rain; if(!r || !r.visible) return;
     var p = r.geometry.attributes.position.array, sp = (WX.code >= 95 ? 24 : WX.code >= 63 ? 20 : 14) * dt;
-    for(var i = 0; i < p.length; i += 6){ p[i + 1] -= sp; p[i + 4] -= sp; p[i] -= sp * .08; p[i + 3] -= sp * .08;
-      if(p[i + 4] < 0){ var x = -3 + Math.random() * 40, y = 13 + Math.random() * 4, z = -3 + Math.random() * 27; p[i] = x; p[i + 1] = y; p[i + 2] = z; p[i + 3] = x - .05; p[i + 4] = y - .55; p[i + 5] = z + .05; } }
+    for(var i = 0; i < p.length; i += 6){ p[i + 1] -= sp; p[i + 4] -= sp; p[i] += sp * SKY.slant; p[i + 3] += sp * SKY.slant;
+      if(p[i + 4] < -.8 || p[i] > 46){ var x = -9 + Math.random() * 52, y = 13 + Math.random() * 4, z = -15 + Math.random() * 50; p[i] = x; p[i + 1] = y; p[i + 2] = z; p[i + 3] = x - .05; p[i + 4] = y - .55; p[i + 5] = z + .05; } }
     r.geometry.attributes.position.needsUpdate = true;
     if(WX.code >= 95){ SKY.flash = Math.max(0, SKY.flash - dt * 3); if(Math.random() < dt * .08) SKY.flash = 1; if(SKY.hemi) SKY.hemi.intensity = SKY.baseHemi + SKY.flash * 1.4; }
   }
@@ -477,22 +477,117 @@
     top.lerp(new T.Color('#ff9a6a'), gold * .55); top.lerp(new T.Color('#5a6070'), cloud * .55); bot.lerp(new T.Color('#2a2a3a'), cloud * .4);
     stage.style.background = 'linear-gradient(180deg,#' + top.getHexString() + ',#' + bot.getHexString() + ')';
     if(SKY.rain) SKY.rain.visible = wet;
+    paintOutside(day, h, kind, wet, cloud, gold);
     var chip = root.querySelector('.o3-wx');
     if(!chip){ var tp = root.querySelector('.o3-top'); if(tp){ chip = document.createElement('span'); chip.className = 'o3-live-pill o3-wx'; tp.appendChild(chip); } }
     if(chip){
       var ph = day > .6 ? (gold > .4 ? (h < 12 ? '🌅 Morning' : '🌇 Sunset') : h < 12 ? '☀️ Morning' : '☀️ Afternoon') : day > .05 ? (h < 12 ? '🌅 Sunrise' : '🌇 Sunset') : '🌙 Night';
       var ic = { clear:day > .3 ? '☀️' : '🌙', part:'⛅', cloud:'☁️', fog:'🌫️', drizzle:'🌦️', rain:'🌧️', storm:'⛈️' }[kind] || '';
-      chip.textContent = ph + (WX.code >= 0 ? ' · ' + ic + ' ' + (WX.temp != null ? Math.round(WX.temp) + '°C ' : '') + wxInfo(WX.code)[1] : '');
+      var hot = WX.temp != null && WX.temp >= 35, windy = WX.wind >= 20;
+      chip.textContent = ph + (WX.code >= 0 ? ' · ' + ic + ' ' + (WX.temp != null ? Math.round(WX.temp) + '°C ' : '') + wxInfo(WX.code)[1] : '') + (hot ? ' · 🔥 Hot' : '') + (windy ? ' · 💨 ' + (WX.wind >= 38 ? 'Very windy ' : 'Windy ') + Math.round(WX.wind) + ' km/h' : '');
       chip.title = 'Bahrain — real time and weather (Open-Meteo)';
     }
   }
   function loadWeather(){
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=26.22&longitude=50.58&current=temperature_2m,weather_code,is_day,cloud_cover&timezone=Asia%2FBahrain')
-      .then(function(r){ return r.json(); }).then(function(j){ var c = j && j.current; if(!c) return; WX.code = Number(c.weather_code); WX.temp = c.temperature_2m; WX.isDay = c.is_day; WX.at = Date.now(); applySky(); }).catch(function(){});
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=26.22&longitude=50.58&current=temperature_2m,weather_code,is_day,cloud_cover,wind_speed_10m&timezone=Asia%2FBahrain')
+      .then(function(r){ return r.json(); }).then(function(j){ var c = j && j.current; if(!c) return; WX.code = Number(c.weather_code); WX.temp = c.temperature_2m; WX.isDay = c.is_day; WX.cloud = Number(c.cloud_cover) || 0; WX.wind = Number(c.wind_speed_10m) || 0; WX.at = Date.now(); applySky(); }).catch(function(){});
   }
   setTimeout(function(){ applySky(); loadWeather(); }, 1500);
   setInterval(applySky, 60000); setInterval(loadWeather, 15 * 60000);
-  window.LBOfficeSky = { test:function(code, hour){ if(code != null) WX.code = code; SKY.forceHour = hour; applySky(); } };   // console preview only
+  window.LBOfficeSky = { test:function(code, hour, temp, wind, cloud){ if(code != null) WX.code = code; SKY.forceHour = hour; if(temp != null) WX.temp = temp; if(wind != null) WX.wind = wind; if(cloud != null) WX.cloud = cloud; applySky(); } };   // console preview only
+
+
+  // ---------- Nov 2026: the outside — island ground, palms, road, lamps, clouds, puddles, wind, sun/moon/stars ----------
+  var OUT = { palms:[], clouds:[], puddles:[], glows:[], ground:null, wind:null, sky:null, cloudMat:null };
+  function palm(x, z, s){
+    var g = new T.Group(); g.position.set(x, -.8, z); g.scale.setScalar(s); scene.add(g);
+    var lean = (Math.random() - .5) * .25, tc = '#8a6440';
+    for(var i = 0; i < 6; i++){ cyl(.17 - i * .015, .2 - i * .015, .75, i % 2 ? tc : '#7a5636', lean * i * .35, .37 + i * .7, 0, g, 8); }
+    var crown = new T.Group(); crown.position.set(lean * 2.1, 4.35, 0); g.add(crown);
+    for(var f = 0; f < 8; f++){ var arm = new T.Group(); arm.rotation.y = f / 8 * Math.PI * 2 + Math.random() * .3; crown.add(arm);
+      var leaf = new T.Mesh(new T.SphereGeometry(1, 10, 6), mat(f % 2 ? '#3f8f3a' : '#4fa846')); leaf.scale.set(1.25, .08, .3); leaf.position.set(1.05, -.2, 0); leaf.rotation.z = -.38; leaf.castShadow = true; arm.add(leaf); }
+    ball(.16, '#6b4a2a', .12, -.15, .1, crown); ball(.15, '#6b4a2a', -.1, -.18, -.08, crown);
+    OUT.palms.push({ crown:crown, ph:Math.random() * 6 });
+  }
+  function buildOutside(){
+    var C = new T.Vector3(17, 0, 10), R = 27;
+    var top = new T.MeshStandardMaterial({ color:'#e3c893', roughness:.95 }), side = mat('#8a6a48');
+    var isl = new T.Mesh(new T.CylinderGeometry(R, R - 1.5, 2.4, 72), [side, top, side]); isl.position.set(C.x, -2.01, C.z); isl.receiveShadow = true; scene.add(isl); OUT.ground = top;
+    // road + curb on the street side (where the driver leaves)
+    var rl = 2 * Math.sqrt(R * R - 23.5 * 23.5) - 1;
+    box(4, .06, rl, '#3b3b44', 39.5, -.78, C.z, null, { r:.6 }); box(1.4, .14, rl, '#cfc6b4', 36.6, -.74, C.z);
+    for(var dz = -rl / 2 + 1.5; dz < rl / 2 - 1; dz += 3) box(.14, .07, 1.5, '#f4e9a0', 39.5, -.74, C.z + dz);
+    // street lamps (glow at night)
+    [ -1, 7, 15, 22 ].forEach(function(z){ cyl(.06, .08, 3.2, '#3a3a46', 36.7, .8, z, null, 8); box(.9, .08, .1, '#3a3a46', 37.1, 2.38, z);
+      var lm = mat('#fff1c9', { e:'#ffd27a', ei:.9 }); LAMPS.push(lm); var hd = box(.36, .16, .3, lm, 37.5, 2.3, z); hd.castShadow = false;
+      var gl = new T.Mesh(new T.CircleGeometry(1.6, 28), new T.MeshBasicMaterial({ color:'#ffcf7a', transparent:true, opacity:0, depthWrite:false })); gl.rotation.x = -Math.PI / 2; gl.position.set(37.6, -.7, z); scene.add(gl); OUT.glows.push(gl); });
+    // palms all around the building
+    [[-3,-1,1.1],[-5.5,8,1],[-3.5,19,1.15],[6,27,1],[17.5,29.5,1.2],[29,27,1.05],[34.8,-4.5,1],[34.8,25,1.1],[10,-7,1.15],[24,-7,1],[2,-6.5,.95],[-6,13.5,.85],[12,31,.8]].forEach(function(p){ palm(p[0], p[1], p[2]); });
+    // little bushes / rocks
+    [[-2,4],[3,24],[22,24.5],[31,-3.5],[15,-4],[-4,24]].forEach(function(p, i){ ball(.45, i % 2 ? '#5aa34a' : '#4b8f3d', p[0], -.6, p[1], null, 1.3, .7, 1.1); });
+    // puddles (only when wet)
+    [[-2,7],[5,23.5],[14,23.6],[27,24],[20,-4.2],[8,-4],[-4.5,15],[30,-5]].forEach(function(p){ var m = new T.Mesh(new T.CircleGeometry(.7 + Math.random() * .6, 24), new T.MeshStandardMaterial({ color:'#6f8fbf', roughness:.05, metalness:.4, transparent:true, opacity:.6 }));
+      m.rotation.x = -Math.PI / 2; m.scale.set(1.5, 1, 1); m.position.set(p[0], -.79, p[1]); m.visible = false; scene.add(m); OUT.puddles.push(m); });
+    // clouds behind / beside the office (so they never cover the workers)
+    OUT.cloudMat = new T.MeshStandardMaterial({ color:'#ffffff', roughness:1, transparent:true, opacity:.92 });
+    for(var c = 0; c < 11; c++){ var cg = new T.Group(), back = c < 7;
+      cg.position.set(back ? -12 + c * 9 : -14 - Math.random() * 3, 4.5 + Math.random() * 2.5, back ? -13 - Math.random() * 4 : -4 + (c - 7) * 9);
+      for(var b = 0; b < 5; b++){ var pf = new T.Mesh(new T.SphereGeometry(1, 12, 10), OUT.cloudMat); pf.position.set((b - 2) * 1.1, Math.sin(b) * .35, (Math.random() - .5) * .8); pf.scale.setScalar(.9 + Math.random() * .8 - Math.abs(b - 2) * .15); cg.add(pf); }
+      cg.userData.back = back; cg.visible = false; scene.add(cg); OUT.clouds.push(cg); }
+    // wind streaks / blowing sand
+    var N = 180, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
+    for(var i = 0; i < N; i++){ var x = -9 + Math.random() * 52, y = .1 + Math.random() * 6, z = -15 + Math.random() * 50; pos.set([x, y, z, x + 1.3, y, z + .35], i * 6); }
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    OUT.wind = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#ffffff', transparent:true, opacity:.45 })); OUT.wind.visible = false; OUT.wind.frustumCulled = false; scene.add(OUT.wind);
+    // CSS sky layer behind the 3D (stars, sun / moon, heat haze, lightning)
+    if(!document.getElementById('o3SkyCss')){ var st = document.createElement('style'); st.id = 'o3SkyCss';
+      st.textContent = '.o3-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden}.o3-stage canvas{position:relative;z-index:1}' +
+        '.o3-stars{position:absolute;left:0;top:0;width:2px;height:2px;border-radius:50%;opacity:0;transition:opacity 2s}' +
+        '.o3-orb{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;transition:all 2s;opacity:0}' +
+        '.o3-orb.sun{background:radial-gradient(circle,#fffbe0 0 38%,#ffd36b 52%,#ffb34766 64%,transparent 72%)}' +
+        '.o3-orb.moon{background:radial-gradient(circle at 38% 38%,#fffdf2 0 30%,#e9e4c9 46%,#e9e4c933 56%,transparent 66%)}' +
+        '.o3-heat{position:absolute;inset:auto 0 0 0;height:55%;opacity:0;transition:opacity 2s;z-index:2;background:linear-gradient(180deg,transparent,#ffb04a26 60%,#ff8a3a33);animation:o3heat 3.2s ease-in-out infinite}' +
+        '@keyframes o3heat{0%,100%{transform:scaleY(1) skewX(0deg)}50%{transform:scaleY(1.04) skewX(1.2deg)}}' +
+        '.o3-haze{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity 2s;background:#d9b98055}' +
+        '.o3-flash{position:absolute;inset:0;z-index:2;background:#e8eeff;opacity:0}';
+      document.head.appendChild(st); }
+    var sky = document.createElement('div'); sky.className = 'o3-sky';
+    var sh = []; for(var k = 0; k < 90; k++) sh.push((Math.random() * 100).toFixed(1) + 'vw ' + (Math.random() * 45).toFixed(1) + 'vh 0 ' + (Math.random() < .2 ? '1px' : '0') + ' #fff' + (Math.random() < .5 ? 'c' : ''));
+    sky.innerHTML = '<i class="o3-stars" style="box-shadow:' + sh.join(',') + '"></i><i class="o3-orb"></i>'; stage.insertBefore(sky, stage.firstChild);
+    var over = document.createElement('div'); over.className = 'o3-sky'; over.style.zIndex = 2; over.innerHTML = '<i class="o3-heat"></i><i class="o3-haze"></i><i class="o3-flash"></i>'; stage.appendChild(over);
+    OUT.sky = sky; OUT.over = over;
+  }
+  function paintOutside(day, h, kind, wet, cloud, gold){
+    if(!OUT.ground) return;
+    var hot = WX.temp != null && WX.temp >= 35 && day > .4, wind = WX.wind || 0;
+    var gc = lerpC('#e3c893', wet ? '#a48a5c' : hot ? '#f2c27a' : '#e3c893', 1); gc.lerp(new T.Color('#5a5478'), (1 - day) * .55); OUT.ground.color.copy(gc); OUT.ground.roughness = wet ? .35 : .95;
+    OUT.puddles.forEach(function(m){ m.visible = wet; });
+    OUT.glows.forEach(function(g){ g.material.opacity = .35 * (1 - day); });
+    var cc = WX.cloud ? WX.cloud / 100 : cloud, n = Math.round(Math.min(1, cc) * OUT.clouds.length);
+    OUT.clouds.forEach(function(c, i){ c.visible = i < n; });
+    OUT.cloudMat.color.copy(lerpC('#4a4f6a', wet || kind === 'storm' ? '#9097a8' : '#ffffff', day)); if(gold > .3) OUT.cloudMat.color.lerp(new T.Color('#ffb98a'), gold * .4);
+    OUT.wind.visible = wind >= 20; OUT.wind.material.color.set(wind >= 38 || kind === 'fog' ? '#e8d2a0' : '#ffffff'); OUT.wind.material.opacity = Math.min(.7, .25 + (wind - 20) / 60);
+    SKY.slant = -(.08 + wind / 120);
+    var sk = OUT.sky, ov = OUT.over; if(!sk) return;
+    sk.querySelector('.o3-stars').style.opacity = String(Math.max(0, (1 - day * 1.6)) * (1 - cc * .85));
+    var orb = sk.querySelector('.o3-orb'), isSun = day > .05, f = isSun ? (h - 5.5) / 12 : ((h + 24 - 17.5) % 24) / 13;
+    f = Math.max(0, Math.min(1, f)); orb.className = 'o3-orb ' + (isSun ? 'sun' : 'moon');
+    orb.style.left = (6 + f * 88) + '%'; orb.style.top = (34 - Math.sin(Math.PI * f) * 26) + '%'; orb.style.opacity = String(Math.max(0, 1 - Math.max(0, cc - .45) * 1.8));
+    ov.querySelector('.o3-heat').style.opacity = hot ? '1' : '0';
+    ov.querySelector('.o3-haze').style.opacity = kind === 'fog' || wind >= 38 ? '1' : '0';
+  }
+  function stepOutside(dt, t){
+    if(!OUT.ground) return;
+    var w = WX.wind || 0, amp = .025 + Math.min(.32, w / 130), lean = Math.min(.22, w / 200);
+    OUT.palms.forEach(function(p){ p.crown.rotation.z = -lean + Math.sin(t * (1.1 + w / 25) + p.ph) * amp; p.crown.rotation.x = Math.cos(t * (.9 + w / 30) + p.ph) * amp * .5; });
+    var cs = (.25 + w / 18) * dt;
+    OUT.clouds.forEach(function(c){ if(!c.visible) return; if(c.userData.back){ c.position.x += cs; if(c.position.x > 56) c.position.x = -16; } else { c.position.z += cs * .6; if(c.position.z > 34) c.position.z = -8; } });
+    if(OUT.wind.visible){ var p = OUT.wind.geometry.attributes.position.array, sp = (7 + w * .35) * dt;
+      for(var i = 0; i < p.length; i += 6){ p[i] += sp; p[i + 3] += sp; p[i + 2] += sp * .27; p[i + 5] += sp * .27;
+        if(p[i] > 46 || p[i + 2] > 36){ var x = -9 + Math.random() * 10, y = .1 + Math.random() * 6, z = -15 + Math.random() * 50; p.set([x, y, z, x + 1.3, y, z + .35], i); } }
+      OUT.wind.geometry.attributes.position.needsUpdate = true; }
+    if(OUT.over){ var fl = OUT.over.querySelector('.o3-flash'); fl.style.opacity = String((SKY.flash || 0) * .55); }
+  }
 
   // ---------- public API ----------
   window.LBOffice3D = {

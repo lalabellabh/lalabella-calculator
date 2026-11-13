@@ -5,11 +5,11 @@
 <script src="shared/config.js"></script>
 <script src="shared/theme.js"></script>
 <script src="auth-guard.js"></script>
-<script src="shared/admin-gate.js" data-title="AI Office" data-strict></script>
+<script src="shared/admin-gate.js" data-title="Lalabella HQ" data-strict></script>
 <meta charset="utf-8">
 <meta name="lb-theme-keep" content="#o3d .o3-side, #o3d .o3-tag, #o3d .o3-room">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lalabella — AI Office</title>
+<title>Lalabella HQ</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0d0a1a;--panel:#150f2b;--ink:#f1ecff;--muted:#9a90b8;--line:#2c2447;--ok:#5be29a;--work:#4fb3ff;--warn:#ffc24f;--bad:#ff6b6b;--u:3px}
@@ -179,6 +179,11 @@
   /* ---------- 3D office (Nov 2026) ---------- */
   #o3d{position:relative;display:none;grid-template-columns:minmax(0,1fr) 280px;border-radius:18px;overflow:hidden;border:1px solid #3a3060;background:radial-gradient(120% 100% at 40% 0%,#3b2c63 0%,#1a1430 70%);box-shadow:0 18px 50px #0008}
   body.v3d #o3d{display:grid} body.v3d #ow{display:none}
+  .o3-sidebtn{position:absolute;top:50%;right:280px;transform:translate(50%,-50%);z-index:8;width:26px;height:58px;border-radius:13px;border:1px solid #6a5aa8;background:#2a2148ee;color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px #0007}
+  .o3-sidebtn:hover{background:#3d3170}
+  #o3d.sidehid{grid-template-columns:minmax(0,1fr) 0} #o3d.sidehid .o3-side{display:none} #o3d.sidehid .o3-sidebtn{right:14px;transform:translateY(-50%)}
+  #o3d.full .o3-sidebtn{display:none}
+  @media (max-width:820px){ .o3-sidebtn,#o3d.sidehid .o3-sidebtn{top:auto;bottom:8px;right:10px;transform:none;height:30px;width:auto;padding:0 12px;font-size:12px} }
   .o3-main{position:relative;min-height:560px;height:66vh}
   .o3-stage{position:absolute;inset:0} .o3-stage canvas{display:block;width:100%;height:100%;cursor:grab}
   .o3-tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
@@ -259,15 +264,16 @@
 </head>
 <body>
 <div class="app" data-lb-text-skip>
-  <div class="head"><h1>🏢 AI OFFICE</h1><span class="tag" data-tl="Mga worker ng system mo — libreng scheduled jobs na nagbabasa ng sarili mong data. Pindutin ang kahit sino para sa detalye.">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
+  <div class="head"><h1>🏢 LALABELLA HQ</h1><span class="tag" data-tl="Mga worker ng system mo — libreng scheduled jobs na nagbabasa ng sarili mong data. Pindutin ang kahit sino para sa detalye.">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
     <button class="pill hi" id="v3dBtn">🧊 3D</button><button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref" data-tl="↻ I-refresh">↻ Refresh</button><a class="pill" href="audit-log.html" data-tl="🕘 History">🕘 Activity History</a></div>
-  <div class="denied" id="denied"><b>No access</b><p>The AI Office is only for Admin accounts.</p></div>
+  <div class="denied" id="denied"><b>No access</b><p>Lalabella HQ is only for Admin accounts.</p></div>
   <div class="main" id="mainBox">
     <section id="o3d">
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
         <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
         <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
+      <button class="o3-sidebtn" id="o3SideBtn" title="Hide the side panel">❯</button>
       <div class="o3-side">Loading…</div>
     </section>
     <section class="ow" id="ow">
@@ -293,6 +299,17 @@
 </div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
 <script src="shared/nav.js" data-standalone data-shift=".head"></script>
+<script>
+(function(){   // Nov 2026: arrow to hide / show the side panel (remembered on this device)
+  var box = document.getElementById('o3d'), b = document.getElementById('o3SideBtn');
+  if(!box || !b) return;
+  function paint(){ var hid = box.classList.contains('sidehid'), mob = window.innerWidth <= 820;
+    b.textContent = mob ? (hid ? '▴ Show panel' : '▾ Hide panel') : (hid ? '❮' : '❯'); b.title = hid ? 'Show the side panel' : 'Hide the side panel'; }
+  try { if(localStorage.getItem('lbHqSide') === 'hid') box.classList.add('sidehid'); } catch(e){}
+  b.addEventListener('click', function(){ box.classList.toggle('sidehid'); try { localStorage.setItem('lbHqSide', box.classList.contains('sidehid') ? 'hid' : ''); } catch(e){} paint(); });
+  window.addEventListener('resize', paint); paint();
+})();
+</script>
 <script>
 (function(){
   var API = LB_CONFIG.AUDIT_API, $ = function(i){ return document.getElementById(i); }, S = null, EMP = {};
@@ -783,7 +800,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=5'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=6'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
