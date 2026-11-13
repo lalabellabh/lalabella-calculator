@@ -301,6 +301,7 @@ async function handleLogin(p: any) {
     return json({ success: false, error: locking ? `Too many failed attempts. Account locked for ${LOCK_MINUTES} minutes.` : 'Incorrect username or password.' });
   }
   if (String(user.status || 'Active') === 'Inactive') return json({ success: false, error: 'This account is disabled. Please contact your admin.' });
+  if (String(user.status || 'Active') === 'Pending') return json({ success: false, pending: true, error: 'Your account is waiting for admin approval. Please try again later.' });
   // Nov 2026: role "Saudi Team" = limited account (Saudi Transfers, My Profile, Members, Messenger, Status only).
   // Its session lives in users.vtoken (like Messenger visitors): users.token stays NULL (DB trigger), so every staff
   // backend refuses it; only auth-fast checkSession, chat, profile-fast and saudi-fast accept it.
@@ -343,6 +344,33 @@ async function handleRegister(p: any) {
     throw e;
   }
   return json({ success: true, message: 'Registered successfully. You can now log in.' });
+}
+
+// Nov 2026: Saudi Team self sign-up (saudi-join.html). The account is created as role "Saudi Team" with
+// status "Pending": it cannot log in until an Admin presses Approve in User Management.
+const SAUDI_MAX_PENDING = 10;
+async function handleSaudiSignup(p: any) {
+  const ip = String(p.__ip || '');
+  const ipKey = 'saudijoin:' + ip;
+  if (ip && await rateGet(ipKey) >= 5) return json({ success: false, error: `Too many sign-ups. Please try again in ${RATE_WINDOW_MIN} minutes.` });
+  const username = String(p.username || '').trim();
+  const password = String(p.password || '');
+  const fullName = String(p.fullName || '').replace(/\s+/g, ' ').trim();
+  if (!username || !password || !fullName) return json({ success: false, error: 'Please fill in all fields.' });
+  if (!/^[A-Za-z0-9._-]{3,30}$/.test(username)) return json({ success: false, error: 'Username must be 3–30 characters: letters, numbers, dot, dash or underscore.' });
+  if (fullName.length < 2 || fullName.length > 40) return json({ success: false, error: 'Please enter your name (2–40 characters).' });
+  if (password.length < MIN_PASSWORD_LENGTH) return json({ success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+  if (ip) await rateHit(ipKey);
+  if (await findUserByUsername(username)) return json({ success: false, error: 'That username is already taken.' });
+  const pend = await rest('GET', `users?select=id&role=eq.${encodeURIComponent(SAUDI_ROLE)}&status=eq.Pending&limit=${SAUDI_MAX_PENDING + 1}`);
+  if ((pend || []).length >= SAUDI_MAX_PENDING) return json({ success: false, error: 'Sign-ups are busy right now. Please ask the admin to approve the waiting accounts first.' });
+  try {
+    await rest('POST', 'users', { username, password_hash: await makePasswordHash(password), full_name: fullName, role: SAUDI_ROLE, status: 'Pending', branch: 'Saudi' });
+  } catch (e: any) {
+    if (String(e.message).includes('409')) return json({ success: false, error: 'That username is already taken.' });
+    throw e;
+  }
+  return json({ success: true, message: 'Sign-up sent! Please wait for the admin to approve your account, then log in.' });
 }
 
 // ---------------------------------------------------------------
@@ -690,6 +718,8 @@ async function route(action: string, p: any) {
       return handleLogin(p);
     case 'register':
       return handleRegister(p);
+    case 'saudiSignup':
+      return handleSaudiSignup(p);
     case 'logout': {
       const token = String(p.token || '').trim();
       if (token) await rest('PATCH', `users?token=eq.${encodeURIComponent(token)}`, { token: null });

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow">
+<title>Saudi Team Sign-up</title>
+<script src="shared/config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#fbeff2,#eef6f0); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .card{ width:100%; max-width:400px; background:#fff; border:1px solid var(--line); border-radius:20px; padding:26px 22px; box-shadow:0 18px 40px rgba(80,20,40,.12); }
+  .flag{ font-size:40px; text-align:center; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:6px 0 2px; text-align:center; }
+  .sub{ color:var(--dim); font-size:13px; text-align:center; margin-bottom:18px; line-height:1.45; }
+  label{ display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px; }
+  input{ width:100%; font:inherit; font-size:16px; border:1px solid var(--line); border-radius:12px; padding:11px 12px; color:var(--ink); background:#fff; }
+  input:focus{ outline:2px solid #e7a3b5; border-color:#e7a3b5; }
+  .hint{ font-size:11.5px; color:var(--dim); margin-top:4px; }
+  button{ width:100%; margin-top:18px; border:0; border-radius:14px; padding:14px; font:inherit; font-size:16px; font-weight:800; color:#fff; background:linear-gradient(135deg,#2f7a4f,#3f9a65); cursor:pointer; }
+  button:disabled{ opacity:.6; cursor:default; }
+  .msg{ display:none; margin-top:14px; padding:11px 12px; border-radius:12px; font-size:13.5px; line-height:1.45; }
+  .msg.err{ display:block; background:#fdecea; color:var(--bad); }
+  .msg.ok{ display:block; background:#e8f5ec; color:var(--ok); }
+  .foot{ text-align:center; font-size:13px; margin-top:16px; color:var(--dim); }
+  .foot a{ color:#a8405e; font-weight:700; }
+  .show{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--dim); margin-top:6px; font-weight:500; }
+  .show input{ width:auto; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="flag">🇸🇦</div>
+  <h1>Saudi Team Sign-up</h1>
+  <div class="sub">Create your Lalabella account. The admin will approve it first, then you can log in and use Saudi Transfers, My Profile and Messenger.</div>
+  <form id="f" autocomplete="off">
+    <label for="fullName">Full name</label>
+    <input id="fullName" maxlength="40" required>
+    <label for="username">Username</label>
+    <input id="username" maxlength="30" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <div class="hint">3–30 letters or numbers (dot, dash, underscore OK). No spaces.</div>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="new-password" required>
+    <div class="hint">At least 8 characters.</div>
+    <label for="password2">Type the password again</label>
+    <input id="password2" type="password" autocomplete="new-password" required>
+    <label class="show"><input type="checkbox" id="showPw"> Show password</label>
+    <button id="btn" type="submit">Sign up</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <div class="foot">Already approved? <a href="index.html">Log in here</a></div>
+</div>
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var API = (window.LB_CONFIG && (LB_CONFIG.AUTH_FAST_API || LB_CONFIG.AUTH_API)) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/auth-fast';
+  function show(t, ok){ var m = $('msg'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+  $('showPw').onchange = function(){ var t = this.checked ? 'text' : 'password'; $('password').type = t; $('password2').type = t; };
+  $('f').onsubmit = function(e){
+    e.preventDefault();
+    var fullName = $('fullName').value.trim(), username = $('username').value.trim(), pw = $('password').value, pw2 = $('password2').value;
+    if(!fullName || !username || !pw) return show('Please fill in all fields.');
+    if(!/^[A-Za-z0-9._-]{3,30}$/.test(username)) return show('Username: 3–30 letters or numbers, no spaces.');
+    if(pw.length < 8) return show('Password must be at least 8 characters.');
+    if(pw !== pw2) return show('The two passwords are not the same.');
+    var b = $('btn'); b.disabled = true; b.textContent = 'Sending…'; $('msg').className = 'msg';
+    fetch(API, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'saudiSignup', fullName:fullName, username:username, password:pw }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        b.disabled = false; b.textContent = 'Sign up';
+        if(!d || !d.success) return show((d && d.error) || 'Sign-up failed. Please try again.');
+        $('f').style.display = 'none';
+        show('✅ Sign-up sent! Your username is "' + username + '". Wait for the admin to approve it, then tap "Log in here" below.', true);
+      })
+      .catch(function(){ b.disabled = false; b.textContent = 'Sign up'; show('No connection. Please check the internet and try again.'); });
+  };
+})();
+</script>
+</body>
+</html>
