@@ -1190,14 +1190,14 @@
   // Chocolate pictures (thumbnail in pick lists, tap for big picture) on chocolate pages. See shared/choc-photos.js.
   if (moduleOf(page) === 'chocolate' && !window.LBChocPhotos && !document.querySelector('script[src="shared/choc-photos.js"]')) {
     const cp = document.createElement('script');
-    cp.src = 'shared/choc-photos.js';
+    cp.src = 'shared/choc-photos.js?v=2';
     document.body.appendChild(cp);
   }
 
   // Flower / Item pictures (thumbnail in pick lists, tap for big picture). See shared/flower-photos.js, shared/item-photos.js.
   [['flower', 'LBFlowerPhotos', 'shared/flower-photos.js'], ['item', 'LBItemPhotos', 'shared/item-photos.js']].forEach(function (m) {
     if (moduleOf(page) === m[0] && !window[m[1]] && !document.querySelector('script[src="' + m[2] + '"]')) {
-      const s = document.createElement('script'); s.src = m[2]; document.body.appendChild(s);
+      const s = document.createElement('script'); s.src = m[2] + '?v=2'; document.body.appendChild(s);
     }
   });
 
