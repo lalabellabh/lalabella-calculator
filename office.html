@@ -643,7 +643,9 @@
   window.LBOfficeSpeakReport = function(k, text, ev){
     ev = ev || {};
     if(!SND.on || SND.vol <= 0 || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
-    var clean = speechText(text), pool = bestVoices(); if(!pool.length || !/\p{L}{2,}/u.test(clean)) return false;
+    // the fast voices are the ones built into this phone / computer (no internet round-trip): use them for reports
+    var local = langVoices().filter(function(v){ return v.localService; }), clean = speechText(text), pool = local.length ? local.slice(0, 4) : bestVoices();
+    if(!pool.length || !/\p{L}{2,}/u.test(clean)) return false;
     try{
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(clean), idx = Math.max(0, KEYS.indexOf(k));
@@ -652,9 +654,13 @@
       u.onstart = function(){ if(ev.start) ev.start(); };
       u.onboundary = function(b){ if(ev.progress && clean.length) ev.progress(Math.min(1, (b.charIndex + (b.charLength || 6)) / clean.length)); };
       u.onend = u.onerror = function(){ if(ev.end) ev.end(); };
-      speechSynthesis.speak(u); lastSpeak = Date.now(); return true;
+      setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} }, 30); lastSpeak = Date.now(); return true;
     }catch(e){ return false; }
   };
+  // wake the voice engine up once (silent) on the first tap, so the first report does not wait for it
+  var warmed = false;
+  document.addEventListener('pointerdown', function(){ if(warmed || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return; warmed = true;
+    try{ var w = new SpeechSynthesisUtterance(' '); w.volume = 0; var lv = langVoices().filter(function(v){ return v.localService; })[0]; if(lv) w.voice = lv; speechSynthesis.speak(w); }catch(e){} }, { capture:true });
   window.LBOfficeStopVoice = function(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} };
   function speakWords(k, text, tone, force){
     if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
