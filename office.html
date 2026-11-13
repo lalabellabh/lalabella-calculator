@@ -577,9 +577,13 @@
   var lastSpeak = 0, usedVoice = '';
   // ---------- Nov 2026: tap anyone in the 3D office -> they report to the President ----------
   function greet(){ var h = new Date(Date.now() + 3 * 3600000).getUTCHours(); return h < 12 ? L('Good morning', 'Magandang umaga po') : h < 18 ? L('Good afternoon', 'Magandang hapon po') : L('Good evening', 'Magandang gabi po'); }
+  // Only Bench (the account with User Management) is "Mr. President"; every other Admin is called by their own name.
+  function whoMe(){ var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
+    if(u.canManageUsers === true) return { pres:true, name:'Mr. President', sir:L('Mr. President', 'Mr. President') };
+    var n = String(u.fullName || u.username || 'Admin').trim().split(/\s+/)[0] || 'Admin'; return { pres:false, name:n, sir:n }; }
   window.LBOfficeReport = function(k){
     var e = EMP[k]; if(!e) return null;
-    var G = greet() + ', ' + L('Mr. President!', 'Mr. President!');
+    var ME = whoMe(), G = greet() + ', ' + ME.name + '!';
     if(k === 'boss'){
       var S2 = window.__lbOfficeS || {}, ks = KEYS.filter(function(x){ return x !== 'boss' && EMP[x]; }), cnt = { working:0, ok:0, warn:0, alert:0 };
       ks.forEach(function(x){ cnt[EMP[x].st] = (cnt[EMP[x].st] || 0) + 1; });
@@ -590,17 +594,17 @@
         (bad.length ? L('**Needs your attention:** ', '**Kailangan ng atensyon mo:** ') + bad.map(function(x){ return EMP[x].name + ' (' + EMP[x].say + ')'; }).join(' · ') + '\n' : L('**No problems right now.**', '**Walang problema ngayon.**') + '\n') +
         L('**Approvals waiting:** ', '**Naghihintay ng approval:** ') + apn + L(' · **Staff online:** ', ' · **Online na staff:** ') + (S2.online || 0) + '\n' +
         (ai.summary ? L('**Latest daily report:** ', '**Huling daily report:** ') + ai.summary + '\n' : '') +
-        '\n' + (bad.length ? L('Awaiting your orders, Mr. President.', 'Hinihintay po namin ang utos ninyo, Mr. President.') : L('Everything is under control, Mr. President.', 'Kontrolado po ang lahat, Mr. President.'));
+        '\n' + (bad.length ? L('Awaiting your orders, ' + ME.sir + '.', 'Hinihintay po namin ang utos ninyo, ' + ME.sir + '.') : L('Everything is under control, ' + ME.sir + '.', 'Kontrolado po ang lahat, ' + ME.sir + '.'));
       var sp = G + ' ' + L('Chief of Staff reporting. ', 'Chief of Staff po. ') + cnt.working + L(' desks working, ', ' nagtatrabaho, ') + cnt.ok + L(' all good', ' ayos') +
         (bad.length ? L(', and ' + bad.length + ' need your attention: ', ', at ' + bad.length + ' ang kailangang tingnan: ') + bad.map(function(x){ return EMP[x].name; }).join(', ') + '.' : L('. No problems right now.', '. Walang problema ngayon.')) +
         (apn ? L(' ' + apn + ' approvals are waiting for you.', ' May ' + apn + ' approval na naghihintay sa inyo.') : '');
-      return { name:e.name, role:e.role, st:e.st, text:t, speak:sp };
+      return { name:e.name, role:e.role, st:e.st, text:t, speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name };
     }
     var stw = { working:L('working on it now', 'ginagawa ko ngayon'), ok:L('all good', 'ayos lahat'), warn:L('needs checking', 'kailangang tingnan'), alert:L('PROBLEM', 'MAY PROBLEMA') }[e.st] || '';
-    var close = e.st === 'alert' ? L('This needs your attention right away, sir.', 'Kailangan po ito ng atensyon ninyo agad.') : e.st === 'warn' ? L('Please take a look when you can, sir.', 'Pakitingnan po kapag may oras kayo.') : L('Everything is under control, sir.', 'Kontrolado ko po ito.');
+    var close = e.st === 'alert' ? L('This needs your attention right away, ' + ME.sir + '.', 'Kailangan po ito ng atensyon ninyo agad, ' + ME.sir + '.') : e.st === 'warn' ? L('Please take a look when you can, ' + ME.sir + '.', 'Pakitingnan po kapag may oras kayo, ' + ME.sir + '.') : L('Everything is under control, ' + ME.sir + '.', 'Kontrolado ko po ito, ' + ME.sir + '.');
     var t = G + ' ' + L('This is ', 'Si ') + e.name + L(', your ', ' po, ang ') + e.role + '.\n\n' +
       L('**Status:** ', '**Status:** ') + stw + '\n' + L('**Report:** ', '**Ulat:** ') + e.say + '\n' + (e.out ? L('**Numbers:** ', '**Detalye:** ') + e.out + '\n' : '') + '\n' + close;
-    return { name:e.name, role:e.role, st:e.st, text:t, speak:G + ' ' + L('This is ', 'Si ') + e.name + L(', your ', ' po, ang ') + e.role + '. ' + e.say + '. ' + close };
+    return { name:e.name, role:e.role, st:e.st, text:t, speak:G + ' ' + L('This is ', 'Si ') + e.name + L(', your ', ' po, ang ') + e.role + '. ' + e.say + '. ' + close, to:ME.pres ? L('the President', 'sa President') : ME.name };
   };
   window.LBOfficeSpeakReport = function(k, text){ if(!SND.on || SND.vol <= 0) return; speakWords(k, text, 'ok', true); };
   window.LBOfficeStopVoice = function(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} };
@@ -829,7 +833,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=14'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=15'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
