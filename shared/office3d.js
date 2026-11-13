@@ -592,6 +592,8 @@
       cb(d); }).catch(function(){ cb(null); });
     }
   }
+  function inPoly(x, z, pts){ var ins = false; for(var i = 0, j = pts.length - 1; i < pts.length; j = i++){ var xi = pts[i][0], zi = pts[i][1], xj = pts[j][0], zj = pts[j][1];
+      if(((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) ins = !ins; } return ins; }
   function buildCity(b, d){
     if(OUT.city){ scene.remove(OUT.city); OUT.city.traverse(function(o){ if(o.geometry) o.geometry.dispose(); }); OUT.city = null; }
     if(!d) return;
@@ -631,6 +633,8 @@
     d.b.forEach(function(bb){
       var pts = bb[0].map(P); if(pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop(); if(pts.length < 3) return;
       if(pts.some(function(p){ return inLot(p[0], p[1]); })) return;                       // our own office stands here
+      // a big building AROUND our office (e.g. the mall the branch is inside): skip it, our office stands in its place
+      for(var lx = -2; lx <= 37; lx += 6.5) for(var lz = -2; lz <= 23; lz += 5) if(inPoly(lx, lz, pts)) return;
       var cx = 0, cz = 0; pts.forEach(function(p){ cx += p[0]; cz += p[1]; }); cx /= pts.length; cz /= pts.length;
       if(Math.abs(cx - 17) > 140 || Math.abs(cz - 10) > 140) return;
       addBuilding(pts, Math.min(45, (bb[2] || (bb[1] ? bb[1] * 3.3 : 6 + (Math.abs(Math.sin(cx * 12.9 + cz * 78.2)) * 7))) / MPU));
