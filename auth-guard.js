@@ -209,6 +209,18 @@
     }
   });
 
+  // Nov 2026: "Saudi Team" accounts (limited) may only open these pages — anything else goes to Saudi Transfers.
+  // (Their session is refused by every other backend anyway; this just keeps them off pages that would be empty.)
+  const SAUDI_PAGES = ['item-saudi.html', 'profile.html', 'chatbox.html'];
+  function saudiGate_(user) {
+    try {
+      if (!user || String(user.role || '') !== 'Saudi Team') return;
+      const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+      if (SAUDI_PAGES.indexOf(page) === -1) location.replace('item-saudi.html');
+    } catch (e) {}
+  }
+  try { saudiGate_(JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || 'null')); } catch (e) {}
+
   // Accept a token from this tab's own session, OR a "Remember me"
   // token saved in localStorage from a previous visit/page.
   const token = sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken');
@@ -258,6 +270,7 @@
   if (cachedVerifiedToken === token && (Date.now() - cachedVerifiedAt) < CACHE_WINDOW_MS && cachedUserStr) {
     window.LALABELLA_TOKEN = token;
     window.LALABELLA_USER = JSON.parse(cachedUserStr);
+    saudiGate_(window.LALABELLA_USER);
     document.documentElement.style.visibility = '';
     stayLoggedIn_(token, window.LALABELLA_USER);
   } else {
@@ -269,6 +282,7 @@
       }
       window.LALABELLA_TOKEN = token;
       window.LALABELLA_USER = data.user || null;
+      saudiGate_(data.user);
       // Keep sessionStorage in sync — this tab's other scripts and
       // any page it navigates to next both read from sessionStorage.
       sessionStorage.setItem('lalabellaToken', token);

@@ -14,58 +14,70 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="lb-theme-keep" content=".wrap, .batch, .modal .box">
 <style>
-  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; --warn:#a8560b; }
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; --warn:#a8560b; --keep:#5a5aa8; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#fbeff2,#eef6f0); min-height:100vh; }
-  .wrap{ max-width:1100px; margin:0 auto; padding:16px 16px 60px; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:16px 16px 60px; }
   header{ padding-left:56px; margin:6px 0 12px; }
   h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
   .sub{ color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .big{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .big button{ border:0; border-radius:16px; padding:16px 12px; font:inherit; font-size:17px; font-weight:800; color:#fff; cursor:pointer; box-shadow:0 8px 20px rgba(80,20,40,.15); }
+  .big .snd{ background:linear-gradient(135deg,#c9506b,#8a4f8a); } .big .ret{ background:linear-gradient(135deg,#2f7a4f,#3f9a65); }
+  .big small{ display:block; font-size:11.5px; font-weight:600; opacity:.9; margin-top:3px; }
   .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin:10px 0; }
   .bar label{ font-size:11px; font-weight:700; color:var(--dim); display:flex; flex-direction:column; gap:3px; }
   .bar input,.bar select,.bar button{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:10px; padding:8px 11px; background:#fff; color:var(--ink); }
   .bar button{ cursor:pointer; font-weight:700; }
   .bar .q{ min-width:220px; flex:1; }
-  .bar .new{ background:linear-gradient(135deg,#c9506b,#8a4f8a); color:#fff; border:0; }
-  .sum{ font-size:12.5px; color:var(--dim); margin:2px 0 10px; }
-  .sum b{ color:var(--ink); }
+  .sum{ font-size:12.5px; color:var(--dim); margin:2px 0 10px; } .sum b{ color:var(--ink); }
   .batch{ background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:14px; overflow-x:auto; }
   .bh{ display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
   .bh h3{ margin:0; font-size:16px; } .bh .m{ color:var(--dim); font-size:12px; }
-  .bh .add{ margin-left:auto; border:1px solid var(--line); background:#fff; border-radius:9px; padding:4px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
-  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
-  thead th{ background:#3c2a32; color:#fff; text-align:left; padding:7px 8px; font-size:12px; letter-spacing:.03em; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:860px; }
+  thead th{ background:#3c2a32; color:#fff; text-align:left; padding:7px 8px; font-size:11.5px; letter-spacing:.03em; }
   thead tr.t th{ background:#5a3a48; text-align:center; font-size:13px; }
   td{ border:1px solid #e6d6db; padding:7px 8px; vertical-align:top; white-space:pre-line; }
-  td.no{ width:44px; text-align:center; } td.qty{ width:170px; } td.nt{ width:190px; background:#fbf6f7; } td.rt{ width:200px; } td.act{ width:70px; white-space:nowrap; text-align:center; }
-  td.rt.still{ background:#fff4e6; color:var(--warn); font-weight:700; } td.rt.back{ background:#eef8f1; color:var(--ok); }
-  .act button{ border:0; background:none; cursor:pointer; font-size:15px; padding:2px 4px; }
+  td.no{ width:40px; text-align:center; } td.qty{ width:150px; } td.nt{ width:170px; background:#fbf6f7; } td.rt{ width:260px; } td.st{ width:120px; font-weight:700; } td.act{ width:44px; text-align:center; }
+  td.st.still{ background:#fff4e6; color:var(--warn); } td.st.back{ background:#eef8f1; color:var(--ok); } td.st.kept{ background:#efeffb; color:var(--keep); } td.st.unknown{ color:var(--dim); }
+  .mv{ font-size:12px; line-height:1.4; padding:3px 0; border-bottom:1px dashed #eadde1; white-space:normal; } .mv:last-child{ border-bottom:0; }
+  .mv .ex{ color:var(--dim); white-space:pre-line; font-size:11.5px; }
+  .ph{ display:inline-block; width:34px; height:34px; border-radius:7px; object-fit:cover; vertical-align:middle; cursor:zoom-in; margin:2px 4px 0 0; border:1px solid #eee; }
+  .mv button,.act button{ border:0; background:none; cursor:pointer; font-size:13px; padding:0 3px; }
   mark{ background:#ffe58a; padding:0 1px; border-radius:2px; }
   .empty{ color:var(--dim); text-align:center; padding:24px 0; font-size:13px; }
   .tag{ font-size:10.5px; font-weight:700; border-radius:99px; padding:1px 8px; background:#f1e7ea; color:var(--dim); }
-  .modal{ position:fixed; inset:0; background:rgba(30,10,20,.45); display:none; align-items:flex-start; justify-content:center; z-index:9000; overflow:auto; padding:30px 12px; }
+  .modal{ position:fixed; inset:0; background:rgba(30,10,20,.45); display:none; align-items:flex-start; justify-content:center; z-index:2147483000; overflow:auto; padding:20px 10px; }
   .modal.show{ display:flex; }
-  .modal .box{ background:#fff; border-radius:16px; width:min(640px,100%); padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
-  .modal h3{ margin:0 0 10px; }
+  .modal .box{ background:#fff; border-radius:16px; width:min(680px,100%); padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .modal h3{ margin:0 0 6px; } .modal .hint{ font-size:12px; color:var(--dim); margin-bottom:6px; }
   .modal label{ display:block; font-size:11px; font-weight:700; color:var(--dim); margin:8px 0 3px; }
-  .modal input,.modal textarea{ width:100%; font:inherit; font-size:13.5px; border:1px solid #e3cfd6; border-radius:9px; padding:8px 10px; }
-  .modal textarea{ min-height:52px; resize:vertical; }
-  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .modal input,.modal textarea,.modal select{ width:100%; font:inherit; font-size:14px; border:1px solid #e3cfd6; border-radius:9px; padding:9px 10px; background:#fff; color:var(--ink); }
+  .modal textarea{ min-height:46px; resize:vertical; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .grid3{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; }
   .line{ border:1px dashed #e3cfd6; border-radius:11px; padding:8px; margin-top:8px; position:relative; }
-  .line .x{ position:absolute; top:4px; right:6px; border:0; background:none; cursor:pointer; color:var(--bad); font-size:15px; }
+  .line .x{ position:absolute; top:4px; right:6px; border:0; background:none; cursor:pointer; color:var(--bad); font-size:15px; width:auto; }
+  .seg{ display:flex; gap:6px; } .seg button{ flex:1; border:1px solid #e3cfd6; background:#fff; border-radius:10px; padding:9px; font:inherit; font-weight:700; cursor:pointer; }
+  .seg button.on{ background:var(--ok); color:#fff; border-color:var(--ok); } .seg button.on.k{ background:var(--keep); border-color:var(--keep); }
+  .pick{ max-height:46vh; overflow:auto; border:1px solid var(--line); border-radius:11px; margin-top:6px; }
+  .pick .g{ font-size:11.5px; font-weight:800; color:var(--dim); background:#faf3f5; padding:5px 9px; position:sticky; top:0; }
+  .pick .r{ display:grid; grid-template-columns:26px 1fr 84px; gap:8px; align-items:center; padding:7px 9px; border-top:1px solid #f3e8eb; font-size:13px; }
+  .pick .r input[type=checkbox]{ width:20px; height:20px; } .pick .r input[type=number]{ padding:7px; font-size:14px; }
+  .pick .r .s{ font-size:11.5px; color:var(--warn); }
+  .photo{ display:flex; gap:10px; align-items:center; } .photo img{ width:70px; height:70px; object-fit:cover; border-radius:10px; display:none; }
   .btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-  .btns button{ font:inherit; font-weight:700; border-radius:10px; padding:9px 16px; cursor:pointer; border:1px solid var(--line); background:#fff; }
+  .btns button{ font:inherit; font-weight:700; border-radius:10px; padding:10px 16px; cursor:pointer; border:1px solid var(--line); background:#fff; }
   .btns .go{ background:var(--ok); color:#fff; border-color:var(--ok); }
   .msg{ font-size:12.5px; color:var(--bad); margin-top:6px; }
-  @media (max-width:600px){ header{ padding-left:52px; } .grid2{ grid-template-columns:1fr; } .bar .q{ min-width:100%; } }
+  .lb{ position:fixed; inset:0; background:rgba(20,8,12,.85); display:none; align-items:center; justify-content:center; z-index:2147483001; cursor:zoom-out; } .lb.show{ display:flex; } .lb img{ max-width:94vw; max-height:88vh; border-radius:12px; }
+  @media (max-width:600px){ header{ padding-left:52px; } .grid2,.grid3{ grid-template-columns:1fr; } .bar .q{ min-width:100%; } .big button{ font-size:15px; padding:14px 8px; } }
   @media print{
-    @page{ size:A4 landscape; margin:10mm; }
+    @page{ size:A4 landscape; margin:9mm; }
     body{ background:#fff !important; }
-    .bar,.nav-toggle,#lbNav,.no-print,.act,.bh .add,.modal{ display:none !important; }
+    .bar,.big,.no-print,.act,.modal,.lb,#lbNav,.nav-toggle{ display:none !important; }
     .wrap{ max-width:none; padding:0; } header{ padding-left:0; }
-    .batch{ border:0; padding:0; break-inside:avoid; } table{ min-width:0; font-size:11px; }
-    thead th{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    td.rt.still,td.rt.back,td.nt{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .batch{ border:0; padding:0; break-inside:avoid; } table{ min-width:0; font-size:10.5px; } .ph{ width:26px; height:26px; }
+    thead th,td.st,td.nt{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
 </style>
 </head>
@@ -74,184 +86,263 @@
 <div class="wrap">
   <header>
     <h1>🇸🇦 Saudi Transfers</h1>
-    <div class="sub">TRANSFERS (BAHRAIN TO KSA) — what was sent for events in Saudi, and what came back to Galali</div>
+    <div class="sub">TRANSFERS (BAHRAIN TO KSA) — what was sent for events in Saudi, and what came back. Record only (stock is not changed).</div>
   </header>
+  <div class="big">
+    <button class="snd" id="bSend" type="button">📤 Send to Saudi<small>items leaving Bahrain</small></button>
+    <button class="ret" id="bRet" type="button">📥 Return<small>items back in a branch / kept in Saudi</small></button>
+  </div>
   <div class="bar">
-    <label class="q">Search<input id="q" placeholder="Item, quantity, notes, returned… e.g. vase, Kelvin, Still"></label>
+    <label class="q">Search<input id="q" placeholder="Item, quantity, notes, person, branch… e.g. vase, Kelvin"></label>
     <label>From<input type="date" id="from"></label>
     <label>To<input type="date" id="to"></label>
-    <label>Status<select id="st"><option value="">All</option><option value="still">⏳ Still in Saudi / not back</option><option value="back">✅ Returned</option></select></label>
+    <label>Status<select id="st"><option value="">All</option><option value="still">⏳ Still in Saudi</option><option value="back">✅ Back</option><option value="kept">🏷️ Kept in Saudi</option><option value="unknown">— No info</option></select></label>
     <button id="clr" type="button">Clear</button>
     <button id="prt" type="button">🖨️ Print</button>
     <button id="xls" type="button">📊 Excel</button>
-    <button id="new" class="new" type="button">＋ New transfer</button>
   </div>
   <div class="sum" id="sum"></div>
   <div id="list"><div class="empty">Loading…</div></div>
 </div>
 
-<div class="modal" id="mNew"><div class="box">
-  <h3>＋ New transfer to Saudi</h3>
+<!-- SEND -->
+<div class="modal" id="mSend"><div class="box">
+  <h3>📤 Send to Saudi</h3>
+  <div class="hint">One form for everything that leaves together. A picture is needed.</div>
   <div class="grid2">
-    <div><label>Transfer date</label><input type="date" id="nDate"></div>
-    <div><label>Name of this transfer (optional)</label><input id="nLabel" placeholder="e.g. 14-November"></div>
+    <div><label>Date sent</label><input type="date" id="sDate"></div>
+    <div><label>Name of this transfer (optional)</label><input id="sLabel" placeholder="e.g. 14-November"></div>
+    <div><label>From (branch / store)</label><select id="sFrom"></select></div>
+    <div><label>Given to</label><input id="sTo" placeholder="e.g. Kelvin"></div>
   </div>
-  <label>Notes (given to / from which branch)</label><textarea id="nNotes" placeholder="e.g. GIVEN TO KELVIN&#10;FROM QALALI BRANCH"></textarea>
-  <div id="nLines"></div>
-  <button type="button" id="nAdd" style="margin-top:8px;font:inherit;font-size:12.5px;font-weight:700;border:1px dashed #c9506b;color:#9e2f4a;background:#fff;border-radius:9px;padding:7px 12px;cursor:pointer">＋ Add item</button>
-  <div class="msg" id="nMsg"></div>
-  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="nSave">Save transfer</button></div>
+  <label>Notes (optional)</label><textarea id="sNotes" placeholder="e.g. for the wedding in Riyadh"></textarea>
+  <div id="sLines"></div>
+  <button type="button" id="sAdd" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #c9506b;color:#9e2f4a;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer">＋ Add item</button>
+  <label>📷 Picture of what was sent</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="sPhoto"><img id="sPrev" alt=""></div>
+  <div class="msg" id="sMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="sSave">Save</button></div>
 </div></div>
 
-<div class="modal" id="mEdit"><div class="box">
-  <h3 id="eTitle">Edit</h3>
-  <div class="grid2">
-    <div><label>No.</label><input id="eNo" inputmode="numeric"></div>
-    <div><label>Quantity</label><textarea id="eQty"></textarea></div>
+<!-- RETURN -->
+<div class="modal" id="mRet"><div class="box">
+  <h3>📥 Return</h3>
+  <div class="seg"><button type="button" class="on" data-kind="return">📥 Came back to a branch</button><button type="button" class="k" data-kind="keep">🏷️ Stays in Saudi</button></div>
+  <div class="hint" style="margin-top:8px">Tick what came back. The number is already filled with what is still in Saudi — change it if only part came back.</div>
+  <input id="rFind" placeholder="Find an item…" style="margin-top:4px">
+  <div class="pick" id="rList"></div>
+  <div class="grid2" id="rWhere">
+    <div><label>Date</label><input type="date" id="rDate"></div>
+    <div><label>Received in</label><select id="rBranch"></select></div>
   </div>
-  <label>Reference (what was sent)</label><textarea id="eRef"></textarea>
-  <label>Notes</label><textarea id="eNotes"></textarea>
   <div class="grid2">
-    <div><label>Date returned / received in Galali — as written</label><textarea id="eRet" placeholder="e.g. Received 26-10, Still, c/o Saudi"></textarea></div>
-    <div><label>…or pick the date it came back</label><input type="date" id="eRetDate"></div>
+    <div><label>Received by</label><input id="rBy"></div>
+    <div><label>Notes (optional)</label><input id="rNotes" placeholder="e.g. 2 broken"></div>
   </div>
-  <div class="msg" id="eMsg"></div>
-  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="eSave">Save</button></div>
+  <label>📷 Picture</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="rPhoto"><img id="rPrev" alt=""></div>
+  <div class="msg" id="rMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="rSave">Save</button></div>
 </div></div>
+
+<!-- ADMIN EDIT -->
+<div class="modal" id="mEdit"><div class="box">
+  <h3 id="eTitle">Edit (Admin)</h3>
+  <div id="eBody"></div>
+  <div class="msg" id="eMsg"></div>
+  <div class="btns"><button type="button" class="no-print" id="eDel" style="margin-right:auto;color:#c5483a;border-color:#c5483a">🗑️ Delete</button><button type="button" data-close>Cancel</button><button type="button" class="go" id="eSave">Save</button></div>
+</div></div>
+
+<div class="lb" id="lb"><img alt=""></div>
 
 <script>
 (function(){
   var API = (window.LB_CONFIG && LB_CONFIG.SAUDI_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/saudi-fast';
+  var BRANCHES = ['Galali', 'ModaMall', 'Hamala', 'Sitra Store', 'Other'];
+  var UNITS = ['pcs', 'set', 'stems', 'bags', 'roll', 'box', 'kg', 'plastic', 'lot'];
   var esc = window.lbEsc, $ = function(id){ return document.getElementById(id); };
   function token(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
-  var ROWS = [], ADMIN = false, EDIT = null;
+  var ROWS = [], ADMIN = false, ME = '', KIND = 'return', EDIT = null;
+  function today(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
   function fd(d){ if(!d) return ''; var x = new Date(d + 'T00:00:00'); return x.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
-  // Still in Saudi / not back yet  vs  came back
-  function status(r){
-    var t = String(r.returned || '').toLowerCase();
-    if(/still|c\/o saudi|keep in saudi/.test(t)) return 'still';
-    if(r.returnedDate || /received|returned|\d{1,2}-\d{1,2}/.test(t)) return 'back';
-    if(!t.trim()) return 'still';
-    return '';
-  }
+  function n3(v){ return v == null ? '' : String(Math.round(v * 1000) / 1000); }
   function hl(s, q){ s = esc(s); if(!q) return s; q.split(/\s+/).filter(Boolean).forEach(function(w){ s = s.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>'); }); return s; }
+  function opts(sel, list, v){ sel.innerHTML = list.map(function(x){ return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); }
   function api(params, post){
-    params.token = token();
-    var q = new URLSearchParams(params);
+    params.token = token(); var q = new URLSearchParams(params);
     return (post ? fetch(API, { method:'POST', body:q }) : fetch(API + '?' + q)).then(function(r){ return r.json(); });
   }
+  // shrink a phone picture before sending (max 1600 px, JPEG)
+  function readPhoto(input){
+    return new Promise(function(res){
+      var f = input.files && input.files[0]; if(!f) return res('');
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function(){ var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82)); };
+      img.onerror = function(){ res(''); }; img.src = url;
+    });
+  }
+  function preview(inp, im){ inp.onchange = function(){ var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
+  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev'));
+
   function load(){
     api({ action:'list' }).then(function(d){
       if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
-      ROWS = d.rows || []; ADMIN = !!d.admin; render();
+      ROWS = d.rows || []; ADMIN = !!d.admin; ME = d.me || ''; render();
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
-  // the NOTES cell covers several lines (merged in the Excel): every line knows its notes, for search and filtered views
-  function withNotes(rows){
-    var out = [], cur = null, left = 0;
-    rows.forEach(function(r){
-      if(r.notes){ cur = r.notes; left = r.notesRows || 1; }
-      out.push(Object.assign({}, r, { notesAll: left > 0 ? cur : '' }));
-      left--; if(left <= 0) cur = null;
-    });
-    return out;
-  }
+  // every line knows the NOTES of its merged cell (for search / filtered views)
+  function withNotes(rows){ var out = [], cur = null, left = 0; rows.forEach(function(r){ if(r.notes){ cur = r.notes; left = r.notesRows || 1; } out.push(Object.assign({}, r, { notesAll: left > 0 ? cur : '' })); left--; if(left <= 0) cur = null; }); return out; }
+  function groups(){ var g = {}, order = []; ROWS.forEach(function(r){ var k = r.batchDate + '|' + r.batch; if(!g[k]){ g[k] = []; order.push(k); } g[k].push(r); }); return order.map(function(k){ return withNotes(g[k]); }); }
+  function hay(r){ return [r.batch, r.reference, r.quantity, r.unit, r.notesAll, r.excelReturned, r.from, r.givenTo, fd(r.batchDate)].concat(r.moves.map(function(m){ return [m.branch, m.by, m.notes, fd(m.date), m.kind === 'keep' ? 'kept saudi' : 'returned back'].join(' '); })).join(' ').toLowerCase(); }
   function filtered(){
-    var q = $('q').value.trim().toLowerCase(), f = $('from').value, t = $('to').value, st = $('st').value, words = q.split(/\s+/).filter(Boolean);
-    var groups = {}, order = [];
-    ROWS.forEach(function(r){ var k = r.batchDate + '|' + r.batch; if(!groups[k]){ groups[k] = []; order.push(k); } groups[k].push(r); });
-    var res = [];
-    order.forEach(function(k){
-      var g = withNotes(groups[k]), b = g[0];
-      if(f && b.batchDate < f) return; if(t && b.batchDate > t) return;
-      var rows = g.filter(function(r){
-        if(st && status(r) !== st) return false;
-        if(!words.length) return true;
-        var h = [r.batch, r.reference, r.quantity, r.notesAll, r.returned, r.returnedDate, fd(r.batchDate)].join(' ').toLowerCase();
-        return words.every(function(w){ return h.indexOf(w) !== -1; });
-      });
-      if(rows.length) res.push({ batch:b.batch, date:b.batchDate, rows:rows, all:g.length, full: rows.length === g.length });
+    var q = $('q').value.trim().toLowerCase(), f = $('from').value, t = $('to').value, st = $('st').value, words = q.split(/\s+/).filter(Boolean), res = [];
+    groups().forEach(function(g){
+      var b = g[0]; if(f && b.batchDate < f) return; if(t && b.batchDate > t) return;
+      var rows = g.filter(function(r){ if(st && r.status !== st) return false; var h = hay(r); return words.every(function(w){ return h.indexOf(w) !== -1; }); });
+      if(rows.length) res.push({ batch:b.batch, date:b.batchDate, rows:rows, all:g.length, full: rows.length === g.length, first:g[0] });
     });
     return res;
   }
+  var ST = { still:'⏳ In Saudi', back:'✅ Back', kept:'🏷️ Kept in Saudi', unknown:'— No info' };
+  function stText(r){ if(r.status === 'still') return '⏳ ' + (r.left != null ? n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : 'Still in Saudi'); return ST[r.status] || ''; }
+  function moveHtml(m, q){
+    var head = m.kind === 'keep' ? '🏷️ ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'kept in Saudi' : '📥 ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'back' + (m.date ? ' · ' + fd(m.date) : '') + (m.branch ? ' · ' + esc(m.branch) : '');
+    return '<div class="mv">' + head + (m.by && m.source !== 'excel' ? ' · by ' + hl(m.by, q) : '') + (m.photo ? ' <img class="ph" src="' + esc(m.photo) + '" alt="">' : '') +
+      (ADMIN ? ' <button class="no-print" title="Edit (Admin)" data-em="' + m.id + '">✏️</button>' : '') +
+      (m.notes ? '<div class="ex">' + hl(m.notes, q) + '</div>' : '') + '</div>';
+  }
   function render(){
     var res = filtered(), q = $('q').value.trim(), n = 0, still = 0;
-    res.forEach(function(b){ n += b.rows.length; b.rows.forEach(function(r){ if(status(r) === 'still') still++; }); });
-    $('sum').innerHTML = '<b>' + res.length + '</b> transfer(s) · <b>' + n + '</b> item line(s) · <b style="color:#a8560b">' + still + '</b> still in Saudi / not back' + (($('from').value || $('to').value) ? ' · ' + esc(($('from').value ? fd($('from').value) : 'start') + ' – ' + ($('to').value ? fd($('to').value) : 'today')) : '');
+    res.forEach(function(b){ n += b.rows.length; b.rows.forEach(function(r){ if(r.status === 'still') still++; }); });
+    $('sum').innerHTML = '<b>' + res.length + '</b> transfer(s) · <b>' + n + '</b> line(s) · <b style="color:#a8560b">' + still + '</b> still in Saudi' + (($('from').value || $('to').value) ? ' · ' + esc(($('from').value ? fd($('from').value) : 'start') + ' – ' + ($('to').value ? fd($('to').value) : 'today')) : '');
     if(!res.length){ $('list').innerHTML = '<div class="empty">' + (ROWS.length ? 'Nothing matches.' : 'No transfers yet.') + '</div>'; return; }
     $('list').innerHTML = res.map(function(b){
-      // Excel layout: the NOTES cell spans its lines (only when the whole transfer is shown)
-      var skip = 0;
+      var skip = 0, f0 = b.first;
       var body = b.rows.map(function(r){
-        var s = status(r), notesCell = '';
-        if(b.full){
-          if(skip > 0){ skip--; }
-          else { var span = r.notes ? Math.max(1, Math.min(r.notesRows || 1, b.rows.length - b.rows.indexOf(r))) : 1; skip = span - 1; notesCell = '<td class="nt"' + (span > 1 ? ' rowspan="' + span + '"' : '') + '>' + hl(r.notes, q) + '</td>'; }
-        } else notesCell = '<td class="nt">' + hl(r.notesAll, q) + '</td>';
-        return '<tr><td class="no">' + esc(r.no == null ? '' : r.no) + '</td><td>' + hl(r.reference, q) + '</td><td class="qty">' + hl(r.quantity, q) + '</td>' + notesCell +
-          '<td class="rt ' + s + '">' + hl(r.returned, q) + (r.returnedDate && r.returned.indexOf(r.returnedDate.split('-').reverse().join('-')) === -1 ? '<div style="font-size:11px">' + fd(r.returnedDate) + '</div>' : '') + '</td>' +
-          '<td class="act no-print"><button title="Edit" data-ed="' + r.id + '">✏️</button>' + (ADMIN ? '<button title="Delete (Admin)" data-del="' + r.id + '">🗑️</button>' : '') + '</td></tr>';
+        var notesCell = '';
+        if(b.full){ if(skip > 0) skip--; else { var span = r.notes ? Math.max(1, Math.min(r.notesRows || 1, b.rows.length - b.rows.indexOf(r))) : 1; skip = span - 1; notesCell = '<td class="nt"' + (span > 1 ? ' rowspan="' + span + '"' : '') + '>' + hl(r.notes, q) + '</td>'; } }
+        else notesCell = '<td class="nt">' + hl(r.notesAll, q) + '</td>';
+        var mv = r.moves.map(function(m){ return moveHtml(m, q); }).join('');
+        if(!mv && r.excelReturned && r.excelReturned !== '-') mv = '<div class="mv"><div class="ex">' + hl(r.excelReturned, q) + '</div></div>';
+        return '<tr><td class="no">' + esc(r.no == null ? '' : r.no) + '</td><td>' + hl(r.reference, q) + (r.photo ? '<br><img class="ph" src="' + esc(r.photo) + '" alt="">' : '') + '</td>' +
+          '<td class="qty">' + hl(r.quantity, q) + '</td>' + notesCell + '<td class="rt">' + (mv || '') + '</td>' +
+          '<td class="st ' + r.status + '">' + esc(stText(r)) + '</td>' +
+          '<td class="act no-print">' + (ADMIN ? '<button title="Edit (Admin)" data-el="' + r.id + '">✏️</button>' : '') + '</td></tr>';
       }).join('');
-      return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
-        (b.rows[0].source === 'excel' ? '<span class="tag">from Excel</span>' : '') +
-        '<button class="add no-print" data-addto="' + esc(b.date) + '|' + esc(b.batch) + '">＋ Add item</button></div>' +
-        '<table><thead><tr class="t"><th colspan="5">TRANSFERS (BAHRAIN TO KSA)</th><th class="no-print" style="background:#5a3a48"></th></tr>' +
-        '<tr><th>NO.</th><th>REFERENCE</th><th>QUANTITY</th><th>NOTES</th><th>DATE RETURNED / RECEIVED IN GALALI</th><th class="no-print"></th></tr></thead><tbody>' + body + '</tbody></table></div>';
+      var who = [f0.from ? 'from ' + f0.from : '', f0.givenTo ? 'given to ' + f0.givenTo : ''].filter(Boolean).join(' · ');
+      return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + (who ? ' · ' + esc(who) : '') + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
+        (f0.source === 'excel' ? '<span class="tag">from Excel</span>' : '') + '</div>' +
+        '<table><thead><tr class="t"><th colspan="6">TRANSFERS (BAHRAIN TO KSA)</th><th class="no-print"></th></tr>' +
+        '<tr><th>NO.</th><th>REFERENCE</th><th>QUANTITY</th><th>NOTES</th><th>RETURNED / RECEIVED</th><th>STATUS</th><th class="no-print"></th></tr></thead><tbody>' + body + '</tbody></table></div>';
     }).join('');
   }
-  // ---------- edit one line / add one line to a transfer ----------
-  function openEdit(r, addTo){
-    EDIT = r ? { id:r.id } : { add:addTo };
-    $('eTitle').textContent = r ? 'Edit — ' + r.batch : '＋ Add item — ' + addTo.batch;
-    $('eNo').value = r ? (r.no == null ? '' : r.no) : ''; $('eRef').value = r ? r.reference : ''; $('eQty').value = r ? r.quantity : '';
-    $('eNotes').value = r ? r.notes : ''; $('eRet').value = r ? r.returned : ''; $('eRetDate').value = r ? (r.returnedDate || '') : ''; $('eMsg').textContent = '';
-    $('mEdit').classList.add('show'); setTimeout(function(){ $('eRef').focus(); }, 50);
-  }
-  $('eSave').onclick = function(){
-    var p = { action:'save', no:$('eNo').value, reference:$('eRef').value, quantity:$('eQty').value, notes:$('eNotes').value, returned:$('eRet').value, returnedDate:$('eRetDate').value };
-    if(!p.returned && p.returnedDate) p.returned = p.returnedDate.split('-').reverse().join('-');
-    if(EDIT.id) p.id = EDIT.id; else { p.batchDate = EDIT.add.date; p.batch = EDIT.add.batch; }
-    this.disabled = true; var btn = this;
-    api(p, true).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mEdit').classList.remove('show'); load(); })
-      .catch(function(){ $('eMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
-  };
-  // ---------- new transfer (several items) ----------
+
+  // ---------- SEND ----------
   function addLine(){
     var d = document.createElement('div'); d.className = 'line';
-    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div class="grid2"><div><label>Reference (what is sent)</label><textarea data-f="reference"></textarea></div><div><label>Quantity</label><textarea data-f="quantity"></textarea></div></div>';
+    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div class="grid3"><div><label>Item</label><input data-f="reference" placeholder="e.g. Gold Stand"></div>' +
+      '<div><label>Qty</label><input data-f="qty" type="number" min="0" step="any" inputmode="decimal"></div><div><label>Unit</label><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select></div></div>' +
+      '<label>Details (optional)</label><input data-f="details" placeholder="e.g. Entrance 6 · Dining 12 · Extra 2">';
     d.querySelector('.x').onclick = function(){ d.remove(); };
-    $('nLines').appendChild(d); d.querySelector('textarea').focus();
+    $('sLines').appendChild(d);
+    try{ if(window.LBExtrasPick) LBExtrasPick.attach(d.querySelector('[data-f=reference]'), d.querySelector('[data-f=qty]')); }catch(e){}
+    d.querySelector('input').focus();
   }
-  $('new').onclick = function(){ $('nDate').value = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); $('nLabel').value = ''; $('nNotes').value = ''; $('nLines').innerHTML = ''; $('nMsg').textContent = ''; addLine(); $('mNew').classList.add('show'); };
-  $('nAdd').onclick = addLine;
-  $('nSave').onclick = function(){
-    var lines = Array.prototype.map.call(document.querySelectorAll('#nLines .line'), function(l){ return { reference:l.querySelector('[data-f=reference]').value, quantity:l.querySelector('[data-f=quantity]').value }; }).filter(function(l){ return l.reference.trim(); });
-    if(!$('nDate').value){ $('nMsg').textContent = 'Pick the transfer date.'; return; }
-    if(!lines.length){ $('nMsg').textContent = 'Add at least one item.'; return; }
-    var btn = this; btn.disabled = true;
-    api({ action:'addBatch', batchDate:$('nDate').value, batch:$('nLabel').value, notes:$('nNotes').value, lines:JSON.stringify(lines) }, true).then(function(d){
-      if(!d || !d.success){ $('nMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mNew').classList.remove('show'); load();
-    }).catch(function(){ $('nMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
+  $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
+  $('sAdd').onclick = addLine;
+  $('sSave').onclick = function(){
+    var lines = Array.prototype.map.call(document.querySelectorAll('#sLines .line'), function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details') }; }).filter(function(l){ return l.reference.trim(); });
+    if(!$('sDate').value){ $('sMsg').textContent = 'Pick the date it was sent.'; return; }
+    if(!lines.length){ $('sMsg').textContent = 'Add at least one item.'; return; }
+    if(!$('sPhoto').files.length){ $('sMsg').textContent = 'Add a picture of what was sent.'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('sPhoto')).then(function(photo){
+      return api({ action:'send', batchDate:$('sDate').value, batch:$('sLabel').value, from:$('sFrom').value, givenTo:$('sTo').value, notes:$('sNotes').value, lines:JSON.stringify(lines), photo:photo }, true);
+    }).then(function(d){ if(!d || !d.success){ $('sMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mSend').classList.remove('show'); load(); })
+      .catch(function(){ $('sMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save'; });
   };
+
+  // ---------- RETURN ----------
+  function setKind(k){ KIND = k; document.querySelectorAll('#mRet .seg button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-kind') === k); }); $('rWhere').style.display = k === 'keep' ? 'none' : ''; }
+  document.querySelectorAll('#mRet .seg button').forEach(function(b){ b.onclick = function(){ setKind(b.getAttribute('data-kind')); }; });
+  function renderPick(){
+    var q = $('rFind').value.trim().toLowerCase(), html = '';
+    groups().forEach(function(g){
+      var open = g.filter(function(r){ return (r.status === 'still' || r.status === 'unknown') && (!q || hay(r).indexOf(q) !== -1); });
+      if(!open.length) return;
+      html += '<div class="g">' + esc(g[0].batch) + ' · ' + fd(g[0].batchDate) + '</div>' + open.map(function(r){
+        return '<label class="r"><input type="checkbox" data-line="' + r.id + '"><span>' + esc(r.reference).replace(/\n/g, ' ') + '<div class="s">' + esc(stText(r)) + (r.left == null && r.quantity ? ' · sent: ' + esc(r.quantity).replace(/\n/g, ', ') : '') + '</div></span>' +
+          '<input type="number" min="0" step="any" inputmode="decimal" data-qty="' + r.id + '" value="' + (r.left != null ? n3(r.left) : '') + '" placeholder="qty"></label>';
+      }).join('');
+    });
+    $('rList').innerHTML = html || '<div class="empty">Nothing is waiting in Saudi.</div>';
+  }
+  $('rFind').oninput = renderPick;
+  $('bRet').onclick = function(){ setKind('return'); $('rFind').value = ''; renderPick(); $('rDate').value = today(); opts($('rBranch'), BRANCHES, 'Galali'); $('rBy').value = ME; $('rNotes').value = ''; $('rPhoto').value = ''; $('rPrev').style.display = 'none'; $('rMsg').textContent = ''; $('mRet').classList.add('show'); };
+  $('rSave').onclick = function(){
+    var items = Array.prototype.map.call(document.querySelectorAll('#rList input[data-line]:checked'), function(c){ var id = c.getAttribute('data-line'); return { lineId:id, qty: document.querySelector('[data-qty="' + id + '"]').value }; });
+    if(!items.length){ $('rMsg').textContent = 'Tick at least one item.'; return; }
+    if(KIND === 'return' && !$('rDate').value){ $('rMsg').textContent = 'Pick the date it came back.'; return; }
+    if(!$('rPhoto').files.length){ $('rMsg').textContent = 'Add a picture.'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('rPhoto')).then(function(photo){
+      return api({ action:'returnItems', kind:KIND, date:$('rDate').value, branch:$('rBranch').value, receivedBy:$('rBy').value, notes:$('rNotes').value, items:JSON.stringify(items), photo:photo }, true);
+    }).then(function(d){ if(!d || !d.success){ $('rMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mRet').classList.remove('show'); load(); })
+      .catch(function(){ $('rMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save'; });
+  };
+
+  // ---------- ADMIN edit / delete ----------
+  function field(lbl, id, v, type){ return '<label>' + lbl + '</label>' + (type === 'area' ? '<textarea id="' + id + '">' + esc(v) + '</textarea>' : '<input id="' + id + '"' + (type ? ' type="' + type + '"' : '') + ' value="' + esc(v) + '">'); }
+  function openLine(r){
+    EDIT = { type:'line', id:r.id }; $('eTitle').textContent = 'Edit line (Admin) — ' + r.batch; $('eMsg').textContent = '';
+    $('eBody').innerHTML = '<div class="grid2"><div>' + field('No.', 'fNo', r.no == null ? '' : r.no) + '</div><div>' + field('Qty sent (number)', 'fQs', r.qtySent == null ? '' : r.qtySent, 'number') + '</div></div>' +
+      field('Reference', 'fRef', r.reference, 'area') + '<div class="grid2"><div>' + field('Quantity (as written)', 'fQty', r.quantity, 'area') + '</div><div>' + field('Unit', 'fUnit', r.unit) + '</div></div>' +
+      field('Notes', 'fNotes', r.notes, 'area') + '<div class="grid2"><div>' + field('From', 'fFrom', r.from) + '</div><div>' + field('Given to', 'fTo', r.givenTo) + '</div></div>' +
+      '<label>Replace picture</label><input type="file" accept="image/*" id="fPh">';
+    $('mEdit').classList.add('show');
+  }
+  function openMove(m){
+    EDIT = { type:'move', id:m.id }; $('eTitle').textContent = 'Edit return (Admin)'; $('eMsg').textContent = '';
+    $('eBody').innerHTML = '<label>Type</label><select id="fKind"><option value="return"' + (m.kind === 'return' ? ' selected' : '') + '>📥 Back in a branch</option><option value="keep"' + (m.kind === 'keep' ? ' selected' : '') + '>🏷️ Kept in Saudi</option></select>' +
+      '<div class="grid2"><div>' + field('Qty', 'fQ', m.qty == null ? '' : m.qty, 'number') + '</div><div>' + field('Date', 'fD', m.date, 'date') + '</div><div>' + field('Branch', 'fB', m.branch) + '</div><div>' + field('Received by', 'fBy', m.by) + '</div></div>' +
+      field('Notes', 'fN', m.notes, 'area') + '<label>Replace picture</label><input type="file" accept="image/*" id="fPh">';
+    $('mEdit').classList.add('show');
+  }
+  $('eSave').onclick = function(){
+    var btn = this, v = function(id){ return $(id).value; }; btn.disabled = true;
+    readPhoto($('fPh')).then(function(photo){
+      var p = EDIT.type === 'line' ? { action:'editLine', id:EDIT.id, no:v('fNo'), qtySent:v('fQs'), reference:v('fRef'), quantity:v('fQty'), unit:v('fUnit'), notes:v('fNotes'), from:v('fFrom'), givenTo:v('fTo') }
+        : { action:'editReturn', id:EDIT.id, kind:v('fKind'), qty:v('fQ'), date:v('fD'), branch:v('fB'), receivedBy:v('fBy'), notes:v('fN') };
+      if(photo) p.photo = photo; return api(p, true);
+    }).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mEdit').classList.remove('show'); load(); })
+      .catch(function(){ $('eMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
+  };
+  $('eDel').onclick = function(){
+    if(!confirm(EDIT.type === 'line' ? 'Delete this whole line (and its returns)?' : 'Delete this return?')) return;
+    api({ action: EDIT.type === 'line' ? 'deleteLine' : 'deleteReturn', id:EDIT.id }, true).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not deleted.'; return; } $('mEdit').classList.remove('show'); load(); });
+  };
+
   document.addEventListener('click', function(e){
     var c = e.target.closest('[data-close]'); if(c){ c.closest('.modal').classList.remove('show'); return; }
-    var ed = e.target.closest('[data-ed]'); if(ed){ var r = ROWS.find(function(x){ return String(x.id) === ed.getAttribute('data-ed'); }); if(r) openEdit(r); return; }
-    var ad = e.target.closest('[data-addto]'); if(ad){ var v = ad.getAttribute('data-addto').split('|'); openEdit(null, { date:v[0], batch:v.slice(1).join('|') }); return; }
-    var de = e.target.closest('[data-del]'); if(de){ var rr = ROWS.find(function(x){ return String(x.id) === de.getAttribute('data-del'); });
-      if(!rr || !confirm('Delete this line?\n\n' + rr.reference + '\n(' + rr.batch + ')')) return;
-      api({ action:'delete', id:rr.id }, true).then(function(d){ if(!d || !d.success) alert((d && d.error) || 'Not deleted.'); load(); }); }
+    var im = e.target.closest('img.ph'); if(im){ $('lb').querySelector('img').src = im.src; $('lb').classList.add('show'); return; }
+    if(e.target.closest('#lb')){ $('lb').classList.remove('show'); return; }
+    var el = e.target.closest('[data-el]'); if(el){ var r = ROWS.find(function(x){ return String(x.id) === el.getAttribute('data-el'); }); if(r) openLine(r); return; }
+    var em = e.target.closest('[data-em]'); if(em){ var m = null; ROWS.some(function(x){ m = x.moves.find(function(y){ return String(y.id) === em.getAttribute('data-em'); }); return !!m; }); if(m) openMove(m); return; }
   });
-  // ---------- search / back-track / print / excel ----------
   var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(render, 200); };
   ['from','to','st'].forEach(function(id){ $(id).onchange = render; });
   $('clr').onclick = function(){ $('q').value = ''; $('from').value = ''; $('to').value = ''; $('st').value = ''; render(); };
   $('prt').onclick = function(){ window.print(); };
   $('xls').onclick = function(){
     if(!window.lbExcel){ alert('Excel tool not loaded — refresh the page.'); return; }
-    var res = filtered(), rows = [['TRANSFERS (BAHRAIN TO KSA)'], []];
-    res.forEach(function(b){
-      rows.push([b.batch + ' · ' + fd(b.date)]); rows.push(['NO.','REFERENCE','QUANTITY','NOTES','DATE RETURNED / RECEIVED IN GALALI','Status']);
-      b.rows.forEach(function(r){ var s = status(r); rows.push([r.no == null ? '' : r.no, r.reference, r.quantity, r.notesAll, r.returned, s === 'still' ? 'Still in Saudi / not back' : s === 'back' ? 'Returned' : '']); });
+    var rows = [['TRANSFERS (BAHRAIN TO KSA)'], []];
+    filtered().forEach(function(b){
+      rows.push([b.batch + ' · ' + fd(b.date)]); rows.push(['NO.', 'REFERENCE', 'QUANTITY', 'NOTES', 'RETURNED / RECEIVED', 'STATUS', 'Still in Saudi']);
+      b.rows.forEach(function(r){
+        var mv = r.moves.map(function(m){ return (m.kind === 'keep' ? 'Kept in Saudi ' : 'Back ') + (m.qty != null ? n3(m.qty) + ' ' : '') + (m.date ? fd(m.date) + ' ' : '') + (m.branch || '') + (m.by && m.source !== 'excel' ? ' by ' + m.by : '') + (m.notes ? ' (' + m.notes.replace(/\n/g, ' / ') + ')' : ''); }).join('\n') || r.excelReturned;
+        rows.push([r.no == null ? '' : r.no, r.reference, r.quantity, r.notesAll, mv, stText(r), r.left == null ? '' : r.left]);
+      });
       rows.push([]);
     });
     lbExcel.save('Saudi Transfers', [{ name:'Transfers', rows:rows, freeze:false }]);
@@ -259,5 +350,6 @@
   load();
 })();
 </script>
+<script src="shared/extras-pick.js?v=1"></script>
 </body>
 </html>

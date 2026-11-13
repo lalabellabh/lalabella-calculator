@@ -202,7 +202,10 @@
   }
   function writePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) {} }
   function sectionDefaults(key) { return key === 'quick' ? QUICK : (MODULES[key] ? MODULES[key].items : []); }
-  function itemAllowed(i) { return visible(i) && moduleAllowed(REG[i[0]] ? REG[i[0]].module : null); }
+  // "Saudi Team" (limited account): only Saudi Transfers, My Profile (members + status) and the chat
+  const SAUDI_TEAM_PAGES = ['item-saudi.html', 'profile.html', 'chatbox.html'];
+  function isSaudiTeam() { return String(currentUser().role || '') === 'Saudi Team'; }
+  function itemAllowed(i) { if (isSaudiTeam()) return SAUDI_TEAM_PAGES.indexOf(i[0]) !== -1; return visible(i) && moduleAllowed(REG[i[0]] ? REG[i[0]].module : null); }
 
   // The section's items in the user's order, each marked hidden or not
   // (only items this person is allowed to see).
