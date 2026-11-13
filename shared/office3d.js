@@ -216,9 +216,37 @@
   function placeCam(){ if(!DIR) DIR = new T.Vector3(1, 1.18, 1.05).normalize(); camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
   var zoomGoal = 1, targetGoal = null;
   function setZoom(z){ zoomGoal = Math.max(.6, Math.min(6, z)); }
-  function wholeOffice(){ follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
+  function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
-  function select(k){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); }
+  function select(k){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k); }
+  // ---------- Nov 2026: whoever you tap reports to you, the President (text box + their voice when sound is on) ----------
+  var repTimer = null;
+  function closeReport(){ var b = root.querySelector('.o3-rep'); if(b) b.remove(); clearInterval(repTimer); try { if(window.LBOfficeStopVoice) window.LBOfficeStopVoice(); } catch(e){} }
+  function showReport(k){
+    closeReport(); if(!window.LBOfficeReport) return; var r = null; try { r = window.LBOfficeReport(k); } catch(e){ console.error(e); } if(!r) return;
+    if(!document.getElementById('o3RepCss')){ var st = document.createElement('style'); st.id = 'o3RepCss';
+      st.textContent = '.o3-rep{position:absolute;left:12px;right:12px;bottom:12px;z-index:9;max-width:620px;margin:0 auto;background:#120d26f2;color:#f1ecff;border:2px solid #8fd9ff;border-radius:16px;padding:12px 14px 12px 12px;box-shadow:0 14px 34px #000a;display:flex;gap:12px;align-items:flex-start;font:13.5px/1.45 system-ui,sans-serif;animation:o3rep .25s ease-out}' +
+        '@keyframes o3rep{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}' +
+        '.o3-rep .av{flex:0 0 46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:inset 0 0 0 2px #0003}' +
+        '.o3-rep .bd{flex:1;min-width:0}.o3-rep .nm{font-weight:800;font-size:13px;color:#8fd9ff;letter-spacing:.02em}.o3-rep .nm span{color:#9a90b8;font-weight:600;font-size:11.5px}' +
+        '.o3-rep .tx{margin-top:4px;white-space:pre-line;max-height:34vh;overflow:auto}.o3-rep .tx b{color:#ffd36b}' +
+        '.o3-rep .ac{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.o3-rep .ac button{border:1px solid #4a3f7a;background:#231a45;color:#f1ecff;border-radius:999px;padding:5px 11px;font:600 12px system-ui,sans-serif;cursor:pointer}' +
+        '.o3-rep .x{position:absolute;right:8px;top:6px;background:none;border:0;color:#9a90b8;font-size:16px;cursor:pointer}' +
+        '.o3-rep.st-warn{border-color:#ffc24f}.o3-rep.st-alert{border-color:#ff6b6b}.o3-rep.st-working{border-color:#4fb3ff}.o3-rep.st-ok{border-color:#5be29a}';
+      document.head.appendChild(st); }
+    var box = document.createElement('div'); box.className = 'o3-rep st-' + (r.st || 'ok');
+    box.innerHTML = '<div class="av" style="background:' + ((LOOKS[k] || {}).fur || '#ddd') + '">' + (k === 'boss' ? '👑' : emoji(k)) + '</div><div class="bd"><div class="nm"></div><div class="tx"></div><div class="ac"><button data-r="again">🔁 ' + L('Report again', 'Ulitin') + '</button><button data-r="more">📋 ' + L('Full details', 'Buong detalye') + '</button></div></div><button class="x" title="Close">✕</button>';
+    box.querySelector('.nm').innerHTML = esc(r.name) + ' <span>· ' + esc(r.role) + ' · ' + L('reporting to the President', 'nag-uulat sa President') + '</span>';
+    root.querySelector('.o3-main').appendChild(box);
+    ['click','pointerdown','wheel','touchstart'].forEach(function(ev){ box.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
+    box.querySelector('.x').onclick = function(){ closeReport(); };
+    box.querySelector('[data-r="again"]').onclick = function(){ showReport(k); };
+    box.querySelector('[data-r="more"]').onclick = function(){ var rw = document.querySelector('#roster .rw[data-k="' + k + '"]'); if(rw) rw.click(); };
+    var full = r.text, i = 0, tx = box.querySelector('.tx');
+    var t0 = Date.now(); repTimer = setInterval(function(){ i = Math.min(full.length, Math.max(i + 2, Math.round((Date.now() - t0) / 1000 * 140))); tx.innerHTML = esc(full.slice(0, i)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if(i >= full.length){ clearInterval(repTimer); tx.innerHTML = esc(full).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); } }, 18);
+    try { if(window.LBOfficeSpeakReport) window.LBOfficeSpeakReport(k, r.speak || full); } catch(e){}
+    var a = AG[k]; if(a){ a.repUntil = Date.now() + 6000; }
+  }
   function drawer(on){ root.classList.toggle('dopen', on); root.classList.remove('menu-open'); }
 
   // ---------- controls ----------
