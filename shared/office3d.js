@@ -243,8 +243,21 @@
     box.querySelector('[data-r="again"]').onclick = function(){ showReport(k); };
     box.querySelector('[data-r="more"]').onclick = function(){ var rw = document.querySelector('#roster .rw[data-k="' + k + '"]'); if(rw) rw.click(); };
     var full = r.text, i = 0, tx = box.querySelector('.tx');
-    var t0 = Date.now(); repTimer = setInterval(function(){ i = Math.min(full.length, Math.max(i + 2, Math.round((Date.now() - t0) / 1000 * 140))); tx.innerHTML = esc(full.slice(0, i)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if(i >= full.length){ clearInterval(repTimer); tx.innerHTML = esc(full).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); } }, 18);
-    try { if(window.LBOfficeSpeakReport) window.LBOfficeSpeakReport(k, r.speak || full); } catch(e){}
+    // words on screen follow the voice: wait for the voice to really start, then keep pace with it
+    var draw = function(){ tx.innerHTML = esc(full.slice(0, i)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>') + (i < full.length ? '<span style="opacity:.5">▍</span>' : ''); };
+    var mode = 'wait', t0 = Date.now(), voicePct = 0, talking = false, fb = 0;
+    var spoke = false; try { if(window.LBOfficeSpeakReport) spoke = window.LBOfficeSpeakReport(k, r.speak || full, {
+        start:function(){ talking = true; mode = 'voice'; t0 = Date.now(); },
+        progress:function(p){ voicePct = p; },
+        end:function(){ talking = false; mode = 'free'; fb = i; t0 = Date.now(); } }); } catch(e){}
+    if(!spoke) mode = 'free';
+    tx.innerHTML = '<span style="opacity:.6">' + (spoke ? '🎙️ …' : '') + '</span>';
+    repTimer = setInterval(function(){
+      if(mode === 'wait'){ if(Date.now() - t0 > 3500){ mode = 'free'; fb = i; t0 = Date.now(); } return; }       // voice never started: just show the words
+      var target = mode === 'voice' ? Math.max(Math.round(voicePct * full.length), Math.round((Date.now() - t0) / 1000 * 15)) : fb + Math.round((Date.now() - t0) / 1000 * 160);
+      if(mode === 'voice' && r.speak && r.speak.length < full.length * .8) target = Math.round(Math.min(1, (Date.now() - t0) / 1000 / Math.max(2, r.speak.length / 15)) * full.length);
+      i = Math.min(full.length, Math.max(i, target)); draw();
+      if(i >= full.length){ clearInterval(repTimer); tx.innerHTML = esc(full).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); } }, 40);
     var a = AG[k]; if(a){ a.repUntil = Date.now() + 6000; }
   }
   function drawer(on){ root.classList.toggle('dopen', on); root.classList.remove('menu-open'); }
