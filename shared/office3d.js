@@ -601,9 +601,10 @@
     var inLot = function(x, z){ return x > -3 && x < 37.5 && z > -3 && z < 23.5; };
     // roads -> one flat mesh
     var W = { motorway:16, trunk:14, primary:12, secondary:10, tertiary:8, residential:6, unclassified:6, living_street:5, service:4, track:3 };
-    var rp = [];
+    var rp = [], segs = [];
     d.r.forEach(function(r){ var w = (W[String(r[1]).replace('_link', '')] || 5) / MPU / 2, pts = r[0].map(P);
       for(var i = 1; i < pts.length; i++){ var a = pts[i - 1], c = pts[i], dx = c[0] - a[0], dz = c[1] - a[1], L = Math.sqrt(dx * dx + dz * dz); if(L < .01) continue;
+        segs.push([a[0], a[1], c[0], c[1], w]);
         var nx = -dz / L * w, nz = dx / L * w, y = -.79 + (w > 3 ? .005 : 0);
         rp.push(a[0] + nx, y, a[1] + nz, c[0] + nx, y, c[1] + nz, c[0] - nx, y, c[1] - nz, a[0] + nx, y, a[1] + nz, c[0] - nx, y, c[1] - nz, a[0] - nx, y, a[1] - nz);
         // round joints
@@ -613,12 +614,9 @@
     // buildings -> merged meshes (roofs + 3 wall colours)
     var dir = new T.Vector3(1, 0, 1.05).normalize(), seen = 0;
     var walls = [[], [], []], roofs = [];
-    d.b.forEach(function(bb){
-      var pts = bb[0].map(P); if(pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop(); if(pts.length < 3) return;
-      if(pts.some(function(p){ return inLot(p[0], p[1]); })) return;                       // our own office stands here
+    var addBuilding = function(pts, hIn){
       var cx = 0, cz = 0; pts.forEach(function(p){ cx += p[0]; cz += p[1]; }); cx /= pts.length; cz /= pts.length;
-      if(Math.abs(cx - 17) > 140 || Math.abs(cz - 10) > 140) return;
-      var h = (bb[2] || (bb[1] ? bb[1] * 3.3 : 6 + (Math.abs(Math.sin(cx * 12.9 + cz * 78.2)) * 7))) / MPU; h = Math.min(h, 45);
+      var h = hIn;
       // never hide the office: buildings between the camera and the office stay low
       var ox = Math.max(-0.5, Math.min(34.5, cx)), oz = Math.max(-0.7, Math.min(20.7, cz)), fx = cx - ox, fz = cz - oz;
       if(fx > 0 || fz > 0){ var front = fx * dir.x + fz * dir.z; if(front > 0) h = Math.min(h, Math.max(1.2, front / 1.35 - 1)); }
@@ -629,7 +627,30 @@
       (g.groups.length ? g.groups : [{ start:0, count:pos.length / 3, materialIndex:1 }]).forEach(function(gp){
         var tgt = gp.materialIndex === 0 ? roofs : w;
         for(var v = gp.start; v < gp.start + gp.count; v++) tgt.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2], uv[v * 2], uv[v * 2 + 1]); });
-      g.dispose(); seen++; });
+      g.dispose(); seen++; };
+    d.b.forEach(function(bb){
+      var pts = bb[0].map(P); if(pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop(); if(pts.length < 3) return;
+      if(pts.some(function(p){ return inLot(p[0], p[1]); })) return;                       // our own office stands here
+      var cx = 0, cz = 0; pts.forEach(function(p){ cx += p[0]; cz += p[1]; }); cx /= pts.length; cz /= pts.length;
+      if(Math.abs(cx - 17) > 140 || Math.abs(cz - 10) > 140) return;
+      addBuilding(pts, Math.min(45, (bb[2] || (bb[1] ? bb[1] * 3.3 : 6 + (Math.abs(Math.sin(cx * 12.9 + cz * 78.2)) * 7))) / MPU));
+    });
+    // Many Bahrain areas have the roads on the map but not the buildings: then line the real streets with simple buildings.
+    if(seen < 25 && segs.length){
+      var rnd = (function(sd){ return function(){ sd = (sd * 16807) % 2147483647; return sd / 2147483647; }; })(Math.round(Math.abs(b.lat * 1e5 + b.lng * 1e4)) % 2147483646 + 1);
+      var dseg = function(x, z, sg){ var ax = sg[0], az = sg[1], vx = sg[2] - ax, vz = sg[3] - az, L2 = vx * vx + vz * vz, t = L2 ? Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / L2)) : 0, ex = ax + vx * t - x, ez = az + vz * t - z; return Math.sqrt(ex * ex + ez * ez); };
+      var placed = [];
+      segs.forEach(function(sg){ var vx = sg[2] - sg[0], vz = sg[3] - sg[1], L = Math.sqrt(vx * vx + vz * vz); if(L < 6) return; var ux = vx / L, uz = vz / L, nx = -uz, nz = ux;
+        for(var t = 3; t < L - 3; t += 8 + rnd() * 5){ [-1, 1].forEach(function(sd){
+          var wd = 6 + rnd() * 6, dp = 6 + rnd() * 6, off = sg[4] + 1.6 + dp / 2, cx = sg[0] + ux * t + nx * off * sd, cz = sg[1] + uz * t + nz * off * sd, rad = Math.max(wd, dp) / 2;
+          if(Math.abs(cx - 17) > 135 || Math.abs(cz - 10) > 135) return;
+          if(cx + rad > -4 && cx - rad < 38.5 && cz + rad > -4 && cz - rad < 24.5) return;              // keep our lot free
+          for(var k = 0; k < segs.length; k++) if(dseg(cx, cz, segs[k]) < segs[k][4] + rad * .75 + .8) return;   // not on a road
+          for(var m = 0; m < placed.length; m++){ var q = placed[m], ddx = q[0] - cx, ddz = q[1] - cz; if(ddx * ddx + ddz * ddz < Math.pow(q[2] + rad + .6, 2)) return; }
+          placed.push([cx, cz, rad * .85]);
+          var hw = wd / 2, hd = dp / 2, pts = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(function(p){ return [cx + p[0] * ux + p[1] * nx, cz + p[0] * uz + p[1] * nz]; });
+          addBuilding(pts, (6 + rnd() * (rnd() < .2 ? 18 : 7)) / MPU); }); } });
+    }
     var mk = function(arr, m){ if(!arr.length) return; var n = arr.length / 8, P3 = new Float32Array(n * 3), N3 = new Float32Array(n * 3), U2 = new Float32Array(n * 2);
       for(var i = 0; i < n; i++){ P3.set(arr.slice(i * 8, i * 8 + 3), i * 3); N3.set(arr.slice(i * 8 + 3, i * 8 + 6), i * 3); U2.set(arr.slice(i * 8 + 6, i * 8 + 8), i * 2); }
       var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(P3, 3)); g.setAttribute('normal', new T.BufferAttribute(N3, 3)); g.setAttribute('uv', new T.BufferAttribute(U2, 2));
