@@ -608,8 +608,8 @@ NOTE_DENOMS.forEach(d => renderDenomRow(document.getElementById('denomNotes'), d
 COIN_DENOMS.forEach(d => renderDenomRow(document.getElementById('denomCoins'), d));
 
 /* ---------- Foreign money (e.g. Saudi riyal) → BD at an editable rate; saved as one line "SAR 250 @ 0.1003 BD" ---------- */
-// Default rates = BD for 1 unit. SAR = 0.100 (500 SAR = 50 BD, the shop rate Bench uses). AED, QAR, OMR and USD are pegged (fixed); the others move — check with the money changer.
-const FX = [['SAR','Saudi riyal',0.1000],['AED','UAE dirham',0.1024],['QAR','Qatari riyal',0.1033],['KWD','Kuwaiti dinar',1.2240],['OMR','Omani rial',0.9779],['USD','US dollar',0.3760],['EUR','Euro',0.4100],['GBP','British pound',0.4900],['INR','Indian rupee',0.0044],['PHP','Philippine peso',0.0065],['EGP','Egyptian pound',0.0077]];
+// Default rates = BD for 1 unit (real exchange rate — Bench, 13 Nov 2026). SAR, AED, QAR, OMR and USD are pegged (fixed); the others move — check with the money changer.
+const FX = [['SAR','Saudi riyal',0.1003],['AED','UAE dirham',0.1024],['QAR','Qatari riyal',0.1033],['KWD','Kuwaiti dinar',1.2240],['OMR','Omani rial',0.9779],['USD','US dollar',0.3760],['EUR','Euro',0.4100],['GBP','British pound',0.4900],['INR','Indian rupee',0.0044],['PHP','Philippine peso',0.0065],['EGP','Egyptian pound',0.0077]];
 function fxRate(code){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); if(m[code] > 0) return m[code]; }catch(e){} const f = FX.find(x => x[0] === code); return f ? f[2] : 0; }
 function fxSaveRate(code, r){ try{ const m = JSON.parse(localStorage.getItem('lbFxRates') || '{}'); m[code] = r; localStorage.setItem('lbFxRates', JSON.stringify(m)); }catch(e){} }
 function fxAddRow(target, pre){
