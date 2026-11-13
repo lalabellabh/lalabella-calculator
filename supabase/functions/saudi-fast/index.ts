@@ -142,7 +142,20 @@ async function send(p: any, u: any) {
       photo_url: photo, source: 'manual', created_by: who(u) };
   });
   const r = await sbPost('saudi_transfers', rows);
+  // Nov 2026: tell the Saudi Team (phone notification). Never blocks or fails the save.
+  try {
+    const items = lines.slice(0, 3).map((l: any) => txt(l.reference, 60).split('\n')[0]).join(', ') + (lines.length > 3 ? ' +' + (lines.length - 3) + ' more' : '');
+    const from = BR(p.from), giv = txt(p.givenTo, 60);
+    await saudiPush('📦 New transfer to Saudi', lines.length + ' item' + (lines.length > 1 ? 's' : '') + (from ? ' from ' + from : '') + (giv ? ' · given to ' + giv : '') + ': ' + items, label, u.id);
+  } catch (e) { console.error('saudi push', e); }
   return { success: true, added: r.length, batch: label };
+}
+
+async function saudiPush(title: string, body: string, batch: string, excludeUserId: number) {
+  const cfg = await sbGet('push_config?select=internal_key&id=eq.1&limit=1');
+  const key = cfg && cfg[0] && cfg[0].internal_key; if (!key) return;
+  await fetch(`${SB_URL}/functions/v1/push-fast`, { method: 'POST', headers: H, signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({ action: 'saudiNotify', key, title, body, batch, excludeUserId }) });
 }
 
 async function returnItems(p: any, u: any) {

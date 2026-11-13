@@ -112,7 +112,8 @@
     if (isIOS && !standalone) return; // iOS only allows push from the Home Screen app
     var dismissed = 0; try { dismissed = Number(localStorage.getItem(DISMISS_KEY)) || 0; } catch (e) {}
     if (dismissed && Date.now() - dismissed < 7 * 86400000) return;
-    setTimeout(function () { show('🔔 Get notified of new messages and orders?', 'Turn on', ask, true); }, 2500);
+    setTimeout(function () { var saudi = false; try { saudi = String((window.LALABELLA_USER || JSON.parse(localStorage.getItem('lalabellaUser') || sessionStorage.getItem('lalabellaUser') || '{}') || {}).role || '') === 'Saudi Team'; } catch (e) {}
+      show(saudi ? '🔔 Get notified of new transfers to Saudi and messages?' : '🔔 Get notified of new messages and orders?', 'Turn on', ask, true); }, 2500);
   }
 
   // ---- ⚙️ Settings → Notifications (per device) ----
