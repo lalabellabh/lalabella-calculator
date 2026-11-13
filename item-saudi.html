@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="shared/excel.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Saudi Transfers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="lb-theme-keep" content=".wrap, .batch, .modal .box">
+<style>
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; --warn:#a8560b; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#fbeff2,#eef6f0); min-height:100vh; }
+  .wrap{ max-width:1100px; margin:0 auto; padding:16px 16px 60px; }
+  header{ padding-left:56px; margin:6px 0 12px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
+  .sub{ color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin:10px 0; }
+  .bar label{ font-size:11px; font-weight:700; color:var(--dim); display:flex; flex-direction:column; gap:3px; }
+  .bar input,.bar select,.bar button{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:10px; padding:8px 11px; background:#fff; color:var(--ink); }
+  .bar button{ cursor:pointer; font-weight:700; }
+  .bar .q{ min-width:220px; flex:1; }
+  .bar .new{ background:linear-gradient(135deg,#c9506b,#8a4f8a); color:#fff; border:0; }
+  .sum{ font-size:12.5px; color:var(--dim); margin:2px 0 10px; }
+  .sum b{ color:var(--ink); }
+  .batch{ background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:14px; overflow-x:auto; }
+  .bh{ display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+  .bh h3{ margin:0; font-size:16px; } .bh .m{ color:var(--dim); font-size:12px; }
+  .bh .add{ margin-left:auto; border:1px solid var(--line); background:#fff; border-radius:9px; padding:4px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+  thead th{ background:#3c2a32; color:#fff; text-align:left; padding:7px 8px; font-size:12px; letter-spacing:.03em; }
+  thead tr.t th{ background:#5a3a48; text-align:center; font-size:13px; }
+  td{ border:1px solid #e6d6db; padding:7px 8px; vertical-align:top; white-space:pre-line; }
+  td.no{ width:44px; text-align:center; } td.qty{ width:170px; } td.nt{ width:190px; background:#fbf6f7; } td.rt{ width:200px; } td.act{ width:70px; white-space:nowrap; text-align:center; }
+  td.rt.still{ background:#fff4e6; color:var(--warn); font-weight:700; } td.rt.back{ background:#eef8f1; color:var(--ok); }
+  .act button{ border:0; background:none; cursor:pointer; font-size:15px; padding:2px 4px; }
+  mark{ background:#ffe58a; padding:0 1px; border-radius:2px; }
+  .empty{ color:var(--dim); text-align:center; padding:24px 0; font-size:13px; }
+  .tag{ font-size:10.5px; font-weight:700; border-radius:99px; padding:1px 8px; background:#f1e7ea; color:var(--dim); }
+  .modal{ position:fixed; inset:0; background:rgba(30,10,20,.45); display:none; align-items:flex-start; justify-content:center; z-index:9000; overflow:auto; padding:30px 12px; }
+  .modal.show{ display:flex; }
+  .modal .box{ background:#fff; border-radius:16px; width:min(640px,100%); padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .modal h3{ margin:0 0 10px; }
+  .modal label{ display:block; font-size:11px; font-weight:700; color:var(--dim); margin:8px 0 3px; }
+  .modal input,.modal textarea{ width:100%; font:inherit; font-size:13.5px; border:1px solid #e3cfd6; border-radius:9px; padding:8px 10px; }
+  .modal textarea{ min-height:52px; resize:vertical; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .line{ border:1px dashed #e3cfd6; border-radius:11px; padding:8px; margin-top:8px; position:relative; }
+  .line .x{ position:absolute; top:4px; right:6px; border:0; background:none; cursor:pointer; color:var(--bad); font-size:15px; }
+  .btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+  .btns button{ font:inherit; font-weight:700; border-radius:10px; padding:9px 16px; cursor:pointer; border:1px solid var(--line); background:#fff; }
+  .btns .go{ background:var(--ok); color:#fff; border-color:var(--ok); }
+  .msg{ font-size:12.5px; color:var(--bad); margin-top:6px; }
+  @media (max-width:600px){ header{ padding-left:52px; } .grid2{ grid-template-columns:1fr; } .bar .q{ min-width:100%; } }
+  @media print{
+    @page{ size:A4 landscape; margin:10mm; }
+    body{ background:#fff !important; }
+    .bar,.nav-toggle,#lbNav,.no-print,.act,.bh .add,.modal{ display:none !important; }
+    .wrap{ max-width:none; padding:0; } header{ padding-left:0; }
+    .batch{ border:0; padding:0; break-inside:avoid; } table{ min-width:0; font-size:11px; }
+    thead th{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    td.rt.still,td.rt.back,td.nt{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<div class="wrap">
+  <header>
+    <h1>🇸🇦 Saudi Transfers</h1>
+    <div class="sub">TRANSFERS (BAHRAIN TO KSA) — what was sent for events in Saudi, and what came back to Galali</div>
+  </header>
+  <div class="bar">
+    <label class="q">Search<input id="q" placeholder="Item, quantity, notes, returned… e.g. vase, Kelvin, Still"></label>
+    <label>From<input type="date" id="from"></label>
+    <label>To<input type="date" id="to"></label>
+    <label>Status<select id="st"><option value="">All</option><option value="still">⏳ Still in Saudi / not back</option><option value="back">✅ Returned</option></select></label>
+    <button id="clr" type="button">Clear</button>
+    <button id="prt" type="button">🖨️ Print</button>
+    <button id="xls" type="button">📊 Excel</button>
+    <button id="new" class="new" type="button">＋ New transfer</button>
+  </div>
+  <div class="sum" id="sum"></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</div>
+
+<div class="modal" id="mNew"><div class="box">
+  <h3>＋ New transfer to Saudi</h3>
+  <div class="grid2">
+    <div><label>Transfer date</label><input type="date" id="nDate"></div>
+    <div><label>Name of this transfer (optional)</label><input id="nLabel" placeholder="e.g. 14-November"></div>
+  </div>
+  <label>Notes (given to / from which branch)</label><textarea id="nNotes" placeholder="e.g. GIVEN TO KELVIN&#10;FROM QALALI BRANCH"></textarea>
+  <div id="nLines"></div>
+  <button type="button" id="nAdd" style="margin-top:8px;font:inherit;font-size:12.5px;font-weight:700;border:1px dashed #c9506b;color:#9e2f4a;background:#fff;border-radius:9px;padding:7px 12px;cursor:pointer">＋ Add item</button>
+  <div class="msg" id="nMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="nSave">Save transfer</button></div>
+</div></div>
+
+<div class="modal" id="mEdit"><div class="box">
+  <h3 id="eTitle">Edit</h3>
+  <div class="grid2">
+    <div><label>No.</label><input id="eNo" inputmode="numeric"></div>
+    <div><label>Quantity</label><textarea id="eQty"></textarea></div>
+  </div>
+  <label>Reference (what was sent)</label><textarea id="eRef"></textarea>
+  <label>Notes</label><textarea id="eNotes"></textarea>
+  <div class="grid2">
+    <div><label>Date returned / received in Galali — as written</label><textarea id="eRet" placeholder="e.g. Received 26-10, Still, c/o Saudi"></textarea></div>
+    <div><label>…or pick the date it came back</label><input type="date" id="eRetDate"></div>
+  </div>
+  <div class="msg" id="eMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="eSave">Save</button></div>
+</div></div>
+
+<script>
+(function(){
+  var API = (window.LB_CONFIG && LB_CONFIG.SAUDI_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/saudi-fast';
+  var esc = window.lbEsc, $ = function(id){ return document.getElementById(id); };
+  function token(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
+  var ROWS = [], ADMIN = false, EDIT = null;
+  function fd(d){ if(!d) return ''; var x = new Date(d + 'T00:00:00'); return x.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+  // Still in Saudi / not back yet  vs  came back
+  function status(r){
+    var t = String(r.returned || '').toLowerCase();
+    if(/still|c\/o saudi|keep in saudi/.test(t)) return 'still';
+    if(r.returnedDate || /received|returned|\d{1,2}-\d{1,2}/.test(t)) return 'back';
+    if(!t.trim()) return 'still';
+    return '';
+  }
+  function hl(s, q){ s = esc(s); if(!q) return s; q.split(/\s+/).filter(Boolean).forEach(function(w){ s = s.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>'); }); return s; }
+  function api(params, post){
+    params.token = token();
+    var q = new URLSearchParams(params);
+    return (post ? fetch(API, { method:'POST', body:q }) : fetch(API + '?' + q)).then(function(r){ return r.json(); });
+  }
+  function load(){
+    api({ action:'list' }).then(function(d){
+      if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+      ROWS = d.rows || []; ADMIN = !!d.admin; render();
+    }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
+  }
+  // the NOTES cell covers several lines (merged in the Excel): every line knows its notes, for search and filtered views
+  function withNotes(rows){
+    var out = [], cur = null, left = 0;
+    rows.forEach(function(r){
+      if(r.notes){ cur = r.notes; left = r.notesRows || 1; }
+      out.push(Object.assign({}, r, { notesAll: left > 0 ? cur : '' }));
+      left--; if(left <= 0) cur = null;
+    });
+    return out;
+  }
+  function filtered(){
+    var q = $('q').value.trim().toLowerCase(), f = $('from').value, t = $('to').value, st = $('st').value, words = q.split(/\s+/).filter(Boolean);
+    var groups = {}, order = [];
+    ROWS.forEach(function(r){ var k = r.batchDate + '|' + r.batch; if(!groups[k]){ groups[k] = []; order.push(k); } groups[k].push(r); });
+    var res = [];
+    order.forEach(function(k){
+      var g = withNotes(groups[k]), b = g[0];
+      if(f && b.batchDate < f) return; if(t && b.batchDate > t) return;
+      var rows = g.filter(function(r){
+        if(st && status(r) !== st) return false;
+        if(!words.length) return true;
+        var h = [r.batch, r.reference, r.quantity, r.notesAll, r.returned, r.returnedDate, fd(r.batchDate)].join(' ').toLowerCase();
+        return words.every(function(w){ return h.indexOf(w) !== -1; });
+      });
+      if(rows.length) res.push({ batch:b.batch, date:b.batchDate, rows:rows, all:g.length, full: rows.length === g.length });
+    });
+    return res;
+  }
+  function render(){
+    var res = filtered(), q = $('q').value.trim(), n = 0, still = 0;
+    res.forEach(function(b){ n += b.rows.length; b.rows.forEach(function(r){ if(status(r) === 'still') still++; }); });
+    $('sum').innerHTML = '<b>' + res.length + '</b> transfer(s) · <b>' + n + '</b> item line(s) · <b style="color:#a8560b">' + still + '</b> still in Saudi / not back' + (($('from').value || $('to').value) ? ' · ' + esc(($('from').value ? fd($('from').value) : 'start') + ' – ' + ($('to').value ? fd($('to').value) : 'today')) : '');
+    if(!res.length){ $('list').innerHTML = '<div class="empty">' + (ROWS.length ? 'Nothing matches.' : 'No transfers yet.') + '</div>'; return; }
+    $('list').innerHTML = res.map(function(b){
+      // Excel layout: the NOTES cell spans its lines (only when the whole transfer is shown)
+      var skip = 0;
+      var body = b.rows.map(function(r){
+        var s = status(r), notesCell = '';
+        if(b.full){
+          if(skip > 0){ skip--; }
+          else { var span = r.notes ? Math.max(1, Math.min(r.notesRows || 1, b.rows.length - b.rows.indexOf(r))) : 1; skip = span - 1; notesCell = '<td class="nt"' + (span > 1 ? ' rowspan="' + span + '"' : '') + '>' + hl(r.notes, q) + '</td>'; }
+        } else notesCell = '<td class="nt">' + hl(r.notesAll, q) + '</td>';
+        return '<tr><td class="no">' + esc(r.no == null ? '' : r.no) + '</td><td>' + hl(r.reference, q) + '</td><td class="qty">' + hl(r.quantity, q) + '</td>' + notesCell +
+          '<td class="rt ' + s + '">' + hl(r.returned, q) + (r.returnedDate && r.returned.indexOf(r.returnedDate.split('-').reverse().join('-')) === -1 ? '<div style="font-size:11px">' + fd(r.returnedDate) + '</div>' : '') + '</td>' +
+          '<td class="act no-print"><button title="Edit" data-ed="' + r.id + '">✏️</button>' + (ADMIN ? '<button title="Delete (Admin)" data-del="' + r.id + '">🗑️</button>' : '') + '</td></tr>';
+      }).join('');
+      return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
+        (b.rows[0].source === 'excel' ? '<span class="tag">from Excel</span>' : '') +
+        '<button class="add no-print" data-addto="' + esc(b.date) + '|' + esc(b.batch) + '">＋ Add item</button></div>' +
+        '<table><thead><tr class="t"><th colspan="5">TRANSFERS (BAHRAIN TO KSA)</th><th class="no-print" style="background:#5a3a48"></th></tr>' +
+        '<tr><th>NO.</th><th>REFERENCE</th><th>QUANTITY</th><th>NOTES</th><th>DATE RETURNED / RECEIVED IN GALALI</th><th class="no-print"></th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    }).join('');
+  }
+  // ---------- edit one line / add one line to a transfer ----------
+  function openEdit(r, addTo){
+    EDIT = r ? { id:r.id } : { add:addTo };
+    $('eTitle').textContent = r ? 'Edit — ' + r.batch : '＋ Add item — ' + addTo.batch;
+    $('eNo').value = r ? (r.no == null ? '' : r.no) : ''; $('eRef').value = r ? r.reference : ''; $('eQty').value = r ? r.quantity : '';
+    $('eNotes').value = r ? r.notes : ''; $('eRet').value = r ? r.returned : ''; $('eRetDate').value = r ? (r.returnedDate || '') : ''; $('eMsg').textContent = '';
+    $('mEdit').classList.add('show'); setTimeout(function(){ $('eRef').focus(); }, 50);
+  }
+  $('eSave').onclick = function(){
+    var p = { action:'save', no:$('eNo').value, reference:$('eRef').value, quantity:$('eQty').value, notes:$('eNotes').value, returned:$('eRet').value, returnedDate:$('eRetDate').value };
+    if(!p.returned && p.returnedDate) p.returned = p.returnedDate.split('-').reverse().join('-');
+    if(EDIT.id) p.id = EDIT.id; else { p.batchDate = EDIT.add.date; p.batch = EDIT.add.batch; }
+    this.disabled = true; var btn = this;
+    api(p, true).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mEdit').classList.remove('show'); load(); })
+      .catch(function(){ $('eMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
+  };
+  // ---------- new transfer (several items) ----------
+  function addLine(){
+    var d = document.createElement('div'); d.className = 'line';
+    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div class="grid2"><div><label>Reference (what is sent)</label><textarea data-f="reference"></textarea></div><div><label>Quantity</label><textarea data-f="quantity"></textarea></div></div>';
+    d.querySelector('.x').onclick = function(){ d.remove(); };
+    $('nLines').appendChild(d); d.querySelector('textarea').focus();
+  }
+  $('new').onclick = function(){ $('nDate').value = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); $('nLabel').value = ''; $('nNotes').value = ''; $('nLines').innerHTML = ''; $('nMsg').textContent = ''; addLine(); $('mNew').classList.add('show'); };
+  $('nAdd').onclick = addLine;
+  $('nSave').onclick = function(){
+    var lines = Array.prototype.map.call(document.querySelectorAll('#nLines .line'), function(l){ return { reference:l.querySelector('[data-f=reference]').value, quantity:l.querySelector('[data-f=quantity]').value }; }).filter(function(l){ return l.reference.trim(); });
+    if(!$('nDate').value){ $('nMsg').textContent = 'Pick the transfer date.'; return; }
+    if(!lines.length){ $('nMsg').textContent = 'Add at least one item.'; return; }
+    var btn = this; btn.disabled = true;
+    api({ action:'addBatch', batchDate:$('nDate').value, batch:$('nLabel').value, notes:$('nNotes').value, lines:JSON.stringify(lines) }, true).then(function(d){
+      if(!d || !d.success){ $('nMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mNew').classList.remove('show'); load();
+    }).catch(function(){ $('nMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
+  };
+  document.addEventListener('click', function(e){
+    var c = e.target.closest('[data-close]'); if(c){ c.closest('.modal').classList.remove('show'); return; }
+    var ed = e.target.closest('[data-ed]'); if(ed){ var r = ROWS.find(function(x){ return String(x.id) === ed.getAttribute('data-ed'); }); if(r) openEdit(r); return; }
+    var ad = e.target.closest('[data-addto]'); if(ad){ var v = ad.getAttribute('data-addto').split('|'); openEdit(null, { date:v[0], batch:v.slice(1).join('|') }); return; }
+    var de = e.target.closest('[data-del]'); if(de){ var rr = ROWS.find(function(x){ return String(x.id) === de.getAttribute('data-del'); });
+      if(!rr || !confirm('Delete this line?\n\n' + rr.reference + '\n(' + rr.batch + ')')) return;
+      api({ action:'delete', id:rr.id }, true).then(function(d){ if(!d || !d.success) alert((d && d.error) || 'Not deleted.'); load(); }); }
+  });
+  // ---------- search / back-track / print / excel ----------
+  var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(render, 200); };
+  ['from','to','st'].forEach(function(id){ $(id).onchange = render; });
+  $('clr').onclick = function(){ $('q').value = ''; $('from').value = ''; $('to').value = ''; $('st').value = ''; render(); };
+  $('prt').onclick = function(){ window.print(); };
+  $('xls').onclick = function(){
+    if(!window.lbExcel){ alert('Excel tool not loaded — refresh the page.'); return; }
+    var res = filtered(), rows = [['TRANSFERS (BAHRAIN TO KSA)'], []];
+    res.forEach(function(b){
+      rows.push([b.batch + ' · ' + fd(b.date)]); rows.push(['NO.','REFERENCE','QUANTITY','NOTES','DATE RETURNED / RECEIVED IN GALALI','Status']);
+      b.rows.forEach(function(r){ var s = status(r); rows.push([r.no == null ? '' : r.no, r.reference, r.quantity, r.notesAll, r.returned, s === 'still' ? 'Still in Saudi / not back' : s === 'back' ? 'Returned' : '']); });
+      rows.push([]);
+    });
+    lbExcel.save('Saudi Transfers', [{ name:'Transfers', rows:rows, freeze:false }]);
+  };
+  load();
+})();
+</script>
+</body>
+</html>

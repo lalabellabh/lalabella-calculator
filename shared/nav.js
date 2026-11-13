@@ -75,6 +75,7 @@
     item: { title: 'Item Inventory', home: 'item-inventory.html', homeLabel: 'Item Inventory', items: [
       ['item-inventory.html', '📦', 'Item Inventory'],
       ['item-dashboard.html', '📊', 'Item Dashboard'],
+      ['item-saudi.html', '🇸🇦', 'Saudi Transfers'],
       ['item-admin.html', '🔐', 'Item Admin', 'admin'],
       ['item-photos.html', '🖼️', 'Item Photos', 'admin'],
       ['item-odoo-import.html', '📥', 'Odoo Price Import', 'admin']
