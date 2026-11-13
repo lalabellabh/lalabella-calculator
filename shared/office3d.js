@@ -432,9 +432,14 @@
 
   // ---------- Nov 2026: real time of day (Bahrain) + live weather (Open-Meteo, free, no key) ----------
   var WX = { code:-1, temp:null, isDay:null, cloud:0, wind:0, at:0 };
+  // Nov 2026: rain / wind only OUTSIDE the building (no roof, so nothing may fall into the rooms).
+  // In front of the building (street side + front yard) the drops stay low so they never cover the rooms in this camera view.
+  function inFoot(x, z){ return x > -1 && x < 35.2 && z > -1.2 && z < 21.4; }
+  function frontZ(x, z){ return z >= 21.4 || x >= 35.2; }
+  function outXZ(){ var x, z, n = 0; do { x = -9 + Math.random() * 52; z = -15 + Math.random() * 50; } while(inFoot(x, z) && ++n < 30); return [x, z]; }
   function buildRain(){
     var N = 1000, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
-    for(var i = 0; i < N; i++){ var x = -9 + Math.random() * 52, y = Math.random() * 16, z = -15 + Math.random() * 50; pos.set([x, y, z, x - .05, y - .55, z + .05], i * 6); }
+    for(var i = 0; i < N; i++){ var q = outXZ(), x = q[0], z = q[1], y = Math.random() * (frontZ(x, z) ? 3 : 16); pos.set([x, y, z, x - .05, y - .55, z + .05], i * 6); }
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
     var rain = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#a9c8ff', transparent:true, opacity:.55 })); rain.visible = false; rain.frustumCulled = false; scene.add(rain); SKY.rain = rain;
   }
@@ -442,7 +447,7 @@
     var r = SKY.rain; if(!r || !r.visible) return;
     var p = r.geometry.attributes.position.array, sp = (WX.code >= 95 ? 24 : WX.code >= 63 ? 20 : 14) * dt;
     for(var i = 0; i < p.length; i += 6){ p[i + 1] -= sp; p[i + 4] -= sp; p[i] += sp * SKY.slant; p[i + 3] += sp * SKY.slant;
-      if(p[i + 4] < -.8 || p[i] > 46){ var x = -9 + Math.random() * 52, y = 13 + Math.random() * 4, z = -15 + Math.random() * 50; p[i] = x; p[i + 1] = y; p[i + 2] = z; p[i + 3] = x - .05; p[i + 4] = y - .55; p[i + 5] = z + .05; } }
+      if(p[i + 4] < -.8 || p[i] > 46 || p[i] < -12 || inFoot(p[i], p[i + 2])){ var q = outXZ(), x = q[0], z = q[1], y = frontZ(x, z) ? 1.5 + Math.random() * 1.5 : 13 + Math.random() * 4; p[i] = x; p[i + 1] = y; p[i + 2] = z; p[i + 3] = x - .05; p[i + 4] = y - .55; p[i + 5] = z + .05; } }
     r.geometry.attributes.position.needsUpdate = true;
     if(WX.code >= 95){ SKY.flash = Math.max(0, SKY.flash - dt * 3); if(Math.random() < dt * .08) SKY.flash = 1; if(SKY.hemi) SKY.hemi.intensity = SKY.baseHemi + SKY.flash * 1.4; }
   }
@@ -536,7 +541,7 @@
       cg.userData.back = back; cg.visible = false; scene.add(cg); OUT.clouds.push(cg); }
     // wind streaks / blowing sand
     var N = 180, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
-    for(var i = 0; i < N; i++){ var x = -9 + Math.random() * 52, y = .1 + Math.random() * 6, z = -15 + Math.random() * 50; pos.set([x, y, z, x + 1.3, y, z + .35], i * 6); }
+    for(var i = 0; i < N; i++){ var q = outXZ(), x = q[0], z = q[1], y = .1 + Math.random() * (frontZ(x, z) ? 1.6 : 6); pos.set([x, y, z, x + 1.3, y, z + .35], i * 6); }
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
     OUT.wind = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#ffffff', transparent:true, opacity:.45 })); OUT.wind.visible = false; OUT.wind.frustumCulled = false; scene.add(OUT.wind);
     // CSS sky layer behind the 3D (stars, sun / moon, heat haze, lightning)
@@ -584,7 +589,7 @@
     OUT.clouds.forEach(function(c){ if(!c.visible) return; if(c.userData.back){ c.position.x += cs; if(c.position.x > 56) c.position.x = -16; } else { c.position.z += cs * .6; if(c.position.z > 34) c.position.z = -8; } });
     if(OUT.wind.visible){ var p = OUT.wind.geometry.attributes.position.array, sp = (7 + w * .35) * dt;
       for(var i = 0; i < p.length; i += 6){ p[i] += sp; p[i + 3] += sp; p[i + 2] += sp * .27; p[i + 5] += sp * .27;
-        if(p[i] > 46 || p[i + 2] > 36){ var x = -9 + Math.random() * 10, y = .1 + Math.random() * 6, z = -15 + Math.random() * 50; p.set([x, y, z, x + 1.3, y, z + .35], i); } }
+        if(p[i] > 46 || p[i + 2] > 36 || inFoot(p[i], p[i + 2]) || inFoot(p[i + 3], p[i + 5]) || (frontZ(p[i], p[i + 2]) && p[i + 1] > 1.7)){ var q = outXZ(), x = q[0], z = q[1], y = .1 + Math.random() * (frontZ(x, z) ? 1.6 : 6); p.set([x, y, z, x + 1.3, y, z + .35], i); } }
       OUT.wind.geometry.attributes.position.needsUpdate = true; }
     if(OUT.over){ var fl = OUT.over.querySelector('.o3-flash'); fl.style.opacity = String((SKY.flash || 0) * .55); }
   }
