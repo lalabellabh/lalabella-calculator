@@ -567,7 +567,15 @@
     var key = 'lbHqOsm2:' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
     try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if(c && Date.now() - c.at < 30 * 86400000) return cb(c.d); } catch(e){}
     var q = '[out:json][timeout:25];(way["building"](around:230,' + b.lat + ',' + b.lng + ');way["highway"](around:280,' + b.lat + ',' + b.lng + '););out geom tags;';
-    fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q)).then(function(r){ if(!r.ok) throw new Error('osm ' + r.status); return r.json(); }).then(function(j){
+    // several free Overpass servers: if one is busy / blocked, try the next (simple POST = no CORS pre-check)
+    var MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+    var tryOne = function(i){ if(i >= MIRRORS.length) return Promise.reject(new Error('all map servers failed'));
+      var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function(){ if(ctl) ctl.abort(); }, 25000);
+      return fetch(MIRRORS[i], { method:'POST', body:'data=' + encodeURIComponent(q), headers:{ 'Content-Type':'application/x-www-form-urlencoded' }, signal:ctl ? ctl.signal : undefined })
+        .then(function(r){ clearTimeout(tm); if(!r.ok) throw new Error('osm ' + r.status); return r.json(); })
+        .then(function(j){ if(!j || !Array.isArray(j.elements)) throw new Error('osm bad'); return j; })
+        .catch(function(e){ clearTimeout(tm); console.warn('[HQ map]', MIRRORS[i], e && e.message); return tryOne(i + 1); }); };
+    tryOne(0).then(function(j){
       var d = { b:[], r:[] };
       (j.elements || []).forEach(function(e){ if(e.type !== 'way' || !e.geometry || e.geometry.length < 2) return; var t = e.tags || {}, pts = e.geometry.map(function(g){ return [+g.lat.toFixed(6), +g.lon.toFixed(6)]; });
         if(t.building && pts.length >= 4) d.b.push([pts, Number(t['building:levels']) || 0, parseFloat(t.height) || 0]);
@@ -626,7 +634,8 @@
     var list = (DATA && DATA.S && DATA.S.branches && DATA.S.branches.length) ? DATA.S.branches : BRANCH_FALLBACK;
     pickBranch(list, function(b, how){ if(!b) return; var id = b.name + '@' + b.lat; if(OUT.loadedFor === id) return; OUT.loadedFor = id; OUT.branch = b; OUT.how = how;
       setPlace('📍 ' + b.name + ' · loading map…');
-      osmGet(b, function(d){ buildCity(b, d); setPlace('📍 ' + b.name + (d ? '' : ' · map not available')); }); });
+      osmGet(b, function(d){ buildCity(b, d); setPlace('📍 ' + b.name + (d ? '' : ' · map not available, trying again in 2 min'));
+        if(!d) setTimeout(function(){ if(OUT.loadedFor === id){ OUT.loadedFor = ''; loadCity(); } }, 120000); }); });
   }
   function setPlace(t){ var el = OUT.over && OUT.over.querySelector('.o3-place'); if(el) el.textContent = t; var mb = root.querySelector('[data-m="loc"]'); if(mb && OUT.branch) mb.textContent = '📍 Place: ' + OUT.branch.name; }
   function nextBranch(){ var list = (DATA && DATA.S && DATA.S.branches && DATA.S.branches.length) ? DATA.S.branches : BRANCH_FALLBACK, i = -1;
