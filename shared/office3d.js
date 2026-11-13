@@ -16,7 +16,7 @@
   var ROOMS = [
     { id:'orders',  en:'Orders & Dispatch', tl:'Orders at Dispatch', x:0,  z:0,  w:12, d:9, floor:['#e08a52','#d1773f'], rug:'#f2b880', agents:['dispatcher','shopify','bleems','abandoned'] },
     { id:'hr',      en:'HR & Attendance',   tl:'HR at Attendance',   x:13, z:0,  w:8,  d:9, floor:['#e3a06a','#d48b55'], rug:'#f5a3c0', agents:['hr','timekeeper'] },
-    { id:'boss',    en:"Boss's Office",     tl:'Opisina ni Boss',    x:22, z:0,  w:7,  d:9, floor:['#c97a4a','#b8693c'], rug:'#9fd3f5', agents:['boss'] },
+    { id:'boss',    en:"Boss's Office",     tl:'Opisina ni Boss',    x:22, z:0,  w:7,  d:9, floor:['#c97a4a','#b8693c'], rug:'#9fd3f5', agents:['boss','secretary'] },
     { id:'tech',    en:'Tech & Health',     tl:'Tech at Health',     x:0,  z:12, w:8,  d:8, floor:['#d9925c','#c97f4a'], rug:'#a8e6a1', agents:['watcher','doctor'] },
     { id:'records', en:'Records & Brain',   tl:'Records at Brain',   x:9,  z:12, w:10, d:8, floor:['#e09862','#cf854f'], rug:'#d4b8ff', agents:['scribe','auditor','archivist'] },
     { id:'deliv',   en:'Delivery',          tl:'Delivery',           x:20, z:12, w:6,  d:8, floor:['#e3a06a','#d48b55'], rug:'#8fe3d0', agents:['delivery','driver'] },
@@ -32,7 +32,8 @@
     doctor:{ a:'bear', fur:'#f4f4f4', shirt:'#e8eef5', panda:1 }, scribe:{ a:'mouse', fur:'#b9b2c8', shirt:'#a77bf0' },
     auditor:{ a:'owl', fur:'#c9a26b', shirt:'#e0a03a' },          archivist:{ a:'bear', fur:'#7a5233', shirt:'#4f8ee0' },
     janitor:{ a:'raccoon', fur:'#6f6f7a', shirt:'#58b84f', cap:'#2f6a2c' },
-    saudi:{ a:'fox', fur:'#d9a066', shirt:'#1b7a3e', cap:'#f4f4f4' }
+    saudi:{ a:'fox', fur:'#d9a066', shirt:'#1b7a3e', cap:'#f4f4f4' },
+    secretary:{ a:'cat', fur:'#f2c9a0', shirt:'#8e44ad' }
   };
   var ST_COL = { working:'#4fb3ff', ok:'#5be29a', warn:'#ffc24f', alert:'#ff6b6b' };
 
@@ -91,7 +92,7 @@
     var o = ROOMOBJ;
     plant(.8, .8, 1.1, o.orders); plant(11.3, .8, 1, o.orders); lamp(6, .7, o.orders);
     plant(20.3, .8, 1, o.hr); lamp(13.7, .7, o.hr);
-    plant(28.4, .8, 1.1, o.boss); plant(22.7, 8.2, .9, o.boss); shelf(28.5, 5.5, o.boss, -Math.PI / 2);
+    plant(28.4, .8, 1.1, o.boss); plant(22.7, 8.2, .9, o.boss); shelf(28.5, 7.9, o.boss, -Math.PI / 2);
     // scoreboard on the Boss wall (live numbers)
     var sc = document.createElement('canvas'); sc.width = 512; sc.height = 256; SCOREBOARD = { c:sc, t:new T.CanvasTexture(sc) };
     var sb = new T.Mesh(new T.PlaneGeometry(4, 2), new T.MeshBasicMaterial({ map:SCOREBOARD.t })); sb.position.set(25.5, 1.45, .15); o.boss.add(sb); box(4.2, 2.2, .06, '#2e5d33', 25.5, 1.45, .1, o.boss);
@@ -222,7 +223,7 @@
   // ---------- Nov 2026: whoever you tap reports to you, the President (text box + their voice when sound is on) ----------
   var repTimer = null;
   function closeReport(){ var b = root.querySelector('.o3-rep'); if(b) b.remove(); clearInterval(repTimer); try { if(window.LBOfficeStopVoice) window.LBOfficeStopVoice(); } catch(e){} }
-  function showReport(k){
+  function showReport(k, quiet){
     closeReport(); if(!window.LBOfficeReport) return; var r = null; try { r = window.LBOfficeReport(k); } catch(e){ console.error(e); } if(!r) return;
     if(!document.getElementById('o3RepCss')){ var st = document.createElement('style'); st.id = 'o3RepCss';
       st.textContent = '.o3-rep{position:absolute;left:12px;right:12px;bottom:12px;z-index:9;max-width:620px;margin:0 auto;background:#120d26f2;color:#f1ecff;border:2px solid #8fd9ff;border-radius:16px;padding:12px 14px 12px 12px;box-shadow:0 14px 34px #000a;display:flex;gap:12px;align-items:flex-start;font:13.5px/1.45 system-ui,sans-serif;animation:o3rep .25s ease-out}' +
@@ -237,7 +238,10 @@
     var box = document.createElement('div'); box.className = 'o3-rep st-' + (r.st || 'ok');
     box.innerHTML = '<div class="av" style="background:' + ((LOOKS[k] || {}).fur || '#ddd') + '">' + (k === 'boss' ? '👑' : emoji(k)) + '</div><div class="bd"><div class="nm"></div><div class="tx"></div><div class="ac"><button data-r="again">🔁 ' + L('Report again', 'Ulitin') + '</button><button data-r="more">📋 ' + L('Full details', 'Buong detalye') + '</button></div></div><button class="x" title="Close">✕</button>';
     box.querySelector('.nm').innerHTML = esc(r.name) + ' <span>· ' + esc(r.role) + ' · ' + L('reporting to ', 'nag-uulat ') + esc(r.to || L('the President', 'sa President')) + '</span>';
+    if(r.extra){ var ex = document.createElement('div'); ex.innerHTML = r.extra; box.querySelector('.bd').insertBefore(ex, box.querySelector('.ac')); }
     root.querySelector('.o3-main').appendChild(box);
+    ['keydown','keyup','keypress'].forEach(function(ev){ box.addEventListener(ev, function(e){ e.stopPropagation(); }); });
+    if(r.onBox) try { r.onBox(box, function(){ showReport(k, true); }); } catch(e){ console.error(e); }
     ['click','pointerdown','wheel','touchstart'].forEach(function(ev){ box.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
     box.querySelector('.x').onclick = function(){ closeReport(); };
     box.querySelector('[data-r="again"]').onclick = function(){ showReport(k); };
@@ -246,7 +250,7 @@
     // words on screen follow the voice: wait for the voice to really start, then keep pace with it
     var draw = function(){ tx.innerHTML = esc(full.slice(0, i)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>') + (i < full.length ? '<span style="opacity:.5">▍</span>' : ''); };
     var mode = 'wait', t0 = Date.now(), voicePct = 0, talking = false, fb = 0;
-    var spoke = false; try { if(window.LBOfficeSpeakReport) spoke = window.LBOfficeSpeakReport(k, r.speak || full, {
+    var spoke = false; try { if(window.LBOfficeSpeakReport && !quiet) spoke = window.LBOfficeSpeakReport(k, r.speak || full, {
         start:function(){ talking = true; mode = 'voice'; t0 = Date.now(); },
         progress:function(p){ voicePct = p; },
         end:function(){ talking = false; mode = 'free'; fb = i; t0 = Date.now(); } }); } catch(e){}
