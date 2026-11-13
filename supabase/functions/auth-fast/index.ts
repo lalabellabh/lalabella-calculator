@@ -215,12 +215,25 @@ async function sessionRow(rawToken: string) {
 }
 async function lookupSession(rawToken: string) {
   const r = await sessionRow(rawToken);
-  return r.valid ? { valid: true, user: await publicUser(r.row) } : { valid: false, error: r.error };
+  if (r.valid) return { valid: true, user: await publicUser(r.row) };
+  // Saudi Team (limited) session — ONLY checkSession accepts it here; every other auth-fast action still needs a staff token.
+  const t = String(rawToken || '').trim();
+  if (/^[a-f0-9]{20,}$/i.test(t)) {
+    const rows = await rest('GET', `users?select=*&limit=1&vtoken=eq.${t}&role=eq.${encodeURIComponent(SAUDI_ROLE)}`);
+    const u = rows && rows[0];
+    const created = u && u.vtoken_created ? new Date(u.vtoken_created).getTime() : 0;
+    if (u && String(u.status || 'Active') === 'Active' && created && Date.now() - created <= SESSION_MAX_AGE_MS) {
+      touchLastSeen(u);
+      return { valid: true, user: { ...(await publicUser(u)), limited: true, modules: [] } };
+    }
+  }
+  return { valid: false, error: r.error };
 }
 async function sessionUser(token: string) {
   const r = await sessionRow(token);
   return r.valid ? r.row : null;
 }
+const SAUDI_ROLE = 'Saudi Team';
 function isAdminRole(u: any) { return String(u.role || '').toLowerCase() === 'admin'; }
 
 // ---------------------------------------------------------------
@@ -288,6 +301,19 @@ async function handleLogin(p: any) {
     return json({ success: false, error: locking ? `Too many failed attempts. Account locked for ${LOCK_MINUTES} minutes.` : 'Incorrect username or password.' });
   }
   if (String(user.status || 'Active') === 'Inactive') return json({ success: false, error: 'This account is disabled. Please contact your admin.' });
+  // Nov 2026: role "Saudi Team" = limited account (Saudi Transfers, My Profile, Members, Messenger, Status only).
+  // Its session lives in users.vtoken (like Messenger visitors): users.token stays NULL (DB trigger), so every staff
+  // backend refuses it; only auth-fast checkSession, chat, profile-fast and saudi-fast accept it.
+  if (String(user.role || '') === SAUDI_ROLE) {
+    const full = await rest('GET', `users?select=vtoken,vtoken_created&id=eq.${user.id}&limit=1`);
+    const v = full && full[0];
+    const vAlive = v && v.vtoken && v.vtoken_created && new Date(v.vtoken_created).getTime() > Date.now() - SESSION_MAX_AGE_MS;
+    const vtok = vAlive ? String(v.vtoken) : generateToken();   // same session on every device until Logout
+    const patch: any = { vtoken: vtok, vtoken_created: new Date(Date.now() + 365 * 86400000).toISOString(), failed_attempts: 0, locked_until: null };
+    if (pwOk === 'upgrade') patch.password_hash = await makePasswordHash(password);
+    await rest('PATCH', `users?id=eq.${user.id}`, patch);
+    return json({ success: true, token: vtok, limited: true, user: { ...(await publicUser(user)), limited: true, modules: [] } });
+  }
   const token = generateToken();
   const loginPatch: any = { token, token_created: new Date().toISOString(), failed_attempts: 0, locked_until: null };
   if (pwOk === 'upgrade') loginPatch.password_hash = await makePasswordHash(password);
@@ -537,7 +563,7 @@ async function adminUpdateUser(p: any, admin: any) {
     if (String(p.position).trim() === '') patch.position = null;
     else { const pos = await findPosition(p.position); if (!pos) return { success: false, error: 'Unknown position.' }; patch.position = pos; }
   }
-  if (role !== undefined && role !== '') { if (role !== 'Admin' && role !== 'Staff') return { success: false, error: 'Role must be Admin or Staff.' }; patch.role = role; }
+  if (role !== undefined && role !== '') { if (role !== 'Admin' && role !== 'Staff' && role !== SAUDI_ROLE) return { success: false, error: 'Role must be Admin, Staff or Saudi Team.' }; patch.role = role; if (role === SAUDI_ROLE) { patch.token = null; patch.token_created = null; } }
   if (status !== undefined && status !== '') { if (status !== 'Active' && status !== 'Inactive') return { success: false, error: 'Status must be Active or Inactive.' }; patch.status = status; }
   if (!Object.keys(patch).length) return { success: false, error: 'Nothing to change.' };
   const losingAdmin = String(target.role) === 'Admin' && String(target.status || 'Active') === 'Active' && ((patch.role && patch.role !== 'Admin') || patch.status === 'Inactive');
@@ -667,13 +693,15 @@ async function route(action: string, p: any) {
     case 'logout': {
       const token = String(p.token || '').trim();
       if (token) await rest('PATCH', `users?token=eq.${encodeURIComponent(token)}`, { token: null });
+      if (token && /^[a-f0-9]{20,}$/i.test(token)) await rest('PATCH', `users?vtoken=eq.${token}&role=eq.${encodeURIComponent(SAUDI_ROLE)}`, { vtoken: null });   // Saudi Team
       return json({ success: true });
     }
     case 'getPositions':
       return json({ success: true, positions: (await listPositions(false)).map((x: any) => x.name) });
     case 'verifyToken': {
       if (!AUTH_TOKEN || String(p.callerSecret || '') !== AUTH_TOKEN) return json({ valid: false, error: 'Unauthorized caller.' });
-      return json(await lookupSession(p.token));
+      // staff sessions only (a Saudi Team session must never pass the other backends)
+      { const r = await sessionRow(p.token); return json(r.valid ? { valid: true, user: await publicUser(r.row) } : { valid: false, error: r.error }); }
     }
     case 'getProfile':
       return json(await handleGetProfile(p.token));

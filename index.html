@@ -1179,6 +1179,8 @@ requestAnimationFrame(()=>{boundsReady=true;bounceStep();})
   }
   function hideLock(){
     if(overlay) overlay.style.display = 'none';
+    // Nov 2026: limited "Saudi Team" accounts have no home page — straight to Saudi Transfers
+    try{ const u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || 'null'); if(u && u.role === 'Saudi Team'){ location.replace('item-saudi.html'); } }catch(e){}
   }
 
   // Fast remembered-session restore. Do NOT block the login page on

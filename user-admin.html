@@ -347,14 +347,14 @@ function rowHtml(u){
         <input type="text" data-f="username" value="${esc(u.username)}" style="font-size:11.5px;padding:4px 5px;width:100%;max-width:140px;color:var(--muted);">
       </div>
       <span>joined ${esc(fmt(u.dateRegistered).split(',')[0])}</span><br>
-      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}${vis?'<span class="badge b-vis">Visitor (Messenger only)</span>':''}${u.status==='Pending'?'<span class="badge b-pend">Waiting for approval</span>':''}
+      ${self?'<span class="badge b-me">You</span>':''}${u.locked?'<span class="badge b-lock">Locked</span>':''}${u.status==='Inactive'?'<span class="badge b-off">Disabled</span>':''}${vis?'<span class="badge b-vis">Visitor (Messenger only)</span>':''}${u.role==='Saudi Team'?'<span class="badge b-vis">Saudi Team (Saudi Transfers, Profile, Chat only)</span>':''}${u.status==='Pending'?'<span class="badge b-pend">Waiting for approval</span>':''}
       ${vis?'':`<label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:600;cursor:${self?'default':'pointer'};">
         <input type="checkbox" data-a="toggleCanManage" ${u.canManageUsers?'checked':''} ${self?'disabled title="You cannot remove your own access"':''}>
         User Management access
       </label>`}
     </td>
     <td data-label="Position"><select data-f="position"><option value="">— Not set —</option>${opt(posOptions(u.position),u.position)}</select></td>
-    <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(vis?['Visitor','Staff','Admin']:['Staff','Admin'],u.role)}</select></td>
+    <td data-label="Role"><select data-f="role"${self?' disabled title="You cannot change your own role"':''}>${opt(vis?['Visitor','Staff','Saudi Team','Admin']:['Staff','Saudi Team','Admin'],u.role)}</select></td>
     <td data-label="Branch"><select data-f="branch">${vis&&!u.branch?'<option value="">— Not set —</option>':''}${opt(branches,u.branch)}</select></td>
     <td data-label="Status"><select data-f="status"${self?' disabled title="You cannot disable yourself"':''}>${opt(u.status==='Pending'?['Pending','Active','Inactive']:['Active','Inactive'],u.status)}</select></td>
     <td data-label="Last login">${esc(u.lastLogin && new Date(u.lastLogin).getTime() > Date.now() ? 'Active (stays logged in)' : fmt(u.lastLogin))}${u.failedAttempts?`<br><span class="muted">${u.failedAttempts} failed tr${u.failedAttempts===1?'y':'ies'}</span>`:''}</td>

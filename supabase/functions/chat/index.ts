@@ -98,7 +98,7 @@ async function sessionUser(token: string) {
   const u = rows && rows[0];
   if (!u || String(u.status || 'Active') !== 'Active') return null;
   const viaV = u.vtoken === t && u.token !== t;
-  if (viaV && String(u.role) !== 'Visitor') return null;
+  if (viaV && String(u.role) !== 'Visitor' && String(u.role) !== 'Saudi Team') return null;   // Saudi Team = limited account, chats like staff
   const stamp = viaV ? u.vtoken_created : u.token_created;
   const created = stamp ? new Date(stamp).getTime() : 0;
   if (!created || Date.now() - created > SESSION_MAX_AGE_MS) return null;

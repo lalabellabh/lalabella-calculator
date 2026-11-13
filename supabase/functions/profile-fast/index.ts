@@ -83,7 +83,7 @@ async function sessionUser(token: string) {
   if (String(user.status || 'Active') !== 'Active') return null;
   const t = String(token || '').trim();
   const isV = user.vtoken === t && user.token !== t;
-  if (isV && String(user.role) !== 'Visitor') return null;
+  if (isV && String(user.role) !== 'Visitor' && String(user.role) !== 'Saudi Team') return null;   // Saudi Team = limited account, sees/post like staff
   const created = (isV ? user.vtoken_created : user.token_created) ? new Date(isV ? user.vtoken_created : user.token_created).getTime() : 0;
   if (!created || Date.now() - created > SESSION_MAX_AGE_MS) return null;
   touchLastSeen(user);
