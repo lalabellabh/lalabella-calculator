@@ -93,11 +93,16 @@ async function sign(urls: string[]): Promise<Record<string, string>> {
 }
 
 async function list(u: any) {
-  const [lines, rets] = await Promise.all([
+  const [lines, rets, pics] = await Promise.all([
     sbGetAll('saudi_transfers?select=*&order=batch_date.desc,batch_label.asc,sort_order.asc,id.asc'),
     sbGetAll('saudi_returns?select=*&order=return_date.asc.nullsfirst,id.asc'),
+    sbGetAll('saudi_photos?select=*&order=sort_order.asc,id.asc'),
   ]);
-  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url)].filter(Boolean));
+  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url)].filter(Boolean));
+  const linePics: Record<string, string[]> = {}, batchPics: any[] = [];
+  pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
+    if (x.line_id) (linePics[x.line_id] = linePics[x.line_id] || []).push(u);
+    else batchPics.push({ batch: x.batch_label, batchDate: x.batch_date, url: u, caption: x.caption || '' }); });
   const byLine: Record<string, any[]> = {};
   rets.forEach((r: any) => { (byLine[r.line_id] = byLine[r.line_id] || []).push({ id: r.id, kind: r.kind, qty: r.qty == null ? null : Number(r.qty), date: r.return_date || '', branch: r.branch || '',
     by: r.received_by || '', notes: r.notes || '', photo: r.photo_url ? (signed[r.photo_url] || '') : '', source: r.source, savedBy: r.created_by || '', at: r.created_at }); });
@@ -113,10 +118,10 @@ async function list(u: any) {
     else status = /^\s*-\s*$/.test(String(r.returned || '')) ? 'unknown' : 'still';
     return { id: r.id, batch: r.batch_label, batchDate: r.batch_date, no: r.line_no, reference: r.reference || '', quantity: r.quantity || '', qtySent: sent, unit: r.unit || '',
       notes: r.notes || '', notesRows: r.notes_rows || 1, excelReturned: r.source === 'excel' ? (r.returned || '') : '', from: r.from_branch || '', givenTo: r.given_to || '',
-      photo: r.photo_url ? (signed[r.photo_url] || '') : '', source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
+      photo: r.photo_url ? (signed[r.photo_url] || '') : '', photos: linePics[r.id] || [], source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
       moves, returned: nBack, kept: nKept, left, status };
   });
-  return { success: true, rows, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
+  return { success: true, rows, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
 }
 
 async function send(p: any, u: any) {
@@ -198,6 +203,19 @@ Deno.serve(async (req) => {
     if (a === 'list') return json(await list(u));
     if (a === 'send') return json(await send(p, u));
     if (a === 'returnItems') return json(await returnItems(p, u));
+    if (a === 'importPhoto') {   // Admin: pictures that were inside TRANSFERS_TO_SAUDI.xlsx
+      if (!isAdmin(u)) return json({ success: false, error: 'Admin only.' });
+      const bl = txt(p.batch, 60), so = parseInt(String(p.item || ''), 10), ord = parseInt(String(p.order || '0'), 10) || 0;
+      const b = await sbGet(`saudi_transfers?select=id,batch_date&batch_label=eq.${encodeURIComponent(bl)}&source=eq.excel&order=sort_order.asc`);
+      if (!b.length) return json({ success: false, error: 'Transfer not found.' });
+      const line = Number.isFinite(so) ? (await sbGet(`saudi_transfers?select=id&batch_label=eq.${encodeURIComponent(bl)}&source=eq.excel&sort_order=eq.${so}&limit=1`))[0] : null;
+      if (Number.isFinite(so) && !line) return json({ success: false, error: 'Line not found.' });
+      const key = txt(p.key, 40);
+      if (key) { const dup = await sbGet(`saudi_photos?select=id&caption=eq.${encodeURIComponent(key)}&batch_label=eq.${encodeURIComponent(bl)}&limit=1`); if (dup.length) return json({ success: true, skipped: true }); }
+      const url = await savePhoto(String(p.photo || '')); if (!url) return json({ success: false, error: 'Picture not saved.' });
+      await sbPost('saudi_photos', [{ line_id: line ? line.id : null, batch_label: bl, batch_date: b[0].batch_date, url, sort_order: ord, caption: key || null, source: 'excel', created_by: who(u) }]);
+      return json({ success: true });
+    }
     if (['editLine', 'editReturn', 'deleteLine', 'deleteReturn'].includes(a)) {
       if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can change or delete. Tell the admin what to fix.' });
       if (a === 'editLine') return json(await editLine(p, u));
