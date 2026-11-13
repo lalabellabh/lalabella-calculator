@@ -399,13 +399,13 @@
       out:'Still in Saudi: ' + saQ + ' pcs on ' + saL + ' lines' + ((SA.still_names || []).length ? ' (' + SA.still_names.map(function(n){ return String(n).split('\n')[0]; }).join(', ') + ')' : '') + ' · No qty written: ' + saU + ' lines · Kept by Saudi: ' + (SA.kept_qty || 0) + ' · Last send ' + saD(SA.last_send) + ' · Last return ' + saD(SA.last_return) + ' · This week: ' + (SA.sends_7d || 0) + ' sent, ' + (SA.returns_7d || 0) + ' returns · All lines: ' + (SA.lines || 0),
       tools:['Saudi Transfers page','saudi_transfers / saudi_returns'], never:NEVER_ALL.concat(['Sends, returns or edits a transfer by itself','Changes stock']) };
     // Nov 2026: Cali the Secretary — your own calendar notes; at the time she reads the note out loud (+ phone alarm)
-    var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }),
+    var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return n.isRem && !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }),
         soon = open.filter(function(n){ var t = new Date(n.at).getTime(); return t > nowMs && t - nowMs < 3600000; }), nxt = open.filter(function(n){ return new Date(n.at).getTime() > nowMs; })[0];
     EMP.secretary = { name:'Cali', role:L('Secretary · Calendar', 'Secretary · Calendar'), st: due.length ? 'warn' : soon.length ? 'working' : 'ok',
       say: due.length ? L('⏰ ' + due[0].note, '⏰ ' + due[0].note) : nxt ? L('Next: ' + noteWhen(nxt.at) + ' — ' + nxt.note, 'Susunod: ' + noteWhen(nxt.at) + ' — ' + nxt.note) : L('No reminders. Tap me to add one.', 'Walang paalala. Pindutin ako para magdagdag.'),
-      now:'Keeps your calendar notes. At the time you set, she reads the note out loud here and sends a reminder to your phone.',
+      now:'Reads your notes and reminders from the Schedule calendar. When a reminder time comes, she reads it out loud here.',
       out:'Open notes: ' + open.length + ' · Due now: ' + due.length + ' · In the next hour: ' + soon.length + (nxt ? ' · Next: ' + noteWhen(nxt.at) + ' — ' + nxt.note : ''),
-      tools:['Your calendar notes (only you see yours)','Phone reminder'], never:NEVER_ALL.concat(['Shows your notes to other admins']) };
+      tools:['Schedule calendar (your own notes + reminders)'], never:NEVER_ALL.concat(['Shows your notes to other admins']) };
     var H = S.hr || {}, late = Number(H.late_today) || 0, noOut = Number(H.no_out_yday) || 0, blk = Number(H.blocked_today) || 0, inT = Number(H.in_today) || 0, brk = Number(H.on_break) || 0, wk = Number(H.working_now) || 0, evn = Number(H.events_today) || 0;
     var nm = function(a){ return (a || []).slice(0, 4).join(', '); };
     EMP.hr = { name:'Hana', role:'HR', st: late ? 'warn' : (inT ? 'working' : 'ok'), say: late ? L(late + ' late today', late + ' ang late ngayon') : (inT ? L(inT + ' of ' + (H.staff || 0) + ' staff clocked in', inT + ' sa ' + (H.staff || 0) + ' staff ang naka-in') : L('No clock-ins yet today', 'Wala pang nag-time in ngayon')),
@@ -613,23 +613,23 @@
       return { name:e.name, role:e.role, st:e.st, text:t, speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name };
     }
     if(k === 'secretary'){
-      var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }), up = open.filter(function(n){ return new Date(n.at).getTime() > nowMs; });
+      var nowMs = Date.now(), rems = (NOTES || []).filter(function(n){ return n.isRem && !n.done; }), due = rems.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }), up = rems.filter(function(n){ return new Date(n.at).getTime() > nowMs; }), notes = (NOTES || []).filter(function(n){ return !n.isRem && n.date >= bhToday(); });
       var t = G + ' ' + L('This is Cali, your secretary.', 'Si Cali po, ang secretary ninyo.') + '\n\n' +
         (due.length ? due.map(function(n){ return '⏰ **' + L('It\'s time: ', 'Oras na po: ') + '**' + n.note + ' (' + noteWhen(n.at) + ')'; }).join('\n') + '\n' : '') +
-        (up.length ? L('**Coming up:** ', '**Susunod:** ') + up.slice(0, 3).map(function(n){ return noteWhen(n.at) + ' — ' + n.note; }).join(' · ') : (due.length ? '' : L('No reminders yet. Add one below.', 'Wala pang paalala. Magdagdag sa ibaba.')));
+        (up.length ? L('**Coming up:** ', '**Susunod:** ') + up.slice(0, 3).map(function(n){ return noteWhen(n.at) + ' — ' + n.note; }).join(' · ') + '\n' : (due.length ? '' : L('No reminders yet. Add one below.', 'Wala pang paalala. Magdagdag sa ibaba.') + '\n')) +
+        (notes.length ? L('**Notes:** ', '**Notes:** ') + notes.slice(0, 3).map(function(n){ return n.date.slice(5).split('-').reverse().join('/') + ' — ' + n.note; }).join(' · ') : '');
       var sp = G + ' ' + (due.length ? L('Reminder: ', 'Paalala po: ') + due.map(function(n){ return n.note; }).join('. ') + '.' : up.length ? L('Your next reminder is ', 'Ang susunod ninyong paalala ay ') + noteWhen(up[0].at) + ': ' + up[0].note + '.' : L('You have no reminders.', 'Wala po kayong paalala.'));
-      var row = function(n, isDue){ return '<div class="nt' + (isDue ? ' due' : '') + '"><span class="w">' + esc(noteWhen(n.at)) + '</span><span class="m">' + esc(n.note) + '</span><button data-nd="' + n.id + '" title="Done">✓</button><button data-nx="' + n.id + '" title="Delete">🗑</button></div>'; };
+      var row = function(n, isDue){ return '<div class="nt' + (isDue ? ' due' : '') + '"><span class="w">' + (n.isRem ? '🔔 ' + esc(noteWhen(n.at)) : '📝 ' + esc(n.date.slice(5).split('-').reverse().join('/'))) + '</span><span class="m">' + esc(n.note) + (n.extra ? ' <i style="opacity:.7">· ' + esc(n.extra) + '</i>' : '') + '</span>' + (n.isRem ? '<button data-nd="' + esc(n.date) + '" title="Done">✓</button>' : '') + '</div>'; };
       var d0 = new Date(Date.now() + 3 * 3600000 + 30 * 60000), dv = d0.toISOString().slice(0, 10), tv = d0.toISOString().slice(11, 16);
       var extra = '<style>.o3-notes{margin-top:8px}.o3-notes .nt{display:flex;gap:6px;align-items:center;padding:5px 6px;border-radius:8px;background:#1d1640;margin-bottom:4px;font-size:12.5px}.o3-notes .nt.due{background:#4a3a12}.o3-notes .w{flex:0 0 auto;color:#8fd9ff;font-weight:700}.o3-notes .m{flex:1;min-width:0;overflow-wrap:anywhere}.o3-notes .nt button{border:0;background:#2c2458;color:#fff;border-radius:6px;padding:3px 7px;cursor:pointer}' +
         '.o3-notes form{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.o3-notes input{font:inherit;font-size:12.5px;border:1px solid #4a3f7a;background:#0f0b22;color:#f1ecff;border-radius:8px;padding:6px 8px}.o3-notes input[name=n]{flex:1 1 180px}.o3-notes form button{border:0;background:#8e44ad;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}.o3-notes .er{color:#ff9b9b;font-size:12px;width:100%}</style>' +
-        '<div class="o3-notes">' + due.map(function(n){ return row(n, true); }).join('') + up.slice(0, 8).map(function(n){ return row(n, false); }).join('') +
-        '<form><input name="n" maxlength="300" placeholder="' + esc(L('What should I remind you?', 'Ano ang ipapaalala ko?')) + '" required><input name="d" type="date" value="' + dv + '" required><input name="t" type="time" value="' + tv + '" required><button>' + esc(L('＋ Add', '＋ Idagdag')) + '</button><div class="er"></div></form></div>';
+        '<div class="o3-notes">' + due.map(function(n){ return row(n, true); }).join('') + up.slice(0, 6).map(function(n){ return row(n, false); }).join('') + notes.slice(0, 4).map(function(n){ return row(n, false); }).join('') +
+        '<div style="font-size:11.5px;color:#9a90b8;margin-top:6px">' + esc(L('Saved in your Schedule calendar (🔔 reminder).', 'Naka-save sa Schedule calendar mo (🔔 reminder).')) + '</div><form><input name="n" maxlength="120" placeholder="' + esc(L('What should I remind you?', 'Ano ang ipapaalala ko?')) + '" required><input name="d" type="date" value="' + dv + '" required><input name="t" type="time" value="' + tv + '" required><button>' + esc(L('＋ Add', '＋ Idagdag')) + '</button><div class="er"></div></form></div>';
       var onBox = function(box, again){
-        box.querySelectorAll('[data-nd]').forEach(function(b){ b.onclick = async function(){ b.disabled = true; await window.LBOfficeNotes.done(Number(b.getAttribute('data-nd'))); again(); }; });
-        box.querySelectorAll('[data-nx]').forEach(function(b){ b.onclick = async function(){ b.disabled = true; await window.LBOfficeNotes.del(Number(b.getAttribute('data-nx'))); again(); }; });
+        box.querySelectorAll('[data-nd]').forEach(function(b){ b.onclick = async function(){ b.disabled = true; await window.LBOfficeNotes.done(b.getAttribute('data-nd')); again(); }; });
         var f = box.querySelector('.o3-notes form'); if(f) f.onsubmit = async function(ev){ ev.preventDefault(); var n = f.n.value.trim(), d = f.d.value, tm = f.t.value; if(!n || !d || !tm) return;
-          var at = new Date(d + 'T' + tm + ':00+03:00').toISOString(), bt = f.querySelector('button'); bt.disabled = true;
-          var r = await window.LBOfficeNotes.add(n, at); bt.disabled = false; if(!r.success){ f.querySelector('.er').textContent = r.error || 'Not saved.'; return; } again(); };
+          var bt = f.querySelector('button'); bt.disabled = true;
+          var r = await window.LBOfficeNotes.add(n.slice(0, 120), d, tm); bt.disabled = false; if(!r.success){ f.querySelector('.er').textContent = r.error || 'Not saved.'; return; } again(); };
       };
       return { name:e.name, role:e.role, st:e.st, text:t, speak:sp, extra:extra, onBox:onBox, to:ME.pres ? L('the President', 'sa President') : ME.name };
     }
@@ -878,16 +878,34 @@
     }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; setTimeout(load, 8000); }
     finally{ busy = false; }
   }
-  async function noteApi(params){ var res = await fetch(API, { method:'POST', body: new URLSearchParams(Object.assign({ token: token() }, params)) }); return res.json(); }
-  async function loadNotes(quiet){ try{ var d = await noteApi({ action:'notes' }); if(d && d.success){ NOTES = d.notes || []; if(!quiet && S) render(); } }catch(e){} }
-  window.LBOfficeNotes = { add:async function(note, at){ var d = await noteApi({ action:'noteAdd', note:note, at:at }); if(d.success) await loadNotes(); return d; },
-    done:async function(id){ var d = await noteApi({ action:'noteDone', id:id }); await loadNotes(); return d; },
-    del:async function(id){ var d = await noteApi({ action:'noteDel', id:id }); await loadNotes(); return d; } };
+  // Nov 2026: Cali reads YOUR notes + reminders from the Schedule calendar (same data as schedule.html, via schedule-fast)
+  var SCHED = (window.LB_CONFIG && LB_CONFIG.SCHEDULE_FAST_API) || '';
+  async function schedApi(params, post){ var p = new URLSearchParams(Object.assign({ token: token() }, params));
+    var res = post ? await fetch(SCHED, { method:'POST', body:p }) : await fetch(SCHED + '?' + p.toString()); return res.json(); }
+  function bhToday(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
+  async function loadNotes(quiet){
+    if(!SCHED) return;
+    try{ var from = new Date(Date.now() + 3 * 3600000 - 7 * 86400000).toISOString().slice(0, 10), d = await schedApi({ action:'getDayNotes', from:from });
+      if(!d || !d.success) return; var today = bhToday();
+      NOTES = (d.notes || []).filter(function(n){ return (n.reminder && !n.done) || n.date >= today; }).map(function(n){
+        var at = new Date(n.date + 'T' + (n.reminder && n.remindTime ? n.remindTime : '00:00') + ':00+03:00').toISOString();
+        return { id:n.date + ' ' + (n.remindTime || ''), date:n.date, isRem:!!n.reminder, note:n.reminder || n.note, extra:n.reminder && n.note ? n.note : '', rawNote:n.note || '', at:at, time:n.remindTime || '', done:!!n.done || !n.reminder }; });
+      if(!quiet && S) render(); }catch(e){}
+  }
+  window.LBOfficeNotes = {
+    add:async function(text, date, time){
+      var same = (NOTES || []).filter(function(n){ return n.date === date; })[0];
+      if(same && same.isRem && !same.done) return { success:false, error:L('That day already has a reminder: "' + same.note + '". Change it in Schedule.', 'May reminder na sa araw na iyan: "' + same.note + '". Palitan sa Schedule.') };
+      var d = await schedApi({ action:'saveDayNote', date:date, note:same ? same.rawNote : '', reminder:text, remindTime:time }, true);
+      if(d && d.success) await loadNotes(); return d || { success:false };
+    },
+    done:async function(date){ var d = await schedApi({ action:'setReminderDone', date:date, done:'1' }, true); await loadNotes(); return d; }
+  };
   // the alarm: when a note's time comes, Cali beeps, walks you to her desk and reads it out (once per note on this device)
   function heard(id){ try{ return (JSON.parse(localStorage.getItem('lbHqNoteHeard') || '[]') || []).indexOf(id) >= 0; }catch(e){ return false; } }
   function markHeard(id){ try{ var a = JSON.parse(localStorage.getItem('lbHqNoteHeard') || '[]') || []; a.push(id); localStorage.setItem('lbHqNoteHeard', JSON.stringify(a.slice(-200))); }catch(e){} }
   setInterval(function(){
-    var nowMs = Date.now(), due = (NOTES || []).filter(function(n){ var t = new Date(n.at).getTime(); return !n.done && t <= nowMs && nowMs - t < 2 * 3600000 && !heard(n.id); });
+    var nowMs = Date.now(), due = (NOTES || []).filter(function(n){ var t = new Date(n.at).getTime(); return n.isRem && !n.done && t <= nowMs && nowMs - t < 12 * 3600000 && !heard(n.id); });
     if(!due.length) return;
     due.forEach(function(n){ markHeard(n.id); });
     window.__lbNoteAlarm = due; if(S) render(); alarmBeep(); setTimeout(alarmBeep, 700);
@@ -898,7 +916,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=17'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=18'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
