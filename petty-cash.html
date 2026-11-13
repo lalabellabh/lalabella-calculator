@@ -1650,14 +1650,12 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.bn.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
     slCashCountHtml(th) +
     slPettyDayHtml(pc, days, th) +
-    // Nov 2026: "Payments" box (Bench's layout): Cash, My Fatoorah, Card, Fawri + (Credit only when used), then the total
-    (list.length ? `<div style="margin:18px 0 0;max-width:420px;font-family:Arial,sans-serif;">
-      <div style="background:#e3e3e3;font-weight:700;font-size:14px;padding:6px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Payments</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px;">
-        ${[['Cash',t.cash],['My Fatoorah',t.mf],['Card',t.card],['Fawri +',t.bn]].concat(t.credit ? [['Credit',t.credit]] : []).map(p=>`<tr><td style="padding:6px 10px;font-weight:700;">${p[0]}</td><td style="padding:6px 10px;text-align:right;">${p[1].toFixed(3)}BD</td></tr>`).join('')}
-      </table>
-      <div style="background:#e3e3e3;font-weight:700;font-size:14px;padding:6px 10px;margin-top:6px;display:flex;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><span>Total</span><span>${t.inv.toFixed(3)}BD</span></div>
-    </div>` : '') +
+    // Nov 2026: "Payments" table — same lines/fonts as the cash count table above: Cash, My Fatoorah, Card, Fawri + (Credit only when used), TOTAL
+    (list.length ? `<h3 style="margin-top:16px;">Payments</h3>
+      <table style="width:100%;max-width:520px;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Payment</th><th ${th}>Amount</th></tr></thead>
+      <tbody>${[['Cash',t.cash],['My Fatoorah',t.mf],['Card',t.card],['Fawri +',t.bn]].concat(t.credit ? [['Credit',t.credit]] : []).map(p=>`<tr><td>${p[0]}</td><td ${th}>${p[1].toFixed(3)} BD</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td>TOTAL</td><td ${th}>${t.inv.toFixed(3)} BD</td></tr></tbody></table>` : '') +
     `<p style="font-size:11px;color:#666;margin-top:14px;">Printed ${fmtDate(slToday())}${list.length ? ' · ' + list.length + ' sales entries' : ''}</p>`;
   window.print();
 });
