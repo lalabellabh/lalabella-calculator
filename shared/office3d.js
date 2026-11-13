@@ -545,7 +545,13 @@
     var sh = []; for(var k = 0; k < 70; k++) sh.push((Math.random() * 100).toFixed(1) + 'vw ' + (Math.random() * 22).toFixed(1) + 'vh 0 ' + (Math.random() < .2 ? '1px' : '0') + ' #fff' + (Math.random() < .5 ? 'c' : ''));
     var cl = ''; for(var c = 0; c < 8; c++) cl += '<i class="o3-cl" style="top:' + (3 + Math.random() * 18).toFixed(1) + '%;width:' + (70 + Math.random() * 90).toFixed(0) + 'px;animation-delay:-' + (Math.random() * 90).toFixed(0) + 's"></i>';
     var over = document.createElement('div'); over.className = 'o3-sky';
-    over.innerHTML = '<i class="o3-band"></i><i class="o3-stars" style="box-shadow:' + sh.join(',') + '"></i><i class="o3-orb"></i>' + cl + '<i class="o3-heat"></i><i class="o3-haze"></i><i class="o3-flash"></i><span class="o3-place"></span>';
+    // Nov 2026: no moon / stars / clouds drawn OVER the city any more (they looked like they were inside the office).
+    // Night = the light + lit windows; clouds = their shadows drifting over the ground.
+    over.innerHTML = '<i class="o3-heat"></i><i class="o3-haze"></i><i class="o3-flash"></i><span class="o3-place"></span>';
+    OUT.cshadows = []; var csm = new T.MeshBasicMaterial({ color:'#1a1630', transparent:true, opacity:.14, depthWrite:false });
+    for(var cs = 0; cs < 9; cs++){ var cm = new T.Mesh(new T.CircleGeometry(1, 28), csm); cm.rotation.x = -Math.PI / 2; cm.scale.set(14 + Math.random() * 12, 8 + Math.random() * 6, 1);
+      cm.position.set(-90 + cs * 22 + Math.random() * 8, -.74, -40 + Math.random() * 100); cm.renderOrder = 2; cm.visible = false; scene.add(cm); OUT.cshadows.push(cm); }
+    OUT.csMat = csm;
     stage.appendChild(over); OUT.sky = over; OUT.over = over;
   }
   // ---- the real neighbourhood ----
@@ -686,14 +692,9 @@
     OUT.wind.visible = wind >= 20; OUT.wind.material.color.set(wind >= 38 || kind === 'fog' ? '#e8d2a0' : '#ffffff'); OUT.wind.material.opacity = Math.min(.7, .25 + (wind - 20) / 60);
     SKY.slant = -(.08 + wind / 120);
     var ov = OUT.over; if(!ov) return;
-    var top = lerpC('#070a1e', '#7fb3e3', day); top.lerp(new T.Color('#ff9a6a'), gold * .55); top.lerp(new T.Color('#5a6070'), cc * .5);
-    ov.querySelector('.o3-band').style.background = 'linear-gradient(180deg,#' + top.getHexString() + 'ee,#' + top.getHexString() + '00)';
-    ov.querySelector('.o3-stars').style.opacity = String(Math.max(0, (1 - day * 1.6)) * (1 - cc * .85));
-    var orb = ov.querySelector('.o3-orb'), isSun = day > .05, f = isSun ? (h - 5.5) / 12 : ((h + 24 - 17.5) % 24) / 13;
-    f = Math.max(0, Math.min(1, f)); orb.className = 'o3-orb ' + (isSun ? 'sun' : 'moon');
-    orb.style.left = (6 + f * 80) + '%'; orb.style.top = (18 - Math.sin(Math.PI * f) * 11) + '%'; orb.style.opacity = String(Math.max(0, 1 - Math.max(0, cc - .45) * 1.8));
-    var n = Math.round(Math.min(1, cc) * 8), ccol = (wet || kind === 'storm') ? '#9aa1b3' : day > .3 ? '#ffffff' : '#5a5f7a', dur = Math.max(25, 140 - wind * 2.5);
-    ov.querySelectorAll('.o3-cl').forEach(function(e, i){ e.style.opacity = i < n ? (day > .3 ? '.9' : '.6') : '0'; e.style.background = ccol; e.style.animationDuration = dur + 's'; });
+    var n = Math.round(Math.min(1, cc) * OUT.cshadows.length);
+    OUT.cshadows.forEach(function(m, i){ m.visible = i < n && day > .15; });
+    OUT.csMat.opacity = wet || kind === 'storm' ? .22 : .14;
     ov.querySelector('.o3-heat').style.opacity = hot ? '1' : '0';
     ov.querySelector('.o3-haze').style.opacity = kind === 'fog' || wind >= 38 ? '1' : '0';
   }
@@ -704,6 +705,7 @@
       for(var i = 0; i < p.length; i += 6){ p[i] += sp; p[i + 3] += sp; p[i + 2] += sp * .27; p[i + 5] += sp * .27;
         if(p[i] > 46 || p[i + 2] > 36 || inFoot(p[i], p[i + 2]) || inFoot(p[i + 3], p[i + 5]) || (frontZ(p[i], p[i + 2]) && p[i + 1] > 1.7)){ var q = outXZ(), x = q[0], z = q[1], y = .1 + Math.random() * (frontZ(x, z) ? 1.6 : 6); p.set([x, y, z, x + 1.3, y, z + .35], i); } }
       OUT.wind.geometry.attributes.position.needsUpdate = true; }
+    if(OUT.cshadows){ var cv = (.4 + w / 12) * dt; OUT.cshadows.forEach(function(m){ if(!m.visible) return; m.position.x += cv; m.position.z += cv * .3; if(m.position.x > 110){ m.position.x = -110; m.position.z = -40 + Math.random() * 100; } }); }
     if(OUT.over){ var fl = OUT.over.querySelector('.o3-flash'); fl.style.opacity = String((SKY.flash || 0) * .55); }
   }
 
