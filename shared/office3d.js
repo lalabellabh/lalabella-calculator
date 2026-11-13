@@ -236,7 +236,7 @@
       document.head.appendChild(st); }
     var box = document.createElement('div'); box.className = 'o3-rep st-' + (r.st || 'ok');
     box.innerHTML = '<div class="av" style="background:' + ((LOOKS[k] || {}).fur || '#ddd') + '">' + (k === 'boss' ? '👑' : emoji(k)) + '</div><div class="bd"><div class="nm"></div><div class="tx"></div><div class="ac"><button data-r="again">🔁 ' + L('Report again', 'Ulitin') + '</button><button data-r="more">📋 ' + L('Full details', 'Buong detalye') + '</button></div></div><button class="x" title="Close">✕</button>';
-    box.querySelector('.nm').innerHTML = esc(r.name) + ' <span>· ' + esc(r.role) + ' · ' + L('reporting to the President', 'nag-uulat sa President') + '</span>';
+    box.querySelector('.nm').innerHTML = esc(r.name) + ' <span>· ' + esc(r.role) + ' · ' + L('reporting to ', 'nag-uulat ') + esc(r.to || L('the President', 'sa President')) + '</span>';
     root.querySelector('.o3-main').appendChild(box);
     ['click','pointerdown','wheel','touchstart'].forEach(function(ev){ box.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
     box.querySelector('.x').onclick = function(){ closeReport(); };
