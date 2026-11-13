@@ -65,6 +65,8 @@
   .pick .r input[type=checkbox]{ width:20px; height:20px; } .pick .r input[type=number]{ padding:7px; font-size:14px; }
   .pick .r .s{ font-size:11.5px; color:var(--warn); }
   .photo{ display:flex; gap:10px; align-items:center; } .photo img{ width:70px; height:70px; object-fit:cover; border-radius:10px; display:none; }
+  .paste{ margin-top:6px; border:2px dashed #d9b8c3; border-radius:11px; padding:12px; text-align:center; font-size:13px; color:var(--dim); cursor:text; background:#fdf8fa; outline:none; }
+  .paste:focus{ border-color:#c9506b; background:#fff; color:var(--ink); }
   .btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
   .btns button{ font:inherit; font-weight:700; border-radius:10px; padding:10px 16px; cursor:pointer; border:1px solid var(--line); background:#fff; }
   .btns .go{ background:var(--ok); color:#fff; border-color:var(--ok); }
@@ -120,6 +122,7 @@
   <button type="button" id="sAdd" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #c9506b;color:#9e2f4a;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer">＋ Add item</button>
   <label>📷 Picture of what was sent</label>
   <div class="photo"><input type="file" accept="image/*" capture="environment" id="sPhoto"><img id="sPrev" alt=""></div>
+  <div class="paste" id="sPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
   <div class="msg" id="sMsg"></div>
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="sSave">Save</button></div>
 </div></div>
@@ -141,6 +144,7 @@
   </div>
   <label>📷 Picture</label>
   <div class="photo"><input type="file" accept="image/*" capture="environment" id="rPhoto"><img id="rPrev" alt=""></div>
+  <div class="paste" id="rPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
   <div class="msg" id="rMsg"></div>
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="rSave">Save</button></div>
 </div></div>
@@ -173,17 +177,33 @@
     return (post ? fetch(API, { method:'POST', body:q }) : fetch(API + '?' + q)).then(function(r){ return r.json(); });
   }
   // shrink a phone picture before sending (max 1600 px, JPEG)
+  var PASTED = {};   // input id -> pasted picture (Snip & paste)
   function readPhoto(input){
     return new Promise(function(res){
-      var f = input.files && input.files[0]; if(!f) return res('');
+      var f = (input.files && input.files[0]) || PASTED[input.id]; if(!f) return res('');
       var img = new Image(), url = URL.createObjectURL(f);
       img.onload = function(){ var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82)); };
       img.onerror = function(){ res(''); }; img.src = url;
     });
   }
-  function preview(inp, im){ inp.onchange = function(){ var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
+  function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
   preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev'));
+  function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
+  // Paste a snipped picture (Ctrl+V) — in the paste box, or anywhere in the open Send / Return form
+  function takePaste(e, inpId, imId, boxId){
+    var items = (e.clipboardData && e.clipboardData.items) || [], blob = null;
+    for(var i = 0; i < items.length; i++){ if(items[i].type && items[i].type.indexOf('image/') === 0){ blob = items[i].getAsFile(); break; } }
+    if(!blob){ if(e.target && e.target.id === boxId){ e.preventDefault(); $(boxId).innerHTML = '⚠ No picture in the clipboard — Snip first (Win + Shift + S), then Ctrl+V here.'; } return; }
+    e.preventDefault(); PASTED[inpId] = blob; $(inpId).value = '';
+    $(imId).src = URL.createObjectURL(blob); $(imId).style.display = 'block';
+    $(boxId).innerHTML = '✅ Picture pasted — press Ctrl+V again to replace it';
+  }
+  document.addEventListener('paste', function(e){
+    if($('mSend').classList.contains('show')) takePaste(e, 'sPhoto', 'sPrev', 'sPaste');
+    else if($('mRet').classList.contains('show')) takePaste(e, 'rPhoto', 'rPrev', 'rPaste');
+  });
+  function resetPaste(inpId, boxId){ delete PASTED[inpId]; $(boxId).innerHTML = '📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)'; }
 
   function load(){
     api({ action:'list' }).then(function(d){
@@ -251,13 +271,13 @@
     try{ if(window.LBExtrasPick) LBExtrasPick.attach(d.querySelector('[data-f=reference]'), d.querySelector('[data-f=qty]')); }catch(e){}
     d.querySelector('input').focus();
   }
-  $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
+  $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; resetPaste('sPhoto', 'sPaste'); $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
   $('sAdd').onclick = addLine;
   $('sSave').onclick = function(){
     var lines = Array.prototype.map.call(document.querySelectorAll('#sLines .line'), function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details') }; }).filter(function(l){ return l.reference.trim(); });
     if(!$('sDate').value){ $('sMsg').textContent = 'Pick the date it was sent.'; return; }
     if(!lines.length){ $('sMsg').textContent = 'Add at least one item.'; return; }
-    if(!$('sPhoto').files.length){ $('sMsg').textContent = 'Add a picture of what was sent.'; return; }
+    if(!hasPhoto('sPhoto')){ $('sMsg').textContent = 'Add a picture of what was sent.'; return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
     readPhoto($('sPhoto')).then(function(photo){
       return api({ action:'send', batchDate:$('sDate').value, batch:$('sLabel').value, from:$('sFrom').value, givenTo:$('sTo').value, notes:$('sNotes').value, lines:JSON.stringify(lines), photo:photo }, true);
@@ -281,12 +301,12 @@
     $('rList').innerHTML = html || '<div class="empty">Nothing is waiting in Saudi.</div>';
   }
   $('rFind').oninput = renderPick;
-  $('bRet').onclick = function(){ setKind('return'); $('rFind').value = ''; renderPick(); $('rDate').value = today(); opts($('rBranch'), BRANCHES, 'Galali'); $('rBy').value = ME; $('rNotes').value = ''; $('rPhoto').value = ''; $('rPrev').style.display = 'none'; $('rMsg').textContent = ''; $('mRet').classList.add('show'); };
+  $('bRet').onclick = function(){ setKind('return'); $('rFind').value = ''; renderPick(); $('rDate').value = today(); opts($('rBranch'), BRANCHES, 'Galali'); $('rBy').value = ME; $('rNotes').value = ''; $('rPhoto').value = ''; $('rPrev').style.display = 'none'; resetPaste('rPhoto', 'rPaste'); $('rMsg').textContent = ''; $('mRet').classList.add('show'); };
   $('rSave').onclick = function(){
     var items = Array.prototype.map.call(document.querySelectorAll('#rList input[data-line]:checked'), function(c){ var id = c.getAttribute('data-line'); return { lineId:id, qty: document.querySelector('[data-qty="' + id + '"]').value }; });
     if(!items.length){ $('rMsg').textContent = 'Tick at least one item.'; return; }
     if(KIND === 'return' && !$('rDate').value){ $('rMsg').textContent = 'Pick the date it came back.'; return; }
-    if(!$('rPhoto').files.length){ $('rMsg').textContent = 'Add a picture.'; return; }
+    if(!hasPhoto('rPhoto')){ $('rMsg').textContent = 'Add a picture.'; return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
     readPhoto($('rPhoto')).then(function(photo){
       return api({ action:'returnItems', kind:KIND, date:$('rDate').value, branch:$('rBranch').value, receivedBy:$('rBy').value, notes:$('rNotes').value, items:JSON.stringify(items), photo:photo }, true);
