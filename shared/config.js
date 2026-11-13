@@ -33,6 +33,7 @@ window.LB_CONFIG = Object.freeze({
   ITEM_FAST_API:    'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/item-fast',
   ORDER_ASSIGN_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/orderassign-fast',
   CALC_SALE_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast',
+  SAUDI_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/saudi-fast',
   ORDER_FORM_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/orderform-fast',
   NOTES_FAST_API:   'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/notes-fast',
   SCHEDULE_FAST_API: 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/schedule-fast',
