@@ -206,7 +206,7 @@
       rt.addEventListener('click', function(e){ e.stopPropagation(); zoomRoom(R); });
     });
     resize(); window.addEventListener('resize', resize); bindControls();
-    checkTurn(); wholeOffice(); target.copy(targetGoal); camera.zoom = zoomGoal; if(DATA){ paintTags(); apply(); } renderSide(); loop();
+    checkTurn(); wholeOffice(); target.copy(targetGoal); camera.zoom = zoomGoal; if(DATA){ paintTags(); apply(); loadCity(); } renderSide(); loop();
   }
   function resize(){
     W = stage.clientWidth || 600; H = stage.clientHeight || 400; renderer.setSize(W, H, false);
@@ -250,6 +250,7 @@
     root.querySelector('.o3-menu').addEventListener('click', function(e){ var b = e.target.closest('[data-m]'); if(!b) return; e.stopPropagation(); var m = b.getAttribute('data-m'); root.classList.remove('menu-open');
       if(m === 'snd'){ root.classList.toggle('snd-open'); var sn = document.getElementById('snd'); if(sn && root.classList.contains('snd-open')) sn.classList.add('open'); }
       if(m === 'names') root.classList.toggle('nonames');
+      if(m === 'loc') nextBranch();
       if(m === 'all'){ drawer(false); wholeOffice(); }
       if(m === 'exit'){ autoFull = false; noAuto = true; goFull(false); }
       if(m === 'classic'){ autoFull = false; noAuto = true; goFull(false); var vb = document.getElementById('v3dBtn'); if(vb) vb.click(); } });
@@ -502,91 +503,160 @@
   window.LBOfficeSky = { test:function(code, hour, temp, wind, cloud){ if(code != null) WX.code = code; SKY.forceHour = hour; if(temp != null) WX.temp = temp; if(wind != null) WX.wind = wind; if(cloud != null) WX.cloud = cloud; applySky(); } };   // console preview only
 
 
-  // ---------- Nov 2026: the outside — island ground, palms, road, lamps, clouds, puddles, wind, sun/moon/stars ----------
-  var OUT = { palms:[], clouds:[], puddles:[], glows:[], ground:null, wind:null, sky:null, cloudMat:null };
-  function palm(x, z, s){
-    var g = new T.Group(); g.position.set(x, -.8, z); g.scale.setScalar(s); scene.add(g);
-    var lean = (Math.random() - .5) * .25, tc = '#8a6440';
-    for(var i = 0; i < 6; i++){ cyl(.17 - i * .015, .2 - i * .015, .75, i % 2 ? tc : '#7a5636', lean * i * .35, .37 + i * .7, 0, g, 8); }
-    var crown = new T.Group(); crown.position.set(lean * 2.1, 4.35, 0); g.add(crown);
-    for(var f = 0; f < 8; f++){ var arm = new T.Group(); arm.rotation.y = f / 8 * Math.PI * 2 + Math.random() * .3; crown.add(arm);
-      var leaf = new T.Mesh(new T.SphereGeometry(1, 10, 6), mat(f % 2 ? '#3f8f3a' : '#4fa846')); leaf.scale.set(1.25, .08, .3); leaf.position.set(1.05, -.2, 0); leaf.rotation.z = -.38; leaf.castShadow = true; arm.add(leaf); }
-    ball(.16, '#6b4a2a', .12, -.15, .1, crown); ball(.15, '#6b4a2a', -.1, -.18, -.08, crown);
-    OUT.palms.push({ crown:crown, ph:Math.random() * 6 });
-  }
+  // ---------- Nov 2026: the outside — the REAL neighbourhood of the branch (OpenStreetMap buildings + roads), puddles, wind, sky band ----------
+  // 1 scene unit = 1.5 m. The office sits on the branch's GPS point (centre 17,10). The map is free OpenStreetMap data
+  // (Overpass API), cached on this device for 30 days. If it cannot load, the office just stands on plain ground.
+  var MPU = 1.5, OUT = { puddles:[], ground:null, wind:null, sky:null, over:null, city:null, winMat:[], place:'', loadedFor:'' };
+  var BRANCH_FALLBACK = [{ name:'Qalali', lat:26.270309, lng:50.661218 }, { name:'Moda Mall', lat:26.238635, lng:50.582121 }, { name:'Hamala', lat:26.14409, lng:50.48298 }];
+  function winTex(lit){ var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
+    g.fillStyle = lit ? '#000' : '#fff'; g.fillRect(0, 0, 128, 128);
+    for(var i = 0; i < 4; i++) for(var j = 0; j < 4; j++){ var on = lit ? Math.random() < .45 : true; if(!on) continue;
+      g.fillStyle = lit ? (Math.random() < .5 ? '#ffd98a' : '#ffefc4') : '#8fa6bd'; g.fillRect(i * 32 + 8, j * 32 + 9, 16, 15); if(!lit){ g.fillStyle = '#c9d6e2'; g.fillRect(i * 32 + 8, j * 32 + 9, 16, 3); } }
+    var t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(1 / 8, 1 / 8); return t; }
   function buildOutside(){
-    var C = new T.Vector3(17, 0, 10), R = 27;
-    var top = new T.MeshStandardMaterial({ color:'#e3c893', roughness:.95 }), side = mat('#8a6a48');
-    var isl = new T.Mesh(new T.CylinderGeometry(R, R - 1.5, 2.4, 72), [side, top, side]); isl.position.set(C.x, -2.01, C.z); isl.receiveShadow = true; scene.add(isl); OUT.ground = top;
-    // road + curb on the street side (where the driver leaves)
-    var rl = 2 * Math.sqrt(R * R - 23.5 * 23.5) - 1;
-    box(4, .06, rl, '#3b3b44', 39.5, -.78, C.z, null, { r:.6 }); box(1.4, .14, rl, '#cfc6b4', 36.6, -.74, C.z);
-    for(var dz = -rl / 2 + 1.5; dz < rl / 2 - 1; dz += 3) box(.14, .07, 1.5, '#f4e9a0', 39.5, -.74, C.z + dz);
-    // street lamps (glow at night)
-    [ -1, 7, 15, 22 ].forEach(function(z){ cyl(.06, .08, 3.2, '#3a3a46', 36.7, .8, z, null, 8); box(.9, .08, .1, '#3a3a46', 37.1, 2.38, z);
-      var lm = mat('#fff1c9', { e:'#ffd27a', ei:.9 }); LAMPS.push(lm); var hd = box(.36, .16, .3, lm, 37.5, 2.3, z); hd.castShadow = false;
-      var gl = new T.Mesh(new T.CircleGeometry(1.6, 28), new T.MeshBasicMaterial({ color:'#ffcf7a', transparent:true, opacity:0, depthWrite:false })); gl.rotation.x = -Math.PI / 2; gl.position.set(37.6, -.7, z); scene.add(gl); OUT.glows.push(gl); });
-    // palms all around the building
-    [[-3,-1,1.1],[-5.5,8,1],[-3.5,19,1.15],[6,27,1],[17.5,29.5,1.2],[29,27,1.05],[34.8,-4.5,1],[34.8,25,1.1],[10,-7,1.15],[24,-7,1],[2,-6.5,.95],[-6,13.5,.85],[12,31,.8]].forEach(function(p){ palm(p[0], p[1], p[2]); });
-    // little bushes / rocks
-    [[-2,4],[3,24],[22,24.5],[31,-3.5],[15,-4],[-4,24]].forEach(function(p, i){ ball(.45, i % 2 ? '#5aa34a' : '#4b8f3d', p[0], -.6, p[1], null, 1.3, .7, 1.1); });
-    // puddles (only when wet)
-    [[-2,7],[5,23.5],[14,23.6],[27,24],[20,-4.2],[8,-4],[-4.5,15],[30,-5]].forEach(function(p){ var m = new T.Mesh(new T.CircleGeometry(.7 + Math.random() * .6, 24), new T.MeshStandardMaterial({ color:'#6f8fbf', roughness:.05, metalness:.4, transparent:true, opacity:.6 }));
-      m.rotation.x = -Math.PI / 2; m.scale.set(1.5, 1, 1); m.position.set(p[0], -.79, p[1]); m.visible = false; scene.add(m); OUT.puddles.push(m); });
-    // clouds behind / beside the office (so they never cover the workers)
-    OUT.cloudMat = new T.MeshStandardMaterial({ color:'#ffffff', roughness:1, transparent:true, opacity:.92 });
-    for(var c = 0; c < 11; c++){ var cg = new T.Group(), back = c < 7;
-      cg.position.set(back ? -12 + c * 9 : -14 - Math.random() * 3, 4.5 + Math.random() * 2.5, back ? -13 - Math.random() * 4 : -4 + (c - 7) * 9);
-      for(var b = 0; b < 5; b++){ var pf = new T.Mesh(new T.SphereGeometry(1, 12, 10), OUT.cloudMat); pf.position.set((b - 2) * 1.1, Math.sin(b) * .35, (Math.random() - .5) * .8); pf.scale.setScalar(.9 + Math.random() * .8 - Math.abs(b - 2) * .15); cg.add(pf); }
-      cg.userData.back = back; cg.visible = false; scene.add(cg); OUT.clouds.push(cg); }
+    var C = new T.Vector3(17, 0, 10), R = 150;
+    var top = new T.MeshStandardMaterial({ color:'#c4b592', roughness:.95 }), side = mat('#8a6a48');
+    var gr = new T.Mesh(new T.CylinderGeometry(R, R - 3, 2.4, 96), [side, top, side]); gr.position.set(C.x, -2.01, C.z); gr.receiveShadow = true; scene.add(gr); OUT.ground = top;
+    // puddles (only when wet) — around the office lot
+    [[-2,7],[5,23.5],[14,23.6],[27,24],[20,-4.2],[8,-4],[-4.5,15],[30,-5],[38,9],[37,18]].forEach(function(p){ var m = new T.Mesh(new T.CircleGeometry(.7 + Math.random() * .6, 24), new T.MeshStandardMaterial({ color:'#6f8fbf', roughness:.05, metalness:.4, transparent:true, opacity:.6 }));
+      m.rotation.x = -Math.PI / 2; m.scale.set(1.5, 1, 1); m.position.set(p[0], -.76, p[1]); m.visible = false; scene.add(m); OUT.puddles.push(m); });
     // wind streaks / blowing sand
     var N = 180, pos = new Float32Array(N * 6), geo = new T.BufferGeometry();
     for(var i = 0; i < N; i++){ var q = outXZ(), x = q[0], z = q[1], y = .1 + Math.random() * (frontZ(x, z) ? 1.6 : 6); pos.set([x, y, z, x + 1.3, y, z + .35], i * 6); }
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
     OUT.wind = new T.LineSegments(geo, new T.LineBasicMaterial({ color:'#ffffff', transparent:true, opacity:.45 })); OUT.wind.visible = false; OUT.wind.frustumCulled = false; scene.add(OUT.wind);
-    // CSS sky layer behind the 3D (stars, sun / moon, heat haze, lightning)
+    // sky band over the top of the view (sky colour, sun / moon, stars, clouds) + heat / haze / lightning overlays
     if(!document.getElementById('o3SkyCss')){ var st = document.createElement('style'); st.id = 'o3SkyCss';
-      st.textContent = '.o3-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden}.o3-stage canvas{position:relative;z-index:1}' +
+      st.textContent = '.o3-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}' +
+        '.o3-band{position:absolute;left:0;right:0;top:0;height:30%;transition:background 2s}' +
         '.o3-stars{position:absolute;left:0;top:0;width:2px;height:2px;border-radius:50%;opacity:0;transition:opacity 2s}' +
-        '.o3-orb{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;transition:all 2s;opacity:0}' +
+        '.o3-orb{position:absolute;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;transition:all 2s;opacity:0}' +
         '.o3-orb.sun{background:radial-gradient(circle,#fffbe0 0 38%,#ffd36b 52%,#ffb34766 64%,transparent 72%)}' +
         '.o3-orb.moon{background:radial-gradient(circle at 38% 38%,#fffdf2 0 30%,#e9e4c9 46%,#e9e4c933 56%,transparent 66%)}' +
-        '.o3-heat{position:absolute;inset:auto 0 0 0;height:55%;opacity:0;transition:opacity 2s;z-index:2;background:linear-gradient(180deg,transparent,#ffb04a26 60%,#ff8a3a33);animation:o3heat 3.2s ease-in-out infinite}' +
+        '.o3-cl{position:absolute;height:26px;border-radius:30px;filter:blur(3px);opacity:0;transition:opacity 2s,background 2s;animation:o3cl linear infinite}' +
+        '.o3-cl:before,.o3-cl:after{content:"";position:absolute;border-radius:50%;background:inherit}.o3-cl:before{width:46%;height:180%;left:16%;top:-90%}.o3-cl:after{width:34%;height:150%;left:48%;top:-62%}' +
+        '@keyframes o3cl{from{transform:translateX(-30vw)}to{transform:translateX(130vw)}}' +
+        '.o3-heat{position:absolute;inset:auto 0 0 0;height:55%;opacity:0;transition:opacity 2s;background:linear-gradient(180deg,transparent,#ffb04a26 60%,#ff8a3a33);animation:o3heat 3.2s ease-in-out infinite}' +
         '@keyframes o3heat{0%,100%{transform:scaleY(1) skewX(0deg)}50%{transform:scaleY(1.04) skewX(1.2deg)}}' +
-        '.o3-haze{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity 2s;background:#d9b98055}' +
-        '.o3-flash{position:absolute;inset:0;z-index:2;background:#e8eeff;opacity:0}';
+        '.o3-haze{position:absolute;inset:0;opacity:0;transition:opacity 2s;background:#d9b98055}' +
+        '.o3-flash{position:absolute;inset:0;background:#e8eeff;opacity:0}' +
+        '.o3-place{position:absolute;left:12px;bottom:10px;font:700 11px/1.2 system-ui,sans-serif;color:#fff;background:#0007;padding:5px 9px;border-radius:999px;opacity:.85}';
       document.head.appendChild(st); }
-    var sky = document.createElement('div'); sky.className = 'o3-sky';
-    var sh = []; for(var k = 0; k < 90; k++) sh.push((Math.random() * 100).toFixed(1) + 'vw ' + (Math.random() * 45).toFixed(1) + 'vh 0 ' + (Math.random() < .2 ? '1px' : '0') + ' #fff' + (Math.random() < .5 ? 'c' : ''));
-    sky.innerHTML = '<i class="o3-stars" style="box-shadow:' + sh.join(',') + '"></i><i class="o3-orb"></i>'; stage.insertBefore(sky, stage.firstChild);
-    var over = document.createElement('div'); over.className = 'o3-sky'; over.style.zIndex = 2; over.innerHTML = '<i class="o3-heat"></i><i class="o3-haze"></i><i class="o3-flash"></i>'; stage.appendChild(over);
-    OUT.sky = sky; OUT.over = over;
+    var sh = []; for(var k = 0; k < 70; k++) sh.push((Math.random() * 100).toFixed(1) + 'vw ' + (Math.random() * 22).toFixed(1) + 'vh 0 ' + (Math.random() < .2 ? '1px' : '0') + ' #fff' + (Math.random() < .5 ? 'c' : ''));
+    var cl = ''; for(var c = 0; c < 8; c++) cl += '<i class="o3-cl" style="top:' + (3 + Math.random() * 18).toFixed(1) + '%;width:' + (70 + Math.random() * 90).toFixed(0) + 'px;animation-delay:-' + (Math.random() * 90).toFixed(0) + 's"></i>';
+    var over = document.createElement('div'); over.className = 'o3-sky';
+    over.innerHTML = '<i class="o3-band"></i><i class="o3-stars" style="box-shadow:' + sh.join(',') + '"></i><i class="o3-orb"></i>' + cl + '<i class="o3-heat"></i><i class="o3-haze"></i><i class="o3-flash"></i><span class="o3-place"></span>';
+    stage.appendChild(over); OUT.sky = over; OUT.over = over;
   }
+  // ---- the real neighbourhood ----
+  function pickBranch(list, cb){
+    var saved = ''; try { saved = localStorage.getItem('lbHqBranch') || ''; } catch(e){}
+    var byName = function(n){ n = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); if(!n) return null; return list.filter(function(b){ var m = String(b.name).toLowerCase().replace(/[^a-z]/g, ''); return m && (m === n || m.indexOf(n) >= 0 || n.indexOf(m) >= 0 || (m === 'qalali' && n === 'galali') || (n === 'qalali' && m === 'galali')); })[0] || null; };
+    if(saved && byName(saved)) return cb(byName(saved), 'saved');
+    var u = {}; try { u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; } catch(e){}
+    var mine = byName(u.branch) || list[0], done = false;
+    var finish = function(b, how){ if(done) return; done = true; cb(b, how); };
+    if(!navigator.geolocation) return finish(mine, 'branch');
+    setTimeout(function(){ finish(mine, 'branch'); }, 7000);
+    try { navigator.geolocation.getCurrentPosition(function(p){
+      var best = null, bd = 1e9; list.forEach(function(b){ var dy = (b.lat - p.coords.latitude) * 110.5, dx = (b.lng - p.coords.longitude) * 111.3 * Math.cos(b.lat * Math.PI / 180), d = Math.sqrt(dx * dx + dy * dy); if(d < bd){ bd = d; best = b; } });
+      finish(best && bd < 5 ? best : mine, best && bd < 5 ? 'gps' : 'branch');
+    }, function(){ finish(mine, 'branch'); }, { timeout:6500, maximumAge:600000 }); } catch(e){ finish(mine, 'branch'); }
+  }
+  function osmGet(b, cb){
+    var key = 'lbHqOsm2:' + b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if(c && Date.now() - c.at < 30 * 86400000) return cb(c.d); } catch(e){}
+    var q = '[out:json][timeout:25];(way["building"](around:230,' + b.lat + ',' + b.lng + ');way["highway"](around:280,' + b.lat + ',' + b.lng + '););out geom tags;';
+    fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q)).then(function(r){ if(!r.ok) throw new Error('osm ' + r.status); return r.json(); }).then(function(j){
+      var d = { b:[], r:[] };
+      (j.elements || []).forEach(function(e){ if(e.type !== 'way' || !e.geometry || e.geometry.length < 2) return; var t = e.tags || {}, pts = e.geometry.map(function(g){ return [+g.lat.toFixed(6), +g.lon.toFixed(6)]; });
+        if(t.building && pts.length >= 4) d.b.push([pts, Number(t['building:levels']) || 0, parseFloat(t.height) || 0]);
+        else if(t.highway && !/footway|path|steps|cycleway|pedestrian|corridor|proposed|construction/.test(t.highway)) d.r.push([pts, t.highway]); });
+      try { localStorage.setItem(key, JSON.stringify({ at:Date.now(), d:d })); } catch(e){}
+      cb(d); }).catch(function(){ cb(null); });
+  }
+  function buildCity(b, d){
+    if(OUT.city){ scene.remove(OUT.city); OUT.city.traverse(function(o){ if(o.geometry) o.geometry.dispose(); }); OUT.city = null; }
+    if(!d) return;
+    var city = new T.Group(); scene.add(city); OUT.city = city;
+    var kx = 111320 * Math.cos(b.lat * Math.PI / 180) / MPU, kz = 110540 / MPU;
+    var P = function(ll){ return [17 + (ll[1] - b.lng) * kx, 10 - (ll[0] - b.lat) * kz]; };
+    var inLot = function(x, z){ return x > -3 && x < 37.5 && z > -3 && z < 23.5; };
+    // roads -> one flat mesh
+    var W = { motorway:16, trunk:14, primary:12, secondary:10, tertiary:8, residential:6, unclassified:6, living_street:5, service:4, track:3 };
+    var rp = [];
+    d.r.forEach(function(r){ var w = (W[String(r[1]).replace('_link', '')] || 5) / MPU / 2, pts = r[0].map(P);
+      for(var i = 1; i < pts.length; i++){ var a = pts[i - 1], c = pts[i], dx = c[0] - a[0], dz = c[1] - a[1], L = Math.sqrt(dx * dx + dz * dz); if(L < .01) continue;
+        var nx = -dz / L * w, nz = dx / L * w, y = -.79 + (w > 3 ? .005 : 0);
+        rp.push(a[0] + nx, y, a[1] + nz, c[0] + nx, y, c[1] + nz, c[0] - nx, y, c[1] - nz, a[0] + nx, y, a[1] + nz, c[0] - nx, y, c[1] - nz, a[0] - nx, y, a[1] - nz);
+        // round joints
+        for(var s2 = 0; s2 < 8; s2++){ var a1 = s2 / 8 * Math.PI * 2, a2 = (s2 + 1) / 8 * Math.PI * 2; rp.push(c[0], y, c[1], c[0] + Math.cos(a2) * w, y, c[1] + Math.sin(a2) * w, c[0] + Math.cos(a1) * w, y, c[1] + Math.sin(a1) * w); } } });
+    if(rp.length){ var rg = new T.BufferGeometry(); rg.setAttribute('position', new T.Float32BufferAttribute(rp, 3)); rg.computeVertexNormals();
+      var rm = new T.Mesh(rg, new T.MeshStandardMaterial({ color:'#4a4b55', roughness:.7, side:T.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1 })); rm.receiveShadow = true; city.add(rm); OUT.roadMat = rm.material; }
+    // buildings -> merged meshes (roofs + 3 wall colours)
+    var dir = new T.Vector3(1, 0, 1.05).normalize(), seen = 0;
+    var walls = [[], [], []], roofs = [];
+    d.b.forEach(function(bb){
+      var pts = bb[0].map(P); if(pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop(); if(pts.length < 3) return;
+      if(pts.some(function(p){ return inLot(p[0], p[1]); })) return;                       // our own office stands here
+      var cx = 0, cz = 0; pts.forEach(function(p){ cx += p[0]; cz += p[1]; }); cx /= pts.length; cz /= pts.length;
+      if(Math.abs(cx - 17) > 140 || Math.abs(cz - 10) > 140) return;
+      var h = (bb[2] || (bb[1] ? bb[1] * 3.3 : 6 + (Math.abs(Math.sin(cx * 12.9 + cz * 78.2)) * 7))) / MPU; h = Math.min(h, 45);
+      // never hide the office: buildings between the camera and the office stay low
+      var ox = Math.max(-0.5, Math.min(34.5, cx)), oz = Math.max(-0.7, Math.min(20.7, cz)), fx = cx - ox, fz = cz - oz;
+      if(fx > 0 || fz > 0){ var front = fx * dir.x + fz * dir.z; if(front > 0) h = Math.min(h, Math.max(1.2, front / 1.35 - 1)); }
+      var shp = new T.Shape(); pts.forEach(function(p, i){ if(i) shp.lineTo(p[0], -p[1]); else shp.moveTo(p[0], -p[1]); });
+      var g; try { g = new T.ExtrudeGeometry(shp, { depth:h, bevelEnabled:false }); } catch(e){ return; }
+      g.rotateX(-Math.PI / 2); g.translate(0, -.8, 0); g = g.index ? g.toNonIndexed() : g;
+      var pos = g.attributes.position.array, nor = g.attributes.normal.array, uv = g.attributes.uv.array, w = walls[Math.abs(Math.round(cx * 7 + cz * 3)) % 3];
+      (g.groups.length ? g.groups : [{ start:0, count:pos.length / 3, materialIndex:1 }]).forEach(function(gp){
+        var tgt = gp.materialIndex === 0 ? roofs : w;
+        for(var v = gp.start; v < gp.start + gp.count; v++) tgt.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2], uv[v * 2], uv[v * 2 + 1]); });
+      g.dispose(); seen++; });
+    var mk = function(arr, m){ if(!arr.length) return; var n = arr.length / 8, P3 = new Float32Array(n * 3), N3 = new Float32Array(n * 3), U2 = new Float32Array(n * 2);
+      for(var i = 0; i < n; i++){ P3.set(arr.slice(i * 8, i * 8 + 3), i * 3); N3.set(arr.slice(i * 8 + 3, i * 8 + 6), i * 3); U2.set(arr.slice(i * 8 + 6, i * 8 + 8), i * 2); }
+      var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(P3, 3)); g.setAttribute('normal', new T.BufferAttribute(N3, 3)); g.setAttribute('uv', new T.BufferAttribute(U2, 2));
+      var me = new T.Mesh(g, m); me.castShadow = true; me.receiveShadow = true; city.add(me); };
+    OUT.winMat = [];
+    ['#ece1c9', '#dccfb3', '#f3ebdc'].forEach(function(col, i){ var wm = new T.MeshStandardMaterial({ color:col, map:winTex(false), emissiveMap:winTex(true), emissive:'#ffffff', emissiveIntensity:0, roughness:.85 }); OUT.winMat.push(wm); mk(walls[i], wm); });
+    mk(roofs, new T.MeshStandardMaterial({ color:'#c9bc9f', roughness:.95 }));
+    OUT.count = seen; applySky();
+  }
+  function loadCity(){
+    var list = (DATA && DATA.S && DATA.S.branches && DATA.S.branches.length) ? DATA.S.branches : BRANCH_FALLBACK;
+    pickBranch(list, function(b, how){ if(!b) return; var id = b.name + '@' + b.lat; if(OUT.loadedFor === id) return; OUT.loadedFor = id; OUT.branch = b; OUT.how = how;
+      setPlace('📍 ' + b.name + ' · loading map…');
+      osmGet(b, function(d){ buildCity(b, d); setPlace('📍 ' + b.name + (d ? '' : ' · map not available')); }); });
+  }
+  function setPlace(t){ var el = OUT.over && OUT.over.querySelector('.o3-place'); if(el) el.textContent = t; var mb = root.querySelector('[data-m="loc"]'); if(mb && OUT.branch) mb.textContent = '📍 Place: ' + OUT.branch.name; }
+  function nextBranch(){ var list = (DATA && DATA.S && DATA.S.branches && DATA.S.branches.length) ? DATA.S.branches : BRANCH_FALLBACK, i = -1;
+    list.forEach(function(b, j){ if(OUT.branch && b.name === OUT.branch.name) i = j; }); var nb = list[(i + 1) % list.length];
+    try { localStorage.setItem('lbHqBranch', nb.name); } catch(e){} OUT.loadedFor = ''; loadCity(); }
   function paintOutside(day, h, kind, wet, cloud, gold){
     if(!OUT.ground) return;
     var hot = WX.temp != null && WX.temp >= 35 && day > .4, wind = WX.wind || 0;
-    var gc = lerpC('#e3c893', wet ? '#a48a5c' : hot ? '#f2c27a' : '#e3c893', 1); gc.lerp(new T.Color('#5a5478'), (1 - day) * .55); OUT.ground.color.copy(gc); OUT.ground.roughness = wet ? .35 : .95;
+    var gc = lerpC('#c4b592', wet ? '#94876c' : hot ? '#d9b77c' : '#c4b592', 1); gc.lerp(new T.Color('#5a5478'), (1 - day) * .55); OUT.ground.color.copy(gc); OUT.ground.roughness = wet ? .35 : .95;
+    if(OUT.roadMat){ OUT.roadMat.color.set(wet ? '#30323c' : '#4a4b55'); OUT.roadMat.roughness = wet ? .2 : .7; }
+    OUT.winMat.forEach(function(m){ m.emissiveIntensity = (1 - day) * .9; });
     OUT.puddles.forEach(function(m){ m.visible = wet; });
-    OUT.glows.forEach(function(g){ g.material.opacity = .35 * (1 - day); });
-    var cc = WX.cloud ? WX.cloud / 100 : cloud, n = Math.round(Math.min(1, cc) * OUT.clouds.length);
-    OUT.clouds.forEach(function(c, i){ c.visible = i < n; });
-    OUT.cloudMat.color.copy(lerpC('#4a4f6a', wet || kind === 'storm' ? '#9097a8' : '#ffffff', day)); if(gold > .3) OUT.cloudMat.color.lerp(new T.Color('#ffb98a'), gold * .4);
+    var cc = WX.cloud ? WX.cloud / 100 : cloud;
     OUT.wind.visible = wind >= 20; OUT.wind.material.color.set(wind >= 38 || kind === 'fog' ? '#e8d2a0' : '#ffffff'); OUT.wind.material.opacity = Math.min(.7, .25 + (wind - 20) / 60);
     SKY.slant = -(.08 + wind / 120);
-    var sk = OUT.sky, ov = OUT.over; if(!sk) return;
-    sk.querySelector('.o3-stars').style.opacity = String(Math.max(0, (1 - day * 1.6)) * (1 - cc * .85));
-    var orb = sk.querySelector('.o3-orb'), isSun = day > .05, f = isSun ? (h - 5.5) / 12 : ((h + 24 - 17.5) % 24) / 13;
+    var ov = OUT.over; if(!ov) return;
+    var top = lerpC('#070a1e', '#7fb3e3', day); top.lerp(new T.Color('#ff9a6a'), gold * .55); top.lerp(new T.Color('#5a6070'), cc * .5);
+    ov.querySelector('.o3-band').style.background = 'linear-gradient(180deg,#' + top.getHexString() + 'ee,#' + top.getHexString() + '00)';
+    ov.querySelector('.o3-stars').style.opacity = String(Math.max(0, (1 - day * 1.6)) * (1 - cc * .85));
+    var orb = ov.querySelector('.o3-orb'), isSun = day > .05, f = isSun ? (h - 5.5) / 12 : ((h + 24 - 17.5) % 24) / 13;
     f = Math.max(0, Math.min(1, f)); orb.className = 'o3-orb ' + (isSun ? 'sun' : 'moon');
-    orb.style.left = (6 + f * 88) + '%'; orb.style.top = (34 - Math.sin(Math.PI * f) * 26) + '%'; orb.style.opacity = String(Math.max(0, 1 - Math.max(0, cc - .45) * 1.8));
+    orb.style.left = (6 + f * 80) + '%'; orb.style.top = (18 - Math.sin(Math.PI * f) * 11) + '%'; orb.style.opacity = String(Math.max(0, 1 - Math.max(0, cc - .45) * 1.8));
+    var n = Math.round(Math.min(1, cc) * 8), ccol = (wet || kind === 'storm') ? '#9aa1b3' : day > .3 ? '#ffffff' : '#5a5f7a', dur = Math.max(25, 140 - wind * 2.5);
+    ov.querySelectorAll('.o3-cl').forEach(function(e, i){ e.style.opacity = i < n ? (day > .3 ? '.9' : '.6') : '0'; e.style.background = ccol; e.style.animationDuration = dur + 's'; });
     ov.querySelector('.o3-heat').style.opacity = hot ? '1' : '0';
     ov.querySelector('.o3-haze').style.opacity = kind === 'fog' || wind >= 38 ? '1' : '0';
   }
   function stepOutside(dt, t){
     if(!OUT.ground) return;
-    var w = WX.wind || 0, amp = .025 + Math.min(.32, w / 130), lean = Math.min(.22, w / 200);
-    OUT.palms.forEach(function(p){ p.crown.rotation.z = -lean + Math.sin(t * (1.1 + w / 25) + p.ph) * amp; p.crown.rotation.x = Math.cos(t * (.9 + w / 30) + p.ph) * amp * .5; });
-    var cs = (.25 + w / 18) * dt;
-    OUT.clouds.forEach(function(c){ if(!c.visible) return; if(c.userData.back){ c.position.x += cs; if(c.position.x > 56) c.position.x = -16; } else { c.position.z += cs * .6; if(c.position.z > 34) c.position.z = -8; } });
+    var w = WX.wind || 0;
     if(OUT.wind.visible){ var p = OUT.wind.geometry.attributes.position.array, sp = (7 + w * .35) * dt;
       for(var i = 0; i < p.length; i += 6){ p[i] += sp; p[i + 3] += sp; p[i + 2] += sp * .27; p[i + 5] += sp * .27;
         if(p[i] > 46 || p[i + 2] > 36 || inFoot(p[i], p[i + 2]) || inFoot(p[i + 3], p[i + 5]) || (frontZ(p[i], p[i + 2]) && p[i + 1] > 1.7)){ var q = outXZ(), x = q[0], z = q[1], y = .1 + Math.random() * (frontZ(x, z) ? 1.6 : 6); p.set([x, y, z, x + 1.3, y, z + .35], i); } }
@@ -602,6 +672,7 @@
         if(!firstData && lastSay[k] !== undefined && lastSay[k] !== sig){ lastChange[k] = Date.now(); var a = AG[k]; if(a){ var p = a.tag.querySelector('.pop'); p.classList.remove('on'); void p.offsetWidth; p.classList.add('on'); } }
         lastSay[k] = sig; });
       firstData = false;
+      if(!OUT.loadedFor && T && scene) loadCity();
       paintTags(); apply(); renderSide();
     },
     say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },

@@ -271,7 +271,7 @@
     <section id="o3d">
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
-        <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
+        <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="loc">📍 Place</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
         <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
       <button class="o3-sidebtn" id="o3SideBtn" title="Hide the side panel">❯</button>
       <div class="o3-side">Loading…</div>
@@ -800,7 +800,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=7'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=8'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
