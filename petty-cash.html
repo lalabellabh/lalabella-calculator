@@ -471,6 +471,7 @@
         <div><label>To</label><input type="date" id="slTo"></div>
         <div><label>Source</label><select id="slFKind"><option value="">All</option><option value="walkin">🚶 Walk-in</option><option value="pickup">🛍️ Pick-up</option><option value="website">🌐 Website order</option><option value="whatsapp">💬 WhatsApp</option><option value="corporate">🏢 Corporate</option><option value="other">📝 Others</option></select></div>
       </div>
+      <div id="slHistPrintBox"></div>
       <div class="pc-toolbar">
         <button class="print-btn" id="slFClear" type="button" data-no-excel>This month</button>
         <button class="print-btn" id="slPrintBtn" type="button" data-no-excel title="One day: sales, payments, cash count and petty cash">🖨️ Daily Report</button><button class="print-btn" id="slExcelBtn" type="button" data-no-excel style="margin-left:6px">📊 Excel</button>
@@ -1509,6 +1510,9 @@ function slFiltered(){ const k=document.getElementById('slFKind').value; return 
 function slChTag(r){ return r.channel ? `<span class="sl-tag${r.channel==='whatsapp'?' p':''}">${SL_CH[r.channel]}</span>` : ''; }
 function slRender(){
   const list = slFiltered(), t = slTotals(list), hist = document.getElementById('slHistory');
+  // right under From / To / Source (easy to see), only while searching
+  document.getElementById('slHistPrintBox').innerHTML = !slSearched ? '' : `<div style="margin:2px 0 10px;"><button class="print-btn" id="slHistPrint" type="button" data-no-excel>🖨️ Print this history · ${esc(slRangeText())}${document.getElementById('slFKind').value ? ' · ' + SL_CH[document.getElementById('slFKind').value] : ''}</button><div style="font-size:11px;color:var(--muted);margin-top:4px;">Sales only — no cash count or petty cash</div></div>`;
+  const hp = document.getElementById('slHistPrint'); if(hp) hp.addEventListener('click', slPrintHistory);
   document.getElementById('slSum').innerHTML =
     `<div>💵 Cash<b>${fmtBD(t.cash)}</b></div><div>💳 Card<b>${fmtBD(t.card)}</b></div><div>🌐 MyFatoorah<b>${fmtBD(t.mf)}</b></div><div>📲 Fawri+/Benefit<b>${fmtBD(t.bn)}</b></div><div>📒 Credit<b>${fmtBD(t.credit)}</b></div>` +
     `<div class="t">Total sales<b>${fmtBD(t.inv)}</b></div>`;
@@ -1527,8 +1531,6 @@ function slRender(){
         ${isAdminUser() ? `<button class="edit-btn" data-sid="${r.id}" title="Edit (Admin)">✏️</button><button class="delete-btn" data-sid="${r.id}" title="Delete (Admin)">🗑️</button>` : ''}
       </div></div>`).join('') + '</div>';
   }).join('');
-  if(slSearched) hist.insertAdjacentHTML('beforeend', `<div style="text-align:center;margin:14px 0 4px;"><button class="print-btn" id="slHistPrint" type="button" data-no-excel>🖨️ Print this history · ${esc(slRangeText())}${document.getElementById('slFKind').value ? ' · ' + SL_CH[document.getElementById('slFKind').value] : ''}</button><div style="font-size:11px;color:var(--muted);margin-top:4px;">Sales only — no cash count or petty cash</div></div>`);
-  const hp = document.getElementById('slHistPrint'); if(hp) hp.addEventListener('click', slPrintHistory);
   hist.querySelectorAll('.edit-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slEdit(Number(b.dataset.sid))));
   hist.querySelectorAll('.delete-btn[data-sid]').forEach(b=>b.addEventListener('click',()=>slDelete(Number(b.dataset.sid))));
 }
