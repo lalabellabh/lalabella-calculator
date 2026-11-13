@@ -209,12 +209,13 @@
   function refreshChips() {
     pickers.forEach(function (p) {
       if (!document.body.contains(p.box)) return;
-      var v = valueName(p);
-      if (v !== p.last) { p.last = v; placeChip(p); }
+      var v = valueName(p), r = p.box.getBoundingClientRect(), pos = Math.round(r.top) + ',' + Math.round(r.right) + ',' + Math.round(r.height);
+      if (v !== p.last || pos !== p.lastPos) { p.last = v; p.lastPos = pos; placeChip(p); }   // follow the box when the page moves (phone keyboard)
     });
   }
   window.addEventListener('scroll', function () { pickers.forEach(function (p) { placeChip(p); if (p.dd && p.dd.style.display === 'block') placeDd(p); }); }, true);
   window.addEventListener('resize', function () { pickers.forEach(function (p) { placeChip(p); if (p.dd && p.dd.style.display === 'block') placeDd(p); }); });
+  if (window.visualViewport) ['resize', 'scroll'].forEach(function (ev) { window.visualViewport.addEventListener(ev, function () { pickers.forEach(function (p) { placeChip(p); }); }); });
 
   // ---------- 2. names standing alone in lists / tables ----------
   var OK_TAGS = { DIV: 1, SPAN: 1, TD: 1, TH: 1, B: 1, STRONG: 1, LI: 1, LABEL: 1, A: 1, P: 1, H1: 1, H2: 1, H3: 1, H4: 1, SMALL: 1 };
