@@ -40,9 +40,14 @@ async function rest(method: string, path: string, body?: unknown, prefer = 'retu
 async function sessionUser(token: string) {
   const t = String(token || '').trim();
   if (!t || !/^[a-f0-9]{20,}$/i.test(t)) return null;
-  const rows = await rest('GET', `users?select=id,username,full_name,status,token_created&token=eq.${encodeURIComponent(t)}&limit=1`);
+  let rows = await rest('GET', `users?select=id,username,full_name,status,token_created&token=eq.${encodeURIComponent(t)}&limit=1`);
+  // Nov 2026: Saudi Team accounts log in with users.vtoken (no staff token) — let them turn on notifications too.
+  if (!rows || !rows[0]) {
+    const v = await rest('GET', `users?select=id,username,full_name,status,vtoken_created&vtoken=eq.${t}&role=eq.${encodeURIComponent('Saudi Team')}&limit=1`);
+    rows = (v || []).map((x: any) => ({ ...x, token_created: x.vtoken_created }));
+  }
   const u = rows && rows[0];
-  if (!u || String(u.status || 'Active') === 'Inactive') return null;
+  if (!u || String(u.status || 'Active') !== 'Active') return null;
   const created = u.token_created ? new Date(u.token_created).getTime() : 0;
   if (!created || Date.now() - created > SESSION_MAX_AGE_MS) return null;
   return u;
@@ -93,7 +98,14 @@ async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '') {
   if (!subs.length) return [];
   const uids = Array.from(new Set(subs.map((s: any) => s.user_id)));
   const act = await rest('GET', `users?select=id,role&status=eq.Active&id=in.(${uids.join(',')})`);
-  const ok = new Set((act || []).filter((u: any) => kind !== 'approvals' || String(u.role || '').toLowerCase() === 'admin').map((u: any) => u.id));
+  // approvals: Admins only. orders: never to Saudi Team / Visitor accounts (Nov 2026: Saudi only gets Saudi transfer alerts + chat).
+  const ok = new Set((act || []).filter((u: any) => {
+    const r = String(u.role || '');
+    if (kind === 'approvals') return r.toLowerCase() === 'admin';
+    if (kind === 'orders') return r !== 'Saudi Team' && r !== 'Visitor';
+    if (kind === 'saudi') return r === 'Saudi Team';
+    return true;
+  }).map((u: any) => u.id));
   return subs.filter((s: any) => ok.has(s.user_id));
 }
 
@@ -104,7 +116,7 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return json({ success: false, error: 'Bad request.' }, 400); }
 
   try {
-    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify') {
+    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify' || p.action === 'saudiNotify') {
       const c = await config();
       if (!p.key || String(p.key) !== c.internal_key) return json({ success: false, error: 'Unauthorized.' }, 401);
 
@@ -130,6 +142,13 @@ Deno.serve(async (req) => {
         const body = (m.kind || 'text') === 'text' ? String(m.body || '') : (LABEL[m.kind] || 'New message');
         const subs = await subsFor(userIds, m.user_id, 'chat');
         const r = await sendTo(subs, { title: clip(title, 80), body: clip(body, 160), url: safeUrl(url, 'chatbox.html'), tag, reply });
+        return json({ success: true, ...r });
+      }
+
+      if (p.action === 'saudiNotify') {
+        // Nov 2026: a new transfer was sent to Saudi -> only the Saudi Team accounts get it (not the person who sent it).
+        const subs = await subsFor(null, Number(p.excludeUserId) || 0, 'saudi');
+        const r = await sendTo(subs, { title: clip(String(p.title || '📦 New transfer to Saudi'), 80), body: clip(String(p.body || ''), 160), url: 'item-saudi.html', tag: 'saudi-' + clip(String(p.batch || ''), 40) });
         return json({ success: true, ...r });
       }
 
