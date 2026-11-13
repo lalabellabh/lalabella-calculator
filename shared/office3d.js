@@ -570,11 +570,19 @@
     // several free Overpass servers: if one is busy / blocked, try the next (simple POST = no CORS pre-check)
     var MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
     var tryOne = function(i){ if(i >= MIRRORS.length) return Promise.reject(new Error('all map servers failed'));
-      var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function(){ if(ctl) ctl.abort(); }, 25000);
+      var ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(function(){ if(ctl) ctl.abort(); }, 60000);
       return fetch(MIRRORS[i], { method:'POST', body:'data=' + encodeURIComponent(q), headers:{ 'Content-Type':'application/x-www-form-urlencoded' }, signal:ctl ? ctl.signal : undefined })
         .then(function(r){ clearTimeout(tm); if(!r.ok) throw new Error('osm ' + r.status); return r.json(); })
         .then(function(j){ if(!j || !Array.isArray(j.elements)) throw new Error('osm bad'); return j; })
         .catch(function(e){ clearTimeout(tm); console.warn('[HQ map]', MIRRORS[i], e && e.message); return tryOne(i + 1); }); };
+    // 1st: our own server (asks the map servers itself, keeps the map for everyone). 2nd: the map servers directly.
+    var tok = ''; try { tok = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; } catch(e){}
+    var api = ((window.LB_CONFIG && LB_CONFIG.SUPABASE_URL) || 'https://zoratiahjeldgsognfsj.supabase.co') + '/functions/v1/hqmap-fast';
+    fetch(api, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ token:tok, lat:b.lat, lng:b.lng }) })
+      .then(function(r){ return r.json(); }).then(function(x){ if(!x || !x.success || !x.data) throw new Error((x && x.error) || 'hqmap'); return x.data; })
+      .then(function(d){ try { localStorage.setItem(key, JSON.stringify({ at:Date.now(), d:d })); } catch(e){} cb(d); })
+      .catch(function(e){ console.warn('[HQ map] server', e && e.message); direct(); });
+    function direct(){
     tryOne(0).then(function(j){
       var d = { b:[], r:[] };
       (j.elements || []).forEach(function(e){ if(e.type !== 'way' || !e.geometry || e.geometry.length < 2) return; var t = e.tags || {}, pts = e.geometry.map(function(g){ return [+g.lat.toFixed(6), +g.lon.toFixed(6)]; });
@@ -582,6 +590,7 @@
         else if(t.highway && !/footway|path|steps|cycleway|pedestrian|corridor|proposed|construction/.test(t.highway)) d.r.push([pts, t.highway]); });
       try { localStorage.setItem(key, JSON.stringify({ at:Date.now(), d:d })); } catch(e){}
       cb(d); }).catch(function(){ cb(null); });
+    }
   }
   function buildCity(b, d){
     if(OUT.city){ scene.remove(OUT.city); OUT.city.traverse(function(o){ if(o.geometry) o.geometry.dispose(); }); OUT.city = null; }
