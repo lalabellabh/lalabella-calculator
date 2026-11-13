@@ -158,7 +158,7 @@ async function returnItems(p: any, u: any) {
   if (!p.photo) return { success: false, error: kind === 'keep' ? 'Add a picture.' : 'Add a picture of what came back.' };
   const photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' };
   const rows = items.map((x: any) => ({ line_id: Number(x.lineId), kind, qty: num(x.qty), return_date: isDate(d) ? d : null, branch: kind === 'return' ? branch : null,
-    received_by: txt(p.receivedBy, 60) || who(u), notes: txt(x.notes || p.notes, 300) || null, photo_url: photo, source: 'manual', created_by: who(u) }));
+    received_by: txt(p.receivedBy, 60) || null, notes: txt(x.notes || p.notes, 300) || null, photo_url: photo, source: 'manual', created_by: who(u) }));
   const r = await sbPost('saudi_returns', rows);
   return { success: true, saved: r.length };
 }

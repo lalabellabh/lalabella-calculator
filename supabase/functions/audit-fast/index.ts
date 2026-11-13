@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const p = await readParams(req);
     const me = await manager(p.token);
     if (!me) return json({ success: false, error: 'Unauthorized. Please log in again.' }, 401);
-    if (String(me.role || '') !== 'Admin' || me.can_manage_users !== true)
+    if (String(me.role || '') !== 'Admin' || (me.can_manage_users !== true && p.action !== 'office'))
       return json({ success: false, error: 'You do not have access to Activity History.' }, 403);
     if (!(await checkAndExtendUnlock(p.token))) return json({ success: false, reauth: true, error: 'Please confirm your password (reload the page).' });
 

@@ -139,7 +139,7 @@
     <div><label>Received in</label><select id="rBranch"></select></div>
   </div>
   <div class="grid2">
-    <div><label>Received by</label><input id="rBy"></div>
+    <div><label>Received by</label><input id="rBy" placeholder="Name of the person who received it"></div>
     <div><label>Notes (optional)</label><input id="rNotes" placeholder="e.g. 2 broken"></div>
   </div>
   <label>📷 Picture</label>
@@ -301,7 +301,7 @@
     $('rList').innerHTML = html || '<div class="empty">Nothing is waiting in Saudi.</div>';
   }
   $('rFind').oninput = renderPick;
-  $('bRet').onclick = function(){ setKind('return'); $('rFind').value = ''; renderPick(); $('rDate').value = today(); opts($('rBranch'), BRANCHES, 'Galali'); $('rBy').value = ME; $('rNotes').value = ''; $('rPhoto').value = ''; $('rPrev').style.display = 'none'; resetPaste('rPhoto', 'rPaste'); $('rMsg').textContent = ''; $('mRet').classList.add('show'); };
+  $('bRet').onclick = function(){ setKind('return'); $('rFind').value = ''; renderPick(); $('rDate').value = today(); opts($('rBranch'), BRANCHES, 'Galali'); $('rBy').value = ''; $('rNotes').value = ''; $('rPhoto').value = ''; $('rPrev').style.display = 'none'; resetPaste('rPhoto', 'rPaste'); $('rMsg').textContent = ''; $('mRet').classList.add('show'); };
   $('rSave').onclick = function(){
     var items = Array.prototype.map.call(document.querySelectorAll('#rList input[data-line]:checked'), function(c){ var id = c.getAttribute('data-line'); return { lineId:id, qty: document.querySelector('[data-qty="' + id + '"]').value }; });
     if(!items.length){ $('rMsg').textContent = 'Tick at least one item.'; return; }
