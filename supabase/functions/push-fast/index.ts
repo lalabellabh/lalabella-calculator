@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return json({ success: false, error: 'Bad request.' }, 400); }
 
   try {
-    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify' || p.action === 'saudiNotify' || p.action === 'noteNotify') {
+    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify' || p.action === 'saudiNotify') {
       const c = await config();
       if (!p.key || String(p.key) !== c.internal_key) return json({ success: false, error: 'Unauthorized.' }, 401);
 
@@ -142,14 +142,6 @@ Deno.serve(async (req) => {
         const body = (m.kind || 'text') === 'text' ? String(m.body || '') : (LABEL[m.kind] || 'New message');
         const subs = await subsFor(userIds, m.user_id, 'chat');
         const r = await sendTo(subs, { title: clip(title, 80), body: clip(body, 160), url: safeUrl(url, 'chatbox.html'), tag, reply });
-        return json({ success: true, ...r });
-      }
-
-      if (p.action === 'noteNotify') {
-        // Nov 2026: Lalabella HQ calendar note is due -> that Admin's own phones / computers only
-        const uid = Number(p.userId); if (!Number.isInteger(uid) || uid < 1) return json({ success: false, error: 'Invalid.' });
-        const subs = await subsFor([uid], 0, '');
-        const r = await sendTo(subs, { title: '📅 Reminder', body: clip(String(p.text || ''), 160), url: 'office.html', tag: 'hqnote-' + (Number(p.noteId) || 0) });
         return json({ success: true, ...r });
       }
 

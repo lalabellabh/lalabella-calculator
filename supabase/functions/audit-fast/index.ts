@@ -60,9 +60,8 @@ async function readParams(req: Request): Promise<Record<string, any>> {
 
 const iso = (v: unknown) => { const d = new Date(String(v || '')); return isNaN(d.getTime()) ? null : d.toISOString(); };
 
-// Nov 2026: Lalabella HQ — any Admin may open the office and keep their OWN calendar notes (the secretary reads them out).
-const ANY_ADMIN = new Set(['office', 'notes', 'noteAdd', 'noteDone', 'noteDel']);
-const noteTxt = (v: unknown) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 300);
+// Nov 2026: Lalabella HQ — any Admin may open the office (other actions stay with the User Management admin).
+const ANY_ADMIN = new Set(['office']);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -105,26 +104,6 @@ Deno.serve(async (req) => {
     if (p.action === 'clearErrors') {
       await rest('DELETE', 'error_log?id=gt.0', undefined, 'return=minimal');
       console.log('[audit-fast] errors cleared by', me.username);
-      return json({ success: true });
-    }
-    if (p.action === 'notes') {
-      const since = new Date(Date.now() - 2 * 86400000).toISOString();
-      const rows = await rest('GET', `hq_notes?select=id,note,at,done&user_id=eq.${me.id}&or=(done.eq.false,at.gt."${since}")&order=at.asc&limit=60`);
-      return json({ success: true, notes: rows || [], now: new Date().toISOString() });
-    }
-    if (p.action === 'noteAdd') {
-      const note = noteTxt(p.note), at = iso(p.at);
-      if (!note) return json({ success: false, error: 'Write the note first.' });
-      if (!at) return json({ success: false, error: 'Pick the date and time.' });
-      const mine = await rest('GET', `hq_notes?select=id&user_id=eq.${me.id}&done=eq.false&limit=101`);
-      if ((mine || []).length >= 100) return json({ success: false, error: 'Too many open notes. Mark some as done first.' });
-      const r = await rest('POST', 'hq_notes', { user_id: me.id, note, at }, 'return=representation');
-      return json({ success: true, note: r && r[0] });
-    }
-    if (p.action === 'noteDone' || p.action === 'noteDel') {
-      const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return json({ success: false, error: 'Bad note.' });
-      if (p.action === 'noteDone') await rest('PATCH', `hq_notes?id=eq.${id}&user_id=eq.${me.id}`, { done: true }, 'return=minimal');
-      else await rest('DELETE', `hq_notes?id=eq.${id}&user_id=eq.${me.id}`, undefined, 'return=minimal');
       return json({ success: true });
     }
     if (p.action === 'office') {
