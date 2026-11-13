@@ -14,11 +14,11 @@ const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.ku
 const BAD_HW = /footway|path|steps|cycleway|pedestrian|corridor|proposed|construction|bridleway|elevator|platform/;
 
 async function overpass(lat: number, lng: number) {
-  const q = `[out:json][timeout:90];(way["building"](around:230,${lat},${lng});way["highway"](around:280,${lat},${lng}););out geom tags;`;
+  const q = `[out:json][timeout:30];(way["building"](around:230,${lat},${lng});way["highway"](around:280,${lat},${lng}););out geom tags;`;
   let last = '';
   for (const m of MIRRORS) {
     try {
-      const r = await fetch(m, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'LalabellaHQ/1.0 (mysystemlla.com)' }, signal: AbortSignal.timeout(100000) });
+      const r = await fetch(m, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'LalabellaHQ/1.0 (mysystemlla.com)' }, signal: AbortSignal.timeout(34000) });
       if (!r.ok) { last = m + ' ' + r.status; continue; }
       const j = await r.json();
       if (!j || !Array.isArray(j.elements)) { last = m + ' bad'; continue; }
