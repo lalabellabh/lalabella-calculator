@@ -1569,7 +1569,9 @@ async function slPettyUsed(){
   if(d.error) throw new Error(d.error);
   slPC = d;
   const f=document.getElementById('slFrom').value, t=document.getElementById('slTo').value;
-  return (d.transactions||[]).filter(x=>x.type!=='topup' && (!f || x.date>=f) && (!t || x.date<=t)).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  // Nov 2026: a "Balance adjustment" (counting fix) is not real spending -> not shown as "used" in the report.
+  // It is still in History, and the "Petty Cash remaining" already includes it.
+  return (d.transactions||[]).filter(x=>x.type!=='topup' && !/balance adjustment/i.test(String(x.purpose||'')) && (!f || x.date>=f) && (!t || x.date<=t)).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
 }
 function slCarTxt(x){ return [x.carPlate, x.driver].filter(Boolean).join(' · '); }
 // Every day of the period (also days with nothing), from "From" up to the LAST day that has a sale or a petty cash entry
