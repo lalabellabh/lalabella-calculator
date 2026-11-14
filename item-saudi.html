@@ -245,6 +245,7 @@
         else notesCell = '<td class="nt">' + hl(r.notesAll, q) + '</td>';
         var mv = r.moves.map(function(m){ return moveHtml(m, q); }).join('');
         if(!mv && r.excelReturned && r.excelReturned !== '-') mv = '<div class="mv"><div class="ex">' + hl(r.excelReturned, q) + '</div></div>';
+        if(!mv && r.status === 'still') mv = '<div class="mv"><div class="ex">Still</div></div>';
         var pics = (r.photo ? [r.photo] : []).concat(r.photos || []);
         return '<tr><td class="no">' + esc(r.no == null ? '' : r.no) + '</td><td>' + hl(r.reference, q) + (pics.length ? '<br>' + pics.map(function(u){ return '<img class="ph" src="' + esc(u) + '" alt="">'; }).join('') : '') + '</td>' +
           '<td class="qty">' + hl(r.quantity, q) + '</td>' + notesCell + '<td class="rt">' + (mv || '') + '</td>' +
@@ -378,7 +379,7 @@
       lines.push({ cells:[b.batch + ' · ' + fd(b.date) + ([b.first.from ? ' · from ' + b.first.from : '', b.first.givenTo ? ' · given to ' + b.first.givenTo : ''].join(''))], style:3, pics: bp });
       lines.push({ cells:['NO.', 'REFERENCE', 'PICTURE', 'QUANTITY', 'NOTES', 'RETURNED / RECEIVED', 'STATUS', 'Still in Saudi'], style:2, head:true });
       b.rows.forEach(function(r){
-        var mv = r.moves.map(function(m){ return (m.kind === 'keep' ? 'Kept in Saudi ' : 'Back ') + (m.qty != null ? n3(m.qty) + ' ' : '') + (m.date ? fd(m.date) + ' ' : '') + (m.branch || '') + (m.by && m.source !== 'excel' ? ' by ' + m.by : '') + (m.notes ? '\n' + m.notes : ''); }).join('\n') || r.excelReturned;
+        var mv = r.moves.map(function(m){ return (m.kind === 'keep' ? 'Kept in Saudi ' : 'Back ') + (m.qty != null ? n3(m.qty) + ' ' : '') + (m.date ? fd(m.date) + ' ' : '') + (m.branch || '') + (m.by && m.source !== 'excel' ? ' by ' + m.by : '') + (m.notes ? '\n' + m.notes : ''); }).join('\n') || r.excelReturned || (r.status === 'still' ? 'Still' : '');
         var pics = (r.photo ? [r.photo] : []).concat(r.photos || []).concat(r.moves.map(function(m){ return m.photo; }).filter(Boolean));
         lines.push({ cells:[r.no == null ? '' : r.no, r.reference, '', r.quantity, r.notesAll, mv, stText(r), r.left == null ? '' : r.left], style:1, pics: pics });
       });
