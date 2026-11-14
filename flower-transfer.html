@@ -221,6 +221,9 @@
           </div>
         </div>
 
+        <button type="button" class="btn" id="addLineBtn" style="width:100%;margin-top:10px;border:1px dashed #c98aa0;background:#fff7f9;color:#9e2f4a;font-weight:700">＋ Add to list (more flowers)</button>
+        <div id="lineList" style="margin-top:8px"></div>
+
         <label>Transferred By</label>
         <input type="text" id="fBy" list="staffList" />
         <datalist id="staffList"></datalist>
@@ -411,23 +414,42 @@
 
   document.getElementById('historyBranchFilter').addEventListener('change', loadHistory);
 
+  // ---- Nov 2026: many flowers in one go — "Add to list", then Log Transfer saves every line ----
+  let LINES = [];
+  function checkLine(name, qty, type){
+    if(!name || !qty || Number(qty) <= 0) return 'Please fill in Flower Name and a Quantity greater than 0.';
+    if(type === 'Supply' && !isSupplyName(name)) return 'Please choose a supply from the list (add new supplies in Receiving first).';
+    if(type === 'Flower' && isSupplyName(name)) return 'That is a supply item — switch to the Supply tab.';
+    return '';
+  }
+  function paintLines(){
+    const el = document.getElementById('lineList');
+    el.innerHTML = LINES.length ? '<div style="font-size:12px;font-weight:700;color:#7a6670;margin-bottom:4px">To transfer (' + LINES.length + ')</div>' + LINES.map((l, i) =>
+      '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #ecdfe3;border-radius:10px;margin-bottom:5px;background:#fff">' +
+      '<span style="flex:1">' + (l.type === 'Supply' ? '🎀 ' : '🌸 ') + lbEsc(l.name) + '</span><b>× ' + lbEsc(l.qty) + '</b>' +
+      '<button type="button" data-rmline="' + i + '" style="border:0;background:#fde2e2;color:#c5483a;border-radius:8px;padding:4px 9px;cursor:pointer">✕</button></div>').join('') : '';
+    document.getElementById('saveBtn').textContent = LINES.length ? 'Log Transfer (' + (LINES.length + (document.getElementById('fFlower').value.trim() ? 1 : 0)) + ')' : 'Log Transfer';
+  }
+  document.getElementById('addLineBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('fFlower').value.trim(), qty = document.getElementById('fQty').value;
+    const err = checkLine(name, qty, currentType); if(err){ alert(err); return; }
+    const same = LINES.find(l => l.name.toLowerCase() === name.toLowerCase() && l.type === currentType);
+    if(same) same.qty = String(Math.round((Number(same.qty) + Number(qty)) * 1000) / 1000); else LINES.push({ name, qty, type: currentType });
+    document.getElementById('fFlower').value = ''; document.getElementById('fQty').value = ''; document.getElementById('previewBox').style.display = 'none';
+    paintLines(); document.getElementById('fFlower').focus();
+  });
+  document.getElementById('lineList').addEventListener('click', e => { const b = e.target.closest('[data-rmline]'); if(!b) return; LINES.splice(Number(b.getAttribute('data-rmline')), 1); paintLines(); });
+  document.getElementById('fFlower').addEventListener('input', paintLines);
+
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const fromBranch = document.getElementById('fFrom').value;
     const toBranch = document.getElementById('fTo').value;
     const flowerName = document.getElementById('fFlower').value.trim();
     const qty = document.getElementById('fQty').value;
-
-    if(!flowerName || !qty || Number(qty) <= 0){
-      alert('Please fill in Flower Name and a Quantity greater than 0.');
-      return;
-    }
-    if(currentType === 'Supply' && !isSupplyName(flowerName)){
-      alert('Please choose a supply from the list (add new supplies in Receiving first).');
-      return;
-    }
-    if(currentType === 'Flower' && isSupplyName(flowerName)){
-      alert('That is a supply item — switch to the Supply tab.');
-      return;
+    const todo = LINES.slice();
+    if(flowerName || qty || !todo.length){
+      const err = checkLine(flowerName, qty, currentType); if(err){ alert(err); return; }
+      todo.push({ name: flowerName, qty, type: currentType });
     }
     if(fromBranch === toBranch){
       alert('From and To Branch cannot be the same.');
@@ -440,36 +462,33 @@
       return;
     }
 
+    if(todo.length > 1 && !confirm('Transfer ' + todo.length + ' items from ' + fromBranch + ' to ' + toBranch + '?\n\n' + todo.map(l => '• ' + l.name + ' × ' + l.qty).join('\n'))) return;
     const btn = document.getElementById('saveBtn');
     btn.disabled = true;
-    btn.textContent = 'Saving…';
-
-    const params = new URLSearchParams({
-      action: 'saveTransfer',
-      fromBranch, toBranch, flowerName, qty,
-      remarks: document.getElementById('fRemarks').value.trim(),
-      transferredBy: document.getElementById('fBy').value.trim(),
-      date: document.getElementById('fDate').value
-    });
-
-    try{
-      const res = await fetch(API_URL + '?' + params.toString());
-      const result = await res.json();
-      if(result.error){
-        alert(result.error);
-      } else {
-        alert('Transfer logged! ' + result.transferNo + (currentType === 'Supply' ? ' · 🎀 Supply' : ' · Value: ' + fmtBD(result.value)));
-        document.getElementById('fFlower').value = '';
-        document.getElementById('fQty').value = '';
-        document.getElementById('fRemarks').value = '';
-        document.getElementById('previewBox').style.display = 'none';
-        await loadHistory();
-      }
-    }catch(e){
-      alert('Not saved. Please check your connection.');
+    const done = [], failed = [];
+    for(let i = 0; i < todo.length; i++){
+      const l = todo[i];
+      btn.textContent = 'Saving ' + (i + 1) + ' of ' + todo.length + '…';
+      const params = new URLSearchParams({
+        action: 'saveTransfer',
+        fromBranch, toBranch, flowerName: l.name, qty: l.qty,
+        remarks: document.getElementById('fRemarks').value.trim(),
+        transferredBy: document.getElementById('fBy').value.trim(),
+        date: document.getElementById('fDate').value
+      });
+      try{
+        const res = await fetch(API_URL + '?' + params.toString());
+        const result = await res.json();
+        if(result.error) failed.push(l.name + ': ' + result.error);
+        else { done.push(l.name + ' × ' + l.qty + ' (' + result.transferNo + ')' + (l.type === 'Supply' ? ' 🎀' : '')); LINES = LINES.filter(x => x !== l); }
+      }catch(e){ failed.push(l.name + ': not saved (connection)'); }
     }
+    if(done.length && !failed.length){ document.getElementById('fFlower').value = ''; document.getElementById('fQty').value = ''; document.getElementById('fRemarks').value = ''; document.getElementById('previewBox').style.display = 'none'; }
+    else if(done.some(d => d.indexOf(flowerName + ' × ') === 0)){ document.getElementById('fFlower').value = ''; document.getElementById('fQty').value = ''; }
+    alert((done.length ? '✅ Transfer logged (' + done.length + '):\n' + done.join('\n') : '') + (failed.length ? '\n\n⚠ Not saved (still in the list):\n' + failed.join('\n') : ''));
     btn.disabled = false;
-    btn.textContent = 'Log Transfer';
+    paintLines();
+    if(done.length) await loadHistory();
   });
 
   document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
