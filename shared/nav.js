@@ -1232,3 +1232,21 @@
     });
   });
 })();
+
+// Nov 2026: stop the browser's "Saved info" list from popping over our search boxes (it covered the stock count list).
+// Every text / search / number box gets autocomplete="off", except login forms (username + password keep autofill).
+(function () {
+  function mark(root) {
+    try {
+      (root.querySelectorAll ? root.querySelectorAll('input:not([autocomplete])') : []).forEach(function (el) {
+        var t = String(el.type || 'text').toLowerCase();
+        if (['text', 'search', 'number', 'tel', ''].indexOf(t) === -1) return;
+        if (/user|login|email|pass/i.test((el.name || '') + ' ' + (el.id || ''))) return;
+        var f = el.form; if (f && f.querySelector('input[type=password]')) return;
+        el.setAttribute('autocomplete', 'off');
+      });
+    } catch (e) {}
+  }
+  function go() { mark(document); try { new MutationObserver(function (ms) { ms.forEach(function (m) { m.addedNodes && m.addedNodes.forEach(function (n) { if (n.nodeType === 1) { if (n.tagName === 'INPUT') mark(n.parentNode || document); else mark(n); } }); }); }).observe(document.body, { childList: true, subtree: true }); } catch (e) {} }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();

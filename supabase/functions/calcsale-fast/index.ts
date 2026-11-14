@@ -269,6 +269,12 @@ Deno.serve(async (req) => {
       return json({ success: true, items });
     }
     if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
+    if (a === 'flowerNames') {
+      const rows = await sbGet('flower_item?select=flower_name&status=eq.Active&order=flower_name.asc&limit=2000');
+      const seen: Record<string, boolean> = {}; const names: string[] = [];
+      (rows || []).forEach((r: any) => { const n = String(r.flower_name || '').trim(); if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = true; names.push(n); } });
+      return json({ success: true, names });
+    }
     if (a === 'editSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await editSale(p, u)); }
     if (a === 'setMode') {
       if (!admin) return json({ success: false, error: 'Admin only.' });
