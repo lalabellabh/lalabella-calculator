@@ -181,6 +181,12 @@
   body.v3d #o3d{display:grid} body.v3d #ow{display:none}
   .o3-sidebtn{position:absolute;top:50%;right:280px;transform:translate(50%,-50%);z-index:8;width:26px;height:58px;border-radius:13px;border:1px solid #6a5aa8;background:#2a2148ee;color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px #0007}
   .o3-sidebtn:hover{background:#3d3170}
+  .o3-ask{position:absolute;left:12px;top:52px;z-index:8;display:flex;gap:5px;width:min(430px,calc(100% - 80px));background:#120d26e6;border:1px solid #4a3f7a;border-radius:999px;padding:4px;box-shadow:0 8px 20px #0006}
+  .o3-ask input{flex:1;min-width:0;border:0;background:transparent;color:#f1ecff;font:500 13px system-ui,sans-serif;padding:6px 10px;outline:none}
+  .o3-ask input::placeholder{color:#9a90b8}
+  .o3-ask button{border:0;border-radius:999px;background:#2c2458;color:#fff;font:700 12.5px system-ui,sans-serif;padding:6px 12px;cursor:pointer}
+  .o3-ask button[type=submit]{background:#8e44ad} .o3-ask #o3Mic.on{background:#e74c3c;animation:o3mic 1s infinite} @keyframes o3mic{50%{opacity:.6}}
+  #o3d.full .o3-ask{top:56px}
   #o3d.sidehid{grid-template-columns:minmax(0,1fr) 0} #o3d.sidehid .o3-side{display:none} #o3d.sidehid .o3-sidebtn{right:14px;transform:translateY(-50%)}
   #o3d.full .o3-sidebtn{display:none}
   @media (max-width:820px){ .o3-sidebtn,#o3d.sidehid .o3-sidebtn{top:auto;bottom:8px;right:10px;transform:none;height:30px;width:auto;padding:0 12px;font-size:12px} }
@@ -269,7 +275,7 @@
   <div class="denied" id="denied"><b>No access</b><p>Lalabella HQ is only for Admin accounts.</p></div>
   <div class="main" id="mainBox">
     <section id="o3d">
-      <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div>
+      <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div><form class="o3-ask" id="o3Ask" autocomplete="off"><input id="o3AskIn" maxlength="160" placeholder="💬 Ask the team… e.g. last stock count Moda"><button type="button" id="o3Mic" title="Talk">🎤</button><button type="submit">Ask</button></form>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
         <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="loc">📍 Place</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
         <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
@@ -640,6 +646,56 @@
     return { name:e.name, role:e.role, st:e.st, text:t, speak:G + ' ' + L('This is ', 'Si ') + e.name + L(', your ', ' po, ang ') + e.role + '. ' + e.say + '. ' + close, to:ME.pres ? L('the President', 'sa President') : ME.name };
   };
   // Speaks the report and tells the 3D box when the voice really starts / how far it is, so the words on screen follow the voice.
+  // ---------- Nov 2026: ask the team a question (no paid AI: simple keyword matching on our own live data) ----------
+  var BR_ALIASES = [['ModaMall', /moda/i], ['Galali', /qalali|galali|galil|kalali/i], ['Hamala', /hamala/i], ['Sitra', /sitra/i]];
+  function bhDate(d){ if(!d) return null; var t = new Date(String(d).slice(0, 10) + 'T12:00:00Z'), today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10), days = Math.round((new Date(today + 'T12:00:00Z') - t) / 86400000);
+    var s1 = t.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
+    return s1 + ' (' + (days <= 0 ? L('today', 'ngayon') : days === 1 ? L('yesterday', 'kahapon') : days + L(' days ago', ' araw na ang nakalipas')) + ')'; }
+  function factFor(b){ return ((S && S.facts) || []).filter(function(f){ return String(f.branch).toLowerCase() === b.toLowerCase(); })[0] || null; }
+  function brName(b){ return b === 'ModaMall' ? 'Moda Mall' : b === 'Galali' ? 'Qalali' : b; }
+  window.LBOfficeAsk = function(q){
+    q = String(q || '').trim(); if(!q) return null;
+    var ME = whoMe(), G = ME.pres ? L('Mr. President', 'Mr. President') : ME.name;
+    var brs = BR_ALIASES.filter(function(a){ return a[1].test(q); }).map(function(a){ return a[0]; });
+    if(!brs.length) brs = ((S && S.facts) || []).map(function(f){ return f.branch; });
+    var choc = /choc|tsokolate|chocolate/i.test(q), flow = /flower|bulaklak|rose/i.test(q); if(!choc && !flow){ choc = flow = true; }
+    var mk = function(k, lines, sp){ var e = EMP[k] || { name:'', role:'' }; return { k:k, r:{ name:e.name, role:e.role, st:e.st, text:L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + lines.join('\n'), speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name } }; };
+    // stock count / receiving -> Ada the Auditor
+    var isCount = /count|bilang|inventory|stock/i.test(q), isRecv = /receiv|recieve|reciev|dating|deliver|supplier|invoice|bili|purchase/i.test(q);
+    if(isCount || isRecv){
+      var lines = [], sp = [];
+      brs.forEach(function(b){ var f = factFor(b); var nm = brName(b);
+        if(isCount || !isRecv){
+          if(flow){ var c = f && f.flower_count; lines.push('🌸 **' + nm + L(' flower stock count:', ' flower stock count:') + '** ' + (c ? bhDate(c.date) + ' · ' + L('by ', 'ni ') + (c.by || '?') + ' · ' + c.items + L(' flowers', ' bulaklak') : L('no count yet', 'wala pang bilang'))); if(c) sp.push(nm + L(' flowers were last counted ', ' flowers huling binilang ') + bhDate(c.date).replace(/\(.*\)/, '')); }
+          if(choc){ var cc = f && f.choc_count; lines.push('🍫 **' + nm + L(' chocolate stock count:', ' chocolate stock count:') + '** ' + (cc ? bhDate(cc.date) + ' · ' + L('by ', 'ni ') + (cc.by || '?') + ' · ' + cc.items + L(' items', ' items') : L('no count yet', 'wala pang bilang'))); if(cc) sp.push(nm + L(' chocolate was last counted ', ' chocolate huling binilang ') + bhDate(cc.date).replace(/\(.*\)/, '')); }
+        }
+        if(isRecv){
+          if(flow){ var r1 = f && f.flower_recv; lines.push('🌸 **' + nm + L(' last flower receiving:', ' huling flower receiving:') + '** ' + (r1 ? bhDate(r1.date) + (r1.supplier ? ' · ' + r1.supplier : '') + (r1.invoice ? ' · #' + r1.invoice : '') : L('none yet', 'wala pa'))); }
+          if(choc){ var r2 = f && f.choc_recv; lines.push('🍫 **' + nm + L(' last chocolate receiving:', ' huling chocolate receiving:') + '** ' + (r2 ? bhDate(r2.date) + (r2.supplier ? ' · ' + r2.supplier : '') : L('none yet', 'wala pa'))); }
+        } });
+      if(!lines.length) lines.push(L('I have no records for that yet.', 'Wala pa akong record niyan.'));
+      return mk('auditor', lines, L('Here you go, ', 'Heto po, ') + G + '. ' + (sp.length ? sp.join('. ') + '.' : L('The details are on the screen.', 'Nasa screen po ang detalye.')));
+    }
+    var route = [[/saudi|ksa/i, 'saudi'], [/late|absent|attendance|pasok|clock|time.?in|break|leave|hr\b/i, 'hr'], [/remind|calendar|schedule|note|alarm|paalala/i, 'secretary'],
+      [/bleems/i, 'bleems'], [/cart|abandon/i, 'abandoned'], [/shopify|website|online order/i, 'shopify'], [/order|assign|unassign/i, 'dispatcher'], [/driver|on the way|papunta/i, 'driver'], [/deliver/i, 'delivery'],
+      [/backup/i, 'archivist'], [/error|bug|sira/i, 'watcher'], [/database|server|db\b|speed|bagal/i, 'doctor'], [/brain|log|changelog/i, 'scribe'], [/delete|bura|audit|change/i, 'auditor'], [/clean|janitor|linis/i, 'janitor'],
+      [/approv|team|summary|everything|lahat|report/i, 'boss']];
+    for(var i = 0; i < route.length; i++) if(route[i][0].test(q)){ var k = route[i][1]; var base = window.LBOfficeReport(k); if(!base) break; base.text = L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + base.text; return { k:k, r:base }; }
+    return mk('boss', [L("I'm not sure who handles that yet, ", 'Hindi ko pa alam kung sino ang sasagot diyan, ') + G + '.', '',
+      L('**You can ask things like:**', '**Puwede mong itanong:**'), '• last stock count Moda / chocolate count Qalali', '• last receiving Moda flowers', '• who is late today', '• orders waiting / Bleems today',
+      '• items still in Saudi', '• my reminders', '• backup / errors / approvals'], L("I'm not sure yet. Try asking about stock count, receiving, orders, attendance, Saudi or reminders.", 'Hindi ko pa po alam. Subukan ninyong itanong ang stock count, receiving, orders, attendance, Saudi o reminders.'));
+  };
+  (function(){
+    var f = document.getElementById('o3Ask'), inp = document.getElementById('o3AskIn'), mic = document.getElementById('o3Mic'); if(!f) return;
+    ['pointerdown','wheel','touchstart','keydown','keyup'].forEach(function(ev){ f.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
+    f.addEventListener('submit', function(e){ e.preventDefault(); var a = window.LBOfficeAsk(inp.value); if(!a) return; inp.blur();
+      if(window.LBOffice3D && window.LBOffice3D.answer && document.body.classList.contains('v3d')) window.LBOffice3D.answer(a.k, a.r); else alert(a.r.text.replace(/\*\*/g, '')); });
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ mic.style.display = 'none'; return; }
+    mic.addEventListener('click', function(){ try{ var rec = new SR(); rec.lang = SND.lang === 'tl' ? 'fil-PH' : 'en-US'; rec.interimResults = false; mic.classList.add('on');
+      rec.onresult = function(ev){ inp.value = ev.results[0][0].transcript; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit')); };
+      rec.onend = rec.onerror = function(){ mic.classList.remove('on'); }; rec.start(); }catch(e){ mic.classList.remove('on'); } });
+  })();
   window.LBOfficeSpeakReport = function(k, text, ev){
     ev = ev || {};
     if(!SND.on || SND.vol <= 0 || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
@@ -922,7 +978,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=18'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=19'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);

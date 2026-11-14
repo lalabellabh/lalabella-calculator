@@ -219,12 +219,12 @@
   function setZoom(z){ zoomGoal = Math.max(.6, Math.min(6, z)); }
   function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
-  function select(k){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k); }
+  function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom); }
   // ---------- Nov 2026: whoever you tap reports to you, the President (text box + their voice when sound is on) ----------
   var repTimer = null;
   function closeReport(){ var b = root.querySelector('.o3-rep'); if(b) b.remove(); clearInterval(repTimer); try { if(window.LBOfficeStopVoice) window.LBOfficeStopVoice(); } catch(e){} }
-  function showReport(k, quiet){
-    closeReport(); if(!window.LBOfficeReport) return; var r = null; try { r = window.LBOfficeReport(k); } catch(e){ console.error(e); } if(!r) return;
+  function showReport(k, quiet, custom){
+    closeReport(); var r = custom || null; if(!r){ if(!window.LBOfficeReport) return; try { r = window.LBOfficeReport(k); } catch(e){ console.error(e); } } if(!r) return;
     if(!document.getElementById('o3RepCss')){ var st = document.createElement('style'); st.id = 'o3RepCss';
       st.textContent = '.o3-rep{position:absolute;left:12px;right:12px;bottom:12px;z-index:9;max-width:620px;margin:0 auto;background:#120d26f2;color:#f1ecff;border:2px solid #8fd9ff;border-radius:16px;padding:12px 14px 12px 12px;box-shadow:0 14px 34px #000a;display:flex;gap:12px;align-items:flex-start;font:13.5px/1.45 system-ui,sans-serif;animation:o3rep .25s ease-out}' +
         '@keyframes o3rep{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}' +
@@ -244,7 +244,7 @@
     if(r.onBox) try { r.onBox(box, function(){ showReport(k, true); }); } catch(e){ console.error(e); }
     ['click','pointerdown','wheel','touchstart'].forEach(function(ev){ box.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
     box.querySelector('.x').onclick = function(){ closeReport(); };
-    box.querySelector('[data-r="again"]').onclick = function(){ showReport(k); };
+    box.querySelector('[data-r="again"]').onclick = function(){ showReport(k, false, custom); };
     box.querySelector('[data-r="more"]').onclick = function(){ var rw = document.querySelector('#roster .rw[data-k="' + k + '"]'); if(rw) rw.click(); };
     var full = r.text, i = 0, tx = box.querySelector('.tx');
     // words on screen follow the voice: wait for the voice to really start, then keep pace with it
@@ -766,7 +766,7 @@
       paintTags(); apply(); renderSide();
     },
     say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
-    select:select, whole:wholeOffice, full:function(on){ if(T) goFull(on); }
+    select:select, answer:function(k, r){ if(AG[k]) select(k, r); }, whole:wholeOffice, full:function(on){ if(T) goFull(on); }
   };
   function paintTags(){
       var d = DATA; if(!d) return;
