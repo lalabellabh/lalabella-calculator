@@ -259,8 +259,11 @@
     <div class="col-side">
       <div class="card">
         <div class="card-title">🧾 Order List</div>
-        <div id="cartList"><div class="empty-note">Nothing added yet.</div></div>
-        <div id="extrasList"></div>
+        <!-- Nov 2026: scroll box so long orders don't push the totals down -->
+        <div id="cartScroll" style="max-height:min(380px,50vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;margin-right:-4px;">
+          <div id="cartList"><div class="empty-note">Nothing added yet.</div></div>
+          <div id="extrasList"></div>
+        </div>
 
         <div class="total-row"><span>Subtotal (Flowers)</span><span id="sumFlowers">0.000 BD</span></div>
         <div class="total-row"><span>Subtotal (Extras)</span><span id="sumExtras">0.000 BD</span></div>
@@ -460,6 +463,11 @@
         <button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button>
       </div>
     `).join('');
+
+    // new line added -> show it at the bottom of the scroll box
+    const nRows = cart.length + extras.length, sc = document.getElementById('cartScroll');
+    if(sc && nRows > (renderCart._n || 0)) sc.scrollTop = sc.scrollHeight;
+    renderCart._n = nRows;
 
     const sumFlowers = cart.reduce((s, c) => s + c.qty * c.rate, 0);
     const sumExtras = extras.reduce((s, x) => s + x.price, 0);
