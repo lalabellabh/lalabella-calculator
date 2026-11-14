@@ -38,7 +38,14 @@
     pick(saved);
     brSel.addEventListener('change', function () { ls('lbCalcSaleBranch', brSel.value); });
     var srcSel = box.querySelector('[data-src]');
-    var lastSig = '', lastNo = '', pendSig = '', pendKey = '', busy = false;
+    var lastSig = '', lastNo = '', lastInfo = null, pendSig = '', pendKey = '', busy = false;
+    // what to show on the printed receipt: the sold details while the list is unchanged, else what is typed in the Sold box now
+    api.info = function () {
+      var g = o.get() || {}, sig = JSON.stringify([brSel.value, g.items || []]);
+      if (lastInfo && sig === lastSig) return lastInfo;
+      var r = (box.querySelector('[data-ref]') || {}).value || '';
+      return { branch: brSel.value || '', source: (srcSel && srcSel.value) || '', ref: r.trim(), saleNo: '' };
+    };
     fetch(API + '?action=getMode&token=' + encodeURIComponent(token())).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.success) return;
       pick(d.userBranch);
@@ -64,7 +71,7 @@
       var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), reqKey: pendKey, disp: window.LB_CALC_DISP || '', branch: branch, source: src, ref: refVal, customer: g.customer || (refVal === src ? src : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
       fetch(API, { method: 'POST', body: body }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
-        if (!d.saleNo) d.saleNo = 'already saved'; window.LB_CALC_DISP = ''; lastSig = sig; lastNo = d.saleNo; pendSig = ''; pendKey = '';
+        if (!d.saleNo) d.saleNo = 'already saved'; window.LB_CALC_DISP = ''; lastSig = sig; lastNo = d.saleNo; lastInfo = { branch: d.branch || branch, source: src, ref: refVal !== src ? refVal : '', saleNo: d.saleNo === 'already saved' ? '' : d.saleNo }; pendSig = ''; pendKey = '';
         var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': needed ' + esc(s.need) + ', the system has only ' + esc(s.have) + '</div>'; }).join('');
         res.innerHTML = '<div class="ok">✓ ' + esc(src) + (refVal !== src ? ' · sold to ' + esc(refVal) : '') + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
         box.querySelector('[data-ref]').value = ''; srcSel.value = '';
@@ -76,5 +83,10 @@
       btn.textContent = done ? '✓ Already sold · ' + lastNo : '✓ Sold'; btn.style.background = done ? '#9aa79f' : ''; }
     setInterval(function () { if (!busy) paintSold(); }, 800);
   }
-  window.LBCalcSale = { mount: mount };
+  var api = { mount: mount, info: function () { return null; },
+    // one line for the receipt, e.g. "ModaMall · Walk-in · INV 123 · CS-000012" ('' when nothing is filled)
+    printText: function (noBranch) { var i = api.info(); if (!i) return ''; var p = [];
+      if (i.branch && !noBranch) p.push(i.branch); if (i.source) p.push(i.source); if (i.ref) p.push(i.ref); if (i.saleNo) p.push(i.saleNo);
+      return (i.source || i.ref || i.saleNo) ? p.join(' · ') : ''; } };
+  window.LBCalcSale = api;
 })();
