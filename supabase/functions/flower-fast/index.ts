@@ -258,11 +258,17 @@ async function processSupplyItem(item: any, ctx: any) {
   return { flowerName: supplyName, itemCode, approvalStatus: 'N/A', suggestedRate: cost, finalRate: cost, amount: subtotal, type: 'Supply' };
 }
 async function processFlowerItem(item: any, ctx: any) {
-  const flowerName = item.flowerName, origin = item.origin || '';
+  let flowerName = String(item.flowerName || '').replace(/\s+/g, ' ').trim(); const origin = item.origin || '';
   let itemCode = item.itemCode || '';
   const unit = item.unit || '', stemsPerBunch = Number(item.stemsPerBunch) || 1, qty = Number(item.qty) || 0, supplierRate = Number(item.supplierRate) || 0;
   const suggestedRate = calculateCompanyRate(supplierRate, unit, stemsPerBunch);
-  const matchingRows = await sbGet('flower_item', `select=*&flower_name=eq.${encodeURIComponent(flowerName)}`);
+  // Nov 2026: match the name WITHOUT caring about capitals ("gerbera" = "Gerbera"), and keep the existing spelling,
+  // so receiving never creates a second copy of the same flower (that split the stock count into two rows).
+  const likeName = flowerName.replace(/[\\%_*]/g, (c) => '\\' + c);
+  const sameName = (await sbGet('flower_item', `select=*&flower_name=ilike.${encodeURIComponent(likeName)}&order=id.asc`)) || [];
+  const canon = sameName.find((r: any) => String(r.status || 'Active') === 'Active') || sameName[0];
+  if (canon && canon.flower_name) flowerName = String(canon.flower_name);
+  const matchingRows = sameName.filter((r: any) => String(r.flower_name) === flowerName);
   let existingRow: any = null, legacyRate: number | null = null, hollandFallbackRate: number | null = null;
   matchingRows.forEach((r: any) => {
     const rowOrigin = String(r.origin || '').trim();

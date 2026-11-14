@@ -354,13 +354,15 @@
 
     await loadFlowerItemsAndList(); savedBase = {};
 
-    backing = stockList.map(s => ({
-      flowerName: s.flowerName,
-      contributingItemCodes: s.contributingItemCodes,
-      physicalCount: '',
-      wastage: '',
-      legacyRate: legacyRateFor(s.flowerName)
-    }));
+    // one row per flower even if the list spells it twice ("Gerbera" / "gerbera"): the count is saved per flower anyway
+    const seenNames = {};
+    backing = [];
+    stockList.forEach(s => {
+      const k = String(s.flowerName||'').trim().toLowerCase(); if(!k) return;
+      if(seenNames[k]){ const codes = new Set(String(seenNames[k].contributingItemCodes||'').split(',').concat(String(s.contributingItemCodes||'').split(',')).map(c=>c.trim()).filter(Boolean)); seenNames[k].contributingItemCodes = Array.from(codes).join(', '); return; }
+      seenNames[k] = { flowerName: s.flowerName, contributingItemCodes: s.contributingItemCodes, physicalCount: '', wastage: '', legacyRate: legacyRateFor(s.flowerName) };
+      backing.push(seenNames[k]);
+    });
 
     // Also list Holland-origin flowers with no stock record yet — they
     // now live directly in FlowerItem (migrated from the old

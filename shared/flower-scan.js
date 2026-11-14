@@ -93,7 +93,7 @@
   var lb = document.createElement('div'); lb.className = 'lbfs-lb'; lb.setAttribute('data-lbflw-skip', '1');
   lb.innerHTML = '<img alt=""><div></div>';
   lb.addEventListener('click', function () { lb.classList.remove('show'); });
-  function bigPic(src, cap) { if (!src) return; lb.querySelector('img').src = src; lb.querySelector('div').textContent = cap || ''; lb.classList.add('show'); }
+  function bigPic(src, cap) { if (!src) return; if (!lb.parentNode && document.body) document.body.appendChild(lb); /* Nov 2026: was never added to the page, so the big picture never showed */ lb.querySelector('img').src = src; lb.querySelector('div').textContent = cap || ''; lb.classList.add('show'); }
   document.addEventListener('click', function (e) {
     var t = e.target; if (t && t.tagName === 'IMG' && t.classList.contains('lbfs-th')) { e.stopPropagation(); bigPic(t.getAttribute('src'), t.getAttribute('data-n')); }
   }, true);
