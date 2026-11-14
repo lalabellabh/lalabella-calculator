@@ -54,7 +54,7 @@
       if (!src) { alert('Choose the source first (Walk-in, Pick-up, Website order, WhatsApp, Corporate or Others).'); srcSel.focus(); return; }
       if (!items.length) { alert('The list is empty.'); return; }
       var sig = JSON.stringify([branch, items]);
-      if (sig === lastSig && !confirm('This same list was already sold (' + lastNo + '). Take it out of stock again?')) return;
+      if (sig === lastSig && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastNo + ' a moment ago.\n\nPress OK ONLY if this is a NEW customer buying the same thing again. Otherwise press Cancel (printing again does not take anything out of stock).')) return;
       var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
       if (!confirm('Source: ' + src + (refVal !== src ? '\nSold to: ' + refVal : '') + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
       if (busy) return; busy = true;
@@ -69,8 +69,12 @@
         res.innerHTML = '<div class="ok">✓ ' + esc(src) + (refVal !== src ? ' · sold to ' + esc(refVal) : '') + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
         box.querySelector('[data-ref]').value = ''; srcSel.value = '';
       }).catch(function () { res.innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
-        .then(function () { busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; });
+        .then(function () { busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; paintSold(); });
     });
+    // after a sale the button shows it was sold, until the list changes (so nobody presses it twice by mistake)
+    function paintSold() { var g = o.get() || {}, sig = JSON.stringify([brSel.value, g.items || []]); var done = !!lastSig && sig === lastSig;
+      btn.textContent = done ? '✓ Already sold · ' + lastNo : '✓ Sold'; btn.style.background = done ? '#9aa79f' : ''; }
+    setInterval(function () { if (!busy) paintSold(); }, 800);
   }
   window.LBCalcSale = { mount: mount };
 })();

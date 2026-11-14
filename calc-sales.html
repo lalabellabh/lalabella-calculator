@@ -49,6 +49,17 @@
   #rp h2{ margin:0; text-align:center; } #rp .c{ text-align:center; } #rp .l{ border-top:1px dashed #000; margin:5px 0; }
   #rp .r{ display:flex; justify-content:space-between; gap:8px; padding:2px 0; } #rp .t{ font-weight:800; font-size:1.25em; }
   #rp.a4 h2{ font-size:26px; } #rp.a4 .r{ padding:7px 0; border-bottom:1px solid #ddd; } #rp.a4 .l{ border-top:1px solid #bbb; margin:10px 0; }
+  .edbtn{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .ed-bg{ position:fixed; inset:0; z-index:2147483000; background:rgba(40,20,30,.45); display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; }
+  .ed{ background:#fff; border-radius:16px; width:min(520px,100%); padding:18px; box-shadow:0 20px 50px rgba(0,0,0,.25); }
+  .ed h3{ margin:0 0 4px; font-size:17px } .ed .sub{ font-size:12px; color:var(--dim); margin-bottom:12px }
+  .ed label{ display:block; font-size:12px; font-weight:700; color:var(--dim); margin:10px 0 4px }
+  .ed input,.ed select{ width:100%; box-sizing:border-box; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:10px; padding:8px 10px }
+  .ed .it{ display:flex; gap:6px; align-items:center; margin-bottom:6px } .ed .it .n{ flex:1; font-size:13.5px } .ed .it input{ width:90px }
+  .ed .it button{ border:0; background:#fde2e2; color:var(--bad); border-radius:8px; padding:6px 9px; cursor:pointer }
+  .ed .acts{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px } .ed .acts button{ border:0; border-radius:10px; padding:9px 16px; font:inherit; font-weight:700; cursor:pointer }
+  .ed .acts .sv{ background:#2f7a4f; color:#fff } .ed .note{ font-size:12px; color:var(--dim); margin-top:8px; line-height:1.4 }
+  .tag.ed2{ background:#fff4d6; color:#8a6400 }
 </style>
 </head>
 <body>
@@ -119,7 +130,8 @@
         return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' + (s.source ? '<span class="tag">' + esc(s.source) + '</span>' : '') +
           (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
           '<span style="display:flex;gap:6px;margin-left:auto"><button class="pbtn" data-pr="th" data-i="' + i + '">🧾 Thermal</button><button class="pbtn" data-pr="a4" data-i="' + i + '">🖨️ A4</button></span>' +
-          (admin && !cx ? '<button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
+          (admin && !cx ? '<button class="edbtn" data-ed="' + i + '">✏️ Edit</button><button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
+          (s.editedBy ? '<div style="font-size:11.5px;color:#8a6400;margin-top:2px">✏️ Edited by ' + esc(s.editedBy) + ' · ' + when(s.editedAt) + '</div>' : '') +
           '<div class="items">' + itemText(s) + '</div>' +
           (s.short && s.short.length ? '<div class="short">⚠ Not enough in the system: ' + s.short.map(function(x){ return esc(x.name) + ' (needed ' + esc(x.need) + ', had ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
       }).join('') : '<div class="empty">No calc sales yet.</div>';
@@ -127,6 +139,7 @@
   }
   document.addEventListener('click', function(e){
     var pr = e.target.closest('[data-pr]'); if(pr){ var sv = SALES[Number(pr.getAttribute('data-i'))]; if(sv) reprint(sv, pr.getAttribute('data-pr')); return; }
+    var ed = e.target.closest('[data-ed]'); if(ed){ var se = SALES[Number(ed.getAttribute('data-ed'))]; if(se) openEdit(se); return; }
     var b = e.target.closest('[data-cx]');
     if(b){ if(!confirm('Cancel ' + b.getAttribute('data-no') + '? Everything it took out goes back into stock.')) return; b.disabled = true;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'cancelSale', id:b.getAttribute('data-cx'), token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); return; }
@@ -134,6 +147,39 @@
     if(m){ var v = m.getAttribute('data-mode'); if(!confirm(v === 'odoo' ? 'Let Odoo take sales out of stock? The "Sold" button in the calcs will stop.' : 'Let the calcs take sales out of stock again?')) return;
       fetch(API, { method:'POST', body:new URLSearchParams({ action:'setMode', mode:v, token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); load(); }); }
   });
+  // ---- Nov 2026: Edit a sale (wrong source / name / branch / qty) ----
+  var SRC = ['Walk-in','Pick-up','Website order','WhatsApp','Corporate','Others'], BRS = ['ModaMall','Hamala','Galali'];
+  function openEdit(s){
+    var fl = s.kind === 'flower', bg = document.createElement('div'); bg.className = 'ed-bg';
+    var items = fl ? (s.items || []).map(function(it){ return { name:it.name, qty:Number(it.qty) || 0 }; }) : [];
+    bg.innerHTML = '<div class="ed"><h3>✏️ Edit ' + esc(s.saleNo) + '</h3><div class="sub">' + (fl ? '🌸 Flower' : '🍫 Chocolate') + ' · ' + when(s.at) + ' · ' + esc(s.by) + '</div>' +
+      '<label>Source</label><select data-f="source">' + SRC.map(function(x){ return '<option' + (x === s.source ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
+      '<label>Sold to (invoice no. / name / phone)</label><input data-f="ref" maxlength="60" value="' + esc(s.ref || '') + '">' +
+      (fl ? '<label>Branch (stock is taken from here)</label><select data-f="branch">' + BRS.map(function(x){ return '<option' + (x === s.branch ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
+        '<label>Flowers (qty in stems)</label><div data-items></div><div class="note">Changing a qty or removing a flower puts the difference back into stock (or takes more out). The sale keeps its number and time.</div>'
+        : '<div class="note">For chocolate only the details can be edited. Wrong chocolate or qty: Cancel the sale (it goes back to stock) and sell again from the Chocolate Calc.</div>') +
+      '<div class="acts"><button data-x>Close</button><button class="sv" data-sv>Save changes</button></div></div>';
+    document.body.appendChild(bg);
+    var paint = function(){ var box = bg.querySelector('[data-items]'); if(!box) return;
+      box.innerHTML = items.map(function(it, k){ return '<div class="it"><span class="n">' + esc(it.name) + '</span><input type="number" min="0" step="1" inputmode="decimal" data-q="' + k + '" value="' + it.qty + '"><button data-rm="' + k + '" title="Remove">✕</button></div>'; }).join('') || '<div class="note">No flowers left.</div>'; };
+    paint();
+    bg.addEventListener('input', function(ev){ var q = ev.target.getAttribute && ev.target.getAttribute('data-q'); if(q != null) items[Number(q)].qty = Number(ev.target.value) || 0; });
+    bg.addEventListener('click', function(ev){
+      if(ev.target === bg || ev.target.closest('[data-x]')){ bg.remove(); return; }
+      var rm = ev.target.closest('[data-rm]'); if(rm){ items.splice(Number(rm.getAttribute('data-rm')), 1); paint(); return; }
+      var sv = ev.target.closest('[data-sv]'); if(!sv) return;
+      var keep = items.filter(function(it){ return it.qty > 0; });
+      if(fl && !keep.length){ alert('At least one flower must stay. To remove everything, use Cancel.'); return; }
+      var body = { action:'editSale', id:s.id, token:token(), source:bg.querySelector('[data-f=source]').value, ref:bg.querySelector('[data-f=ref]').value.trim(), customer:s.customer || '' };
+      if(fl){ body.branch = bg.querySelector('[data-f=branch]').value; body.items = JSON.stringify(keep); }
+      var lines = fl ? '\n\n' + keep.map(function(it){ return '• ' + it.name + ' × ' + it.qty; }).join('\n') : '';
+      if(!confirm('Save changes to ' + s.saleNo + '?' + lines)) return;
+      sv.disabled = true; sv.textContent = 'Saving…';
+      fetch(API, { method:'POST', body:new URLSearchParams(body) }).then(function(r){ return r.json(); }).then(function(d){
+        if(!d.success){ alert(d.error || 'Not saved.'); sv.disabled = false; sv.textContent = 'Save changes'; return; }
+        bg.remove(); load(); }).catch(function(){ alert('Connection problem.'); sv.disabled = false; sv.textContent = 'Save changes'; });
+    });
+  }
   $('br').onchange = load; $('kind').onchange = load; $('ref').onclick = load; $('from').onchange = load; $('to').onchange = load;
   var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(load, 350); };
   load();
