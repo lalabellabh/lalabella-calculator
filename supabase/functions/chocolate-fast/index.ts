@@ -139,11 +139,19 @@ async function addIfNotExists(table: string, name: string) {
   const already = existing.some((r: any) => String(r.name).toLowerCase() === String(name).toLowerCase());
   if (!already) await sbPost(table, [{ name }]);
 }
-async function ensureItemListEntry(name: string, category: string, brand: string, unit: string, pricePerKg: any, grams: any, packagingType: string | null) {
-  name = String(name || '').trim();
-  if (!name) return;
-  const existing = await sbGet('chocolate_item_list', `select=id&chocolate_name=eq.${encodeURIComponent(name)}`);
-  if (existing.length) return;
+// Nov 2026: names are matched WITHOUT caring about capitals, and the catalog's own spelling is returned,
+// so "ferrero rocher" never becomes a second item next to "Ferrero Rocher" (that split the flower stock count).
+const likeEq = (v: string) => encodeURIComponent(String(v).replace(/[\\%_*]/g, (c) => '\\' + c));
+async function catalogName(name: string): Promise<string> {
+  const n = String(name || '').replace(/\s+/g, ' ').trim(); if (!n) return n;
+  const rows = await sbGet('chocolate_item_list', `select=chocolate_name&chocolate_name=ilike.${likeEq(n)}&order=id.asc&limit=1`);
+  return rows && rows[0] ? String(rows[0].chocolate_name) : n;
+}
+async function ensureItemListEntry(name: string, category: string, brand: string, unit: string, pricePerKg: any, grams: any, packagingType: string | null): Promise<string> {
+  name = String(name || '').replace(/\s+/g, ' ').trim();
+  if (!name) return name;
+  const existing = await sbGet('chocolate_item_list', `select=id,chocolate_name&chocolate_name=ilike.${likeEq(name)}&order=id.asc&limit=1`);
+  if (existing.length) return String(existing[0].chocolate_name);
   const prefix = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'CHO';
   const num = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Chocolate Item Code', start_at: 1 });
   const productCode = prefix + '-' + String(num).padStart(5, '0');
@@ -153,6 +161,7 @@ async function ensureItemListEntry(name: string, category: string, brand: string
     grams: Number(grams) > 0 ? Number(grams) : null, product_code: productCode,
     packaging_type: packagingType || 'Piece',
   }]);
+  return name;
 }
 
 function mapItemRow(r: any) { return { 'Chocolate Name': r.chocolate_name, 'Product Code': r.product_code, 'Brand': r.brand, 'Category': r.category, 'Standard Price / Kg': r.standard_price_per_kg, 'Grams': r.grams, 'Min Stock': r.min_stock, 'Packaging Type': r.packaging_type }; }
@@ -230,7 +239,7 @@ async function addEntry(p: Record<string, any>) {
   const qty = Number(p.qty) || 0, price = Number(p.price) || 0;
   const priceField = priceFieldForUnit(p.unit);
 
-  await ensureItemListEntry(p.chocolateName, p.category, p.brand, p.unit, price, p.weightPerPiece, p.packagingType);
+  p.chocolateName = (await ensureItemListEntry(p.chocolateName, p.category, p.brand, p.unit, price, p.weightPerPiece, p.packagingType)) || p.chocolateName;
 
   await sbPost('chocolate_database', [{
     legacy_id: newID, receive_date: p.receiveDate || null, delivery_date: p.receiveDate || null,
@@ -261,7 +270,7 @@ async function editEntry(p: Record<string, any>) {
   const newPrice = Number(p.price) || 0;
   const priceField = priceFieldForUnit(p.unit || existingRows[0].unit);
 
-  await ensureItemListEntry(p.chocolateName, '', '', p.unit, newPrice, p.weightPerPiece, null);
+  p.chocolateName = (await ensureItemListEntry(p.chocolateName, '', '', p.unit, newPrice, p.weightPerPiece, null)) || p.chocolateName;
 
   await sbPatch('chocolate_database', query, {
     receive_date: p.receiveDate || null, delivery_date: p.receiveDate || null, delivery_note_no: p.deliveryNo || '',
@@ -292,7 +301,7 @@ async function addInitialStock(p: Record<string, any>) {
     batch = searchPrefix + String(maxSeq + 1).padStart(2, '0');
   }
 
-  await ensureItemListEntry(p.chocolateName, p.category, '', p.unit, price, null, null);
+  p.chocolateName = (await ensureItemListEntry(p.chocolateName, p.category, '', p.unit, price, null, null)) || p.chocolateName;
   let catalogGramsForNewBatch = 0;
   const itemRows = await sbGet('chocolate_item_list', `select=grams&chocolate_name=eq.${encodeURIComponent(p.chocolateName)}`);
   if (itemRows.length) catalogGramsForNewBatch = Number(itemRows[0].grams) || 0;
@@ -429,8 +438,10 @@ async function checkFixBarcodes() {
   return { success: true, missingFixed: fixedMissing.length, duplicatesFixed: fixedDuplicates.length, details: fixedMissing.concat(fixedDuplicates) };
 }
 async function addChocolateItem(p: Record<string, any>) {
-  const name = (p.chocolateName || '').trim();
+  const name = String(p.chocolateName || '').replace(/\s+/g, ' ').trim();
   if (!name) return { error: 'Chocolate name is required' };
+  const dupe = await catalogName(name);
+  if (dupe.toLowerCase() === name.toLowerCase() && (await sbGet('chocolate_item_list', `select=id&chocolate_name=ilike.${likeEq(name)}&limit=1`)).length) return { error: `"${dupe}" already exists in the catalog.` };
   const prefix = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'CHO';
   const num = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Chocolate Item Code', start_at: 1 });
   const productCode = prefix + '-' + String(num).padStart(5, '0');
@@ -445,7 +456,7 @@ async function updateChocolateItem(p: Record<string, any>) {
 
   const newName = String(p.newChocolateName || '').trim();
   if (newName && newName.toLowerCase() !== name.toLowerCase()) {
-    const clash = await sbGet('chocolate_item_list', `select=id&chocolate_name=eq.${encodeURIComponent(newName)}`);
+    const clash = await sbGet('chocolate_item_list', `select=id&chocolate_name=ilike.${likeEq(newName)}`);
     if (clash.length) return { error: `"${newName}" already exists in the catalog — choose a different name, or edit that item instead.` };
   }
 
