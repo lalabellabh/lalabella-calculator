@@ -402,7 +402,7 @@ document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
         return;
       }
       resultBox.className = 'result ok';
-      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode +
+      resultBox.textContent = '✓ Added — Item Code: ' + res.itemCode + (res.legacyCode ? ' · also on the original list as ' + res.legacyCode : '') +
         (hollandSuggestedRate !== null ? ' (Rate: Pending Approval — see Dashboard)' : '');
       if(flowerPhotoData){
         const pic = flowerPhotoData, nm = name;

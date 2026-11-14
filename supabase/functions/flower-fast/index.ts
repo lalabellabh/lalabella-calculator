@@ -163,11 +163,11 @@ function calculateCompanyRate(supplierRate: any, unit: any, stemsPerBunch: any) 
   // rounded to 3 decimals (half-up); +1e-9 stops float errors (e.g. 0.5774999…) from rounding down
   return Math.round((perStem * 3 * 1.10 + 1e-9) * 1000) / 1000;
 }
-async function generateItemCode(flowerName: string) {
-  const prefix = String(flowerName || 'FLW').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'FLW';
-  const num = await sbRpc('get_next_flower_counter', { counter_key: 'Next Item ID', start_at: 1 });
-  return prefix + '-' + String(num).padStart(5, '0');
+// Nov 2026 (Bench): every new flower item follows the original list numbering FLW000xxx (no more PAN-/GER-/ROS- codes).
+async function generateItemCode(_flowerName: string) {
+  return String(await sbRpc('next_flw_code', {}));
 }
+const likeName = (v: string) => encodeURIComponent(String(v).replace(/[\\%_*]/g, (c) => '\\' + c));
 function getStockEquivalent(qty: any, unit: any, stemsPerBunch: any) {
   const u = String(unit || '').trim().toLowerCase();
   const stems = Number(stemsPerBunch) || 1;
@@ -264,8 +264,7 @@ async function processFlowerItem(item: any, ctx: any) {
   const suggestedRate = calculateCompanyRate(supplierRate, unit, stemsPerBunch);
   // Nov 2026: match the name WITHOUT caring about capitals ("gerbera" = "Gerbera"), and keep the existing spelling,
   // so receiving never creates a second copy of the same flower (that split the stock count into two rows).
-  const likeName = flowerName.replace(/[\\%_*]/g, (c) => '\\' + c);
-  const sameName = (await sbGet('flower_item', `select=*&flower_name=ilike.${encodeURIComponent(likeName)}&order=id.asc`)) || [];
+  const sameName = (await sbGet('flower_item', `select=*&flower_name=ilike.${likeName(flowerName)}&order=id.asc`)) || [];
   const canon = sameName.find((r: any) => String(r.status || 'Active') === 'Active') || sameName[0];
   if (canon && canon.flower_name) flowerName = String(canon.flower_name);
   const matchingRows = sameName.filter((r: any) => String(r.flower_name) === flowerName);
@@ -324,6 +323,16 @@ async function saveReceiving(p: Record<string, any>) {
   const batchRef = 'FR-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
   const paperTotal = (p.paperTotal === undefined || p.paperTotal === '' || isNaN(Number(p.paperTotal))) ? null : Number(p.paperTotal);
   const ctx = { branch: p.branch, supplier: p.supplier || '', invoiceNo: p.invoiceNo || '', receivedBy: p.receivedBy || '', date: p.date || new Date().toISOString().slice(0, 10), taxPercent, invoiceTotal: invoiceGrandTotal, batchRef, paperTotal };
+  // Nov 2026 (Bench): new flowers are added by an Admin in Flower Admin first — Receiving only uses flowers already on the list.
+  const missing: string[] = [];
+  for (const it of items) {
+    if (it.type === 'Supply') continue;
+    const nm = String(it.flowerName || '').replace(/\s+/g, ' ').trim();
+    if (!nm) { missing.push('(no name)'); continue; }
+    const hit = await sbGet('flower_item', `select=id&flower_name=ilike.${likeName(nm)}&status=eq.Active&limit=1`);
+    if (!hit.length && missing.indexOf(nm) === -1) missing.push(nm);
+  }
+  if (missing.length) return { error: `Not in the Flower list yet: ${missing.join(', ')}. Ask an Admin to add it in Flower Admin first (nothing was saved).` };
   const results = [];
   for (const it of items) results.push(it.type === 'Supply' ? await processSupplyItem(it, ctx) : await processFlowerItem(it, ctx));
   return { success: true, results, batchRef, waitingApproval: true };
@@ -373,16 +382,27 @@ async function approveRejectRate(p: Record<string, any>, action: string) {
   return { success: true };
 }
 async function addFlowerItem(p: Record<string, any>) {
-  const flowerName = (p.flowerName || '').trim();
+  let flowerName = String(p.flowerName || '').replace(/\s+/g, ' ').trim();
   if (!flowerName) return { error: 'Flower name is required' };
-  const origin = p.origin || '', itemCode = await generateItemCode(flowerName);
+  const origin = String(p.origin || '').trim() || 'Legacy/Unknown';
+  const same = (await sbGet('flower_item', `select=id,flower_name,origin,item_code,status&flower_name=ilike.${likeName(flowerName)}&order=id.asc`)) || [];
+  if (same.length) flowerName = String((same.find((r: any) => r.status === 'Active') || same[0]).flower_name);   // keep the list's spelling
+  const dupe = same.find((r: any) => String(r.origin || '').trim().toLowerCase() === origin.toLowerCase());
+  if (dupe) return { error: `"${flowerName}" (${origin}) is already on the list as ${dupe.item_code}. Use "Fix an Existing Flower Item" to change it.` };
+  const itemCode = await generateItemCode(flowerName);
   const pendingSuggestedRate = p.pendingSuggestedRate;
   const fields: Record<string, any> = { flower_name: flowerName, origin, item_code: itemCode, unit: p.unit || '', stems_per_bunch: Number(p.stemsPerBunch) || 1,
     rate: Number(p.rate) || 0, min_stock: Number(p.minStock) || 0, status: 'Active', created_date: new Date().toISOString(), last_updated_date: new Date().toISOString() };
   if (pendingSuggestedRate !== undefined && pendingSuggestedRate !== '') { fields.rate_status = 'Pending Approval'; fields.suggested_rate = Number(pendingSuggestedRate) || 0; fields.supplier_rate_used = Number(p.hollandOdooPrice) || 0; }
   else { fields.rate_status = 'Approved'; fields.suggested_rate = Number(p.rate) || 0; fields.supplier_rate_used = Number(p.rate) || 0; }
   await sbPost('flower_item', [fields]);
-  return { success: true, itemCode };
+  // A brand-new flower also gets its Legacy (original list) row, same price — so Stock Count, Dashboard and Transfer know it at once.
+  let legacyCode = '';
+  if (origin !== 'Legacy/Unknown' && !same.some((r: any) => String(r.origin || '').trim() === 'Legacy/Unknown')) {
+    legacyCode = await generateItemCode(flowerName);
+    await sbPost('flower_item', [{ ...fields, origin: 'Legacy/Unknown', item_code: legacyCode, rate_status: 'Approved', suggested_rate: Number(p.rate) || 0, supplier_rate_used: Number(p.rate) || 0 }]);
+  }
+  return { success: true, itemCode, legacyCode };
 }
 async function updateFlowerRates(p: Record<string, any>) {
   let updates: any[] = [];

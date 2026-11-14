@@ -136,8 +136,8 @@ async function addFlower(p: Record<string, any>) {
   const stems = Math.max(1, Math.floor(Number(p.stemsPerBunch) || 1));
   let photo = '';
   if (p.image) { photo = await savePhotoFile(String(p.image), name); if (!photo) return { error: 'Photo upload failed. Nothing was added.' }; }
-  const prefix = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'FLW';
-  const itemCode = prefix + '-' + String(await nextCounter()).padStart(5, '0');
+  // Nov 2026: same numbering as the original list (FLW000xxx)
+  const itemCode = String(await sb('POST', 'rpc/next_flw_code', {}));
   const now = new Date().toISOString();
   await sb('POST', 'flower_item', [{ flower_name: name, origin: 'Legacy/Unknown', item_code: itemCode, unit, stems_per_bunch: stems, rate,
     min_stock: Math.max(0, Number(p.minStock) || 0), status: 'Active', created_date: now, last_updated_date: now,
