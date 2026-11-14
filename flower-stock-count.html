@@ -242,8 +242,9 @@
 
       <div class="card">
         <div class="card-title">📊 Live Summary</div>
-        <div class="summary-row"><span>Inventory Weekly Stock</span><b id="sumInventory">0.000 BD</b></div>
-        <div class="summary-row"><span>Cost Weekly Wastage</span><b id="sumWastageCost">0.000 BD</b></div>
+        <!-- Nov 2026: Bench asked to hide the BD totals (inventory stock + wastage cost) on the count page -->
+        <div class="summary-row" style="display:none"><span>Inventory Weekly Stock</span><b id="sumInventory">0.000 BD</b></div>
+        <div class="summary-row" style="display:none"><span>Cost Weekly Wastage</span><b id="sumWastageCost">0.000 BD</b></div>
         <div class="summary-row"><span>Items Counted</span><b id="sumCounted">0</b></div>
       </div>
 
@@ -265,7 +266,7 @@
 <div id="printView">
   <div class="pv-title">Weekly Inventory Sheet</div>
   <div class="pv-meta"><span id="pvDate"></span><span id="pvBranch"></span></div>
-  <div class="pv-meta"><span id="pvInventory"></span><span id="pvWastage"></span></div>
+  <div class="pv-meta" style="display:none"><span id="pvInventory"></span><span id="pvWastage"></span></div>
   <table class="pv-table">
     <thead><tr><th>No.</th><th>Product</th><th>Quantity</th><th>Wastage</th></tr></thead>
     <tbody id="pvBody"></tbody>
