@@ -161,7 +161,7 @@ async function listSales(p: any) {
   if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
   if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
   const rows = await sbGet(q);
-  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at })) };
+  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at, editedBy: r.edited_by || '', editedAt: r.edited_at || null })) };
 }
 async function cancelSale(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
@@ -179,6 +179,45 @@ async function cancelSale(p: any, u: any) {
   }
   await sbPatch('calc_sales', `id=eq.${id}`, { status: 'Cancelled', cancelled_by: who(u), cancelled_at: new Date().toISOString() });
   return { success: true };
+}
+
+// Nov 2026: Admin can fix a sale (wrong source / name / branch / qty) without cancelling it.
+// Flower: the stock taken out is re-done for the new list (old lines put back, new lines taken out, same sale no. and date).
+// Chocolate: only the details (source, sold to, customer) — for wrong chocolates, Cancel and sell again.
+const SRC_OK = ['Walk-in', 'Pick-up', 'Website order', 'WhatsApp', 'Corporate', 'Others'];
+async function editSale(p: any, u: any) {
+  const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
+  const s = (await sbGet(`calc_sales?select=*&id=eq.${id}`))[0];
+  if (!s) return { success: false, error: 'Sale not found.' };
+  if (s.status !== 'Active') return { success: false, error: 'This sale is cancelled — it cannot be edited.' };
+  const src = txt(p.source, 30); if (src && SRC_OK.indexOf(src) === -1) return { success: false, error: 'Pick a source from the list.' };
+  const fields: any = { source: src || s.source || null, ref: txt(p.ref, 60) || null, customer: txt(p.customer, 80) || null };
+  const before = { source: s.source, ref: s.ref, customer: s.customer, branch: s.branch, items: s.items, total: s.total };
+  if (s.kind === 'flower' && p.items != null) {
+    let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
+    const branch = txt(p.branch, 30) || s.branch; if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch.' };
+    const oldRate: Record<string, number> = {}; (s.items || []).forEach((it: any) => { oldRate[String(it.name)] = Number(it.rate) || 0; });
+    const sum: Record<string, number> = {};
+    items.forEach((it: any) => { const n = txt(it && it.name, 80), q = r3(Number(it && it.qty) || 0); if (!n || q <= 0) return; sum[n] = r3((sum[n] || 0) + q); });
+    const names = Object.keys(sum);
+    if (!names.length) return { success: false, error: 'At least one flower must stay. To remove everything, use Cancel.' };
+    const unknown = names.filter((n) => oldRate[n] === undefined);
+    // a flower added during the edit: take its rate from the flower list (Legacy price first)
+    for (const n of unknown) { const r = await sbGet(`flower_item?select=rate,origin&flower_name=eq.${encodeURIComponent(n)}&status=eq.Active`); if (!r.length) return { success: false, error: `"${n}" is not in the flower list.` }; const lg = r.find((x: any) => String(x.origin) === 'Legacy/Unknown') || r[0]; oldRate[n] = Number(lg.rate) || 0; }
+    const oldItemsTotal = (s.items || []).reduce((a: number, it: any) => a + (Number(it.qty) || 0) * (Number(it.rate) || 0), 0);
+    const extras = r3(Math.max(0, (Number(s.total) || 0) - oldItemsTotal));
+    // put back the old lines, take out the new ones (same sale no. + original sale time)
+    await sbDelete('flower_arrangement_fulfillments', `arrangement_code=eq.${encodeURIComponent(s.sale_no)}`);
+    await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: s.sale_no, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + (s.created_by || who(u)) + ' (edited by ' + who(u) + ')', fulfilled_date: s.created_at })));
+    fields.branch = branch; fields.items = names.map((n) => ({ name: n, qty: sum[n], rate: oldRate[n] || 0 }));
+    fields.deducted = names.map((n) => ({ name: n, qty: sum[n] }));
+    fields.total = r3(names.reduce((a, n) => a + sum[n] * (oldRate[n] || 0), 0) + extras);
+  }
+  const log = Array.isArray(s.edit_log) ? s.edit_log.slice(-19) : [];
+  log.push({ at: new Date().toISOString(), by: who(u), before });
+  fields.edited_by = who(u); fields.edited_at = new Date().toISOString(); fields.edit_log = log;
+  await sbPatch('calc_sales', `id=eq.${id}`, fields);
+  return { success: true, saleNo: s.sale_no, total: fields.total ?? s.total };
 }
 
 async function readParams(req: Request): Promise<Record<string, any>> {
@@ -230,6 +269,7 @@ Deno.serve(async (req) => {
       return json({ success: true, items });
     }
     if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
+    if (a === 'editSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await editSale(p, u)); }
     if (a === 'setMode') {
       if (!admin) return json({ success: false, error: 'Admin only.' });
       const v = p.mode === 'odoo' ? 'odoo' : 'calc';
