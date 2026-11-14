@@ -1598,6 +1598,13 @@ function slLeftAt(day){   // petty cash balance at the end of `day` = today's ba
   (slPC.transactions||[]).forEach(x=>{ if(x.date > day) b -= (x.type==='topup' ? 1 : -1) * Number(x.amount||0); });
   return Math.round(b*1000)/1000;
 }
+// Nov 2026: branch name for the print/Excel title — the picked branch, or (on "All") the one branch the rows belong to
+function slBranchLabel(list, pc){
+  const br = document.getElementById('branchSelect').value;
+  if(br !== 'All') return br;
+  const set = new Set([].concat(list||[], pc||[]).map(x => x && x.branch).filter(Boolean));
+  return set.size === 1 ? [...set][0] : 'All branches';
+}
 function slPeriodText(days){ return days.length ? fmtDate(days[0]) + ' – ' + fmtDate(days[days.length-1]) : slRangeText(); }
 // Cash counts of the same branch + dates, inside the one Sales print (denominations only, no pictures)
 function slCashCounts(){
@@ -1644,7 +1651,7 @@ function slPrintHistory(){
   const k = document.getElementById('slFKind').value;
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales History</h2>
-    <p>${esc(document.getElementById('branchSelect').value)} · ${esc(slRangeText())}${k ? ' · ' + SL_CH[k] + ' only' : ''} · <b>back-track copy</b> (not a daily report)</p>
+    <p><b>${esc(slBranchLabel(list))}</b> · ${esc(slRangeText())}${k ? ' · ' + SL_CH[k] + ' only' : ''} · <b>back-track copy</b> (not a daily report)</p>
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>My Fatoorah</th><th ${th}>Card</th><th ${th}>Fawri +</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th></tr></thead>
       <tbody>${Object.keys(days).sort().map(d=>{ const dt = slTotals(days[d]);
@@ -1674,7 +1681,7 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
     return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.bn)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
   document.getElementById('printArea').innerHTML = `
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Sales, Cash Count &amp; Petty Cash</h2>
-    <p>${esc(document.getElementById('branchSelect').value)} · ${slPeriodText(days)}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
+    <p><b>${esc(slBranchLabel(list, pc))}</b> · ${slPeriodText(days)}${document.getElementById('slFKind').value?' · '+SL_CH[document.getElementById('slFKind').value]+' only':''}</p>
     ` +
     (list.length ? `<h3>Sales</h3><table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Date</th><th style="text-align:left;">Branch</th><th style="text-align:left;">Source</th><th ${th}>Cash</th><th ${th}>Card</th><th ${th}>MyFatoorah</th><th ${th}>Fawri+/Benefit</th><th ${th}>Credit</th><th ${th}>Total</th><th style="text-align:left;">Invoice / notes</th><th style="text-align:left;">By</th></tr></thead>
@@ -1697,18 +1704,18 @@ document.getElementById('slExcelBtn').addEventListener('click', async ()=>{
   let pc = [];
   try{ pc = await slPettyUsed(); }catch(e){ if(!confirm('Could not load the petty cash (' + (e.message||'connection') + '). Export the sales only?')) return; }
   if(!list.length && !pc.length){ alert('Nothing to export for these dates.'); return; }
-  const t = slTotals(list), pcT = Math.round(pc.reduce((s,x)=>s+Number(x.amount||0),0)*1000)/1000, br = document.getElementById('branchSelect').value, f3 = '#,##0.000';
+  const t = slTotals(list), pcT = Math.round(pc.reduce((s,x)=>s+Number(x.amount||0),0)*1000)/1000, br = document.getElementById('branchSelect').value, brL = slBranchLabel(list, pc), f3 = '#,##0.000';
   const saved = r => r.createdAt ? new Date(r.createdAt).toLocaleString('en-GB',{timeZone:'Asia/Bahrain'}) : '';
-  const sales = [['Lalabella — Sales'],[br + ' · ' + slRangeText()],[],['Date','Branch','Source','Cash','Card','MyFatoorah','Fawri+/Benefit','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
+  const sales = [['Lalabella — Sales'],[brL + ' · ' + slRangeText()],[],['Date','Branch','Source','Cash','Card','MyFatoorah','Fawri+/Benefit','Credit','Total','Invoice / order','Notes','Entered by','Saved at']]
     .concat(list.map(r=>[r.date,r.branch,r.channel?SL_CH[r.channel].replace(/^\S+\s/,''):'',r.cash,r.card,r.myfatoorah,r.benefit||0,r.credit,r.amount,r.ref,r.notes,r.enteredBy,saved(r)]))
     .concat([[],['TOTAL SALES','','',t.cash,t.card,t.mf,t.bn,t.credit,t.inv]]);
-  const petty = [['Lalabella — Petty cash used (separate from sales)'],[br + ' · ' + slRangeText()],[],['Date','Branch','Purpose','Car plate','Driver','Entered by','Amount']]
+  const petty = [['Lalabella — Petty cash used (separate from sales)'],[brL + ' · ' + slRangeText()],[],['Date','Branch','Purpose','Car plate','Driver','Entered by','Amount']]
     .concat(pc.map(x=>[x.date,x.branch,x.purpose,x.carPlate||'',x.driver||'',x.enteredBy||'',Number(x.amount)])).concat([[],['TOTAL PETTY CASH USED','','','','','',pcT]]);
   const days = {}; list.forEach(r=>{ (days[r.date] = days[r.date] || []).push(r); });
   const pDay = {}; pc.forEach(x=>{ pDay[x.date] = (pDay[x.date]||0) + Number(x.amount||0); });
   const allDays = slDays(list, pc), oneB = br !== 'All';
   const daily = [['Date','Cash','Card','MyFatoorah','Fawri+/Benefit','Credit','Total sales','Petty cash used'].concat(oneB?['Petty cash left']:[])].concat(allDays.map(d=>{ const x=slTotals(days[d]||[]); return [d,x.cash,x.card,x.mf,x.bn,x.credit,x.inv,Math.round((pDay[d]||0)*1000)/1000].concat(oneB?[slLeftAt(d)]:[]); })).concat([[],['TOTAL',t.cash,t.card,t.mf,t.bn,t.credit,t.inv,pcT]]);
-  lbExcel.save('Lalabella Sales ' + br, [
+  lbExcel.save('Lalabella Sales ' + brL, [
     { name:'Daily summary', rows: daily, fmt:{1:f3,2:f3,3:f3,4:f3,5:f3,6:f3,7:f3,8:f3} },
     { name:'Sales', rows: sales, headerRow: 4, fmt:{3:f3,4:f3,5:f3,6:f3,7:f3,8:f3} },
     { name:'Petty cash used', rows: petty, headerRow: 4, fmt:{6:f3} },
