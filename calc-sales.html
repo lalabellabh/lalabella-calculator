@@ -156,19 +156,28 @@
       '<label>Source</label><select data-f="source">' + SRC.map(function(x){ return '<option' + (x === s.source ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
       '<label>Sold to (invoice no. / name / phone)</label><input data-f="ref" maxlength="60" value="' + esc(s.ref || '') + '">' +
       (fl ? '<label>Branch (stock is taken from here)</label><select data-f="branch">' + BRS.map(function(x){ return '<option' + (x === s.branch ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
-        '<label>Flowers (qty in stems)</label><div data-items></div><div class="note">Changing a qty or removing a flower puts the difference back into stock (or takes more out). The sale keeps its number and time.</div>'
+        '<label>Flowers (qty in stems)</label><div data-items></div><div class="note">Tap a flower name to change it (e.g. Rose → S-Rose). Changing a flower or qty puts the old back into stock and takes the new out. The sale keeps its number and time.</div>'
         : '<div class="note">For chocolate only the details can be edited. Wrong chocolate or qty: Cancel the sale (it goes back to stock) and sell again from the Chocolate Calc.</div>') +
       '<div class="acts"><button data-x>Close</button><button class="sv" data-sv>Save changes</button></div></div>';
     document.body.appendChild(bg);
     var paint = function(){ var box = bg.querySelector('[data-items]'); if(!box) return;
-      box.innerHTML = items.map(function(it, k){ return '<div class="it"><span class="n">' + esc(it.name) + '</span><input type="number" min="0" step="1" inputmode="decimal" data-q="' + k + '" value="' + it.qty + '"><button data-rm="' + k + '" title="Remove">✕</button></div>'; }).join('') || '<div class="note">No flowers left.</div>'; };
+      box.innerHTML = items.map(function(it, k){ return '<div class="it"><input class="n" list="edFlowers" data-n="' + k + '" value="' + esc(it.name) + '" style="flex:1;width:auto" title="Tap to change the flower"><input type="number" min="0" step="1" inputmode="decimal" data-q="' + k + '" value="' + it.qty + '"><button data-rm="' + k + '" title="Remove">✕</button></div>'; }).join('') +
+        '<button type="button" data-add style="border:1px dashed var(--line);background:#fff;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%">＋ Add flower</button>'; };
+    if(fl && !document.getElementById('edFlowers')){ var dl = document.createElement('datalist'); dl.id = 'edFlowers'; document.body.appendChild(dl);
+      fetch(API + '?action=flowerNames&token=' + encodeURIComponent(token())).then(function(r){ return r.json(); }).then(function(d){ if(d && d.success) dl.innerHTML = d.names.map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); }).catch(function(){}); }
     paint();
-    bg.addEventListener('input', function(ev){ var q = ev.target.getAttribute && ev.target.getAttribute('data-q'); if(q != null) items[Number(q)].qty = Number(ev.target.value) || 0; });
+    bg.addEventListener('input', function(ev){ var q = ev.target.getAttribute && ev.target.getAttribute('data-q'); if(q != null) items[Number(q)].qty = Number(ev.target.value) || 0;
+      var nn = ev.target.getAttribute && ev.target.getAttribute('data-n'); if(nn != null) items[Number(nn)].name = ev.target.value.trim(); });
     bg.addEventListener('click', function(ev){
       if(ev.target === bg || ev.target.closest('[data-x]')){ bg.remove(); return; }
       var rm = ev.target.closest('[data-rm]'); if(rm){ items.splice(Number(rm.getAttribute('data-rm')), 1); paint(); return; }
+      if(ev.target.closest('[data-add]')){ items.push({ name:'', qty:1 }); paint(); var last = bg.querySelector('[data-n="' + (items.length - 1) + '"]'); if(last) last.focus(); return; }
       var sv = ev.target.closest('[data-sv]'); if(!sv) return;
-      var keep = items.filter(function(it){ return it.qty > 0; });
+      var keep = items.filter(function(it){ return it.qty > 0 && it.name; });
+      var dlist = document.getElementById('edFlowers'), known = dlist ? Array.prototype.map.call(dlist.options, function(o){ return o.value.toLowerCase(); }) : [];
+      var bad = keep.filter(function(it){ return known.length && known.indexOf(it.name.toLowerCase()) === -1; });
+      if(bad.length){ alert('Pick the flower from the list: ' + bad.map(function(it){ return it.name; }).join(', ')); return; }
+      keep.forEach(function(it){ var k = known.indexOf(it.name.toLowerCase()); if(k >= 0) it.name = dlist.options[k].value; });
       if(fl && !keep.length){ alert('At least one flower must stay. To remove everything, use Cancel.'); return; }
       var body = { action:'editSale', id:s.id, token:token(), source:bg.querySelector('[data-f=source]').value, ref:bg.querySelector('[data-f=ref]').value.trim(), customer:s.customer || '' };
       if(fl){ body.branch = bg.querySelector('[data-f=branch]').value; body.items = JSON.stringify(keep); }
