@@ -282,6 +282,7 @@
   let hasCountDate = false;
   let isReadOnlyView = false;
   let hasBeenEdited = false;
+  let isRecalled = false;
   let savedBase = {};         // flower -> {count,waste} already saved this session (branch|date); the server overwrites per flower/day, so new entries are ADDED on top of these
   // ---- Unit per flower: pieces (default) or bunch. Stock is always saved in PIECES, so bunch counts are multiplied by pieces-per-bunch ----
   const UNIT_KEY = 'lbFlowerUnitPrefs';
@@ -386,6 +387,7 @@
 
     hasCountDate = true;
     isReadOnlyView = false;
+    isRecalled = false;
     hasBeenEdited = true;
     document.getElementById('statusLabel').innerHTML = '<span class="badge baseline">Fresh Load — ' + backing.length + ' flowers</span>';
     document.getElementById('countCard').style.display = 'block';
@@ -411,6 +413,7 @@
 
     hasCountDate = true;
     isReadOnlyView = false;
+    isRecalled = true;
     hasBeenEdited = false;
     document.getElementById('statusLabel').innerHTML = '<span class="badge baseline">Recalled — ' + backing.length + ' flowers, editable</span>';
     document.getElementById('countCard').style.display = 'block';
@@ -436,6 +439,7 @@
 
     hasCountDate = true;
     isReadOnlyView = true;
+    isRecalled = false;
     document.getElementById('statusLabel').innerHTML = '<span class="badge readonly">Read-only view — click Recall Count to edit</span>';
     document.getElementById('countCard').style.display = 'block';
     document.getElementById('saveCard').style.display = 'block';
@@ -587,7 +591,32 @@
     document.getElementById('sumInventory').textContent = fmtBD(inventoryTotal);
     document.getElementById('sumWastageCost').textContent = fmtBD(wastageCostTotal);
     document.getElementById('sumCounted').textContent = itemsCounted;
+    paintUpdBar();
   }
+
+  // Nov 2026: sticky bottom bar so staff see where to save after adding a missing flower / editing
+  function hasSavedCount(){ return isRecalled || Object.keys(savedBase).length > 0; }
+  function paintUpdBar(){
+    let bar = document.getElementById('updBar');
+    if(!bar){
+      bar = document.createElement('div'); bar.id = 'updBar';
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff7e6;border-top:2px solid #f0b54a;box-shadow:0 -6px 18px rgba(0,0,0,.12);font-size:14px;font-weight:600;color:#7a4b00;';
+      bar.innerHTML = '<span id="updBarTxt"></span><button type="button" id="updBarBtn" style="border:0;border-radius:12px;padding:11px 18px;font:inherit;font-weight:800;color:#fff;background:#2f7a4f;cursor:pointer;"></button>';
+      document.body.appendChild(bar);
+      document.getElementById('updBarBtn').onclick = () => document.getElementById('saveBtn').click();
+    }
+    const upd = hasSavedCount();
+    const label = upd ? '🔄 Update Count' : '💾 Save Count';
+    const sb = document.getElementById('saveBtn');
+    if(!sb.disabled) sb.textContent = label;
+    const anyEntry = backing.some(b => (b.physicalCount !== '' && !isNaN(b.physicalCount)) || (b.wastage !== '' && Number(b.wastage) > 0));
+    const show = hasBeenEdited && (upd || anyEntry) && !isReadOnlyView && document.getElementById('saveCard').style.display !== 'none';
+    document.getElementById('updBarTxt').textContent = upd ? '✏️ You changed the saved count. Tap Update to save it.' : '✏️ Not saved yet.';
+    document.getElementById('updBarBtn').textContent = label;
+    bar.style.display = show ? 'flex' : 'none';
+    document.body.style.paddingBottom = show ? '70px' : '';
+  }
+  document.addEventListener('input', () => setTimeout(paintUpdBar, 0));
 
   document.getElementById('addMissingBtn').addEventListener('click', ()=>{
     const term = prompt('Enter the Flower Name to add:');
@@ -655,7 +684,7 @@
       if(data.error){ alert(data.error); }
       else {
         const shortages = data.results.filter(r => r.variance < 0).length;
-        alert(data.savedCount + ' item(s) saved.' + (shortages ? '\\n' + shortages + ' with a shortage (negative variance).' : ''));
+        alert(data.savedCount + ' item(s) ' + (isRecalled ? 'updated' : 'saved') + '.' + (shortages ? '\\n' + shortages + ' with a shortage (negative variance).' : ''));
         hasBeenEdited = false;
 
         // Clear out the saved fields so the form is visibly "empty"
@@ -672,7 +701,7 @@
     }catch(e){
       alert('Not saved. Please check your connection.');
     }
-    btn.disabled = false; btn.textContent = '💾 Save Count';
+    btn.disabled = false; paintUpdBar();
   });
 
   function populatePrintView(){
