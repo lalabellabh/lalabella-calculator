@@ -369,8 +369,9 @@
     // HollandTracking sheet). Skips any name already covered above.
     const existingNames = new Set(backing.map(b => b.flowerName.trim().toLowerCase()));
     flowerItems
-      .filter(it => (it.Origin||'').trim() === 'Holland' && !existingNames.has(String(it.Flowers||'').trim().toLowerCase()))
+      .filter(it => (it.Origin||'').trim() === 'Holland' && String(it.Status||'Active').trim() === 'Active' && !existingNames.has(String(it.Flowers||'').trim().toLowerCase()))
       .forEach(it => {
+        const k = String(it.Flowers||'').trim().toLowerCase(); if(existingNames.has(k)) return; existingNames.add(k);   // Nov 2026: once per flower, Active only
         backing.push({
           flowerName: String(it.Flowers||'').trim(),
           contributingItemCodes: String(it['Item Code']||'').trim(),
@@ -448,7 +449,7 @@
     const have = new Set(backing.map(b => b.flowerName.trim().toLowerCase())), out = [], seen = new Set();
     const push = (name, codes) => { const k = String(name||'').trim().toLowerCase(); if(!k || have.has(k) || seen.has(k)) return; seen.add(k); out.push({ flowerName:String(name).trim(), contributingItemCodes:codes||'' }); };
     (stockList||[]).forEach(s => push(s.flowerName, s.contributingItemCodes));
-    (flowerItems||[]).filter(it => (it.Origin||'').trim() === 'Holland').forEach(it => push(it.Flowers, String(it['Item Code']||'').trim()));
+    (flowerItems||[]).filter(it => (it.Origin||'').trim() === 'Holland' && String(it.Status||'Active').trim() === 'Active').forEach(it => push(it.Flowers, String(it['Item Code']||'').trim()));
     return out;
   }
   function addFlowerRow(m){
