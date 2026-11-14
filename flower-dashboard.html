@@ -141,6 +141,7 @@
           <button data-t="sup">Supplies</button>
           <button data-t="hist">Rate changes</button>
           <button data-t="br">Branches</button>
+          <button data-t="calc">🧮 Calc today</button>
         </div>
       </div>
       <div class="scroll" id="mvScroll"></div>
@@ -484,6 +485,9 @@
 
   function renderActivity(){
     let h;
+    const mvEl = document.getElementById('mvScroll');
+    if(ui.mvTab === 'calc'){ if(window.LBCalcToday) LBCalcToday.render('flower', ui.branch, mvEl); return; }
+    if(window.LBCalcToday) LBCalcToday.stop(mvEl);
     if(ui.mvTab === 'tr'){
       // Newest first. With one branch selected, show what that branch SENT and what it RECEIVED.
       const b = ui.branch;
@@ -549,5 +553,6 @@
 
 <script src="joyboy-bubble.js"></script>
 <script src="shared/live-orders-mini.js?v=3"></script>
+<script src="shared/calc-today.js?v=1"></script>
 </body>
 </html>
