@@ -319,7 +319,10 @@
       (it.Origin||'').trim() === 'Legacy/Unknown' &&
       (it.Status||'').trim() === 'Active'
     );
-    return match ? Number(match.Rate) || 0 : 0;
+    if(match) return Number(match.Rate) || 0;
+    // Nov 2026: a new flower with only a Holland item (no Legacy row yet) shows its Holland rate instead of 0.000 — same as the dashboard
+    const hol = flowerItems.find(it => (it.Flowers||'').trim().toLowerCase() === flowerName.toLowerCase() && (it.Origin||'').trim() === 'Holland' && (it.Status||'').trim() === 'Active');
+    return hol ? Number(hol.Rate) || 0 : 0;
   }
 
   async function loadFlowerItemsAndList(){
