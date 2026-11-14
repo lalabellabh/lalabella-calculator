@@ -50,7 +50,7 @@
     ['stock-count.html', '📋', 'Chocolate Stock Count'], ['stock-approval.html', '✅', 'Stock Approval'], ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],
     ['chocolate-barcode.html', '🏷️', 'Chocolate Barcode'], ['chocolate-calc.html', '🍫', 'Chocolate Calculator'], ['chocolate-admin.html', '🔐', 'Chocolate Admin', 1],
     ['chocolate-photos.html', '🖼️', 'Chocolate Photos', 1], ['chocolate-odoo-import.html', '📥', 'Chocolate Odoo Price Import', 1], ['chocolate-guide.html', '📖', 'Chocolate Guide'],
-    ['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-admin.html', '🔐', 'Item Admin', 1],
+    ['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-saudi.html', '🇸🇦', 'Saudi Transfers'], ['item-admin.html', '🔐', 'Item Admin', 1],
     ['item-photos.html', '🖼️', 'Item Photos', 1], ['item-odoo-import.html', '📥', 'Item Odoo Price Import', 1],
     ['nova-command-center.html', '🎙️', 'NOVA'], ['schedule.html', '📆', 'Duty Schedule'], ['attendance.html', '🕒', 'Attendance'],
     ['delivery-admin.html', '🗺️', 'Delivery Map', 1], ['profile.html', '👤', 'My Profile'], ['petty-cash.html', '💰', 'Petty Cash & Cash'],

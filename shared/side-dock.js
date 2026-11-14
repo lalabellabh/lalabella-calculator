@@ -30,7 +30,7 @@
     ['dashboard.html', '📊', 'Dashboard'], ['chocolate-calc.html', '🍫', 'Chocolate Calculator'], ['chocolate-receiving.html', '📥', 'Chocolate Receiving'],
     ['chocolate-release.html', '📤', 'Chocolate Release'], ['chocolate-barcode.html', '🏷️', 'Chocolate Barcode'], ['stock-count.html', '📋', 'Stock Count'],
     ['flower-calc.html', '🧮', 'Flower Calculator'], ['flower-receiving.html', '🛒', 'Flower Receiving'], ['flower-purchase.html', '🧾', 'Flower Purchase'],
-    ['flower-arrangements.html', '💐', 'Flower Arrangements'], ['flower-transfer.html', '🔄', 'Flower Transfer'], ['item-dashboard.html', '📊', 'Item Dashboard'],
+    ['flower-arrangements.html', '💐', 'Flower Arrangements'], ['flower-transfer.html', '🔄', 'Flower Transfer'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-saudi.html', '🇸🇦', 'Saudi Transfers'],
     ['schedule.html', '📆', 'Duty Schedule'], ['attendance.html', '🕒', 'Attendance'], ['profile.html', '👤', 'My Profile'],
     ['petty-cash.html', '💰', 'Petty Cash'], ['notes.html', '📝', 'Notes'], ['order-form.html', '🧾', 'Order Form'],
     ['card-print.html', '💌', 'Card Print'], ['nova-command-center.html', '🎙️', 'NOVA'], ['chatbox.html', '💬', 'Full Chat'],
