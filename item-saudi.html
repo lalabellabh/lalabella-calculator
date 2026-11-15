@@ -369,9 +369,9 @@
   }
   // ---------- SHIPMENTS (checklist): Send -> notification -> Receive with ticks ----------
   var DIR = { to_saudi:'Bahrain → Saudi', to_bahrain:'Saudi → Bahrain' }, SST = { on_way:'🚚 On the way', received:'✅ Received', partial:'⚠️ Received (some missing)' };
-  function canRecv(sh){ return sh.status === 'on_way' && (ADMIN || (sh.direction === 'to_saudi') === LIMITED); }
+  function canRecv(sh){ return sh.status === 'on_way' && (sh.direction === 'to_saudi') === LIMITED; }   // Saudi receives from Bahrain, Bahrain (Admin/Staff) receives from Saudi
   function buttons(){
-    var bh = ADMIN || !LIMITED, sa = ADMIN || LIMITED;
+    var bh = !LIMITED, sa = LIMITED;   // buttons follow the login: Bahrain or Saudi
     $('bSend').style.display = bh ? '' : 'none'; $('bRecvS').style.display = bh ? '' : 'none';
     $('bBack').style.display = sa ? '' : 'none'; $('bRecvB').style.display = sa ? '' : 'none'; $('bRet').style.display = ADMIN ? '' : 'none';
     var nS = SHIPS.filter(function(x){ return x.status === 'on_way' && x.direction === 'to_bahrain'; }).length, nB = SHIPS.filter(function(x){ return x.status === 'on_way' && x.direction === 'to_saudi'; }).length;
