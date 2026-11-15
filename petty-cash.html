@@ -1646,9 +1646,9 @@ function slPettyDayHtml(pc, days, th){
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="4">USED ON ${fmtDate(day).toUpperCase()}</td><td ${th}>−${usedT.toFixed(3)} BD</td></tr></tbody></table>` + leftLine;
 }
 // Nov 15 2026: flowers from the suppliers that day (Wards, Fresh Blooms…) + the weekly flower budget left per branch
-async function slFlowerDay(day){
+async function slFlowerDay(day, branch){
   const api = (window.LB_CONFIG && LB_CONFIG.FLOWER_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flower-fast';
-  const r = await fetch(api + '?' + new URLSearchParams({ action:'dayReceiving', date: day, branch: document.getElementById('branchSelect').value, token: getToken() }));
+  const r = await fetch(api + '?' + new URLSearchParams({ action:'dayReceiving', date: day, branch: branch || document.getElementById('branchSelect').value, token: getToken() }));
   const d = await r.json(); if(!d || !d.success) throw new Error((d && d.error) || 'not loaded'); return d;
 }
 function slFlowerHtml(fd, th){
@@ -1657,7 +1657,7 @@ function slFlowerHtml(fd, th){
   const recv = `<h3 style="margin-top:16px;">Flowers from suppliers — ${fmtDate(fd.day)}</h3>` + (sup.length ? `
     <table style="width:100%;max-width:640px;border-collapse:collapse;font-size:12.5px;">
       <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Supplier</th><th style="text-align:left;">Invoice</th><th style="text-align:center;">Lines</th><th ${th}>Amount</th><th ${th}>VAT</th><th ${th}>Total</th></tr></thead>
-      <tbody>${sup.map(x=>`<tr><td>${esc(x.supplier)}${x.pending ? ' <span style="color:#a8560b;font-size:11px">(' + x.pending + ' waiting approval)</span>' : ''}</td><td>${esc((x.invoices||[]).join(', ') || '—')}</td><td style="text-align:center;">${x.lines}${x.supplies ? ' <span style="color:#666;font-size:11px">(' + x.supplies + ' supply)</span>' : ''}</td><td ${th}>${Number(x.amount).toFixed(3)}</td><td ${th}>${Number(x.vat).toFixed(3)}</td><td ${th}>${Number(x.total).toFixed(3)} BD</td></tr>`).join('')}
+      <tbody>${sup.map(x=>`<tr><td>${esc(x.supplier)}${x.pending ? ' <span style="color:#a8560b;font-size:11px">(' + x.pending + ' waiting approval)</span>' : ''}</td><td>${esc(x.invoice || '—')}${(fd.budget||[]).length > 1 && x.branch ? ' <span style="color:#666;font-size:11px">· ' + esc(x.branch) + '</span>' : ''}</td><td style="text-align:center;">${x.lines}${x.supplies ? ' <span style="color:#666;font-size:11px">(' + x.supplies + ' supply)</span>' : ''}</td><td ${th}>${Number(x.amount).toFixed(3)}</td><td ${th}>${Number(x.vat).toFixed(3)}</td><td ${th}>${Number(x.total).toFixed(3)} BD</td></tr>`).join('')}
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL</td><td ${th}>${Number(t.amount||0).toFixed(3)}</td><td ${th}>${Number(t.vat||0).toFixed(3)}</td><td ${th}>${Number(t.total||0).toFixed(3)} BD</td></tr></tbody></table>`
     : `<p style="margin:4px 0 0;font-size:12.5px;color:#555;">No flowers received from suppliers on ${fmtDate(fd.day)}.</p>`);
   const bud = (fd.budget || []).length ? `<h3 style="margin-top:16px;">Weekly flower budget <small style="font-weight:400">· ${fmtDate(fd.weekStart)} – ${fmtDate(fd.weekEnd)} · up to ${fmtDate(fd.day)} (without VAT)</small></h3>
@@ -1700,7 +1700,9 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   // sales are optional: the cash count + petty cash still print on their own
   const t = slTotals(list), pcT = pc.reduce((s,x)=>s+Number(x.amount||0),0), th='style="text-align:right;"';
   const days = oneDay ? [oneDay] : [], oneBranch = document.getElementById('branchSelect').value !== 'All';
-  let flowerDay = null; try{ flowerDay = await slFlowerDay(oneDay || toV || slToday()); }catch(e){ flowerDay = null; }
+  // the branch of the report (picked, or the one branch the rows belong to) — so the budget shows only that branch
+  const repBr = slBranchLabel(list, pc), flBr = ['ModaMall','Hamala','Galali'].indexOf(repBr) !== -1 ? repBr : 'All';
+  let flowerDay = null; try{ flowerDay = await slFlowerDay(oneDay || toV || slToday(), flBr); }catch(e){ flowerDay = null; }
   const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
     const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
     return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.bn)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');

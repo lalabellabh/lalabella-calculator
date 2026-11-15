@@ -648,12 +648,13 @@ async function dayReceiving(p: Record<string, any>) {
   const r3 = (n: number) => Math.round(n * 1000) / 1000;
   const sup: Record<string, any> = {};
   rows.filter((r: any) => String(r.entry_date).slice(0, 10) === day).forEach((r: any) => {
-    const k = String(r.supplier || '—').trim() || '—', x = sup[k] = sup[k] || { supplier: k, invoices: new Set<string>(), lines: 0, flowers: 0, supplies: 0, amount: 0, vat: 0, pending: 0, branches: new Set<string>() };
+    // one row per supplier + invoice (Nov 15 2026: same supplier, different invoices = separate rows)
+    const sn = String(r.supplier || '—').trim() || '—', inv = String(r.invoice_no || '').trim(), k = sn + '|' + inv + '|' + String(r.branch || ''), x = sup[k] = sup[k] || { supplier: sn, invoice: inv, branch: String(r.branch || ''), invoices: new Set<string>(), lines: 0, flowers: 0, supplies: 0, amount: 0, vat: 0, pending: 0, branches: new Set<string>() };
     if (r.invoice_no) x.invoices.add(String(r.invoice_no)); x.lines++; if (r.type === 'Supply') x.supplies++; else x.flowers++;
     x.amount += Number(r.amount) || 0; x.vat += Number(r.tax) || 0; if (String(r.approval_status) !== 'Approved') x.pending++; x.branches.add(String(r.branch || ''));
   });
-  const suppliers = Object.values(sup).map((x: any) => ({ supplier: x.supplier, invoices: [...x.invoices], lines: x.lines, flowers: x.flowers, supplies: x.supplies, amount: r3(x.amount), vat: r3(x.vat), total: r3(x.amount + x.vat), pending: x.pending, branches: [...x.branches] }))
-    .sort((a: any, b: any) => b.amount - a.amount);
+  const suppliers = Object.values(sup).map((x: any) => ({ supplier: x.supplier, invoice: x.invoice, branch: x.branch, invoices: [...x.invoices], lines: x.lines, flowers: x.flowers, supplies: x.supplies, amount: r3(x.amount), vat: r3(x.vat), total: r3(x.amount + x.vat), pending: x.pending, branches: [...x.branches] }))
+    .sort((a: any, b: any) => a.supplier.localeCompare(b.supplier) || a.invoice.localeCompare(b.invoice));
   const limit: Record<string, number> = { ModaMall: 350, Hamala: 350, Galali: 350 };
   budgets.forEach((b: any) => { const n = String(b.branch || '').trim(); if (n in limit) limit[n] = Number(b.weekly_budget) || 350; });
   const budget = brs.map(b => { const used = r3(rows.filter((r: any) => r.branch === b).reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0)), L = limit[b];
