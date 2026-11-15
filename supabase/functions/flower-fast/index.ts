@@ -391,7 +391,7 @@ async function addFlowerItem(p: Record<string, any>) {
   if (dupe) return { error: `"${flowerName}" (${origin}) is already on the list as ${dupe.item_code}. Use "Fix an Existing Flower Item" to change it.` };
   const itemCode = await generateItemCode(flowerName);
   const pendingSuggestedRate = p.pendingSuggestedRate;
-  const fields: Record<string, any> = { flower_name: flowerName, origin, item_code: itemCode, unit: p.unit || '', stems_per_bunch: Number(p.stemsPerBunch) || 1,
+  const fields: Record<string, any> = { flower_name: flowerName, origin, item_code: itemCode, unit: String(p.unit || '').trim() || null, stems_per_bunch: Number(p.stemsPerBunch) > 0 ? Number(p.stemsPerBunch) : null,   // blank = unknown (like the Legacy list)
     rate: Number(p.rate) || 0, min_stock: Number(p.minStock) || 0, status: 'Active', created_date: new Date().toISOString(), last_updated_date: new Date().toISOString() };
   if (pendingSuggestedRate !== undefined && pendingSuggestedRate !== '') { fields.rate_status = 'Pending Approval'; fields.suggested_rate = Number(pendingSuggestedRate) || 0; fields.supplier_rate_used = Number(p.hollandOdooPrice) || 0; }
   else { fields.rate_status = 'Approved'; fields.suggested_rate = Number(p.rate) || 0; fields.supplier_rate_used = Number(p.rate) || 0; }
@@ -400,7 +400,7 @@ async function addFlowerItem(p: Record<string, any>) {
   let legacyCode = '';
   if (origin !== 'Legacy/Unknown' && !same.some((r: any) => String(r.origin || '').trim() === 'Legacy/Unknown')) {
     legacyCode = await generateItemCode(flowerName);
-    await sbPost('flower_item', [{ ...fields, origin: 'Legacy/Unknown', item_code: legacyCode, rate_status: 'Approved', suggested_rate: Number(p.rate) || 0, supplier_rate_used: Number(p.rate) || 0 }]);
+    await sbPost('flower_item', [{ ...fields, origin: 'Legacy/Unknown', item_code: legacyCode, unit: null, stems_per_bunch: null, rate_status: 'Approved', suggested_rate: Number(p.rate) || 0, supplier_rate_used: Number(p.rate) || 0 }]);
   }
   return { success: true, itemCode, legacyCode };
 }

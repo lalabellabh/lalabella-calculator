@@ -131,6 +131,7 @@
 <meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
 <link rel="stylesheet" href="shared/glass-skin.css">
 <script src="shared/glass-skin.js"></script>
+<script src="shared/paste-pic.js?v=1"></script>
 </head>
 <body>
 
@@ -169,10 +170,11 @@
         <div class="field"><label>Origin</label><input id="flowerOrigin" placeholder="e.g. Kenya"></div>
         <div class="field">
           <label>Unit</label>
-          <select id="flowerUnit"><option>Stem</option><option>Bunch</option><option>Piece</option></select>
+          <select id="flowerUnit"><option value="">— Unknown —</option><option>Stem</option><option>Bunch</option><option>Piece</option></select>
         </div>
-        <div class="field"><label>Stems per Bunch</label><input id="flowerStems" type="number" min="1" value="1"></div>
-        <div class="field"><label>Rate (BHD)</label><input id="flowerRate" type="number" step="0.001" min="0" value="0"></div>
+        <div class="field"><label>Stems per Bunch</label><input id="flowerStems" type="number" min="1" placeholder="Unknown — leave blank"></div>
+        <div class="field"><label>Rate (BHD) — company rate per stem</label><input id="flowerRate" type="number" step="0.001" min="0" placeholder="0.000"></div>
+        <div class="field full" style="font-size:11px;color:var(--ink-dim);margin-top:-4px;">Only the Rate is needed. Leave Unit and Stems per Bunch blank if you are not sure — it is saved as unknown (Legacy).</div>
         <div class="field full" id="hollandHintBox" style="display:none;"><div style="font-size:11px;color:var(--rose-deep);background:var(--blush);border-radius:8px;padding:8px 10px;"></div></div>
         <div class="field full"><label>Min Stock</label><input id="flowerMinStock" type="number" min="0" value="0"></div>
         <div class="field full">
@@ -181,6 +183,7 @@
             <label for="flowerPhotoCamera" style="flex:1;margin:0;text-transform:none;text-align:center;padding:10px 0;background:var(--blush);border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;">📷 Take Photo</label>
             <label for="flowerPhotoFile" style="flex:1;margin:0;text-transform:none;text-align:center;padding:10px 0;background:var(--blush);border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;">🖼️ Choose File</label>
           </div>
+          <div id="flowerPasteBox"></div>
           <input type="file" id="flowerPhotoCamera" accept="image/*" capture="environment" style="display:none;">
           <input type="file" id="flowerPhotoFile" accept="image/*" style="display:none;">
           <div id="flowerPhotoWrap" style="display:none;position:relative;width:100px;margin-top:8px;">
@@ -364,6 +367,7 @@ function flowerPhotoReset(){
 document.getElementById('flowerPhotoCamera').addEventListener('change', function(){ flowerPhotoSet(this.files[0]); });
 document.getElementById('flowerPhotoFile').addEventListener('change', function(){ flowerPhotoSet(this.files[0]); });
 document.getElementById('flowerPhotoClear').addEventListener('click', flowerPhotoReset);
+try{ LBPastePic.attach(document.getElementById('flowerPasteBox'), flowerPhotoSet); }catch(e){}
 function flowerPhotoToken(){ try{ return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
 
 // ---------- Flower save ----------
@@ -373,6 +377,11 @@ document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
   if(!name){
     resultBox.className = 'result err';
     resultBox.textContent = 'Flower name is required.';
+    return;
+  }
+  if(!(Number(document.getElementById('flowerRate').value) > 0)){
+    resultBox.className = 'result err';
+    resultBox.textContent = 'Please type the Rate (BHD).';
     return;
   }
   const btn = document.getElementById('saveFlowerBtn');
@@ -414,7 +423,9 @@ document.getElementById('saveFlowerBtn').addEventListener('click', ()=>{
       }
       document.getElementById('flowerName').value = '';
       document.getElementById('flowerOrigin').value = '';
-      document.getElementById('flowerRate').value = 0;
+      document.getElementById('flowerRate').value = '';
+      document.getElementById('flowerUnit').value = '';
+      document.getElementById('flowerStems').value = '';
       document.getElementById('flowerMinStock').value = 0;
       hollandSuggestedRate = null;
       hollandOdooPrice = null;

@@ -114,6 +114,7 @@
 <meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
 <link rel="stylesheet" href="shared/glass-skin.css">
 <script src="shared/glass-skin.js"></script>
+<script src="shared/paste-pic.js?v=1"></script>
 </head>
 <body>
 <button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
@@ -172,6 +173,7 @@
 
     <label>Reference Photo (optional — auto-compressed)</label>
     <input type="file" id="arrPhoto" accept="image/*">
+    <div id="arrPasteBox"></div>
     <div id="arrPhotoHint" style="font-size:11px;color:var(--muted);margin:-8px 0 10px;"></div>
     <img id="arrPhotoPreview" style="display:none;max-width:120px;border-radius:10px;margin-bottom:14px;">
 
@@ -230,8 +232,9 @@ function compressImage(file){
     reader.readAsDataURL(file);
   });
 }
-document.getElementById('arrPhoto').addEventListener('change', async function(){
-  const file = this.files[0];
+document.getElementById('arrPhoto').addEventListener('change', function(){ arrPhotoUse(this.files[0]); });
+try{ LBPastePic.attach(document.getElementById('arrPasteBox'), function(f){ arrPhotoUse(f); }); }catch(e){}
+async function arrPhotoUse(file){
   if(!file) return;
   const hint = document.getElementById('arrPhotoHint');
   hint.textContent = 'Compressing…';
@@ -246,7 +249,7 @@ document.getElementById('arrPhoto').addEventListener('change', async function(){
     hint.textContent = 'Could not process this image.';
     arrPhotoData = null;
   }
-});
+}
 
 /* ---------- Barcode scanning (same native BarcodeDetector pattern used in chocolate-barcode.html) ---------- */
 let scanStream = null;
