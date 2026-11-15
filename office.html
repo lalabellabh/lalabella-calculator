@@ -661,18 +661,21 @@
     var choc = /choc|tsokolate|chocolate/i.test(q), flow = /flower|bulaklak|rose/i.test(q); if(!choc && !flow){ choc = flow = true; }
     var mk = function(k, lines, sp){ var e = EMP[k] || { name:'', role:'' }; return { k:k, r:{ name:e.name, role:e.role, st:e.st, text:L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + lines.join('\n'), speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name } }; };
     // Nov 15 2026: stock before -> after of the calc sales (was the deduction right?) -> Ada the Auditor, from the live log
-    if(/bawas|before|after|galaw|deduct|nabawas|movement|binawas|kinuha sa stock/i.test(q)){
+    if(/bawas|before|after|galaw|deduct|nabawas|movement|binawas|kinuha sa stock|na-?add|added|dagdag|nadagdag|pumasok/i.test(q)){
       var one = BR_ALIASES.filter(function(a){ return a[1].test(q); }).map(function(a){ return a[0]; })[0] || '';
       var kind = (choc && !flow) ? 'chocolate' : (flow && !choc) ? 'flower' : '';
       var tk = ''; try{ tk = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){}
       var api = (window.LB_CONFIG && LB_CONFIG.CALC_SALE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast';
-      return fetch(api + '?' + new URLSearchParams({ action:'stockMoves', token:tk, kind:kind, branch:one, limit:'8' })).then(function(x){ return x.json(); }).then(function(d){
+      return fetch(api + '?' + new URLSearchParams({ action:'stockMoves', token:tk, kind:kind, branch:one, limit:'150' })).then(function(x){ return x.json(); }).then(function(d){
         var mv = (d && d.success && d.moves) || [];
         var n = function(m, v){ return m.unit === 'kg' ? (Math.round(v * 1000) / 1000).toFixed(3) : String(Math.round(v * 1000) / 1000); };
+        var T = (window.LBCalcToday && LBCalcToday.todayTotals) ? LBCalcToday.todayTotals(mv) : null, fz = function(o){ return Object.keys(o).map(function(u){ return (Math.round(o[u] * 1000) / 1000) + ' ' + u; }).join(' + ') || '0'; };
+        var top = T ? [L('**Today:** ＋ added ', '**Ngayon:** ＋ nadagdag ') + fz(T.add) + (T.received ? ' (' + T.received + L(' received', ' na-receive') + ')' : '') + L(' · − taken out ', ' · − nabawas ') + fz(T.out), ''] : [];
+        var all = mv; mv = mv.slice(0, 8);
         var lines = mv.length ? mv.map(function(m){ return (m.kind === 'flower' ? '🌸 ' : '🍫 ') + '**' + m.item + '** · ' + brName(m.branch) + ': ' + n(m, m.before) + ' → **' + n(m, m.after) + '** (' + (m.change > 0 ? '+' : '−') + n(m, Math.abs(m.change)) + ' ' + m.unit + ') · ' + m.action + (m.ref ? ' · ' + m.ref : '') + ' · ' + (m.by || ''); })
           : [L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')];
-        var said = (window.LBCalcToday && LBCalcToday.movesText) ? LBCalcToday.movesText(mv, 4) : '';
-        return mk('auditor', [L('**Stock before → after (latest calc sales):**', '**Stock bago → pagkatapos (huling calc sales):**')].concat(lines), (mv.length ? L('Here are the latest stock changes, ', 'Heto po ang huling galaw ng stock, ') + G + '. ' + said : L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')));
+        var said = (window.LBCalcToday && LBCalcToday.movesText) ? LBCalcToday.movesText(all, 4) : '';
+        return mk('auditor', top.concat([L('**Stock before → after (latest):**', '**Stock bago → pagkatapos (pinakahuli):**')]).concat(lines), (mv.length ? L('Here are the latest stock changes, ', 'Heto po ang huling galaw ng stock, ') + G + '. ' + said : L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')));
       }).catch(function(){ return mk('auditor', [L('I could not load the stock changes. Check the connection.', 'Hindi ko makuha ang galaw ng stock. Pakitingnan ang internet.')], L('I could not load the stock changes.', 'Hindi ko makuha ang galaw ng stock.')); });
     }
     // stock count / receiving -> Ada the Auditor
@@ -1020,6 +1023,6 @@
   setInterval(function(){ if(!document.hidden) load(); }, 30000);
 })();
 </script>
-<script src="shared/calc-today.js?v=2"></script>
+<script src="shared/calc-today.js?v=3"></script>
 </body>
 </html>

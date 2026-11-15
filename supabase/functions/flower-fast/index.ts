@@ -493,7 +493,14 @@ async function decideReceiving(p: Record<string, any>, authUser: any, approve: b
   const ids = done.map((r: any) => r.id);
   // Nov 2026 (Bench): approving a receiving adds stock ONLY. Its rate change stays Pending and is approved
   // separately in Rate Approval, like before. Rejecting a receiving also rejects its rate change (no stock = no new rate).
-  if (approve) return { success: true, lines: done.length, rates: 0 };
+  if (approve) {
+    // Nov 15 2026: before -> after record of what this receiving added (the calc log in calcsale-fast keeps all stock moves)
+    try {
+      const lines = done.filter((r: any) => r.type !== 'Supply').map((r: any) => { const u = String(r.unit || '').trim().toLowerCase(), spb = Number(r.stems_per_bunch) || 1; return { branch: r.branch, item: r.flower_name, qty: u === 'bunch' ? (Number(r.qty) || 0) * spb : (Number(r.qty) || 0) }; });
+      if (lines.length) await Promise.race([fetch(`${SB_URL}/functions/v1/calcsale-fast`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logReceived', token: p.token, kind: 'flower', ref: (done[0].invoice_no ? 'Inv ' + done[0].invoice_no : batch), lines: JSON.stringify(lines) }) }), new Promise((r) => setTimeout(r, 6000))]);
+    } catch (_) { /* never block an approval */ }
+    return { success: true, lines: done.length, rates: 0 };
+  }
   const rcs = await sbGet('flower_rate_change_history', `select=id&approval_status=eq.Pending%20Approval&source_id=in.(${ids.join(',')})`);
   for (const rc of rcs) await approveRejectRate({ row: rc.id, approvedBy: who }, 'rejectRate');
   return { success: true, lines: done.length, rates: rcs.length };

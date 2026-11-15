@@ -293,6 +293,29 @@ Deno.serve(async (req) => {
       catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
     if (a === 'listSales') return json(await listSales(p));
+    // receiving approved (called by flower-fast / chocolate-fast with the approver's token): the stock now already has it -> before = now - qty
+    if (a === 'logReceived') {
+      let lines: any[] = []; try { lines = JSON.parse(p.lines || '[]'); } catch { lines = []; }
+      const kind = p.kind === 'chocolate' ? 'chocolate' : 'flower', mv: any[] = [];
+      const by: Record<string, any> = {};
+      lines.slice(0, 200).forEach((l: any) => { const br = txt(l.branch, 30), it = txt(l.item, 120), un = kind === 'flower' ? 'stems' : unitLabel(l.unit), q = r3(Number(l.qty) || 0); if (!br || !it || q <= 0 || BRANCHES.indexOf(br) === -1) return; const k = br + '|' + it + '|' + un; by[k] = by[k] ? { ...by[k], q: r3(by[k].q + q) } : { br, it, un, q }; });
+      for (const k of Object.keys(by)) {
+        const x = by[k]; let now = 0;
+        if (kind === 'flower') now = (await flowerAvailable(x.br, [x.it]))[x.it] || 0; else now = (await chocBranchStock(x.br, x.it))[x.un] || 0;
+        mv.push({ kind, branch: x.br, item: x.it, unit: x.un, before: r3(now - x.q), change: x.q, after: r3(now), ref: txt(p.ref, 60) || null, action: 'Received', by: who(u) });
+      }
+      await logMoves(mv); return json({ success: true, logged: mv.length });
+    }
+    // one-time: a sale made before this log existed -> before = stock now + qty (Admin)
+    if (a === 'backfillSaleMoves') {
+      if (!admin) return json({ success: false, error: 'Admin only.' });
+      const s = (await sbGet(`calc_sales?select=*&sale_no=eq.${encodeURIComponent(txt(p.saleNo, 20))}&status=eq.Active&limit=1`))[0];
+      if (!s || s.kind !== 'flower') return json({ success: false, error: 'Flower sale not found.' });
+      const qty: Record<string, number> = {}; (s.deducted || []).forEach((d: any) => { qty[String(d.name)] = r3((qty[String(d.name)] || 0) + (Number(d.qty) || 0)); });
+      const av = await flowerAvailable(s.branch, Object.keys(qty));
+      const mv = Object.keys(qty).map((n) => ({ at: s.created_at, kind: 'flower', branch: s.branch, item: n, unit: 'stems', before: r3(av[n] + qty[n]), change: -qty[n], after: av[n], ref: s.sale_no, action: 'Sold (recorded later)', by: s.created_by || who(u) }));
+      await logMoves(mv); return json({ success: true, logged: mv.length });
+    }
     if (a === 'stockMoves') {
       const dRx = /^\d{4}-\d{2}-\d{2}$/; let q = 'stock_moves?select=*&order=id.desc&limit=' + Math.min(500, Math.max(1, Number(p.limit) || 100));
       if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;

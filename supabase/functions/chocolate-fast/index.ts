@@ -526,7 +526,7 @@ async function decideReceivingChoc(p: Record<string, any>, me: any, approve: boo
   const batch = String(p.batch || '').trim();
   if (!batch) return { success: false, error: 'No receiving selected.' };
   const filter = batch.startsWith('ROW-') ? `id=eq.${Number(batch.slice(4)) || 0}` : `batch_ref=eq.${encodeURIComponent(batch)}`;
-  const rows = await sbGet('chocolate_database', `select=id,qty_received,qty_used&${filter}&approval_status=eq.Pending`);
+  const rows = await sbGet('chocolate_database', `select=id,qty_received,qty_used,chocolate_name,unit,branch,delivery_note_no&${filter}&approval_status=eq.Pending`);
   if (!rows.length) return { success: false, error: 'This receiving was already checked by someone else.' };
   const who = String(me.full_name || me.username || '');
   let n = 0;
@@ -535,6 +535,12 @@ async function decideReceivingChoc(p: Record<string, any>, me: any, approve: boo
       ? { approval_status: 'Approved', approved_by: who, approved_at: new Date().toISOString(), current_stock: (Number(r.qty_received) || 0) - (Number(r.qty_used) || 0) }
       : { approval_status: 'Rejected', approved_by: who, approved_at: new Date().toISOString(), current_stock: 0 });
     n += done.length;
+  }
+  if (approve && n) {   // Nov 15 2026: before -> after record of what this receiving added (calcsale-fast stock log)
+    try {
+      const lines = rows.map((r: any) => ({ branch: r.branch, item: r.chocolate_name, unit: r.unit, qty: (Number(r.qty_received) || 0) - (Number(r.qty_used) || 0) }));
+      await Promise.race([fetch(`${SB_URL}/functions/v1/calcsale-fast`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logReceived', token: p.token, kind: 'chocolate', ref: rows[0].delivery_note_no ? "DN " + rows[0].delivery_note_no : batch, lines: JSON.stringify(lines) }) }), new Promise((r) => setTimeout(r, 6000))]);
+    } catch (_) { /* never block an approval */ }
   }
   return { success: true, lines: n };
 }
