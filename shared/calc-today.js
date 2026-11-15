@@ -60,7 +60,7 @@
           var T = window.LBCalcToday.todayTotals(list), fz = function (o) { return Object.keys(o).map(function (u) { return '<b>' + (Math.round(o[u] * 1000) / 1000) + '</b> ' + esc(u); }).join(' + ') || '0'; };
           el.innerHTML = '<div class="mt" style="padding:6px 10px;line-height:1.5;display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 <b>Stock before → after</b> · Receiving + ✓ Sold / Edit / Cancel' +
             '<span style="flex-basis:100%;height:0"></span><span>Today: <span style="color:#2f7a4f">＋ added ' + fz(T.add) + (T.received ? ' (' + T.received + ' received)' : '') + '</span> · <span style="color:#b0413e">− taken out ' + fz(T.out) + '</span></span>' +
-            '<button type="button" data-say-moves style="margin-left:auto;border:1px solid #ddd;background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer">🔊 Read latest</button></div>' +
+            '<button type="button" data-say-moves style="margin-left:auto;border:1px solid #ddd;background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer">🔊 Read today</button></div>' +
             (list.length ? list.map(function (m) {
               var up = m.change > 0, n = function (v) { return m.unit === 'kg' ? f3(v) : String(Math.round(v * 1000) / 1000); };
               return '<div class="row"><div class="nm">' + esc(m.item) + ' <span class="mt">· ' + esc(m.branch) + ' · ' + esc(m.action) + (m.ref ? ' · ' + esc(m.ref) : '') + '</span>' +
@@ -83,7 +83,7 @@
     movesText: function (list, n) {
       var T = window.LBCalcToday.todayTotals(list), fmt = function (o) { return Object.keys(o).map(function (u) { var v = Math.round(o[u] * 1000) / 1000; return v + (u === 'kg' ? ' kilo' : ' ' + u); }).join(' and '); };
       var head = (Object.keys(T.add).length || Object.keys(T.out).length) ? 'Today: ' + (Object.keys(T.add).length ? 'added ' + fmt(T.add) + (T.received ? ' from receiving, ' + T.received + ' kind' + (T.received > 1 ? 's' : '') : '') : 'nothing added') + '. ' + (Object.keys(T.out).length ? 'Taken out ' + fmt(T.out) + '.' : 'Nothing taken out.') + ' ' : '';
-      return head + (list || []).slice(0, n || 5).map(function (m) {
+      return head + (list || []).slice(0, n == null ? 5 : n).map(function (m) {
         var v = function (x) { return m.unit === 'kg' ? (Math.round(x * 1000) / 1000) + ' kilo' : (Math.round(x * 1000) / 1000) + (m.unit === 'stems' ? ' stems' : ' ' + m.unit); };
         return m.item + ' in ' + m.branch + ': from ' + v(m.before) + ' to ' + v(m.after) + ', ' + (m.change > 0 ? 'plus ' : 'minus ') + v(Math.abs(m.change)) + (m.action ? ', ' + m.action.replace(/\s*\(.*\)/, '') : '') + (m.ref ? ', ' + m.ref.replace('CS-0000', 'C S ') : '') + '.';
       }).join(' ');
@@ -91,7 +91,8 @@
   };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-say-moves]'); if (!b) return;
-    var txt = window.LBCalcToday.movesText(window.__lbMoves, 5) || 'No stock changes yet.';
+    // Nov 2026 (Bench): the dashboard reads the summary only (today's totals), not every flower one by one
+    var txt = window.LBCalcToday.movesText(window.__lbMoves, 0).trim() || 'No stock changes today yet.';
     try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch (er) { alert(txt); }
   });
 })();
