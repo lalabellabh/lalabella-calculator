@@ -100,9 +100,9 @@ async function list(u: any) {
     sbGetAll('saudi_photos?select=*&order=sort_order.asc,id.asc'),
   ]);
   const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url)].filter(Boolean));
-  const linePics: Record<string, string[]> = {}, batchPics: any[] = [];
+  const linePics: Record<string, string[]> = {}, lineInfo: Record<string, any[]> = {}, batchPics: any[] = [];
   pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
-    if (x.line_id) (linePics[x.line_id] = linePics[x.line_id] || []).push(u);
+    if (x.line_id) { (linePics[x.line_id] = linePics[x.line_id] || []).push(u); (lineInfo[x.line_id] = lineInfo[x.line_id] || []).push({ id: x.id, url: u, canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); }
     else batchPics.push({ id: x.id, batch: x.batch_label, batchDate: x.batch_date, url: u, caption: x.caption || '', canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); });
   const byLine: Record<string, any[]> = {};
   rets.forEach((r: any) => { (byLine[r.line_id] = byLine[r.line_id] || []).push({ id: r.id, kind: r.kind, qty: r.qty == null ? null : Number(r.qty), date: r.return_date || '', branch: r.branch || '',
@@ -119,7 +119,7 @@ async function list(u: any) {
     else status = /^\s*-\s*$/.test(String(r.returned || '')) ? 'unknown' : 'still';
     return { id: r.id, batch: r.batch_label, batchDate: r.batch_date, no: r.line_no, reference: r.reference || '', quantity: r.quantity || '', qtySent: sent, unit: r.unit || '',
       notes: r.notes || '', notesRows: r.notes_rows || 1, excelReturned: r.source === 'excel' ? (r.returned || '') : '', from: r.from_branch || '', givenTo: r.given_to || '',
-      photo: r.photo_url ? (signed[r.photo_url] || '') : '', photos: linePics[r.id] || [], source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
+      photo: r.photo_url ? (signed[r.photo_url] || '') : '', photos: linePics[r.id] || [], photoInfo: lineInfo[r.id] || [], source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
       moves, returned: nBack, kept: nKept, left, status };
   });
   return { success: true, rows, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
@@ -189,6 +189,13 @@ async function editLine(p: any, u: any) {
   if (p.from !== undefined) f.from_branch = BR(p.from);
   if (p.givenTo !== undefined) f.given_to = txt(p.givenTo, 60) || null;
   if (p.photo) { const ph = await savePhoto(String(p.photo)); if (!ph) return { success: false, error: 'The picture could not be saved.' }; f.photo_url = ph; }
+  // Nov 15 2026: one more picture on this line (keeps the others) — file, camera or Ctrl+V
+  if (p.addPhoto) {
+    const ln = (await sbGet(`saudi_transfers?select=id,batch_label,batch_date&id=eq.${id}&limit=1`))[0]; if (!ln) return { success: false, error: 'Line not found.' };
+    const n = (await sbGet(`saudi_photos?select=id&line_id=eq.${id}`)).length; if (n >= 20) return { success: false, error: 'This line already has 20 pictures.' };
+    const url = await savePhoto(String(p.addPhoto)); if (!url) return { success: false, error: 'The picture could not be saved.' };
+    await sbPost('saudi_photos', [{ line_id: id, batch_label: ln.batch_label, batch_date: ln.batch_date, url, sort_order: 100 + n, caption: null, source: 'added', created_by: who(u) }]);
+  }
   await sbPatch('saudi_transfers', `id=eq.${id}`, f);
   return { success: true };
 }
@@ -232,7 +239,7 @@ Deno.serve(async (req) => {
     if (a === 'deleteBatchPhoto') {
       const id = parseInt(String(p.id || ''), 10); if (!id) return json({ success: false, error: 'Missing id.' });
       const ph = (await sbGet(`saudi_photos?select=id,url,source,created_by,line_id&id=eq.${id}&limit=1`))[0];
-      if (!ph || ph.line_id) return json({ success: false, error: 'Picture not found.' });
+      if (!ph) return json({ success: false, error: 'Picture not found.' });
       if (!isAdmin(u) && !(ph.source === 'added' && ph.created_by === who(u))) return json({ success: false, error: 'Only an admin or the person who added it can delete this picture.' });
       await sbDelete('saudi_photos', `id=eq.${id}`);
       const path = String(ph.url || '').indexOf(PUB) === 0 ? String(ph.url).slice(PUB.length) : (/^https?:/.test(String(ph.url || '')) ? '' : String(ph.url || ''));
