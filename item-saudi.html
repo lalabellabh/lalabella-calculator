@@ -152,6 +152,8 @@
   </div>
   <label>Notes (optional)</label><textarea id="sNotes" placeholder="e.g. for the wedding in Riyadh"></textarea>
   <div id="sLines"></div>
+  <button type="button" id="sPick" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px solid #2f7a4f;color:#2f7a4f;background:#eef8f1;border-radius:9px;padding:8px 12px;cursor:pointer">↩️ Pick from items that came back</button>
+  <div id="sPickBox" style="display:none;margin-top:6px"><input id="sPickQ" placeholder="🔍 Search items that came back… e.g. gold stand"><div class="pick" id="sPickList" style="max-height:38vh"></div></div>
   <button type="button" id="sAdd" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #c9506b;color:#9e2f4a;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer">＋ Add item</button>
   <label>📷 Picture of what was sent</label>
   <div class="photo"><input type="file" accept="image/*" capture="environment" id="sPhoto"><img id="sPrev" alt=""></div>
@@ -601,24 +603,55 @@
   }
 
   // ---------- SEND ----------
-  function addLine(){
-    var d = document.createElement('div'); d.className = 'line';
-    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div style="display:flex;gap:8px;align-items:center;margin-bottom:2px">' + picBtn('') + '<span style="font-size:11.5px;color:#7a6670">📷 Picture of this item (optional)</span></div><div class="grid3"><div><label>Item</label><input data-f="reference" placeholder="e.g. Gold Stand"></div>' +
+  function addLine(pre){
+    pre = pre && pre.reference !== undefined ? pre : null;
+    var d = document.createElement('div'); d.className = 'line'; if(pre) d.setAttribute('data-from', pre.fromLine);
+    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div style="display:flex;gap:8px;align-items:center;margin-bottom:2px">' + picBtn(pre ? pre.photo : '') + '<span style="font-size:11.5px;color:#7a6670">' + (pre ? '↩️ came back from ' + esc(pre.from) + ' · tap the picture to change it' : '📷 Picture of this item (optional)') + '</span></div><div class="grid3"><div><label>Item</label><input data-f="reference" placeholder="e.g. Gold Stand"></div>' +
       '<div><label>Qty</label><input data-f="qty" type="number" min="0" step="any" inputmode="decimal"></div><div><label>Unit</label><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select></div></div>' +
       '<label>Details (optional)</label><input data-f="details" placeholder="e.g. Entrance 6 · Dining 12 · Extra 2">';
     d.querySelector('.x').onclick = function(){ d.remove(); };
     $('sLines').appendChild(d); wirePic(d);
-    try{ if(window.LBExtrasPick) LBExtrasPick.attach(d.querySelector('[data-f=reference]'), d.querySelector('[data-f=qty]')); }catch(e){}
-    d.querySelector('input').focus();
+    if(pre){ d.querySelector('[data-f=reference]').value = pre.reference; d.querySelector('[data-f=qty]').value = pre.qty; if(UNITS.indexOf(pre.unit) !== -1) d.querySelector('[data-f=unit]').value = pre.unit; }
+    else try{ if(window.LBExtrasPick) LBExtrasPick.attach(d.querySelector('[data-f=reference]'), d.querySelector('[data-f=qty]')); }catch(e){}
+    if(!pre) d.querySelector('[data-f=reference]').focus();
+    return d;
   }
-  $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; resetPaste('sPhoto', 'sPaste'); $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
+  // ↩️ Pick from items that came back (returned to a Bahrain branch) -> a new line with name, qty and the old picture
+  function renderSPick(){
+    var q = $('sPickQ').value.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), html = '';
+    var used = {}; document.querySelectorAll('#sLines .line[data-from]').forEach(function(l){ used[l.getAttribute('data-from')] = 1; });
+    groups().forEach(function(g){
+      var back = g.filter(function(r){ var b = r.moves.filter(function(m){ return m.kind === 'return'; }); if(!b.length) return false; var h = hay(r); return words.every(function(w){ return h.indexOf(w) !== -1; }); });
+      if(!back.length) return;
+      html += '<div class="g">' + esc(g[0].batch) + ' · ' + fd(g[0].batchDate) + '</div>' + back.map(function(r){
+        var pic = r.photo || (r.photos || [])[0] || '', m = r.moves.filter(function(x){ return x.kind === 'return'; }), last = m[m.length - 1];
+        return '<div class="r" style="grid-template-columns:46px 1fr 70px;cursor:pointer" data-spick="' + r.id + '">' + (pic ? '<img src="' + esc(pic) + '" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:8px">' : '<span style="font-size:22px;text-align:center">📦</span>') +
+          '<span>' + hl(String(r.reference).replace(/\n/g, ' '), q) + '<div class="s" style="color:#2f7a4f">↩️ ' + (r.returned != null ? esc(n3(r.returned)) + ' ' + esc(r.unit || '') + ' ' : '') + 'came back' + (last && last.branch ? ' · ' + esc(last.branch) : '') + (last && last.date ? ' · ' + esc(fd(last.date)) : '') + '</div></span>' +
+          '<button type="button" style="font:inherit;font-weight:800;border:0;border-radius:8px;padding:8px;background:' + (used[r.id] ? '#ddd;color:#777' : '#2f7a4f;color:#fff') + '">' + (used[r.id] ? 'Added' : '＋ Add') + '</button></div>';
+      }).join('');
+    });
+    $('sPickList').innerHTML = html || '<div class="empty">' + (q ? 'Nothing matches.' : 'Nothing has come back yet.') + '</div>';
+  }
+  $('sPick').onclick = function(){ var b = $('sPickBox'), show = b.style.display === 'none'; b.style.display = show ? '' : 'none'; if(show){ $('sPickQ').value = ''; renderSPick(); $('sPickQ').focus(); } };
+  $('sPickQ').oninput = renderSPick;
+  $('sPickList').addEventListener('click', function(e){
+    var row = e.target.closest('[data-spick]'); if(!row || e.target.closest('img')) return;
+    var r = ROWS.find(function(x){ return String(x.id) === row.getAttribute('data-spick'); }); if(!r) return;
+    if(document.querySelector('#sLines .line[data-from="' + r.id + '"]')) return;
+    // replace the first empty line, else add a new one
+    Array.prototype.forEach.call(document.querySelectorAll('#sLines .line:not([data-from])'), function(l){ if(!l.querySelector('[data-f=reference]').value.trim() && !l.querySelector('[data-f=qty]').value) l.remove(); });
+    addLine({ reference: String(r.reference).split('\n')[0], qty: r.returned != null ? n3(r.returned) : '', unit: r.unit || 'pcs', photo: r.photo || (r.photos || [])[0] || '', fromLine: r.id, from: r.batch });
+    renderSPick();
+  });
+  $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPickBox').style.display = 'none'; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; resetPaste('sPhoto', 'sPaste'); $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
   $('sAdd').onclick = addLine;
   $('sSave').onclick = function(){
     var lineEls = Array.prototype.filter.call(document.querySelectorAll('#sLines .line'), function(l){ return l.querySelector('[data-f=reference]').value.trim(); });
-    var lines = lineEls.map(function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details') }; });
+    var lines = lineEls.map(function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details'), fromLine: l.getAttribute('data-from') || '' }; });
     if(!$('sDate').value){ $('sMsg').textContent = 'Pick the date it was sent.'; return; }
     if(!lines.length){ $('sMsg').textContent = 'Add at least one item.'; return; }
-    if(!hasPhoto('sPhoto')){ $('sMsg').textContent = 'Add a picture of what was sent.'; return; }
+    var everyPic = lineEls.every(function(l){ var lb = l.querySelector('.ipic'), inp = lb && lb.querySelector('input'); return (inp && inp.files && inp.files.length) || (l.getAttribute('data-from') && lb && lb.querySelector('img').getAttribute('src')); });
+    if(!hasPhoto('sPhoto') && !everyPic){ $('sMsg').textContent = 'Add a picture of what was sent (or a picture on every item).'; return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
     Promise.all(lineEls.map(picOf)).then(function(pics){ lines.forEach(function(l, i){ if(pics[i]) l.photo = pics[i]; }); return readPhoto($('sPhoto')); }).then(function(photo){
       return api({ action:'send', batchDate:$('sDate').value, batch:$('sLabel').value, from:$('sFrom').value, givenTo:$('sTo').value, notes:$('sNotes').value, lines:JSON.stringify(lines), photo:photo }, true);

@@ -148,8 +148,13 @@ async function send(p: any, u: any) {
   let lines: any[] = []; try { lines = JSON.parse(String(p.lines || '[]')); } catch { return { success: false, error: 'Bad list.' }; }
   lines = (Array.isArray(lines) ? lines : []).slice(0, 100).filter((l: any) => txt(l.reference, 400));
   if (!lines.length) return { success: false, error: 'Add at least one item.' };
-  if (!p.photo) return { success: false, error: 'Add a picture of what was sent.' };
-  const photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' };
+  // Nov 15 2026: a line picked from "items that came back" keeps that line's picture (fromLine)
+  const fromIds = [...new Set(lines.map((l: any) => Number(l.fromLine)).filter((n: number) => Number.isInteger(n) && n > 0))];
+  const fromPic: Record<string, string> = {};
+  if (fromIds.length) (await sbGet(`saudi_transfers?select=id,photo_url&id=in.(${fromIds.join(',')})`)).forEach((x: any) => { if (x.photo_url) fromPic[x.id] = x.photo_url; });
+  const allHavePic = lines.every((l: any) => l.photo || fromPic[Number(l.fromLine)]);
+  if (!p.photo && !allHavePic) return { success: false, error: 'Add a picture of what was sent.' };
+  const photo = p.photo ? await savePhoto(String(p.photo)) : ''; if (p.photo && !photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' };
   const label = txt(p.batch, 60) || new Date(bd + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'long', timeZone: 'UTC' }).replace(' ', '-');
   const last = await sbGet(`saudi_transfers?select=sort_order,line_no&batch_date=eq.${bd}&batch_label=eq.${encodeURIComponent(label)}&order=sort_order.desc&limit=1`);
   const start = (last[0] && last[0].sort_order) || 0, notes = txt(p.notes, 400) || null;
@@ -161,7 +166,7 @@ async function send(p: any, u: any) {
     return { batch_label: label, batch_date: bd, line_no: start + i + 1, sort_order: start + i + 1, reference: txt(l.reference, 400),
       qty_sent: q, unit, quantity: [q != null ? q + ' ' + (unit || '') : '', det].filter(Boolean).join('\n') || null,
       notes: i === 0 ? notes : null, notes_rows: i === 0 && notes ? lines.length : 1, from_branch: BR(p.from), given_to: txt(p.givenTo, 60) || null,
-      photo_url: linePic[i] || photo, source: 'manual', created_by: who(u) };
+      photo_url: linePic[i] || fromPic[Number(l.fromLine)] || photo || null, source: 'manual', created_by: who(u) };
   });
   const r = await sbPost('saudi_transfers', rows);
   // Nov 15 2026: the same send is a shipment (checklist) — Saudi ticks it when it arrives
