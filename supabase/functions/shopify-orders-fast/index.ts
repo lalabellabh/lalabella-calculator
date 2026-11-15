@@ -17,13 +17,15 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 async function rest(method: string, path: string, body?: unknown, prefer = 'return=representation') {
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    method,
-    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: prefer },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`db ${res.status}: ${text.slice(0, 300)}`);
+  // Nov 15 2026: retry a dropped connection ("connection reset") — it gave a few 500s on the profile page
+  const opts = { method, headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: prefer }, body: body === undefined ? undefined : JSON.stringify(body) };
+  let res: Response | null = null;
+  for (let i = 0; ; i++) {
+    try { res = await fetch(`${SB_URL}/rest/v1/${path}`, opts); break; }
+    catch (e) { if (i >= 2 || !(e instanceof TypeError)) throw e; await new Promise((r) => setTimeout(r, 250 * (i + 1))); }
+  }
+  const text = await res!.text();
+  if (!res!.ok) throw new Error(`db ${res!.status}: ${text.slice(0, 300)}`);
   try { return text ? JSON.parse(text) : null; } catch { return null; }
 }
 
