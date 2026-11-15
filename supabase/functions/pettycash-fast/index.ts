@@ -300,7 +300,8 @@ async function handleGetCashCounts(p: any) {
 async function handleAddCashCount(p: any) {
   const branch = p.branch;
   const countDate = p.date || new Date().toISOString().slice(0, 10);
-  const countedBy = p.countedBy || '';
+  const countedBy = String(p.countedBy || '').trim().slice(0, 80);
+  if (!countedBy) return { error: 'Write who counted the cash (Counted by).' };   // Nov 15 2026: required
   let breakdown: any[] = [];
   try { breakdown = JSON.parse(p.breakdown || '[]'); } catch { breakdown = []; }
   if (!branch) return { error: 'Branch is required.' };

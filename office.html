@@ -525,7 +525,7 @@
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
   var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[91,41], secretary:[92,53.5], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
   var SPOT = { boss:[88,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
-  var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['saudi','🇸🇦 SAUDI OFFICE',75,25,11,33],['boss','BOSS',87,25,11,33],
+  var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['saudi','🚚 SAUDI OFFICE',75,25,11,33],['boss','BOSS',87,25,11,33],
     ['qa','QA DESK',2,63,22,34],['records','RECORDS',25,63,20,34],['vault','VAULT',46,63,12,34],['deliv','DELIVERY',59,63,15,34],['kitchen','PANTRY',75,63,23,34]];
   var P = {}, inited = false, MAP, PREV = null;
   function depth(y){ return (.8 + .32 * Math.max(0, Math.min(1, (y - 25) / 72))).toFixed(3); }
@@ -675,8 +675,9 @@
         var all = mv; mv = mv.slice(0, 8);
         var lines = mv.length ? mv.map(function(m){ return (m.kind === 'flower' ? '🌸 ' : '🍫 ') + '**' + m.item + '** · ' + brName(m.branch) + ': ' + n(m, m.before) + ' → **' + n(m, m.after) + '** (' + (m.change > 0 ? '+' : '−') + n(m, Math.abs(m.change)) + ' ' + m.unit + ') · ' + m.action + (m.ref ? ' · ' + m.ref : '') + ' · ' + (m.by || ''); })
           : [L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')];
-        var said = (window.LBCalcToday && LBCalcToday.movesText) ? LBCalcToday.movesText(all, 4) : '';
-        return mk('auditor', top.concat([L('**Stock before → after (latest):**', '**Stock bago → pagkatapos (pinakahuli):**')]).concat(lines), (mv.length ? L('Here are the latest stock changes, ', 'Heto po ang huling galaw ng stock, ') + G + '. ' + said : L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')));
+        // Nov 15 2026 (Bench): HQ reads the summary only (today's totals), like the dashboard — the list stays on screen
+        var said = (window.LBCalcToday && LBCalcToday.movesText) ? LBCalcToday.movesText(all, 0).trim() : '';
+        return mk('auditor', top.concat([L('**Stock before → after (latest):**', '**Stock bago → pagkatapos (pinakahuli):**')]).concat(lines), (mv.length ? L('Here is the stock summary, ', 'Heto po ang buod ng stock, ') + G + '. ' + (said || L('No stock changes today yet.', 'Wala pang galaw ngayong araw.')) : L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')));
       }).catch(function(){ return mk('auditor', [L('I could not load the stock changes. Check the connection.', 'Hindi ko makuha ang galaw ng stock. Pakitingnan ang internet.')], L('I could not load the stock changes.', 'Hindi ko makuha ang galaw ng stock.')); });
     }
     // stock count / receiving -> Ada the Auditor

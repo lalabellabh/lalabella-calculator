@@ -413,7 +413,7 @@
       <div class="rc-prev" id="ccPhotoPrev"><img alt="Cash count photo"><button type="button" id="ccPhotoClear" aria-label="Remove photo">✕</button></div>
 
       <label style="margin-top:14px;">Counted By</label>
-      <input type="text" id="ccCountedBy" placeholder="Your name">
+      <input type="text" id="ccCountedBy" placeholder="Your name (needed)" required>
       <button class="save-btn" id="ccSaveBtn">Save Count</button>
       <div class="msg" id="ccMsg"></div>
     </div>
@@ -1370,6 +1370,8 @@ async function markSent(id, btn){
   }
 }
 
+// Counted by is required — start it with the logged-in name (they can change it)
+try{ const _u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || 'null'); const _cb = document.getElementById('ccCountedBy'); if(_u && _cb && !_cb.value) _cb.value = _u.fullName || _u.full_name || _u.username || ''; }catch(e){}
 document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
   const branch = document.getElementById('branchSelect').value;
   const date = document.getElementById('ccDate').value;
@@ -1380,6 +1382,7 @@ document.getElementById('ccSaveBtn').addEventListener('click', async ()=>{
 
   if(branch === 'All'){ msg.textContent = 'Please select a specific branch.'; msg.className = 'msg error'; return; }
   if(!breakdown.length){ msg.textContent = 'Please enter the count for at least one denomination.'; msg.className = 'msg error'; return; }
+  if(!countedBy){ msg.textContent = 'Write who counted the cash (Counted by).'; msg.className = 'msg error'; document.getElementById('ccCountedBy').focus(); return; }
 
   const btn = document.getElementById('ccSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
