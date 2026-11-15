@@ -96,7 +96,12 @@ async function check(branchSel: string) {
   }
   const inv: Record<string, { sum: number; total: number; first: any }> = {};
   for (const r of flowerDb) {
-    if (r.type === 'Supply' || String(r.entry_date || '').slice(0, 10) < since) continue;
+    if (String(r.entry_date || '').slice(0, 10) < since) continue;
+    // Nov 15 2026: supply lines (tube, box…) are part of the same invoice total -> count them in the invoice sum, skip the flower-only checks
+    if (r.type === 'Supply') {
+      if (String(r.invoice_no || '').trim()) { const k = r.branch + '|' + String(r.invoice_no).trim() + '|' + String(r.entry_date || '').slice(0, 10); const g = inv[k] || (inv[k] = { sum: 0, total: Number(r.invoice_total) || 0, first: r }); g.sum += (Number(r.subtotal) || 0) + (Number(r.tax) || 0); }
+      continue;
+    }
     const it = `${r.flower_name} · inv ${r.invoice_no || '—'} · ${dmy(r.entry_date)}`, rid = String(r.legacy_id || r.id), yr = Number(String(r.entry_date || '').slice(0, 4));
     if (yr < 2020 || String(r.entry_date || '').slice(0, 10) > today) add('bad', 'flower', r.branch, it, `Receiving date looks wrong: ${dmy(r.entry_date)}`, 'Fix the date.', 'flower-receiving.html', rid, 'eDate');
     if (/bunch/i.test(String(r.unit || '')) && !(Number(r.stems_per_bunch) > 0)) add('bad', 'flower', r.branch, it, 'Bunch without "stems per bunch" — the stock in stems is wrong', 'Add how many stems are in one bunch.', 'flower-receiving.html', rid, 'eStemsPerBunch');
@@ -105,6 +110,7 @@ async function check(branchSel: string) {
     if (String(r.invoice_no || '').trim()) {
       const k = r.branch + '|' + String(r.invoice_no).trim() + '|' + String(r.entry_date || '').slice(0, 10);
       const g = inv[k] || (inv[k] = { sum: 0, total: Number(r.invoice_total) || 0, first: r });
+      if (g.first.type === 'Supply') g.first = r;
       g.sum += (Number(r.subtotal) || 0) + (Number(r.tax) || 0);
     }
     if (!String(r.received_by || '').trim()) add('warn', 'flower', r.branch, it, 'No "Received by" name', 'Add who received it.', 'flower-receiving.html', String(r.legacy_id || r.id), 'eReceivedBy');
