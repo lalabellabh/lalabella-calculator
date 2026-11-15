@@ -66,6 +66,10 @@
 <script src="shared/nav.js" data-standalone></script>
 <div class="wrap">
   <header>
+    <div id="backCalc" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+      <a href="flower-calc.html" data-k="flower" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">&larr; 🌸 Flower Calc</a>
+      <a href="chocolate-calc.html" data-k="chocolate" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">&larr; 🍫 Chocolate Calc</a>
+    </div>
     <h1>🧾 Calc Sales</h1>
     <div class="sub">Every "✓ Sold" from the Flower Calc and Chocolate Calc — what was taken out of each branch's stock</div>
   </header>
@@ -221,6 +225,15 @@
   var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(load, 350); };
   load();
 })();
+</script>
+<script>
+(function(){ try{
+  var k = new URLSearchParams(location.search).get('kind') || (/chocolate-calc/.test(document.referrer) ? 'chocolate' : /flower-calc/.test(document.referrer) ? 'flower' : '');
+  if(!k) return;
+  var box = document.getElementById('backCalc'), a = box.querySelector('[data-k="' + k + '"]');
+  if(a){ box.insertBefore(a, box.firstChild); a.style.background = '#a8405e'; a.style.color = '#fff'; }
+  var sel = document.getElementById('kind'); if(sel && !sel.value){ sel.value = k; sel.dispatchEvent(new Event('change', { bubbles:true })); }
+}catch(e){} })();
 </script>
 </body>
 </html>
