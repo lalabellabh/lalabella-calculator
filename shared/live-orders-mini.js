@@ -30,10 +30,12 @@
     '#lbLiveMini .ok{margin-top:6px;border:0;border-radius:8px;padding:5px 10px;font:inherit;font-size:12px;font-weight:700;background:#2f7a4f;color:#fff;cursor:pointer}' +
     '#lbLiveMini .e{color:#7a6670;font-size:12.5px;margin-top:6px}' +
     '#lbLiveMini.one{padding:9px 12px}#lbLiveMini.one .rows{display:flex;overflow-x:auto;gap:8px;margin-top:6px;padding-bottom:2px}#lbLiveMini.one .r{flex:0 0 250px}' +
+    '#lbLiveMini .bchk{border:1px solid #e3cfd6;background:#fff;border-radius:99px;padding:2px 10px;font:inherit;font-size:11.5px;font-weight:800;color:#a8405e;cursor:pointer}#lbLiveMini .bchk:disabled{opacity:.6;cursor:default}' +
+    '#lbLiveMini .bmsg{font-size:11.5px;font-weight:600;color:#7a6670}' +
     '@keyframes lbmb{to{opacity:.35}}';
   document.head.appendChild(css);
   var box = document.createElement('div'); box.id = 'lbLiveMini';
-  box.innerHTML = '<div class="h">🎁 Orders <span class="pill" data-br>All</span><span class="dot" data-dot></span><span data-pills></span><a href="live-orders.html">Open Live Orders →</a></div><div data-body><div class="e">Loading…</div></div>';
+  box.innerHTML = '<div class="h">🎁 Orders <span class="pill" data-br>All</span><span class="dot" data-dot></span><span data-pills></span><button type="button" class="bchk" data-bchk style="display:none" title="Check Bleems for new orders now">🔄 Check Bleems</button><span class="bmsg" data-bmsg></span><a href="live-orders.html">Open Live Orders →</a></div><div data-body><div class="e">Loading…</div></div>';
   top.parentNode.insertBefore(box, top.nextSibling);
   // Full-screen glass dashboards (#app = grid: top bar, KPIs, main): give the box its own short row and keep it to one line.
   function fit() {
@@ -73,7 +75,22 @@
     fetch(API + '?action=getLiveOrders&token=' + encodeURIComponent(token()) + '&_=' + Date.now()).then(function (r) { return r.json(); })
       .then(function (d) { if (d && d.success) { DATA = d; render(); } }).catch(function () {}).then(function () { busy = false; });
   }
+  // Nov 15 2026: Admin can make the Bleems check run now (if the 1-minute sync is late or missed an order)
+  var me = {}; try { me = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; } catch (e) {}
+  if (String(me.role || '').toLowerCase() === 'admin') box.querySelector('[data-bchk]').style.display = '';
+  function hm() { return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
   box.addEventListener('click', function (e) {
+    var c = e.target.closest('[data-bchk]');
+    if (c) {
+      var msg = box.querySelector('[data-bmsg]'); c.disabled = true; c.textContent = '⏳ Checking…'; msg.textContent = '';
+      var url = ((window.LB_CONFIG && LB_CONFIG.SUPABASE_URL) || 'https://zoratiahjeldgsognfsj.supabase.co') + '/functions/v1/bleems-fast';
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sync', token: token() }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { msg.textContent = d && d.success ? '✓ Bleems checked ' + hm() + ' · ' + (Number(d.added) ? d.added + ' new' : 'no new order') : '⚠ ' + ((d && d.error) || 'Bleems not reachable'); msg.style.color = d && d.success ? '#2f7a4f' : '#c5483a'; load(); })
+        .catch(function () { msg.textContent = '⚠ No connection'; msg.style.color = '#c5483a'; })
+        .then(function () { setTimeout(function () { c.disabled = false; c.textContent = '🔄 Check Bleems'; }, 15000); });
+      return;
+    }
     var b = e.target.closest('[data-ack]'); if (!b) return; b.disabled = true;
     var q = new URLSearchParams({ action: 'ackLiveOrder', id: b.getAttribute('data-ack'), token: token() });
     fetch(API, { method: 'POST', body: q }).then(load, load);
