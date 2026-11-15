@@ -255,13 +255,17 @@
 
       <div class="card">
         <div class="card-title">🎀 Extras</div>
-        <div class="grid-3">
+        <div class="grid-3" style="grid-template-columns:2fr .7fr 1fr auto;">
           <div>
             <label>Description</label>
             <input type="text" id="extraDesc" placeholder="e.g. Vase, Handwork, Box" />
           </div>
           <div>
-            <label>Price (BD)</label>
+            <label>Qty</label>
+            <input type="number" id="extraQty" min="1" step="1" value="1" />
+          </div>
+          <div>
+            <label>Price each (BD)</label>
             <input type="number" id="extraPrice" min="0" step="0.001" placeholder="0.000" />
           </div>
           <button class="btn btn-outline btn-sm" id="addExtraBtn">Add</button>
@@ -505,14 +509,14 @@
     exEl.innerHTML = extras.map((x, i) => EDIT_KEY === 'extra' + i ? `
       <div class="cart-row cart-edit">
         <div style="flex:1;min-width:0;">
-          <div class="edit-fields"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(x.desc)}"></label><label>Price<input type="number" min="0" step="0.001" data-ed="price" value="${Number(x.price).toFixed(3)}"></label></div>
+          <div class="edit-fields"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(x.desc)}"></label><label>Qty<input type="number" min="1" step="1" data-ed="qty" value="${lbEsc(x.qty || 1)}"></label><label>Price each<input type="number" min="0" step="0.001" data-ed="price" value="${Number(x.each != null ? x.each : x.price).toFixed(3)}"></label></div>
         </div>
         <div class="edit-btns"><button class="edit-save" data-idx="${i}" data-kind="extra">Save</button><button class="edit-cancel">Cancel</button></div>
       </div>` : `
       <div class="cart-row">
         <div>
           <div class="cart-row-name">${(window.LBExtrasPick && LBExtrasPick.thumb) ? LBExtrasPick.thumb(x.desc) : ''}${lbEsc(x.desc)}</div>
-          <div class="cart-row-meta">${fmtBD(x.price)}</div>
+          <div class="cart-row-meta">${(x.qty || 1) > 1 ? lbEsc(x.qty) + ' × ' + fmtBD(x.each) + ' = ' : ''}${fmtBD(x.price)}</div>
         </div>
         <div style="display:flex;align-items:center;"><button class="edit-btn" data-idx="${i}" data-kind="extra" title="Edit">✏️</button><button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button></div>
       </div>
@@ -550,12 +554,14 @@
 
   document.getElementById('addExtraBtn').addEventListener('click', ()=>{
     const desc = document.getElementById('extraDesc').value.trim();
-    const price = parseFloat(document.getElementById('extraPrice').value) || 0;
-    if(!desc || price <= 0){ alert('Enter a Description and Price.'); return; }
-    extras.push({ desc, price });
-    try{ LBExtrasPick.noteAdd(document.getElementById('extraDesc'), price, 'flower'); }catch(e){}
+    const each = parseFloat(document.getElementById('extraPrice').value) || 0;
+    const qty = Math.max(1, parseFloat(document.getElementById('extraQty').value) || 1);
+    if(!desc || each <= 0){ alert('Enter a Description and Price.'); return; }
+    extras.push({ desc, qty, each, price: Math.round(qty * each * 1000) / 1000 });   // price = line total
+    try{ LBExtrasPick.noteAdd(document.getElementById('extraDesc'), each, 'flower'); }catch(e){}
     document.getElementById('extraDesc').value = '';
     document.getElementById('extraPrice').value = '';
+    document.getElementById('extraQty').value = 1;
     renderCart();
   });
 
@@ -574,7 +580,8 @@
       } else {
         const d = String(v('desc') || '').trim(), pr = parseFloat(v('price'));
         if(!d || !(pr > 0)){ alert('Enter a Description and Price.'); return; }
-        extras[i].desc = d; extras[i].price = pr;
+        const xq = Math.max(1, parseFloat(v('qty')) || 1);
+        extras[i].desc = d; extras[i].qty = xq; extras[i].each = pr; extras[i].price = Math.round(xq * pr * 1000) / 1000;
       }
       EDIT_KEY = ''; renderCart(); return;
     }
@@ -607,7 +614,7 @@
     document.getElementById('a4Rows').innerHTML = cart.map(c => `
       <tr><td>${lbEsc(c.name)}</td><td>${lbEsc(c.qty)}</td><td>${fmtBD(c.rate)}</td><td>${fmtBD(c.qty*c.rate)}</td></tr>
     `).join('') + extras.map(x => `
-      <tr><td colspan="3">${lbEsc(x.desc)}</td><td>${fmtBD(x.price)}</td></tr>
+      <tr><td>${lbEsc(x.desc)}</td><td>${lbEsc(x.qty || 1)}</td><td>${fmtBD(x.each != null ? x.each : x.price)}</td><td>${fmtBD(x.price)}</td></tr>
     `).join('');
     document.getElementById('a4Grand').textContent = fmtBD(grand);
 
@@ -616,7 +623,7 @@
     document.getElementById('tRows').innerHTML = cart.map(c => `
       <div class="t-row"><span>${lbEsc(c.name)} x${lbEsc(c.qty)}</span><span>${fmtBD(c.qty*c.rate)}</span></div>
     `).join('') + extras.map(x => `
-      <div class="t-row"><span>${lbEsc(x.desc)}</span><span>${fmtBD(x.price)}</span></div>
+      <div class="t-row"><span>${lbEsc(x.desc)}${(x.qty || 1) > 1 ? ' x' + lbEsc(x.qty) : ''}</span><span>${fmtBD(x.price)}</span></div>
     `).join('');
     document.getElementById('tGrand').textContent = fmtBD(grand);
   }
@@ -835,7 +842,7 @@
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
   try{ LBCalcSale.mount({ kind:'flower', anchor: document.getElementById('shareBtn'),
-    get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), extrasList: extras.map(function(x){ return { desc:x.desc, price:x.price }; }), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
+    get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.desc + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.price }; }), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 <script src="joyboy-bubble.js"></script>
 </body>

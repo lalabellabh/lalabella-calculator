@@ -529,7 +529,7 @@
   }
   .extras-form{
     display:grid;
-    grid-template-columns:1fr 120px;
+    grid-template-columns:1fr 64px 120px;
     gap:8px;
   }
   .extras-form input{
@@ -1187,7 +1187,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         </div>
         <div class="extras-form">
           <input id="extraDescription" type="text" placeholder="e.g. Vase" autocomplete="off" />
-          <input id="extraAmount" type="number" min="0" step="0.001" placeholder="0.000 BD" />
+          <input id="extraQty" type="number" min="1" step="1" value="1" title="Qty" placeholder="Qty" />
+          <input id="extraAmount" type="number" min="0" step="0.001" placeholder="0.000 BD each" />
           <button class="extra-add-btn" id="addExtraBtn">Add Extra</button>
         </div>
         <div id="extraItems"></div>
@@ -1569,7 +1570,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     } else {
       const d = String(v('desc') || '').trim(), a = parseFloat(v('amount'));
       if(!d || !(a > 0)){ alert('Enter a Description and Price.'); return; }
-      extras[i].description = d; extras[i].amount = a;
+      const xq = Math.max(1, parseFloat(v('qty')) || 1);
+      extras[i].description = d; extras[i].qty = xq; extras[i].each = a; extras[i].amount = Math.round(xq * a * 1000) / 1000;
     }
     EDIT_KEY = ''; renderCart();
   });
@@ -1637,7 +1639,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       if(EDIT_KEY === 'x' + idx){
         row.classList.add('lb-edit');
         row.innerHTML = `
-        <div class="lb-edit-f" style="flex:1;min-width:0;"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(extra.description)}"></label><label>Price<input type="number" min="0" step="0.001" data-ed="amount" value="${Number(extra.amount).toFixed(3)}"></label></div>
+        <div class="lb-edit-f" style="flex:1;min-width:0;"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(extra.description)}"></label><label>Qty<input type="number" min="1" step="1" data-ed="qty" value="${lbEsc(extra.qty || 1)}"></label><label>Price each<input type="number" min="0" step="0.001" data-ed="amount" value="${Number(extra.each != null ? extra.each : extra.amount).toFixed(3)}"></label></div>
         <div class="lb-edit-b"><button type="button" class="lb-save" data-k="x" data-idx="${idx}">Save</button><button type="button" class="lb-cancel">Cancel</button></div>`;
         extraItemsEl.appendChild(row);
         return;
@@ -1645,7 +1647,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       row.innerHTML = `
         <div>${(window.LBExtrasPick && LBExtrasPick.thumb) ? LBExtrasPick.thumb(extra.description) : ''}${lbEsc(extra.description)}</div>
         <div class="extra-row-right">
-          <div class="extra-price">${fmtBD(extra.amount)}</div>
+          <div class="extra-price">${(extra.qty || 1) > 1 ? lbEsc(extra.qty) + ' × ' + fmtBD(extra.each) + ' = ' : ''}${fmtBD(extra.amount)}</div>
           <button type="button" class="lb-edit-btn" data-k="x" data-idx="${idx}" title="Edit">✏️</button>
           <button class="extra-remove" data-extra-idx="${idx}" aria-label="Remove extra">&times;</button>
         </div>
@@ -1675,8 +1677,10 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     const amount = parseFloat(extraAmountEl.value);
     if(!description || isNaN(amount) || amount <= 0) return;
 
-    extras.push({ description, amount });
+    const qtyEl = document.getElementById('extraQty'), xq = Math.max(1, parseFloat(qtyEl && qtyEl.value) || 1);
+    extras.push({ description, qty: xq, each: amount, amount: Math.round(xq * amount * 1000) / 1000 });   // amount = line total
     try{ LBExtrasPick.noteAdd(extraDescriptionEl, amount, 'chocolate'); }catch(e){}
+    if(qtyEl) qtyEl.value = 1;
     extraDescriptionEl.value = '';
     extraAmountEl.value = '';
     renderCart();
@@ -1846,7 +1850,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       name: c.name, qty: c.amount, unit: c.mode === 'pieces' ? 'piece' : (c.mode === 'grams' ? 'g' : 'kg'),
       price: c.amount > 0 ? Math.round(c.total / c.amount * 1e6) / 1e6 : 0
     }));
-    extras.forEach(e => rows.push({ name: e.description, qty: 1, unit: 'piece', price: e.amount, extra: true }));
+    extras.forEach(e => rows.push({ name: e.description, qty: e.qty || 1, unit: 'piece', price: e.each != null ? e.each : e.amount, extra: true }));
     return rows;
   }
   // Best-before of a saved list lives in its own small endpoint (best effort - never blocks printing).
@@ -1912,7 +1916,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         if(bbEl && v){ bbEl.value = v; bbEl.dispatchEvent(new Event('input')); }
       }catch(e){}
       (hit['Items'] || []).forEach(it=>{
-        if(it.extra){ extras.push({ description: it.name, amount: (Number(it.qty) || 1) * (Number(it.price) || 0) }); return; }
+        if(it.extra){ const q = Number(it.qty) || 1, ea = Number(it.price) || 0; extras.push({ description: it.name, qty: q, each: ea, amount: Math.round(q * ea * 1000) / 1000 }); return; }
         const mode = it.unit === 'g' ? 'grams' : (it.unit === 'kg' ? 'kg' : 'pieces');
         const cat = DATA.find(d => String(d.name).trim().toLowerCase() === String(it.name).trim().toLowerCase());
         const qty = Number(it.qty) || 0;
@@ -1954,7 +1958,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra</span></div>
+        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra${(extra.qty || 1) > 1 ? ' · ' + lbEsc(extra.qty) + ' × ' + fmtBD(extra.each) : ''}</span></div>
         <div>${fmtBD(extra.amount)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -2005,7 +2009,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       const row = document.createElement('div');
       row.className = 'r-row';
       row.innerHTML = `
-        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra</span></div>
+        <div class="r-name"><span class="r-ex">${lbEsc(extra.description)}</span><span class="r-meta">Extra${(extra.qty || 1) > 1 ? ' · ' + lbEsc(extra.qty) + ' × ' + fmtBD(extra.each) : ''}</span></div>
         <div>${fmtBD(extra.amount)}</div>
       `;
       rItemsEl.appendChild(row);
@@ -2536,7 +2540,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
   try{ LBCalcSale.mount({ kind:'chocolate', anchor: document.getElementById('shareBtn'), branchSelect: document.getElementById('listBranch'),
-    get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0), extrasList: extras.map(function(x){ return { desc:x.description, price:x.amount }; }) }; } }); }catch(e){ console.error('calc sale', e); }
+    get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.description + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.amount }; }) }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 </body>
 </html>
