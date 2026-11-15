@@ -281,6 +281,7 @@
           <button data-t="tr">Transfers</button>
           <button data-t="br" id="mvBranchTab">Branches</button>
           <button data-t="calc">🧮 Calc today</button>
+          <button data-t="moves">📋 Before → After</button>
         </div>
       </div>
       <div class="scroll" id="mvScroll"></div>
@@ -581,6 +582,7 @@
     const d = data; let h;
     const mvEl = document.getElementById('mvScroll');
     if(ui.mvTab === 'calc'){ if(window.LBCalcToday) LBCalcToday.render('chocolate', ui.branch, mvEl); return; }
+    if(ui.mvTab === 'moves'){ if(window.LBCalcToday && LBCalcToday.moves) LBCalcToday.moves('chocolate', ui.branch, mvEl); return; }
     if(window.LBCalcToday) LBCalcToday.stop(mvEl);
     if(ui.mvTab === 'tr'){
       const bsel = ui.branch;
@@ -682,6 +684,6 @@
 
 <script src="joyboy-bubble.js"></script>
 <script src="shared/live-orders-mini.js?v=3"></script>
-<script src="shared/calc-today.js?v=1"></script>
+<script src="shared/calc-today.js?v=2"></script>
 </body>
 </html>

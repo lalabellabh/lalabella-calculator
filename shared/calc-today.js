@@ -46,6 +46,41 @@
       if (!(cache[kind] && cache[kind].day === today())) el.innerHTML = '<div class="mt" style="padding:14px">Loading today\'s calc sales…</div>';
       paint(); timer = setInterval(function () { if (el.getAttribute('data-calc-today') === kind && !document.hidden) { delete cache[kind]; paint(); } else clearInterval(timer); }, 60000);
     },
-    stop: function (el) { if (el) el.removeAttribute('data-calc-today'); clearInterval(timer); }
+    stop: function (el) { if (el) { el.removeAttribute('data-calc-today'); el.removeAttribute('data-moves'); } clearInterval(timer); },
+    // Nov 15 2026: before / after of every stock change made by the calcs (Sold / Edited / Cancelled) — newest first, with 🔊 read-out
+    moves: function (kind, branch, el) {
+      if (!el) return; clearInterval(timer); el.removeAttribute('data-calc-today'); el.setAttribute('data-moves', kind);
+      var paint = function () {
+        var q = new URLSearchParams({ action: 'stockMoves', token: token(), kind: kind, branch: (branch && branch !== 'All') ? branch : '', limit: '150' });
+        fetch(API + '?' + q).then(function (r) { return r.json(); }).then(function (d) {
+          if (!el.isConnected || el.getAttribute('data-moves') !== kind) return;
+          if (!d || !d.success) { el.innerHTML = '<div class="mt" style="padding:14px">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+          var list = (d.moves || []).filter(function (m) { return !branch || branch === 'All' || brKey(m.branch) === brKey(branch); });
+          window.__lbMoves = list;
+          el.innerHTML = '<div class="mt" style="padding:6px 10px;line-height:1.5;display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 <b>Stock before → after</b> · every ✓ Sold / Edit / Cancel from the calcs' +
+            '<button type="button" data-say-moves style="margin-left:auto;border:1px solid #ddd;background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer">🔊 Read latest</button></div>' +
+            (list.length ? list.map(function (m) {
+              var up = m.change > 0, n = function (v) { return m.unit === 'kg' ? f3(v) : String(Math.round(v * 1000) / 1000); };
+              return '<div class="row"><div class="nm">' + esc(m.item) + ' <span class="mt">· ' + esc(m.branch) + ' · ' + esc(m.action) + (m.ref ? ' · ' + esc(m.ref) : '') + '</span>' +
+                '<div class="mt">' + hm(m.at) + ' ' + esc(new Date(m.at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Asia/Bahrain' })) + ' · ' + esc(m.by) + '</div></div>' +
+                '<div class="rt" style="white-space:nowrap"><span class="mt">' + n(m.before) + '</span> → <b>' + n(m.after) + '</b> <span style="color:' + (up ? '#2f7a4f' : '#b0413e') + ';font-weight:700">(' + (up ? '+' : '−') + n(Math.abs(m.change)) + ')</span> <span class="mt">' + esc(m.unit) + '</span></div></div>';
+            }).join('') : '<div class="mt" style="padding:14px">No calc stock changes yet. They appear here after the next ✓ Sold.</div>');
+        }).catch(function () { if (el.isConnected) el.innerHTML = '<div class="mt" style="padding:14px">Connection problem.</div>'; });
+      };
+      el.innerHTML = '<div class="mt" style="padding:14px">Loading…</div>'; paint();
+      timer = setInterval(function () { if (el.getAttribute('data-moves') === kind && !document.hidden) paint(); else clearInterval(timer); }, 60000);
+    },
+    // words for the voice / HQ: the latest few moves
+    movesText: function (list, n) {
+      return (list || []).slice(0, n || 5).map(function (m) {
+        var v = function (x) { return m.unit === 'kg' ? (Math.round(x * 1000) / 1000) + ' kilo' : (Math.round(x * 1000) / 1000) + (m.unit === 'stems' ? ' stems' : ' ' + m.unit); };
+        return m.item + ' in ' + m.branch + ': from ' + v(m.before) + ' to ' + v(m.after) + ', ' + (m.change > 0 ? 'plus ' : 'minus ') + v(Math.abs(m.change)) + (m.action ? ', ' + m.action.replace(/\s*\(.*\)/, '') : '') + (m.ref ? ', ' + m.ref.replace('CS-0000', 'C S ') : '') + '.';
+      }).join(' ');
+    }
   };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-say-moves]'); if (!b) return;
+    var txt = window.LBCalcToday.movesText(window.__lbMoves, 5) || 'No stock changes yet.';
+    try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch (er) { alert(txt); }
+  });
 })();

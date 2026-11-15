@@ -69,6 +69,13 @@ function parseExtras(v: any): any[] | null {
 }
 const extrasSum = (a: any[]) => r3(a.reduce((s: number, x: any) => s + (Number(x.price) || 0), 0));
 function itemsTotal(kind: string, items: any[]) { return r3((items || []).reduce((a: number, it: any) => a + (kind === 'flower' ? (Number(it.qty) || 0) * (Number(it.rate) || 0) : (Number(it.total) || 0)), 0)); }
+// Nov 15 2026: before / after record of every stock change made by the calcs (Sold, Edit, Cancel) — the basis that the deduction was right.
+async function logMoves(rows: any[]) { try { const ok = rows.filter((x) => x && x.item && Math.abs(Number(x.change) || 0) > 0.0005); if (ok.length) await sbPost('stock_moves', ok); } catch (_) { /* never block a sale */ } }
+const unitLabel = (u: any) => isKg(u) ? 'kg' : isG(u) ? 'g' : (String(u || '').trim() || 'pcs');
+async function chocBranchStock(branch: string, name: string) {   // current stock of one chocolate in one branch, per unit
+  const rows = await sbGet(`chocolate_database?select=current_stock,unit&branch=eq.${encodeURIComponent(branch)}&approval_status=eq.Approved&chocolate_name=eq.${encodeURIComponent(name)}`);
+  const by: Record<string, number> = {}; (rows || []).forEach((b: any) => { const k = unitLabel(b.unit); by[k] = r3((by[k] || 0) + (Number(b.current_stock) || 0)); }); return by;
+}
 async function nextSaleNo(saleId: number) { return 'CS-' + String(saleId).padStart(6, '0'); }
 
 // ---------------- FLOWER ----------------
@@ -113,6 +120,7 @@ async function saveFlowerSale(p: any, u: any) {
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
   await sbPatch('calc_sales', `id=eq.${head.id}`, { sale_no: saleNo, deducted: names.map((n) => ({ name: n, qty: sum[n] })) });
+  await logMoves(names.map((n) => ({ kind: 'flower', branch, item: n, unit: 'stems', before: avail[n], change: -sum[n], after: r3(avail[n] - sum[n]), ref: saleNo, action: 'Sold', by: who(u) })));
   return { success: true, saleNo, branch, lines: names.length, short };
 }
 
@@ -130,7 +138,7 @@ async function saveChocolateSale(p: any, u: any) {
   const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   let releaseNo = '';
-  const deducted: any[] = [], short: any[] = [];
+  const deducted: any[] = [], short: any[] = [], moves: any[] = [];
   const day = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
   for (const c of items) {
     // how much: grams (if known) and pieces (if known)
@@ -140,6 +148,8 @@ async function saveChocolateSale(p: any, u: any) {
     const q0 = `chocolate_database?select=*&branch=eq.${encodeURIComponent(branch)}&approval_status=eq.Approved&current_stock=gt.0&order=expiry_date.asc.nullslast,id.asc`;
     let batches: any[] = c.code ? await sbGet(q0 + `&product_code=eq.${encodeURIComponent(c.code)}`) : [];
     if (!batches.length) batches = await sbGet(q0 + `&chocolate_name=eq.${encodeURIComponent(c.name)}`);
+    const mvName = batches.length ? String(batches[0].chocolate_name) : c.name;
+    const mvBefore = batches.length ? await chocBranchStock(branch, mvName) : {}; const mvTaken: Record<string, number> = {};
     for (const b of batches) {
       const kgU = isKg(b.unit), gU = isG(b.unit);
       const want = kgU ? (leftG == null ? null : leftG / 1000) : gU ? leftG : leftP;
@@ -151,14 +161,17 @@ async function saveChocolateSale(p: any, u: any) {
       await sbPost('chocolate_release_database', [{ release_no: releaseNo, transaction_type: 'Sale (Calc)', branch, customer_department: txt(p.customer, 80) || 'Calc sale', chocolate_name: b.chocolate_name, product_code: b.product_code || '', batch_no: b.batch_no, qty_release: q, unit: b.unit, price, total: r3(q * price), remarks: saleNo + (p.source ? ' · ' + txt(p.source, 30) : '') + (p.ref ? ' · ' + txt(p.ref, 60) : ''), prepared_by: who(u), release_date: day, database_id: String(b.id), to_branch: '' }]);
       await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) - q), qty_used: r3(Number(b.qty_used || 0) + q) });
       deducted.push({ name: b.chocolate_name, id: b.id, batch: b.batch_no, qty: q, unit: b.unit });
+      mvTaken[unitLabel(b.unit)] = r3((mvTaken[unitLabel(b.unit)] || 0) + q);
       if (kgU || gU) { const g = kgU ? q * 1000 : q; leftG = (leftG ?? 0) - g; if (leftP != null && grams && pcs) leftP = leftG * pcs / grams; }
       else { leftP = (leftP ?? 0) - q; if (leftG != null && pcs) leftG = leftP * (grams! / pcs); }
     }
+    moves.push(...Object.keys(mvTaken).map((k) => ({ kind: 'chocolate', branch, item: mvName, unit: k, before: mvBefore[k] || 0, change: -mvTaken[k], after: r3((mvBefore[k] || 0) - mvTaken[k]), action: 'Sold', by: who(u) })));
     if (!batches.length) short.push({ name: c.name, need: c.mode === 'pieces' ? c.amount + ' pcs' : r3(grams || 0) + ' g', have: 'not in this branch stock' });
     else if (leftG != null && leftG > 0.5) short.push({ name: c.name, need: r3(grams || 0) + ' g', have: r3((grams || 0) - leftG) + ' g' });
     else if (leftG == null && leftP != null && leftP > 0.01) short.push({ name: c.name, need: r3(pcs || 0) + ' pcs', have: r3((pcs || 0) - leftP) + ' pcs' });
   }
   await sbPatch('calc_sales', `id=eq.${head.id}`, { sale_no: saleNo, release_no: releaseNo || null, deducted, short });
+  await logMoves(moves.map((m) => ({ ...m, ref: saleNo })));
   return { success: true, saleNo, releaseNo, branch, lines: deducted.length, short };
 }
 
@@ -180,9 +193,16 @@ async function cancelSale(p: any, u: any) {
   const rows = await sbGet(`calc_sales?select=*&id=eq.${id}`); const s = rows[0];
   if (!s) return { success: false, error: 'Sale not found.' };
   if (s.status !== 'Active') return { success: false, error: 'Already cancelled.' };
+  const moves: any[] = [];
   if (s.kind === 'flower') {
+    const qty: Record<string, number> = {}; (s.deducted || s.items || []).forEach((d: any) => { qty[String(d.name)] = r3((qty[String(d.name)] || 0) + (Number(d.qty) || 0)); });
+    const av = await flowerAvailable(s.branch, Object.keys(qty));
     await sbDelete('flower_arrangement_fulfillments', `arrangement_code=eq.${encodeURIComponent(s.sale_no)}`);
+    Object.keys(qty).forEach((n) => moves.push({ kind: 'flower', branch: s.branch, item: n, unit: 'stems', before: av[n], change: qty[n], after: r3(av[n] + qty[n]) }));
   } else {
+    const back: Record<string, number> = {};
+    (s.deducted || []).forEach((d: any) => { const k = String(d.name) + '|' + unitLabel(d.unit); back[k] = r3((back[k] || 0) + (Number(d.qty) || 0)); });
+    for (const k of Object.keys(back)) { const [nm, un] = k.split('|'); const bf = (await chocBranchStock(s.branch, nm))[un] || 0; moves.push({ kind: 'chocolate', branch: s.branch, item: nm, unit: un, before: bf, change: back[k], after: r3(bf + back[k]) }); }
     for (const d of (s.deducted || [])) {
       const b = (await sbGet(`chocolate_database?select=id,current_stock,qty_used&id=eq.${Number(d.id)}`))[0];
       if (b) await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) + Number(d.qty)), qty_used: r3(Math.max(0, Number(b.qty_used || 0) - Number(d.qty))) });
@@ -190,6 +210,7 @@ async function cancelSale(p: any, u: any) {
     if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=eq.${encodeURIComponent('Sale (Calc)')}`);
   }
   await sbPatch('calc_sales', `id=eq.${id}`, { status: 'Cancelled', cancelled_by: who(u), cancelled_at: new Date().toISOString() });
+  await logMoves(moves.map((m) => ({ ...m, ref: s.sale_no, action: 'Cancelled (put back)', by: who(u) })));
   return { success: true };
 }
 
@@ -221,12 +242,22 @@ async function editSale(p: any, u: any) {
     // a flower added during the edit: take its rate from the flower list (Legacy price first)
     for (const n of unknown) { const r = await sbGet(`flower_item?select=rate,origin&flower_name=eq.${encodeURIComponent(n)}&status=eq.Active`); if (!r.length) return { success: false, error: `"${n}" is not in the flower list.` }; const lg = r.find((x: any) => String(x.origin) === 'Legacy/Unknown') || r[0]; oldRate[n] = Number(lg.rate) || 0; }
     const extras = exTotal;
+    // before/after record: per flower, what changes in each branch
+    const oldQ: Record<string, number> = {}; (s.items || []).forEach((it: any) => { oldQ[String(it.name)] = r3((oldQ[String(it.name)] || 0) + (Number(it.qty) || 0)); });
+    const mv: any[] = [];
+    const brs = branch === s.branch ? [branch] : [s.branch, branch];
+    for (const br of brs) {
+      const all = Array.from(new Set([...(br === s.branch ? Object.keys(oldQ) : []), ...(br === branch ? names : [])]));
+      const av = await flowerAvailable(br, all);
+      all.forEach((n) => { const ch = r3((br === s.branch ? (oldQ[n] || 0) : 0) - (br === branch ? (sum[n] || 0) : 0)); mv.push({ kind: 'flower', branch: br, item: n, unit: 'stems', before: av[n], change: ch, after: r3(av[n] + ch), ref: s.sale_no, action: 'Edited', by: who(u) }); });
+    }
     // put back the old lines, take out the new ones (same sale no. + original sale time)
     await sbDelete('flower_arrangement_fulfillments', `arrangement_code=eq.${encodeURIComponent(s.sale_no)}`);
     await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: s.sale_no, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + (s.created_by || who(u)) + ' (edited by ' + who(u) + ')', fulfilled_date: s.created_at })));
     fields.branch = branch; fields.items = names.map((n) => ({ name: n, qty: sum[n], rate: oldRate[n] || 0 }));
     fields.deducted = names.map((n) => ({ name: n, qty: sum[n] }));
     fields.total = r3(names.reduce((a, n) => a + sum[n] * (oldRate[n] || 0), 0) + extras);
+    await logMoves(mv);
   }
   const log = Array.isArray(s.edit_log) ? s.edit_log.slice(-19) : [];
   log.push({ at: new Date().toISOString(), by: who(u), before });
@@ -262,6 +293,14 @@ Deno.serve(async (req) => {
       catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
     if (a === 'listSales') return json(await listSales(p));
+    if (a === 'stockMoves') {
+      const dRx = /^\d{4}-\d{2}-\d{2}$/; let q = 'stock_moves?select=*&order=id.desc&limit=' + Math.min(500, Math.max(1, Number(p.limit) || 100));
+      if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
+      if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
+      if (dRx.test(String(p.from || ''))) q += '&at=gte.' + encodeURIComponent(p.from + 'T00:00:00+03:00');
+      if (/^[A-Za-z0-9 \-]{2,40}$/.test(String(p.item || ''))) q += '&item=ilike.*' + encodeURIComponent(String(p.item)) + '*';
+      return json({ success: true, moves: (await sbGet(q)).map((m: any) => ({ at: m.at, kind: m.kind, branch: m.branch, item: m.item, unit: m.unit, before: Number(m.before), change: Number(m.change), after: Number(m.after), ref: m.ref || '', action: m.action || '', by: m.by || '' })) });
+    }
     // Guard: was this display (DISP-…) already sold in a calc or released? (so it is not taken out of stock twice)
     if (a === 'dispUsed') {
       const code = String(p.code || '').toUpperCase();

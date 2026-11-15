@@ -660,6 +660,21 @@
     if(!brs.length) brs = ((S && S.facts) || []).map(function(f){ return f.branch; });
     var choc = /choc|tsokolate|chocolate/i.test(q), flow = /flower|bulaklak|rose/i.test(q); if(!choc && !flow){ choc = flow = true; }
     var mk = function(k, lines, sp){ var e = EMP[k] || { name:'', role:'' }; return { k:k, r:{ name:e.name, role:e.role, st:e.st, text:L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + lines.join('\n'), speak:sp, to:ME.pres ? L('the President', 'sa President') : ME.name } }; };
+    // Nov 15 2026: stock before -> after of the calc sales (was the deduction right?) -> Ada the Auditor, from the live log
+    if(/bawas|before|after|galaw|deduct|nabawas|movement|binawas|kinuha sa stock/i.test(q)){
+      var one = BR_ALIASES.filter(function(a){ return a[1].test(q); }).map(function(a){ return a[0]; })[0] || '';
+      var kind = (choc && !flow) ? 'chocolate' : (flow && !choc) ? 'flower' : '';
+      var tk = ''; try{ tk = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){}
+      var api = (window.LB_CONFIG && LB_CONFIG.CALC_SALE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast';
+      return fetch(api + '?' + new URLSearchParams({ action:'stockMoves', token:tk, kind:kind, branch:one, limit:'8' })).then(function(x){ return x.json(); }).then(function(d){
+        var mv = (d && d.success && d.moves) || [];
+        var n = function(m, v){ return m.unit === 'kg' ? (Math.round(v * 1000) / 1000).toFixed(3) : String(Math.round(v * 1000) / 1000); };
+        var lines = mv.length ? mv.map(function(m){ return (m.kind === 'flower' ? '🌸 ' : '🍫 ') + '**' + m.item + '** · ' + brName(m.branch) + ': ' + n(m, m.before) + ' → **' + n(m, m.after) + '** (' + (m.change > 0 ? '+' : '−') + n(m, Math.abs(m.change)) + ' ' + m.unit + ') · ' + m.action + (m.ref ? ' · ' + m.ref : '') + ' · ' + (m.by || ''); })
+          : [L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')];
+        var said = (window.LBCalcToday && LBCalcToday.movesText) ? LBCalcToday.movesText(mv, 4) : '';
+        return mk('auditor', [L('**Stock before → after (latest calc sales):**', '**Stock bago → pagkatapos (huling calc sales):**')].concat(lines), (mv.length ? L('Here are the latest stock changes, ', 'Heto po ang huling galaw ng stock, ') + G + '. ' + said : L('No stock changes from the calcs yet.', 'Wala pang galaw sa stock mula sa calcs.')));
+      }).catch(function(){ return mk('auditor', [L('I could not load the stock changes. Check the connection.', 'Hindi ko makuha ang galaw ng stock. Pakitingnan ang internet.')], L('I could not load the stock changes.', 'Hindi ko makuha ang galaw ng stock.')); });
+    }
     // stock count / receiving -> Ada the Auditor
     var isCount = /count|bilang|inventory|stock/i.test(q), isRecv = /receiv|recieve|reciev|dating|deliver|supplier|invoice|bili|purchase/i.test(q);
     if(isCount || isRecv){
@@ -682,14 +697,15 @@
       [/approv|team|summary|everything|lahat|report/i, 'boss']];
     for(var i = 0; i < route.length; i++) if(route[i][0].test(q)){ var k = route[i][1]; var base = window.LBOfficeReport(k); if(!base) break; base.text = L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + base.text; return { k:k, r:base }; }
     return mk('boss', [L("I'm not sure who handles that yet, ", 'Hindi ko pa alam kung sino ang sasagot diyan, ') + G + '.', '',
-      L('**You can ask things like:**', '**Puwede mong itanong:**'), '• last stock count Moda / chocolate count Qalali', '• last receiving Moda flowers', '• who is late today', '• orders waiting / Bleems today',
+      L('**You can ask things like:**', '**Puwede mong itanong:**'), '• last stock count Moda / chocolate count Qalali', '• last receiving Moda flowers', '• stock before after Moda (what the calcs took out)', '• who is late today', '• orders waiting / Bleems today',
       '• items still in Saudi', '• my reminders', '• backup / errors / approvals'], L("I'm not sure yet. Try asking about stock count, receiving, orders, attendance, Saudi or reminders.", 'Hindi ko pa po alam. Subukan ninyong itanong ang stock count, receiving, orders, attendance, Saudi o reminders.'));
   };
   (function(){
     var f = document.getElementById('o3Ask'), inp = document.getElementById('o3AskIn'), mic = document.getElementById('o3Mic'); if(!f) return;
     ['pointerdown','wheel','touchstart','keydown','keyup'].forEach(function(ev){ f.addEventListener(ev, function(e){ e.stopPropagation(); }, { passive:true }); });
-    f.addEventListener('submit', function(e){ e.preventDefault(); var a = window.LBOfficeAsk(inp.value); if(!a) return; inp.blur();
-      if(window.LBOffice3D && window.LBOffice3D.answer && document.body.classList.contains('v3d')) window.LBOffice3D.answer(a.k, a.r); else alert(a.r.text.replace(/\*\*/g, '')); });
+    f.addEventListener('submit', function(e){ e.preventDefault(); var a0 = window.LBOfficeAsk(inp.value); if(!a0) return; inp.blur();
+      Promise.resolve(a0).then(function(a){ if(!a) return;
+        if(window.LBOffice3D && window.LBOffice3D.answer && document.body.classList.contains('v3d')) window.LBOffice3D.answer(a.k, a.r); else alert(a.r.text.replace(/\*\*/g, '')); }); });
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){ mic.style.display = 'none'; return; }
     mic.addEventListener('click', function(){ try{ var rec = new SR(); rec.lang = SND.lang === 'tl' ? 'fil-PH' : 'en-US'; rec.interimResults = false; mic.classList.add('on');
@@ -987,5 +1003,6 @@
   setInterval(function(){ if(!document.hidden) load(); }, 30000);
 })();
 </script>
+<script src="shared/calc-today.js?v=2"></script>
 </body>
 </html>
