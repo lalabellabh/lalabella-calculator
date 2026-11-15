@@ -174,8 +174,15 @@
       var hasSum = cols.some(function(c){ return c.sum; });
       var tfoot = hasSum ? '<tr class="tot">' + cols.map(function(c, i){
         if (c.sum) return '<td style="text-align:right;">' + (c.fmtSum ? c.fmtSum(sums[i]) : sums[i].toFixed(c.dec == null ? 3 : c.dec)) + '</td>';
-        return '<td>' + (i === 0 ? 'TOTAL (' + list.length + ')' : '') + '</td>';
+        return '<td>' + (i === 0 ? (opt.totalLabel || 'TOTAL') + ' (' + list.length + ')' : '') + '</td>';
       }).join('') + '</tr>' : '';
+      // Nov 2026: extra lines under the total, e.g. VAT and the real invoice total — opt.afterTotal(list) -> [[label, value, bold?], …]
+      if (hasSum && opt.afterTotal) {
+        var at = cols.findIndex(function(c){ return c.sum; }), rest = cols.length - at - 1;
+        (opt.afterTotal(list) || []).forEach(function(row){
+          tfoot += '<tr' + (row[2] ? ' class="tot"' : '') + '><td colspan="' + at + '" style="text-align:right;' + (row[2] ? '' : 'font-weight:600;') + '">' + esc(row[0]) + '</td><td style="text-align:right;' + (row[2] ? '' : 'font-weight:600;') + '">' + esc(row[1]) + '</td>' + (rest ? '<td colspan="' + rest + '"></td>' : '') + '</tr>';
+        });
+      }
 
       var doc = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(opt.title) + '</title><style>' +
         'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:18px;}' +

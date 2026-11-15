@@ -6,7 +6,7 @@
 <script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
-<script src="shared/history-tools.js"></script>
+<script src="shared/history-tools.js?v=2"></script>
 <script src="auth-guard.js"></script>
 
 <meta charset="UTF-8" />
@@ -1022,6 +1022,14 @@ body::after{
         {h:'Supplier', v:e => e.Supplier},
         {h:'By', v:e => e['Received By']}
       ],
+      // Nov 2026: the real invoice total = subtotal + VAT (not the subtotal only)
+      totalLabel: 'SUBTOTAL',
+      afterTotal: list => {
+        const sub = list.reduce((a, e) => a + (Number(e.Subtotal != null ? e.Subtotal : e.Amount) || 0), 0);
+        const vat = list.reduce((a, e) => a + (e.Tax != null && e.Tax !== '' ? Number(e.Tax) || 0 : (Number(e.Subtotal != null ? e.Subtotal : e.Amount) || 0) * (Number(e['Tax%']) || 0) / 100), 0);
+        const pcts = [...new Set(list.map(e => Number(e['Tax%']) || 0))];
+        return [['VAT' + (pcts.length === 1 ? ' (' + pcts[0] + '%)' : ''), vat.toFixed(3)], ['TOTAL (with VAT)', (sub + vat).toFixed(3) + ' BD', true]];
+      },
       onChange: () => renderHistory()
     });
     return _ht;
