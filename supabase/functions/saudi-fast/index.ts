@@ -139,7 +139,7 @@ async function list(u: any) {
     recDate: x.received_date || '', recBy: x.received_by || '', recNote: x.received_note || '', recPhoto: x.received_photo ? (signed[x.received_photo] || '') : '', recSavedBy: x.received_saved_by || '', recAt: x.received_at,
     items: sitems.filter((it: any) => it.shipment_id === x.id).map((it: any) => ({ id: it.id, lineId: it.line_id, item: it.item, qty: it.qty_sent == null ? null : Number(it.qty_sent), unit: it.unit || '',
       got: it.got, qtyGot: it.qty_received == null ? null : Number(it.qty_received), note: it.note || '', photo: it.photo_url ? (signed[it.photo_url] || '') : '' })),
-    extras: exs.filter((e: any) => e.shipment_id === x.id).map((e: any) => ({ item: e.item, qty: e.qty == null ? null : Number(e.qty), unit: e.unit || '', note: e.note || '' })) }));
+    extras: exs.filter((e: any) => e.shipment_id === x.id && !sitems.some((it: any) => it.shipment_id === x.id && it.item === e.item)).map((e: any) => ({ item: e.item, qty: e.qty == null ? null : Number(e.qty), unit: e.unit || '', note: e.note || '' })) }));
   return { success: true, rows, extras, shipments, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
 }
 
@@ -244,6 +244,8 @@ async function receiveShipment(p: any, u: any) {
         notes: txt('Checklist #' + id + (t.note ? ' · ' + t.note : ''), 300), photo_url: photo || sh.photo_url || null, source: 'shipment', created_by: who(u) }]);
       f.return_id = r[0] && r[0].id;
     }
+    // an item that was sent as "not on the list" -> it goes to Not on the list (Admin matches it to a transfer)
+    if (got && !it.line_id) extras.push({ item: it.item, qty: q, unit: it.unit, note: String(it.note || '').replace(/^Not on the list:\s*/, '') || 'Sent without a transfer line', fromList: true });
     await sbPatch('saudi_shipment_items', `id=eq.${it.id}`, f);
   }
   if (extras.length) await sbPost('saudi_extras', extras.map((x: any) => ({ kind: sh.direction === 'to_bahrain' ? 'return' : 'receive', item: txt(x.item, 300), qty: num(x.qty), unit: txt(x.unit, 20) || null,
