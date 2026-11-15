@@ -610,7 +610,7 @@ body::after{
           <div class="grid-2">
             <div>
               <label>Unit</label>
-              <input type="text" id="sUnit" placeholder="e.g. Piece, Box, Set" />
+              <select id="sUnit"><option>Piece</option><option>Box</option><option>Pack</option><option>Set</option><option>Roll</option><option>Bundle</option><option>Bag</option><option>Bottle</option><option>Meter</option></select>
             </div>
             <div>
               <label>Quantity</label>
@@ -755,6 +755,8 @@ body::after{
   let entries = [];
   let cart = [];
   let currentType = 'Flower';
+  let EDITING = null;   // the cart line being fixed (taken back into the form)
+  function editDone(){ EDITING = null; const ab = document.getElementById('addItemBtn'); if(ab){ ab.textContent = '+ Add to List'; ab.style.background = ''; } }
 
   function fmtBD(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) + ' BD'; }
   function fmtDate(d){
@@ -964,7 +966,7 @@ body::after{
             <div class="cart-row-name">${lbEsc(name)} <span style="color:var(--ink-dim); font-weight:400;">(${lbEsc(sub)})</span></div>
             <div class="cart-row-meta">${lbEsc(it.qty)} ${lbEsc(it.unit)} × ${fmtBD(rate)} = ${fmtBD(subtotal)}</div>
           </div>
-          <button class="cart-remove-btn" data-idx="${i}">✕</button>
+          <div style="display:flex;align-items:center;flex-shrink:0;"><button type="button" class="cart-edit-btn" data-idx="${i}" title="Edit this line" style="background:none;border:0;font-size:15px;cursor:pointer;padding:4px 6px;">✏️</button><button class="cart-remove-btn" data-idx="${i}">✕</button></div>
         </div>
       `;
     }).join('');
@@ -976,6 +978,19 @@ body::after{
     document.getElementById('cartGrandTotal').textContent = fmtBD(grandTotal);
     updateTally();
 
+    // Nov 2026: ✏️ = take the line back into the form above to fix it, then "Update line"
+    document.querySelectorAll('.cart-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const it = cart.splice(Number(btn.dataset.idx), 1)[0]; if(!it) return;
+        const tb = document.querySelector('#typeToggle .type-btn[data-type="' + it.type + '"]'); if(tb) tb.click();
+        const set = (id, v) => { const el = document.getElementById(id); if(el){ el.value = v == null ? '' : v; el.dispatchEvent(new Event('input', { bubbles:true })); el.dispatchEvent(new Event('change', { bubbles:true })); } };
+        if(it.type === 'Supply'){ set('sSupplyName', it.supplyName); const su = document.getElementById('sUnit'); if(su && ![...su.options].some(o => o.value === it.unit)) su.add(new Option(it.unit, it.unit)); set('sUnit', it.unit); set('sQty', it.qty); set('sCost', it.cost); }
+        else { set('fFlowerName', it.flowerName); set('fOrigin', it.origin); set('fUnit', it.unit); stemsTouched = true; set('fStemsPerBunch', it.stemsPerBunch || 1); set('fQty', it.qty); set('fSupplierRate', it.supplierRate); }
+        EDITING = it; const ab = document.getElementById('addItemBtn'); ab.textContent = '✔ Update line'; ab.style.background = '#c97a14';
+        renderCart();
+        document.getElementById('addItemBtn').scrollIntoView({ behavior:'smooth', block:'center' });
+      });
+    });
     document.querySelectorAll('.cart-remove-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         cart.splice(Number(btn.dataset.idx), 1);
@@ -1174,14 +1189,15 @@ body::after{
       cart.push({
         type: 'Supply',
         supplyName,
-        unit: document.getElementById('sUnit').value.trim() || 'Piece',
+        unit: document.getElementById('sUnit').value || 'Piece',
         qty, cost
       });
       renderCart();
 
       document.getElementById('sSupplyName').value = '';
-      document.getElementById('sUnit').value = '';
+      document.getElementById('sUnit').value = 'Piece';
       document.getElementById('sQty').value = '';
+      editDone();
       document.getElementById('sCost').value = '';
       document.getElementById('sSupplyName').focus();
       return;
@@ -1222,6 +1238,7 @@ body::after{
     document.getElementById('fSupplierRate').value = '';
     document.getElementById('ratePreview').style.display = 'none';
     document.getElementById('fFlowerName').focus();
+    editDone();
   });
 
   let lastReceiptSnapshot = null;
@@ -1661,5 +1678,7 @@ body::after{
 
 
 <script src="joyboy-bubble.js"></script>
+<script src="shared/clear-x.js?v=1"></script>
+<script>try{ LBClearX.attach(['fFlowerName','fOrigin','fQty','fSupplierRate','fStemsPerBunch','sSupplyName','sQty','sCost','fSupplier','fInvoiceNo','fReceivedBy','fPaperTotal']); }catch(e){}</script>
 </body>
 </html>
