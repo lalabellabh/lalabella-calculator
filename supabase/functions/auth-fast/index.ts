@@ -234,6 +234,14 @@ async function sessionUser(token: string) {
   return r.valid ? r.row : null;
 }
 const SAUDI_ROLE = 'Saudi Team';
+// Nov 15 2026: My Profile (get / update / password) also works for a Saudi Team session (users.vtoken). Nothing else in auth-fast does.
+async function profileUser(token: string) {
+  const u = await sessionUser(token); if (u) return u;
+  const t = String(token || '').trim(); if (!/^[a-f0-9]{20,}$/i.test(t)) return null;
+  const rows = await rest('GET', `users?select=*&limit=1&vtoken=eq.${t}&role=eq.${encodeURIComponent(SAUDI_ROLE)}`);
+  const v = rows && rows[0]; const c = v && v.vtoken_created ? new Date(v.vtoken_created).getTime() : 0;
+  return v && String(v.status || 'Active') === 'Active' && c && Date.now() - c <= SESSION_MAX_AGE_MS ? v : null;
+}
 function isAdminRole(u: any) { return String(u.role || '').toLowerCase() === 'admin'; }
 
 // ---------------------------------------------------------------
@@ -377,7 +385,7 @@ async function handleSaudiSignup(p: any) {
 // PROFILE
 // ---------------------------------------------------------------
 async function handleGetProfile(token: string) {
-  const user = await sessionUser(token);
+  const user = await profileUser(token);
   if (!user) return { success: false, error: 'Unauthorized.' };
   const profile: any = await publicUser(user);
   profile.dateRegistered = user.date_registered || '';
@@ -385,7 +393,7 @@ async function handleGetProfile(token: string) {
   return { success: true, profile };
 }
 async function handleUpdateProfile(token: string, p: any) {
-  const user = await sessionUser(token);
+  const user = await profileUser(token);
   if (!user) return { success: false, error: 'Unauthorized.' };
   const patch: any = {};
   const newUsername = String(p.username || '').trim();
@@ -396,7 +404,7 @@ async function handleUpdateProfile(token: string, p: any) {
     patch.username = newUsername;
   }
   if (p.fullName) patch.full_name = String(p.fullName).trim();
-  if (p.branch) patch.branch = String(p.branch).trim();
+  if (p.branch && String(user.role) !== SAUDI_ROLE) patch.branch = String(p.branch).trim();   // Saudi Team stays branch "Saudi"
   if (p.photoBase64) patch.photo_link = await saveProfilePhoto(p.photoBase64, user.username);
   if (Object.keys(patch).length) {
     try { await rest('PATCH', `users?id=eq.${user.id}`, patch); }
@@ -405,7 +413,7 @@ async function handleUpdateProfile(token: string, p: any) {
   return { success: true, message: 'Profile updated.', username: patch.username || user.username };
 }
 async function handleChangePassword(token: string, p: any) {
-  const user = await sessionUser(token);
+  const user = await profileUser(token);
   if (!user) return { success: false, error: 'Unauthorized.' };
   const currentPassword = String(p.currentPassword || '');
   const newPassword = String(p.newPassword || '');

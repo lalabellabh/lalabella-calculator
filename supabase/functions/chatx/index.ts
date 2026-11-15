@@ -50,10 +50,13 @@ async function ping() {
 async function sessionUser(token: string) {
   const t = String(token || '').trim();
   if (!t || !/^[a-f0-9]{20,}$/i.test(t)) return null;
-  const rows = await rest('GET', `users?select=id,username,full_name,role,status,token_created&token=eq.${encodeURIComponent(t)}&limit=1`);
+  // Nov 15 2026: Saudi Team (session in users.vtoken) chats like staff, so reactions / Team photo work for them too
+  const rows = await rest('GET', `users?select=id,username,full_name,role,status,token,token_created,vtoken,vtoken_created&or=(token.eq.${t},vtoken.eq.${t})&limit=1`);
   const u = rows && rows[0];
   if (!u || String(u.status || 'Active') === 'Inactive') return null;
-  const created = u.token_created ? new Date(u.token_created).getTime() : 0;
+  const viaV = u.vtoken === t && u.token !== t;
+  if (viaV && String(u.role) !== 'Saudi Team') return null;
+  const created = (viaV ? u.vtoken_created : u.token_created) ? new Date(viaV ? u.vtoken_created : u.token_created).getTime() : 0;
   if (!created || Date.now() - created > SESSION_MAX_AGE_MS) return null;
   return u;
 }
