@@ -632,6 +632,35 @@ async function getWeeklyBudget(p: Record<string, any>) {
   return { branch, weeklyLimit, actual, remaining: weeklyLimit - actual, percentUsed: weeklyLimit > 0 ? Math.round((actual / weeklyLimit) * 100) : 0 };
 }
 
+// Nov 15 2026: for the daily Sales / Cash count print — what came from the suppliers that day (per supplier),
+// and the weekly budget (Sun–Sat, supplier cost without VAT, like the dashboard) per branch up to that day.
+async function dayReceiving(p: Record<string, any>) {
+  const bh = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || '')) ? String(p.date) : bh;
+  const d0 = new Date(day + 'T00:00:00Z'), dow = d0.getUTCDay();
+  const ws = new Date(d0.getTime() - dow * 86400000).toISOString().slice(0, 10), we = new Date(d0.getTime() + (6 - dow) * 86400000).toISOString().slice(0, 10);
+  const ALL = ['ModaMall', 'Hamala', 'Galali'], one = ALL.indexOf(String(p.branch || '')) !== -1 ? String(p.branch) : '';
+  const brs = one ? [one] : ALL;
+  const [rows, budgets] = await Promise.all([
+    sbGet('flower_database', `select=entry_date,branch,supplier,type,amount,tax,approval_status,invoice_no&approval_status=neq.Rejected&entry_date=gte.${ws}&entry_date=lte.${day}${one ? '&branch=eq.' + encodeURIComponent(one) : ''}`),
+    sbGet('flower_budgets', 'select=*'),
+  ]);
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  const sup: Record<string, any> = {};
+  rows.filter((r: any) => String(r.entry_date).slice(0, 10) === day).forEach((r: any) => {
+    const k = String(r.supplier || '—').trim() || '—', x = sup[k] = sup[k] || { supplier: k, invoices: new Set<string>(), lines: 0, flowers: 0, supplies: 0, amount: 0, vat: 0, pending: 0, branches: new Set<string>() };
+    if (r.invoice_no) x.invoices.add(String(r.invoice_no)); x.lines++; if (r.type === 'Supply') x.supplies++; else x.flowers++;
+    x.amount += Number(r.amount) || 0; x.vat += Number(r.tax) || 0; if (String(r.approval_status) !== 'Approved') x.pending++; x.branches.add(String(r.branch || ''));
+  });
+  const suppliers = Object.values(sup).map((x: any) => ({ supplier: x.supplier, invoices: [...x.invoices], lines: x.lines, flowers: x.flowers, supplies: x.supplies, amount: r3(x.amount), vat: r3(x.vat), total: r3(x.amount + x.vat), pending: x.pending, branches: [...x.branches] }))
+    .sort((a: any, b: any) => b.amount - a.amount);
+  const limit: Record<string, number> = { ModaMall: 350, Hamala: 350, Galali: 350 };
+  budgets.forEach((b: any) => { const n = String(b.branch || '').trim(); if (n in limit) limit[n] = Number(b.weekly_budget) || 350; });
+  const budget = brs.map(b => { const used = r3(rows.filter((r: any) => r.branch === b).reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0)), L = limit[b];
+    return { branch: b, limit: L, used, remaining: r3(L - used), pctUsed: L > 0 ? Math.round(used / L * 100) : 0, pctLeft: L > 0 ? Math.round((L - used) / L * 100) : 0 }; });
+  return { success: true, day, weekStart: ws, weekEnd: we, suppliers, dayTotal: { amount: r3(suppliers.reduce((s: number, x: any) => s + x.amount, 0)), vat: r3(suppliers.reduce((s: number, x: any) => s + x.vat, 0)), total: r3(suppliers.reduce((s: number, x: any) => s + x.total, 0)) }, budget };
+}
+
 // ---------------------------------------------------------------
 // DASHBOARD (unchanged from earlier slice)
 // ---------------------------------------------------------------
@@ -845,6 +874,7 @@ Deno.serve(async (req) => {
     if (action === 'getSupplyItems') return json((await sbGet('flower_supply_item', 'select=*&order=id.asc')).map((r: any) => ({ 'Supply Name': r.supply_name, 'Item Code': r.item_code, 'Default Unit': r.default_unit, 'Cost/Rate': r.cost_rate, 'Status': r.status })));
     if (action === 'getEntries') { let q = 'select=*&order=id.desc'; if (p.branch) q += `&branch=eq.${encodeURIComponent(p.branch)}`; return json((await sbGet('flower_database', q)).map(mapDbRow)); }
     if (action === 'getWeeklyBudget') return json(await getWeeklyBudget(p));
+    if (action === 'dayReceiving') return json(await dayReceiving(p));
     if (action === 'getRateChangeHistory') return json((await sbGet('flower_rate_change_history', 'select=*&approval_status=neq.Pending Approval&order=change_date.desc&limit=20')).map((r: any) => ({ Date: r.change_date, Flower: r.flower_name, Origin: r.origin, ItemCode: r.item_code, OldRate: Number(r.old_company_rate) || 0, NewRate: Number(r.new_company_rate) || 0, Status: r.approval_status, ApprovedBy: r.approved_by })));
     if (action === 'getPendingRateApprovals') return json((await sbGet('flower_rate_change_history', 'select=*&approval_status=eq.Pending Approval&order=id.asc')).map((r: any) => ({ Date: r.change_date, Flower: r.flower_name, Origin: r.origin, 'Item Code': r.item_code, 'Old Company Rate': r.old_company_rate, 'New Company Rate': r.new_company_rate, 'Supplier Rate Used': r.supplier_rate_used, Difference: r.difference, 'Margin %': r.margin_percent, 'Margin Status': r.margin_status, 'Approval Status': r.approval_status, 'Approved By': r.approved_by, _row: r.id })));
     if (action === 'getFlowerCatalogWithMinStock') {

@@ -1645,6 +1645,27 @@ function slPettyDayHtml(pc, days, th){
       <tbody>${used.map(x=>`<tr><td>${esc(x.purpose)}</td><td>${esc(x.carPlate||'')}</td><td>${esc(x.driver||'')}</td><td>${esc(x.enteredBy)||'—'}</td><td ${th}>−${Number(x.amount).toFixed(3)}</td></tr>`).join('')}
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="4">USED ON ${fmtDate(day).toUpperCase()}</td><td ${th}>−${usedT.toFixed(3)} BD</td></tr></tbody></table>` + leftLine;
 }
+// Nov 15 2026: flowers from the suppliers that day (Wards, Fresh Blooms…) + the weekly flower budget left per branch
+async function slFlowerDay(day){
+  const api = (window.LB_CONFIG && LB_CONFIG.FLOWER_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flower-fast';
+  const r = await fetch(api + '?' + new URLSearchParams({ action:'dayReceiving', date: day, branch: document.getElementById('branchSelect').value, token: getToken() }));
+  const d = await r.json(); if(!d || !d.success) throw new Error((d && d.error) || 'not loaded'); return d;
+}
+function slFlowerHtml(fd, th){
+  if(!fd) return '';
+  const sup = fd.suppliers || [], t = fd.dayTotal || {};
+  const recv = `<h3 style="margin-top:16px;">Flowers from suppliers — ${fmtDate(fd.day)}</h3>` + (sup.length ? `
+    <table style="width:100%;max-width:640px;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Supplier</th><th style="text-align:left;">Invoice</th><th style="text-align:center;">Lines</th><th ${th}>Amount</th><th ${th}>VAT</th><th ${th}>Total</th></tr></thead>
+      <tbody>${sup.map(x=>`<tr><td>${esc(x.supplier)}${x.pending ? ' <span style="color:#a8560b;font-size:11px">(' + x.pending + ' waiting approval)</span>' : ''}</td><td>${esc((x.invoices||[]).join(', ') || '—')}</td><td style="text-align:center;">${x.lines}${x.supplies ? ' <span style="color:#666;font-size:11px">(' + x.supplies + ' supply)</span>' : ''}</td><td ${th}>${Number(x.amount).toFixed(3)}</td><td ${th}>${Number(x.vat).toFixed(3)}</td><td ${th}>${Number(x.total).toFixed(3)} BD</td></tr>`).join('')}
+      <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL</td><td ${th}>${Number(t.amount||0).toFixed(3)}</td><td ${th}>${Number(t.vat||0).toFixed(3)}</td><td ${th}>${Number(t.total||0).toFixed(3)} BD</td></tr></tbody></table>`
+    : `<p style="margin:4px 0 0;font-size:12.5px;color:#555;">No flowers received from suppliers on ${fmtDate(fd.day)}.</p>`);
+  const bud = (fd.budget || []).length ? `<h3 style="margin-top:16px;">Weekly flower budget <small style="font-weight:400">· ${fmtDate(fd.weekStart)} – ${fmtDate(fd.weekEnd)} · up to ${fmtDate(fd.day)} (without VAT)</small></h3>
+    <table style="width:100%;max-width:640px;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;">Branch</th><th ${th}>Budget</th><th ${th}>Used</th><th ${th}>Left</th><th ${th}>% left</th></tr></thead>
+      <tbody>${fd.budget.map(b=>`<tr><td>${esc(b.branch)}</td><td ${th}>${Number(b.limit).toFixed(3)}</td><td ${th}>${Number(b.used).toFixed(3)} <span style="color:#666;font-size:11px">(${b.pctUsed}%)</span></td><td ${th}><b style="color:${b.remaining < 0 ? '#b2402e' : (b.pctLeft <= 15 ? '#a8560b' : '#2f7a4f')}">${Number(b.remaining).toFixed(3)} BD</b></td><td ${th}><b>${b.pctLeft}%</b>${b.remaining < 0 ? ' <span style="color:#b2402e">OVER</span>' : ''}</td></tr>`).join('')}</tbody></table>` : '';
+  return recv + bud;
+}
 function slSorted(){ return slFiltered().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.id-b.id); }
 // Back-track print: the searched dates, sales only (per day + day total), then Payments for the whole search.
 function slPrintHistory(){
@@ -1679,6 +1700,7 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
   // sales are optional: the cash count + petty cash still print on their own
   const t = slTotals(list), pcT = pc.reduce((s,x)=>s+Number(x.amount||0),0), th='style="text-align:right;"';
   const days = oneDay ? [oneDay] : [], oneBranch = document.getElementById('branchSelect').value !== 'All';
+  let flowerDay = null; try{ flowerDay = await slFlowerDay(oneDay || toV || slToday()); }catch(e){ flowerDay = null; }
   const dayRows = days.map(d=>{ const x = slTotals(list.filter(r=>r.date===d)), u = pc.filter(p=>p.date===d).reduce((s,p)=>s+Number(p.amount||0),0), left = oneBranch ? slLeftAt(d) : null;
     const z = v => v ? v.toFixed(3) : '<span style="color:#aaa">—</span>';
     return `<tr><td>${fmtDate(d)}</td><td ${th}>${z(x.cash)}</td><td ${th}>${z(x.card)}</td><td ${th}>${z(x.mf)}</td><td ${th}>${z(x.bn)}</td><td ${th}>${z(x.credit)}</td><td ${th}><b>${z(x.inv)}</b></td><td ${th}>${z(u)}</td>${oneBranch?`<td ${th}>${left==null?'':left.toFixed(3)}</td>`:''}</tr>`; }).join('');
@@ -1692,6 +1714,7 @@ document.getElementById('slPrintBtn').addEventListener('click', async ()=>{
       <tr style="border-top:2px solid #000;font-weight:700;"><td colspan="3">TOTAL SALES</td><td ${th}>${t.cash.toFixed(3)}</td><td ${th}>${t.card.toFixed(3)}</td><td ${th}>${t.mf.toFixed(3)}</td><td ${th}>${t.bn.toFixed(3)}</td><td ${th}>${t.credit.toFixed(3)}</td><td ${th}>${t.inv.toFixed(3)} BD</td><td></td><td></td></tr></tbody></table>` : '') +
     slCashCountHtml(th, oneDay) +
     slPettyDayHtml(pc, days, th) +
+    slFlowerHtml(flowerDay, th) +
     // Nov 2026: "Payments" table — same lines/fonts as the cash count table above: Cash, My Fatoorah, Card, Fawri + (Credit only when used), TOTAL
     (list.length ? `<h3 style="margin-top:16px;">Payments</h3>
       <table style="width:100%;max-width:520px;border-collapse:collapse;font-size:12.5px;">
