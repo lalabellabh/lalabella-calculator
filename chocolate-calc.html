@@ -556,6 +556,15 @@
     cursor:pointer;
   }
   .extra-add-btn:hover{background:var(--foil-hot);}
+  .lb-edit-btn{ background:none; border:none; font-size:13px; cursor:pointer; padding:2px 5px; opacity:.75; }
+  .lb-edit-btn:hover{ opacity:1; }
+  .lb-edit{ display:flex; align-items:flex-end; gap:8px; background:rgba(255,255,255,.6); border-radius:8px; padding:8px; }
+  .lb-edit-f{ display:flex; gap:8px; margin-top:5px; }
+  .lb-edit-f label{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); }
+  .lb-edit-f input{ padding:6px 8px; font:inherit; font-size:13px; border:1px solid var(--line, #e3d6c4); border-radius:6px; width:100%; box-sizing:border-box; }
+  .lb-edit-b{ display:flex; flex-direction:column; gap:4px; flex-shrink:0; }
+  .lb-edit-b button{ border:0; border-radius:6px; padding:6px 11px; font:inherit; font-size:11.5px; font-weight:700; cursor:pointer; }
+  .lb-save{ background:#2f7a4f; color:#fff; } .lb-cancel{ background:#efe6d8; color:#5a4a3a; }
   .extra-row{
     display:flex;
     justify-content:space-between;
@@ -1542,6 +1551,34 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     return n + ' kg';
   }
 
+  // Nov 2026: ✏️ edit a line already in the List (amount in the same unit — price per kg/piece stays; extras: name / price)
+  let EDIT_KEY = '';
+  document.addEventListener('click', (e)=>{
+    const eb = e.target.closest('.lb-edit-btn');
+    if(eb){ EDIT_KEY = eb.dataset.k + eb.dataset.idx; renderCart(); const f = document.querySelector('.lb-edit input'); if(f){ f.focus(); f.select && f.select(); } return; }
+    if(e.target.closest('.lb-cancel')){ EDIT_KEY = ''; renderCart(); return; }
+    const sb = e.target.closest('.lb-save'); if(!sb) return;
+    const row = sb.closest('.lb-edit'), v = k => (row.querySelector('[data-ed="' + k + '"]') || {}).value, i = Number(sb.dataset.idx);
+    if(sb.dataset.k === 'c'){
+      const en = cart[i], n = parseFloat(v('amount'));
+      if(!en || !(n > 0)){ alert('Enter the amount.'); return; }
+      const byPiece = en.whole && en.mode === 'pieces';
+      const unit = byPiece ? en.total / (en.amount || 1) : en.total / (en.kg || 1);   // price per piece (whole) or per kg
+      const kg = en.mode === 'pieces' ? (n * en.gpp) / 1000 : en.mode === 'grams' ? n / 1000 : n;
+      en.amount = n; en.kg = kg; en.total = byPiece ? n * unit : kg * unit;
+    } else {
+      const d = String(v('desc') || '').trim(), a = parseFloat(v('amount'));
+      if(!d || !(a > 0)){ alert('Enter a Description and Price.'); return; }
+      extras[i].description = d; extras[i].amount = a;
+    }
+    EDIT_KEY = ''; renderCart();
+  });
+  document.addEventListener('keydown', (e)=>{
+    const ed = e.target.closest && e.target.closest('.lb-edit'); if(!ed) return;
+    if(e.key === 'Enter'){ e.preventDefault(); const b = ed.querySelector('.lb-save'); b && b.click(); }
+    else if(e.key === 'Escape'){ EDIT_KEY = ''; renderCart(); }
+  });
+
   function renderCart(){
     if(cart.length === 0 && extras.length === 0){
       listSection.style.display = 'none';
@@ -1558,6 +1595,17 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       chocolateTotal += entry.total;
       const row = document.createElement('div');
       row.className = 'list-row';
+      if(EDIT_KEY === 'c' + idx){
+        row.classList.add('lb-edit');
+        row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${lbEsc(entry.name)}</div>
+          <div class="lb-edit-f"><label>${entry.mode === 'pieces' ? 'Pieces' : entry.mode === 'grams' ? 'Grams' : 'Kg'}<input type="number" min="0" step="any" data-ed="amount" value="${lbEsc(entry.amount)}"></label></div>
+        </div>
+        <div class="lb-edit-b"><button type="button" class="lb-save" data-k="c" data-idx="${idx}">Save</button><button type="button" class="lb-cancel">Cancel</button></div>`;
+        listItemsEl.appendChild(row);
+        return;
+      }
       row.innerHTML = `
         <div>
           <div class="list-row-name">${lbEsc(entry.name)}</div>
@@ -1565,6 +1613,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         </div>
         <div class="list-row-right">
           <div class="list-row-price">${fmtBD(entry.total)}</div>
+          <button type="button" class="lb-edit-btn" data-k="c" data-idx="${idx}" title="Edit">✏️</button>
           <button class="list-row-remove" data-idx="${idx}" aria-label="Remove">&times;</button>
         </div>
       `;
@@ -1585,10 +1634,19 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     extras.forEach((extra, idx)=>{
       const row = document.createElement('div');
       row.className = 'extra-row';
+      if(EDIT_KEY === 'x' + idx){
+        row.classList.add('lb-edit');
+        row.innerHTML = `
+        <div class="lb-edit-f" style="flex:1;min-width:0;"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(extra.description)}"></label><label>Price<input type="number" min="0" step="0.001" data-ed="amount" value="${Number(extra.amount).toFixed(3)}"></label></div>
+        <div class="lb-edit-b"><button type="button" class="lb-save" data-k="x" data-idx="${idx}">Save</button><button type="button" class="lb-cancel">Cancel</button></div>`;
+        extraItemsEl.appendChild(row);
+        return;
+      }
       row.innerHTML = `
         <div>${lbEsc(extra.description)}</div>
         <div class="extra-row-right">
           <div class="extra-price">${fmtBD(extra.amount)}</div>
+          <button type="button" class="lb-edit-btn" data-k="x" data-idx="${idx}" title="Edit">✏️</button>
           <button class="extra-remove" data-extra-idx="${idx}" aria-label="Remove extra">&times;</button>
         </div>
       `;

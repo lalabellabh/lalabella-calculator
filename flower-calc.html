@@ -73,6 +73,15 @@
   .cart-row-name{ font-weight:600; font-size:13px; }
   .cart-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
   .remove-btn{ background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; flex-shrink:0; padding:4px 8px; }
+  .edit-btn{ background:none; border:none; font-size:14px; cursor:pointer; flex-shrink:0; padding:4px 6px; opacity:.8; }
+  .edit-btn:hover{ opacity:1; }
+  .cart-edit{ align-items:flex-end; background:rgba(255,255,255,.55); border-radius:10px; padding:10px; }
+  .edit-fields{ display:flex; gap:8px; margin-top:6px; }
+  .edit-fields label{ flex:1; min-width:0; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); display:flex; flex-direction:column; gap:3px; margin:0; }
+  .edit-fields input{ padding:7px 8px; font-size:13px; }
+  .edit-btns{ display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+  .edit-btns button{ border:0; border-radius:8px; padding:7px 12px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .edit-save{ background:#2f7a4f; color:#fff; } .edit-cancel{ background:#eee3e6; color:#5a4650; }
 
   .total-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
   .total-row.grand{ border-top:2px solid var(--rose); margin-top:8px; padding-top:12px; font-size:17px; font-weight:800; color:var(--rose-deep); }
@@ -333,6 +342,7 @@
   let CODE_TO_NAME = {};   // item code (lowercase) -> flower name, for scan / typed code
   let cart = [];       // { name, qty, rate }
   let extras = [];     // { desc, price }
+  let EDIT_KEY = '';   // 'cart3' / 'extra0' = the Order List line being edited
   let selected = null;
 
   async function loadCatalog(){
@@ -473,25 +483,38 @@
     if(cart.length === 0){
       el.innerHTML = '<div class="empty-note">Nothing added yet.</div>';
     } else {
-      el.innerHTML = cart.map((c, i) => `
+      el.innerHTML = cart.map((c, i) => EDIT_KEY === 'cart' + i ? `
+        <div class="cart-row cart-edit">
+          <div style="flex:1;min-width:0;">
+            <div class="cart-row-name">${lbEsc(c.name)}</div>
+            <div class="edit-fields"><label>Qty<input type="number" min="0" step="0.5" data-ed="qty" value="${lbEsc(c.qty)}"></label><label>Rate<input type="number" min="0" step="0.001" data-ed="rate" value="${Number(c.rate).toFixed(3)}"></label></div>
+          </div>
+          <div class="edit-btns"><button class="edit-save" data-idx="${i}" data-kind="cart">Save</button><button class="edit-cancel">Cancel</button></div>
+        </div>` : `
         <div class="cart-row">
           <div>
             <div class="cart-row-name">${lbEsc(c.name)}</div>
             <div class="cart-row-meta">${lbEsc(c.qty)} × ${fmtBD(c.rate)} = ${fmtBD(c.qty * c.rate)}</div>
           </div>
-          <button class="remove-btn" data-idx="${i}" data-kind="cart">✕</button>
+          <div style="display:flex;align-items:center;"><button class="edit-btn" data-idx="${i}" data-kind="cart" title="Edit">✏️</button><button class="remove-btn" data-idx="${i}" data-kind="cart">✕</button></div>
         </div>
       `).join('');
     }
 
     const exEl = document.getElementById('extrasList');
-    exEl.innerHTML = extras.map((x, i) => `
+    exEl.innerHTML = extras.map((x, i) => EDIT_KEY === 'extra' + i ? `
+      <div class="cart-row cart-edit">
+        <div style="flex:1;min-width:0;">
+          <div class="edit-fields"><label style="flex:2">Description<input type="text" data-ed="desc" value="${lbEsc(x.desc)}"></label><label>Price<input type="number" min="0" step="0.001" data-ed="price" value="${Number(x.price).toFixed(3)}"></label></div>
+        </div>
+        <div class="edit-btns"><button class="edit-save" data-idx="${i}" data-kind="extra">Save</button><button class="edit-cancel">Cancel</button></div>
+      </div>` : `
       <div class="cart-row">
         <div>
           <div class="cart-row-name">${lbEsc(x.desc)}</div>
           <div class="cart-row-meta">${fmtBD(x.price)}</div>
         </div>
-        <button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button>
+        <div style="display:flex;align-items:center;"><button class="edit-btn" data-idx="${i}" data-kind="extra" title="Edit">✏️</button><button class="remove-btn" data-idx="${i}" data-kind="extra">✕</button></div>
       </div>
     `).join('');
 
@@ -537,12 +560,36 @@
   });
 
   document.addEventListener('click', (e)=>{
+    // Nov 2026: ✏️ edit a line already in the Order List (qty / rate, or extra name / price)
+    const eb = e.target.closest('.edit-btn');
+    if(eb){ EDIT_KEY = eb.dataset.kind + eb.dataset.idx; renderCart(); const f = document.querySelector('.cart-edit input'); if(f){ f.focus(); f.select && f.select(); } return; }
+    if(e.target.closest('.edit-cancel')){ EDIT_KEY = ''; renderCart(); return; }
+    const sb = e.target.closest('.edit-save');
+    if(sb){
+      const row = sb.closest('.cart-edit'), v = k => (row.querySelector('[data-ed="' + k + '"]') || {}).value, i = Number(sb.dataset.idx);
+      if(sb.dataset.kind === 'cart'){
+        const q = parseFloat(v('qty')), rt = parseFloat(v('rate'));
+        if(!(q > 0) || !(rt >= 0) || isNaN(rt)){ alert('Enter a Qty and Rate.'); return; }
+        cart[i].qty = q; cart[i].rate = rt;
+      } else {
+        const d = String(v('desc') || '').trim(), pr = parseFloat(v('price'));
+        if(!d || !(pr > 0)){ alert('Enter a Description and Price.'); return; }
+        extras[i].desc = d; extras[i].price = pr;
+      }
+      EDIT_KEY = ''; renderCart(); return;
+    }
     const btn = e.target.closest('.remove-btn');
     if(!btn) return;
     const idx = Number(btn.dataset.idx);
     if(btn.dataset.kind === 'cart') cart.splice(idx, 1);
     else extras.splice(idx, 1);
+    EDIT_KEY = '';
     renderCart();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(!e.target.closest || !e.target.closest('.cart-edit')) return;
+    if(e.key === 'Enter'){ e.preventDefault(); const b = e.target.closest('.cart-edit').querySelector('.edit-save'); b && b.click(); }
+    else if(e.key === 'Escape'){ EDIT_KEY = ''; renderCart(); }
   });
 
   function populateReceipts(){
