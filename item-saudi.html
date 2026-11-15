@@ -91,6 +91,8 @@
   .sc .b{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; } .sc .b button{ font:inherit; font-size:12.5px; font-weight:700; border:1px solid #cfe2ef; background:#fff; border-radius:9px; padding:7px 11px; cursor:pointer; }
   .sc .b .go{ background:#2f7a4f; color:#fff; border-color:#2f7a4f; }
   .sc .it{ font-size:12.5px; margin-top:6px; display:none; } .sc.open .it{ display:block; }
+  .sc{ position:relative; } .scx{ display:none; position:absolute; top:8px; right:8px; border:1px solid #cfe2ef; background:#fff; border-radius:8px; width:30px; height:30px; font-size:14px; font-weight:800; cursor:pointer; color:#2f6f9a; }
+  .sc.open .scx{ display:block; } .sc.open .t{ padding-right:36px; } .ships.mini .shb{ display:none; } .ships.mini h3{ margin:0; }
   .ss{ font-size:11px; font-weight:800; border-radius:99px; padding:2px 9px; } .ss.on_way{ background:#e3effa; color:#2f6f9a; } .ss.received{ background:#e3f4e8; color:#2f7a4f; } .ss.partial{ background:#ffe9cc; color:#8a4a0c; }
   .ck{ display:grid; grid-template-columns:26px 1fr 78px; gap:6px 8px; align-items:center; padding:7px 9px; border-top:1px solid #f3e8eb; font-size:13px; }
   .ck input[type=checkbox]{ width:22px; height:22px; } .ck input[type=number]{ padding:7px; font-size:14px; } .ck .s{ font-size:11.5px; color:var(--dim); } .ck .nt{ grid-column:2 / 4; padding:6px 8px; font-size:12.5px; }
@@ -402,17 +404,19 @@
       var items = sh.items.map(function(it){ var g = sh.status === 'on_way' ? '☐' : (it.got ? '✅' : '❌'); return '<div>' + g + ' ' + (it.photo ? '<img class="ph" src="' + esc(it.photo) + '" alt=""> ' : '') + esc(it.item) + ' — ' + esc(qtyTxt(it.qty, it.unit)) + (sh.status !== 'on_way' && it.got && it.qtyGot != null && it.qty != null && it.qtyGot < it.qty ? ' <b style="color:#a8560b">(got ' + esc(n3(it.qtyGot)) + ')</b>' : '') + (it.note ? ' <span style="color:#7a6670">· ' + esc(it.note) + '</span>' : '') + '</div>'; }).join('') +
         sh.extras.map(function(e){ return '<div>➕ ' + esc(e.item) + ' — ' + esc(qtyTxt(e.qty, e.unit)) + ' <span style="color:#a8560b">· not on the list: ' + esc(e.note) + '</span></div>'; }).join('');
       var got = sh.items.filter(function(it){ return it.got; }).length;
-      return '<div class="sc" data-sc="' + sh.id + '"><div class="t">' + esc(shipName(sh)) + ' <span class="ss ' + sh.status + '">' + SST[sh.status] + (sh.status !== 'on_way' ? ' ' + got + '/' + sh.items.length : '') + '</span></div>' +
+      return '<div class="sc" data-sc="' + sh.id + '"><button type="button" class="scx no-print" data-scopen="' + sh.id + '" title="Hide the items">✕</button><div class="t">' + esc(shipName(sh)) + ' <span class="ss ' + sh.status + '">' + SST[sh.status] + (sh.status !== 'on_way' ? ' ' + got + '/' + sh.items.length : '') + '</span></div>' +
         '<div class="m">' + esc(sh.from) + ' → ' + esc(sh.to) + ' · sent by ' + esc(sh.sentBy) + (sh.note ? ' · ' + esc(sh.note) : '') +
         (sh.status !== 'on_way' ? '<br>Received ' + esc(fd(sh.recDate)) + ' by ' + esc(sh.recBy) + (sh.recNote ? ' · ' + esc(sh.recNote) : '') : '') +
         (sh.photo ? ' <img class="ph" src="' + esc(sh.photo) + '" alt="">' : '') + (sh.recPhoto ? ' <img class="ph" src="' + esc(sh.recPhoto) + '" alt="">' : '') + '</div>' +
         '<div class="it">' + items + '</div>' +
-        '<div class="b no-print"><button type="button" data-scopen="' + sh.id + '">👁 Items</button><button type="button" data-scprint="' + sh.id + '">🖨️ Print checklist</button>' +
+        '<div class="b no-print"><button type="button" data-scopen="' + sh.id + '">👁 Items / Hide</button><button type="button" data-scprint="' + sh.id + '">🖨️ Print checklist</button>' +
         (canRecv(sh) ? '<button type="button" class="go" data-screcv="' + sh.id + '">✅ Receive</button>' : '') +
         (ADMIN && sh.status === 'on_way' ? '<button type="button" data-scdel="' + sh.id + '" style="color:#c5483a">🗑️</button>' : '') + '</div></div>';
     }
-    $('ships').innerHTML = '<div class="ships"><h3>🚚 Deliveries (checklist)</h3>' + (open.length ? open.map(card).join('') : '<div class="m" style="color:#7a6670;font-size:12.5px;margin-bottom:6px">Nothing on the way.</div>') +
-      (done.length ? '<details><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#2f6f9a;margin:4px 0">Recently received (' + done.length + ')</summary>' + done.map(card).join('') + '</details>' : '') + '</div>';
+    var mini = false; try{ mini = localStorage.getItem('lbShipsMini') === '1'; }catch(e){}
+    $('ships').innerHTML = '<div class="ships' + (mini ? ' mini' : '') + '"><h3 style="display:flex;align-items:center;gap:8px">🚚 Deliveries (checklist)' + (open.length ? ' <span class="ss on_way">' + open.length + ' on the way</span>' : '') + '<button type="button" id="shipsMin" class="no-print" title="Minimize / show" style="margin-left:auto;border:1px solid #cfe2ef;background:#fff;border-radius:8px;font:inherit;font-weight:800;padding:3px 10px;cursor:pointer">' + (mini ? '▾ Show' : '— Hide') + '</button></h3><div class="shb">' + (open.length ? open.map(card).join('') : '<div class="m" style="color:#7a6670;font-size:12.5px;margin-bottom:6px">Nothing on the way.</div>') +
+      (done.length ? '<details><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#2f6f9a;margin:4px 0">Recently received (' + done.length + ')</summary>' + done.map(card).join('') + '</details>' : '') + '</div></div>';
+    $('shipsMin').onclick = function(){ try{ localStorage.setItem('lbShipsMini', mini ? '0' : '1'); }catch(e){} renderShips(); };
   }
   function printChecklist(sh){
     var rows = sh.items.map(function(it, i){
