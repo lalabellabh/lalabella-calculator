@@ -1617,6 +1617,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     if(!description || isNaN(amount) || amount <= 0) return;
 
     extras.push({ description, amount });
+    try{ LBExtrasPick.noteAdd(extraDescriptionEl, amount, 'chocolate'); }catch(e){}
     extraDescriptionEl.value = '';
     extraAmountEl.value = '';
     renderCart();
@@ -2471,7 +2472,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <script src="joyboy-bubble.js"></script>
 <script src="shared/calc-sale.js?v=7"></script>
 <script src="shared/disp-guard.js?v=2"></script>
-<script src="shared/extras-pick.js?v=1"></script>
+<script src="shared/extras-pick.js?v=2"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDescription"), document.getElementById("extraAmount")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)

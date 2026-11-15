@@ -260,13 +260,21 @@ Deno.serve(async (req) => {
       (rel || []).forEach((r: any) => { if (seen[r.release_no]) return; seen[r.release_no] = true; releases.push({ no: r.release_no, branch: r.branch, date: r.release_date, by: r.prepared_by }); });
       return json({ success: true, made: dp && dp[0] ? { name: dp[0].display_name, at: dp[0].created_at, by: dp[0].created_by } : null, sales: (cs || []).map((r: any) => ({ no: r.sale_no, branch: r.branch, at: r.created_at, by: r.created_by })), releases });
     }
-    // Extras picker: Item Inventory names only (no price — prices there are not reliable yet)
+    // Extras picker: Item Inventory names + sale price (Nov 15 2026: prices aligned to the Odoo sale price; staff may still change it — logged)
     if (a === 'itemNames') {
-      const rows = await sbGet('item_inventory?select=item_code,item_name,size,photo_link&order=item_name.asc&limit=2000');
+      const rows = await sbGet('item_inventory?select=item_code,item_name,size,photo_link,price_bhd&order=item_name.asc&limit=2000');
       const seen: Record<string, boolean> = {}; const items: any[] = [];
       (rows || []).forEach((r: any) => { const n = String(r.item_name || '').trim(); if (!n || seen[n.toLowerCase()]) return; seen[n.toLowerCase()] = true;
-        items.push({ code: r.item_code || '', name: n, size: r.size || '', photo: /^https:\/\/mysystemlla\.com\/[^\s"'<>]{1,200}$/.test(String(r.photo_link || '')) ? r.photo_link : '' }); });
+        items.push({ code: r.item_code || '', name: n, size: r.size || '', price: Number(r.price_bhd) || 0, photo: /^https:\/\/mysystemlla\.com\/[^\s"'<>]{1,200}$/.test(String(r.photo_link || '')) ? r.photo_link : '' }); });
       return json({ success: true, items });
+    }
+    // Extras: staff typed a different price than the Item Inventory sale price -> keep a log (no stock change)
+    if (a === 'logExtraPrice') {
+      const lp = Number(p.listPrice), up = Number(p.usedPrice);
+      if (!isFinite(lp) || !isFinite(up) || up < 0 || up > 100000) return json({ success: false, error: 'Bad price.' });
+      await sbPost('extra_price_log', [{ kind: p.kind === 'chocolate' ? 'chocolate' : 'flower', branch: txt(p.branch, 30) || null, item_code: txt(p.itemCode, 30) || null,
+        item_name: txt(p.itemName, 120), list_price: lp, used_price: up, created_by: who(u) }]);
+      return json({ success: true });
     }
     if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
     if (a === 'flowerNames') {

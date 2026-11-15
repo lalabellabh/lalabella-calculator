@@ -182,7 +182,7 @@
       var cols = ['#ff4d4d', '#ffd84d', '#4dff88', '#4db8ff', '#ff7ad9'], n = small ? 14 : 24;
       h += '<div class="lights">'; for (var i = 0; i < n; i++) h += '<b style="background:' + cols[i % 5] + ';color:' + cols[i % 5] + ';animation-delay:' + (i % 5 * .3).toFixed(1) + 's"></b>'; h += '</div>';
       for (var s = 0; s < (small ? 10 : 18); s++) h += '<i class="sn" style="left:' + rnd(0, 100).toFixed(1) + '%;font-size:' + rnd(9, 18).toFixed(0) + 'px;opacity:' + rnd(.45, .9).toFixed(2) + ';--dx:' + rnd(-8, 8).toFixed(1) + 'vw;animation-duration:' + rnd(10, 20).toFixed(1) + 's;animation-delay:-' + rnd(0, 20).toFixed(1) + 's">' + (s % 3 ? '•' : '❄') + '</i>';
-      h += '<i class="sleigh">🛷🦌</i>';
+      h += '<i class="sleigh"><span style="display:inline-block;transform:scaleX(-1)">🦌🛷</span></i>';   // mirrored: reindeer in front, facing the way it flies (left → right)
     } else if (th === 'undas') {
       h += '<div class="glow" style="left:-80px"></div><div class="glow" style="right:-80px"></div>';
       h += '<i class="cd" style="left:8px">🕯️</i><i class="cd" style="right:8px;animation-delay:.7s">🕯️</i>';

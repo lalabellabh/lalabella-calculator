@@ -1,7 +1,8 @@
 /* LALABELLA — Extras picker (Nov 2026).
  * Typing in the Extras name box (Flower Calc / Chocolate Calc) shows matching Item Inventory names (vase, box, ribbon…)
- * with their picture and code. Name only — the price stays manual (ask the admin). Anything not in the list can still be typed.
- * Use: LBExtrasPick.attach(inputElement, priceInputElement?)
+ * with their picture, code and sale price. Picking one fills the price (Nov 15 2026); staff can still change it — a changed price is logged
+ * (extra_price_log) when the extra is added. No stock is taken out. Anything not in the list can still be typed.
+ * Use: LBExtrasPick.attach(inputElement, priceInputElement?) · LBExtrasPick.noteAdd(inputElement, usedPrice, 'flower'|'chocolate') before clearing
  */
 (function () {
   'use strict';
@@ -28,7 +29,9 @@
     var list = [], idx = -1;
     function place() { var r = inp.getBoundingClientRect(); box.style.left = (r.left + window.scrollX) + 'px'; box.style.top = (r.bottom + window.scrollY + 4) + 'px'; box.style.width = Math.max(240, r.width) + 'px'; }
     function hide() { box.style.display = 'none'; idx = -1; }
-    function pick(i) { var it = list[i]; if (!it) return; inp.value = it.name + (it.size ? ' (' + it.size + ')' : ''); hide(); if (priceInp) { priceInp.focus(); priceInp.select && priceInp.select(); } }
+    function pick(i) { var it = list[i]; if (!it) return; inp.value = it.name + (it.size ? ' (' + it.size + ')' : ''); hide();
+      inp.__lbxpPick = it.price > 0 ? { code: it.code, name: inp.value, price: it.price } : null;
+      if (priceInp) { if (it.price > 0) priceInp.value = it.price.toFixed(3); priceInp.focus(); priceInp.select && priceInp.select(); } }
     function show() {
       var q = inp.value.trim().toLowerCase(); if (q.length < 2) { hide(); return; }
       load().then(function (all) {
@@ -36,12 +39,13 @@
         list = all.filter(function (it) { var h = (it.name + ' ' + it.code + ' ' + it.size).toLowerCase(); return words.every(function (w) { return h.indexOf(w) !== -1; }); }).slice(0, 40);
         box.innerHTML = list.length ? list.map(function (it, i) {
           return '<div class="o" data-i="' + i + '">' + (it.photo ? '<img loading="lazy" src="' + esc(it.photo) + '" alt="">' : '<span class="ph">📦</span>') +
-            '<div><div>' + esc(it.name) + (it.size ? ' <span class="c">' + esc(it.size) + '</span>' : '') + '</div><div class="c">' + esc(it.code) + '</div></div></div>';
-        }).join('') + '<div class="n">Price: type it yourself (ask the admin).</div>' : '<div class="n">Not in Item Inventory — just type the name.</div>';
+            '<div style="flex:1"><div>' + esc(it.name) + (it.size ? ' <span class="c">' + esc(it.size) + '</span>' : '') + '</div><div class="c">' + esc(it.code) + '</div></div>' +
+            (it.price > 0 ? '<b style="font-size:12px;white-space:nowrap">' + it.price.toFixed(3) + ' BD</b>' : '<span class="c">no price</span>') + '</div>';
+        }).join('') + '<div class="n">Price is filled in — you can change it (a changed price is saved in the log).</div>' : '<div class="n">Not in Item Inventory — just type the name.</div>';
         idx = -1; place(); box.style.display = 'block';
       });
     }
-    inp.addEventListener('input', show);
+    inp.addEventListener('input', function () { inp.__lbxpPick = null; show(); });
     inp.addEventListener('focus', function () { load(); if (inp.value.trim().length >= 2) show(); });
     inp.addEventListener('keydown', function (e) {
       if (box.style.display === 'none') return;
@@ -55,5 +59,14 @@
     window.addEventListener('resize', function () { if (box.style.display !== 'none') place(); });
     window.addEventListener('scroll', function () { if (box.style.display !== 'none') place(); }, true);
   }
-  window.LBExtrasPick = { attach: attach };
+  // call when the extra is added: logs it only if the price was changed from the Item Inventory sale price
+  function noteAdd(inp, usedPrice, kind) {
+    var pk = inp && inp.__lbxpPick; if (inp) inp.__lbxpPick = null;
+    if (!pk || inp.value.trim() !== pk.name) return;
+    var used = Number(usedPrice) || 0; if (Math.abs(used - pk.price) < 0.0005) return;
+    var br = ''; try { var s = document.querySelector('.lbcs select'); br = (s && s.value) || ''; } catch (e) {}
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logExtraPrice', token: token(), kind: kind, branch: br,
+      itemCode: pk.code, itemName: pk.name, listPrice: pk.price, usedPrice: used }) }).catch(function () {});
+  }
+  window.LBExtrasPick = { attach: attach, noteAdd: noteAdd };
 })();
