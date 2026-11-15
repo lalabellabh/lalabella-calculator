@@ -93,6 +93,7 @@ async function sign(urls: string[]): Promise<Record<string, string>> {
 }
 
 async function list(u: any) {
+  const u0 = u;
   const [lines, rets, pics] = await Promise.all([
     sbGetAll('saudi_transfers?select=*&order=batch_date.desc,batch_label.asc,sort_order.asc,id.asc'),
     sbGetAll('saudi_returns?select=*&order=return_date.asc.nullsfirst,id.asc'),
@@ -102,7 +103,7 @@ async function list(u: any) {
   const linePics: Record<string, string[]> = {}, batchPics: any[] = [];
   pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
     if (x.line_id) (linePics[x.line_id] = linePics[x.line_id] || []).push(u);
-    else batchPics.push({ batch: x.batch_label, batchDate: x.batch_date, url: u, caption: x.caption || '' }); });
+    else batchPics.push({ id: x.id, batch: x.batch_label, batchDate: x.batch_date, url: u, caption: x.caption || '', canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); });
   const byLine: Record<string, any[]> = {};
   rets.forEach((r: any) => { (byLine[r.line_id] = byLine[r.line_id] || []).push({ id: r.id, kind: r.kind, qty: r.qty == null ? null : Number(r.qty), date: r.return_date || '', branch: r.branch || '',
     by: r.received_by || '', notes: r.notes || '', photo: r.photo_url ? (signed[r.photo_url] || '') : '', source: r.source, savedBy: r.created_by || '', at: r.created_at }); });
@@ -225,6 +226,17 @@ Deno.serve(async (req) => {
       if (n >= 30) return json({ success: false, error: 'This transfer already has 30 pictures.' });
       const url = await savePhoto(String(p.photo || '')); if (!url) return json({ success: false, error: 'Picture not saved (JPEG/PNG only).' });
       await sbPost('saudi_photos', [{ line_id: null, batch_label: bl, batch_date: b[0].batch_date, url, sort_order: 100 + n, caption: txt(p.caption, 60) || null, source: 'added', created_by: who(u) }]);
+      return json({ success: true });
+    }
+    // delete a transfer picture: Admin, or the person who added it
+    if (a === 'deleteBatchPhoto') {
+      const id = parseInt(String(p.id || ''), 10); if (!id) return json({ success: false, error: 'Missing id.' });
+      const ph = (await sbGet(`saudi_photos?select=id,url,source,created_by,line_id&id=eq.${id}&limit=1`))[0];
+      if (!ph || ph.line_id) return json({ success: false, error: 'Picture not found.' });
+      if (!isAdmin(u) && !(ph.source === 'added' && ph.created_by === who(u))) return json({ success: false, error: 'Only an admin or the person who added it can delete this picture.' });
+      await sbDelete('saudi_photos', `id=eq.${id}`);
+      const path = String(ph.url || '').indexOf(PUB) === 0 ? String(ph.url).slice(PUB.length) : (/^https?:/.test(String(ph.url || '')) ? '' : String(ph.url || ''));
+      try { if (path) await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); } catch (_) { /* row is gone either way */ }
       return json({ success: true });
     }
     if (a === 'importPhoto') {   // Admin: pictures that were inside TRANSFERS_TO_SAUDI.xlsx

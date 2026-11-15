@@ -169,7 +169,7 @@
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="pSave">Save</button></div>
 </div></div>
 
-<div class="lb" id="lb"><img alt=""></div>
+<div class="lb" id="lb"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><img alt=""><div id="lbCap" style="color:#fff;font-size:14px;font-weight:600"></div><button type="button" id="lbDel" style="display:none;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:800;background:#c5483a;color:#fff;cursor:pointer">🗑️ Delete this picture</button></div></div>
 
 <script>
 (function(){
@@ -289,7 +289,7 @@
       var who = [f0.from ? 'from ' + f0.from : '', f0.givenTo ? 'given to ' + f0.givenTo : ''].filter(Boolean).join(' · ');
       return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + (who ? ' · ' + esc(who) : '') + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
         (f0.source === 'excel' ? '<span class="tag">from Excel</span>' : '') +
-        (function(){ var bp = BPICS.filter(function(x){ return x.batch === b.batch && x.batchDate === b.date; }); return '<span class="m">' + (bp.length ? '📄 ' + bp.map(function(x){ return '<img class="ph" src="' + esc(x.url) + '" alt="" title="' + esc(x.caption || 'Picture') + '">'; }).join('') : '') + ' <button type="button" class="no-print" data-addpic="' + esc(b.batch) + '" data-adddate="' + esc(b.date || '') + '" title="Add a picture (chat screenshot, delivery list, photo)" style="width:26px;height:26px;border-radius:50%;border:1px dashed #9e2f4a;background:#fff;color:#9e2f4a;font-weight:800;font-size:15px;line-height:1;cursor:pointer;vertical-align:middle">＋</button></span>'; })() + '</div>' +
+        (function(){ var bp = BPICS.filter(function(x){ return x.batch === b.batch && x.batchDate === b.date; }); return '<span class="m">' + (bp.length ? '📄 ' + bp.map(function(x){ return '<img class="ph" src="' + esc(x.url) + '" alt="" title="' + esc(x.caption || 'Picture') + '"' + (x.canDelete ? ' data-pid="' + esc(x.id) + '"' : '') + ' data-cap="' + esc(x.caption || '') + '">'; }).join('') : '') + ' <button type="button" class="no-print" data-addpic="' + esc(b.batch) + '" data-adddate="' + esc(b.date || '') + '" title="Attach a picture (chat screenshot, delivery list, photo)" style="border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer;vertical-align:middle;padding:2px 4px">📎</button></span>'; })() + '</div>' +
         '<table><thead><tr class="t"><th colspan="6">TRANSFERS (BAHRAIN TO KSA)</th><th class="no-print"></th></tr>' +
         '<tr><th>NO.</th><th>REFERENCE</th><th>QUANTITY</th><th>NOTES</th><th>RETURNED / RECEIVED</th><th>STATUS</th><th class="no-print"></th></tr></thead><tbody>' + body + '</tbody></table></div>';
     }).join('');
@@ -382,7 +382,11 @@
 
   document.addEventListener('click', function(e){
     var c = e.target.closest('[data-close]'); if(c){ c.closest('.modal').classList.remove('show'); return; }
-    var im = e.target.closest('img.ph'); if(im){ $('lb').querySelector('img').src = im.src; $('lb').classList.add('show'); return; }
+    var dl = e.target.closest('#lbDel');
+    if(dl){ var pid = dl.getAttribute('data-pid'); if(!pid || !confirm('Delete this picture? It cannot be undone.')) return;
+      dl.disabled = true; api({ action:'deleteBatchPhoto', id: pid }, true).then(function(d){ dl.disabled = false; if(!d || !d.success){ alert((d && d.error) || 'Not deleted.'); return; } $('lb').classList.remove('show'); load(); }); return; }
+    var im = e.target.closest('img.ph'); if(im){ $('lb').querySelector('img').src = im.src; $('lbCap').textContent = im.getAttribute('data-cap') || '';
+      var pd = im.getAttribute('data-pid'); $('lbDel').style.display = pd ? '' : 'none'; if(pd) $('lbDel').setAttribute('data-pid', pd); $('lb').classList.add('show'); return; }
     if(e.target.closest('#lb')){ $('lb').classList.remove('show'); return; }
     var el = e.target.closest('[data-el]'); if(el){ var r = ROWS.find(function(x){ return String(x.id) === el.getAttribute('data-el'); }); if(r) openLine(r); return; }
     var em = e.target.closest('[data-em]'); if(em){ var m = null; ROWS.some(function(x){ m = x.moves.find(function(y){ return String(y.id) === em.getAttribute('data-em'); }); return !!m; }); if(m) openMove(m); return; }
