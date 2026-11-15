@@ -1472,7 +1472,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
           row.innerHTML = `
             <div>
               <div class="result-name">${lbEsc(r.name)}</div>
-              <div class="result-meta">${lbEsc(r.category)} · ${lbEsc(r.code)} · ${lbEsc(r.grams)}g/pc</div>
+              <div class="result-meta">${lbEsc(r.category)} · ${lbEsc(r.code)} · ${lbEsc(r.grams)}g/pc</div>${window.LBCalcStock ? LBCalcStock.tag('chocolate', r.name) : ''}
             </div>
             <div class="result-price">${fmtBD(r.pricePerKg)}/kg</div>
           `;
@@ -1481,6 +1481,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         });
       }
       resultsEl.style.display = 'block';
+      if(window.LBCalcStock) LBCalcStock.paint(resultsEl);
     }catch(err){
       console.error(err);
       console.error(err);
@@ -1494,7 +1495,8 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     resultsEl.style.display = 'none';
     cardEl.style.display = 'block';
     itemNameEl.textContent = item.name;
-    itemMetaEl.textContent = `${item.code} · ${item.grams}g per piece · ${fmtBD(item.pricePerKg)}/kg`;
+    itemMetaEl.innerHTML = lbEsc(`${item.code} · ${item.grams}g per piece · ${fmtBD(item.pricePerKg)}/kg`) + (window.LBCalcStock ? LBCalcStock.tag('chocolate', item.name, true) : '');
+    if(window.LBCalcStock) LBCalcStock.paint(itemMetaEl);
     amountEl.value = '';
     addBtn.disabled = true;
     setMode('pieces');
@@ -2534,6 +2536,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 
 <script src="joyboy-bubble.js"></script>
 <script src="shared/calc-sale.js?v=8"></script>
+<script src="shared/calc-stock.js?v=1"></script>
 <script src="shared/disp-guard.js?v=2"></script>
 <script src="shared/extras-pick.js?v=4"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDescription"), document.getElementById("extraAmount")); }catch(e){}</script>

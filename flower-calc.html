@@ -420,12 +420,12 @@
     } else {
       searchResults.innerHTML = matches.map(f => `
         <div class="result-item" data-name="${lbEsc(f.name)}" data-rate="${lbEsc(f.rate)}">
-          <span class="result-name">${lbEsc(f.name)}</span>
+          <span><span class="result-name">${lbEsc(f.name)}</span>${window.LBCalcStock ? LBCalcStock.tag('flower', f.name) : ''}</span>
           <span class="result-rate">${fmtBD(f.rate)}</span>
         </div>
       `).join('');
     }
-    searchResults.classList.add('show');
+    searchResults.classList.add('show'); if(window.LBCalcStock) LBCalcStock.paint(searchResults);
   });
 
   searchResults.addEventListener('click', (e)=>{
@@ -434,7 +434,7 @@
     selected = { name: item.dataset.name, rate: Number(item.dataset.rate) };
     searchInput.value = selected.name;
     document.getElementById('rateInput').value = selected.rate.toFixed(3);
-    document.getElementById('selectedName').textContent = 'Napili: ' + selected.name; paintSearchPic(selected.name);
+    document.getElementById('selectedName').innerHTML = 'Napili: ' + lbEsc(selected.name) + (window.LBCalcStock ? LBCalcStock.tag('flower', selected.name) : ''); paintSearchPic(selected.name); if(window.LBCalcStock) LBCalcStock.paint(document.getElementById('selectedName'));
     searchResults.classList.remove('show');
     document.getElementById('addBtn').disabled = false;
     document.getElementById('qtyInput').focus();
@@ -451,7 +451,7 @@
     selected = { name: f.name, rate: f.rate };
     searchInput.value = f.name; paintSearchClear();
     document.getElementById('rateInput').value = f.rate.toFixed(3);
-    document.getElementById('selectedName').textContent = 'Napili: ' + f.name; paintSearchPic(f.name);
+    document.getElementById('selectedName').innerHTML = 'Napili: ' + lbEsc(f.name) + (window.LBCalcStock ? LBCalcStock.tag('flower', f.name) : ''); paintSearchPic(f.name); if(window.LBCalcStock) LBCalcStock.paint(document.getElementById('selectedName'));
     searchResults.classList.remove('show');
     document.getElementById('addBtn').disabled = false;
     document.getElementById('qtyInput').focus();
@@ -837,6 +837,7 @@
 
 
 <script src="shared/calc-sale.js?v=8"></script>
+<script src="shared/calc-stock.js?v=1"></script>
 <script src="shared/extras-pick.js?v=4"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>

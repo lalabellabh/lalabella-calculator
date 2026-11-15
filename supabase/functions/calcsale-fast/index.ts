@@ -316,6 +316,20 @@ Deno.serve(async (req) => {
       const mv = Object.keys(qty).map((n) => ({ at: s.created_at, kind: 'flower', branch: s.branch, item: n, unit: 'stems', before: r3(av[n] + qty[n]), change: -qty[n], after: av[n], ref: s.sale_no, action: 'Sold (recorded later)', by: s.created_by || who(u) }));
       await logMoves(mv); return json({ success: true, logged: mv.length });
     }
+    // Nov 15 2026: stock shown under the calc search results — flower: stems per name; chocolate: batches (+ kg / pcs) per chocolate
+    if (a === 'stockList') {
+      const br = txt(p.branch, 30); if (BRANCHES.indexOf(br) === -1) return json({ success: false, error: 'Pick the branch first.' });
+      if (p.kind === 'chocolate') {
+        const rows = await sbGetAll(`chocolate_database?select=chocolate_name,product_code,batch_no,expiry_date,current_stock,unit,weight_per_piece&branch=eq.${encodeURIComponent(br)}&approval_status=eq.Approved&current_stock=gt.0&order=expiry_date.asc.nullslast`);
+        const by: Record<string, any> = {};
+        (rows || []).forEach((r: any) => { const k = String(r.chocolate_name || '').trim().toLowerCase(); if (!k) return; const g = by[k] || (by[k] = { name: r.chocolate_name, code: r.product_code || '', batches: [], total: {} });
+          const un = unitLabel(r.unit), q = r3(Number(r.current_stock) || 0); g.batches.push({ batch: r.batch_no || '', stock: q, unit: un, expiry: r.expiry_date || '', gpp: Number(r.weight_per_piece) || 0 }); g.total[un] = r3((g.total[un] || 0) + q); });
+        return json({ success: true, branch: br, kind: 'chocolate', stock: Object.values(by) });
+      }
+      const items = await sbGet('flower_item?select=flower_name&status=eq.Active&limit=1000');
+      const names = Array.from(new Set((items || []).map((r: any) => String(r.flower_name || '').trim()).filter(Boolean)));
+      return json({ success: true, branch: br, kind: 'flower', stock: await flowerAvailable(br, names) });
+    }
     if (a === 'stockMoves') {
       const dRx = /^\d{4}-\d{2}-\d{2}$/; let q = 'stock_moves?select=*&order=id.desc&limit=' + Math.min(500, Math.max(1, Number(p.limit) || 100));
       if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
