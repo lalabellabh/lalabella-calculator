@@ -94,7 +94,12 @@
     return (s.items || []).map(function(it){
       if(s.kind === 'flower') return esc(it.name) + ' × ' + esc(it.qty);
       return esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg');
-    }).join(' · ');
+    }).join(' · ') + (extrasOf(s).length ? '<div style="margin-top:3px;color:#7a5a20">🎀 Extras: ' + extrasOf(s).map(function(x){ return esc(x.desc) + ' ' + f3(x.price); }).join(' · ') + '</div>' : '');
+  }
+  // Nov 15 2026: the extras of a sale (older sales only know the extras total -> one "Extras" line)
+  function extrasOf(s){
+    if(s.extras && s.extras.length) return s.extras.map(function(x){ return { desc: x.desc, price: Number(x.price) || 0 }; });
+    return (Number(s.extrasTotal) || 0) > 0.0005 ? [{ desc:'Extras', price:Number(s.extrasTotal) }] : [];
   }
   var SALES = [];
   function f3(n){ return (Number(n) || 0).toFixed(3); }
@@ -103,7 +108,7 @@
     var rows = (s.items || []).map(function(it){
       if(s.kind === 'flower') return '<div class="r"><span>' + esc(it.name) + ' x' + esc(it.qty) + '</span><span>' + f3((Number(it.qty) || 0) * (Number(it.rate) || 0)) + ' BD</span></div>';
       return '<div class="r"><span>' + esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : f3(it.kg) + ' kg') + '</span><span>' + f3(it.total) + ' BD</span></div>';
-    }).join('');
+    }).join('') + extrasOf(s).map(function(x){ return '<div class="r"><span>' + esc(x.desc) + '</span><span>' + f3(x.price) + ' BD</span></div>'; }).join('');
     $('rp').className = mode;
     $('rp').innerHTML = '<h2>' + (s.kind === 'flower' ? 'Lalabella Flowers' : 'Lalabella') + '</h2><div class="c">' + esc(s.branch) + ' · ' + when(s.at) + '</div>' +
       '<div class="c">' + esc(s.saleNo) + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + '</div>' +
@@ -152,12 +157,17 @@
   function openEdit(s){
     var fl = s.kind === 'flower', bg = document.createElement('div'); bg.className = 'ed-bg';
     var items = fl ? (s.items || []).map(function(it){ return { name:it.name, qty:Number(it.qty) || 0 }; }) : [];
+    var exs = extrasOf(s).map(function(x){ return { desc:x.desc, price:x.price }; });
+    var rateOf = {}; (s.items || []).forEach(function(it){ rateOf[String(it.name).toLowerCase()] = Number(it.rate) || 0; });
+    var chocItems = fl ? 0 : (s.items || []).reduce(function(a, it){ return a + (Number(it.total) || 0); }, 0);
     bg.innerHTML = '<div class="ed"><h3>✏️ Edit ' + esc(s.saleNo) + '</h3><div class="sub">' + (fl ? '🌸 Flower' : '🍫 Chocolate') + ' · ' + when(s.at) + ' · ' + esc(s.by) + '</div>' +
       '<label>Source</label><select data-f="source">' + SRC.map(function(x){ return '<option' + (x === s.source ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
       '<label>Sold to (invoice no. / name / phone)</label><input data-f="ref" maxlength="60" value="' + esc(s.ref || '') + '">' +
       (fl ? '<label>Branch (stock is taken from here)</label><select data-f="branch">' + BRS.map(function(x){ return '<option' + (x === s.branch ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
         '<label>Flowers (qty in stems)</label><div data-items></div><div class="note">Tap a flower name to change it (e.g. Rose → S-Rose). Changing a flower or qty puts the old back into stock and takes the new out. The sale keeps its number and time.</div>'
-        : '<div class="note">For chocolate only the details can be edited. Wrong chocolate or qty: Cancel the sale (it goes back to stock) and sell again from the Chocolate Calc.</div>') +
+        : '<label>Chocolates</label><div style="font-size:13px;line-height:1.5">' + itemText({ kind:'chocolate', items:s.items }) + '</div><div class="note">For chocolate the chocolates themselves cannot be changed here. Wrong chocolate or qty: Cancel the sale (it goes back to stock) and sell again from the Chocolate Calc.</div>') +
+      '<label>🎀 Extras (vase, box, hand work…)</label><div data-extras></div>' +
+      '<div data-tot style="margin-top:12px;padding:10px 12px;border-radius:10px;background:#f7f1e8;font-size:13px;line-height:1.6"></div>' +
       '<div class="acts"><button data-x>Close</button><button class="sv" data-sv>Save changes</button></div></div>';
     document.body.appendChild(bg);
     var paint = function(){ var box = bg.querySelector('[data-items]'); if(!box) return;
@@ -165,12 +175,26 @@
         '<button type="button" data-add style="border:1px dashed var(--line);background:#fff;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%">＋ Add flower</button>'; };
     if(fl && !document.getElementById('edFlowers')){ var dl = document.createElement('datalist'); dl.id = 'edFlowers'; document.body.appendChild(dl);
       fetch(API + '?action=flowerNames&token=' + encodeURIComponent(token())).then(function(r){ return r.json(); }).then(function(d){ if(d && d.success) dl.innerHTML = d.names.map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); }).catch(function(){}); }
-    paint();
-    bg.addEventListener('input', function(ev){ var q = ev.target.getAttribute && ev.target.getAttribute('data-q'); if(q != null) items[Number(q)].qty = Number(ev.target.value) || 0;
+    var paintEx = function(){ var box = bg.querySelector('[data-extras]');
+      box.innerHTML = exs.map(function(x, k){ return '<div class="it"><input class="n" data-xd="' + k + '" value="' + esc(x.desc) + '" placeholder="e.g. Vase" style="flex:1;width:auto"><input type="number" min="0" step="0.001" inputmode="decimal" data-xp="' + k + '" value="' + f3(x.price) + '"><button data-xrm="' + k + '" title="Remove">✕</button></div>'; }).join('') +
+        '<button type="button" data-xadd style="border:1px dashed var(--line);background:#fff;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%">＋ Add extra</button>'; };
+    var paintTot = function(){
+      var it = fl ? items.reduce(function(a, x){ var rt = rateOf[String(x.name).toLowerCase()]; return a + (rt == null ? 0 : rt * (Number(x.qty) || 0)); }, 0) : chocItems;
+      var newOnes = fl ? items.filter(function(x){ return x.name && rateOf[String(x.name).toLowerCase()] == null; }).length : 0;
+      var ex = exs.reduce(function(a, x){ return a + (Number(x.price) || 0); }, 0);
+      bg.querySelector('[data-tot]').innerHTML = (fl ? 'Flowers' : 'Chocolates') + ': <b>' + f3(it) + ' BD</b>' + (newOnes ? ' <span style="color:var(--dim)">(+ new flower at its list rate)</span>' : '') +
+        '<br>Extras: <b>' + f3(ex) + ' BD</b><br><span style="font-size:15px">TOTAL: <b>' + f3(it + ex) + ' BD</b></span>' + (Math.abs(it + ex - (Number(s.total) || 0)) > 0.0005 ? ' <span style="color:var(--dim)">(was ' + f3(s.total) + ')</span>' : ''); };
+    paint(); paintEx(); paintTot();
+    bg.addEventListener('input', function(ev){
+      var xd = ev.target.getAttribute && ev.target.getAttribute('data-xd'); if(xd != null) exs[Number(xd)].desc = ev.target.value.trim();
+      var xp = ev.target.getAttribute && ev.target.getAttribute('data-xp'); if(xp != null) exs[Number(xp)].price = Number(ev.target.value) || 0;
+      setTimeout(paintTot, 0); var q = ev.target.getAttribute && ev.target.getAttribute('data-q'); if(q != null) items[Number(q)].qty = Number(ev.target.value) || 0;
       var nn = ev.target.getAttribute && ev.target.getAttribute('data-n'); if(nn != null) items[Number(nn)].name = ev.target.value.trim(); });
     bg.addEventListener('click', function(ev){
       if(ev.target === bg || ev.target.closest('[data-x]')){ bg.remove(); return; }
-      var rm = ev.target.closest('[data-rm]'); if(rm){ items.splice(Number(rm.getAttribute('data-rm')), 1); paint(); return; }
+      var rm = ev.target.closest('[data-rm]'); if(rm){ items.splice(Number(rm.getAttribute('data-rm')), 1); paint(); paintTot(); return; }
+      var xrm = ev.target.closest('[data-xrm]'); if(xrm){ exs.splice(Number(xrm.getAttribute('data-xrm')), 1); paintEx(); paintTot(); return; }
+      if(ev.target.closest('[data-xadd]')){ exs.push({ desc:'', price:0 }); paintEx(); var lx = bg.querySelector('[data-xd="' + (exs.length - 1) + '"]'); if(lx) lx.focus(); return; }
       if(ev.target.closest('[data-add]')){ items.push({ name:'', qty:1 }); paint(); var last = bg.querySelector('[data-n="' + (items.length - 1) + '"]'); if(last) last.focus(); return; }
       var sv = ev.target.closest('[data-sv]'); if(!sv) return;
       var keep = items.filter(function(it){ return it.qty > 0 && it.name; });
@@ -181,7 +205,10 @@
       if(fl && !keep.length){ alert('At least one flower must stay. To remove everything, use Cancel.'); return; }
       var body = { action:'editSale', id:s.id, token:token(), source:bg.querySelector('[data-f=source]').value, ref:bg.querySelector('[data-f=ref]').value.trim(), customer:s.customer || '' };
       if(fl){ body.branch = bg.querySelector('[data-f=branch]').value; body.items = JSON.stringify(keep); }
-      var lines = fl ? '\n\n' + keep.map(function(it){ return '• ' + it.name + ' × ' + it.qty; }).join('\n') : '';
+      var exKeep = exs.filter(function(x){ return x.desc && x.price > 0; });
+      if(exs.some(function(x){ return (x.desc && !(x.price > 0)) || (!x.desc && x.price > 0); })){ alert('Each extra needs a name and a price (or remove it with ✕).'); return; }
+      body.extrasList = JSON.stringify(exKeep);
+      var lines = (fl ? '\n\n' + keep.map(function(it){ return '• ' + it.name + ' × ' + it.qty; }).join('\n') : '') + (exKeep.length ? '\n' + exKeep.map(function(x){ return '• ' + x.desc + ' ' + f3(x.price); }).join('\n') : '');
       if(!confirm('Save changes to ' + s.saleNo + '?' + lines)) return;
       sv.disabled = true; sv.textContent = 'Saving…';
       fetch(API, { method:'POST', body:new URLSearchParams(body) }).then(function(r){ return r.json(); }).then(function(d){

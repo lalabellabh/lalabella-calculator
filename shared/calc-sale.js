@@ -1,7 +1,7 @@
 /* LALABELLA — "✓ Sold" for the Flower Calc and Chocolate Calc (Nov 2026).
  * While Odoo is not live, a sale made with the calc is taken out of the chosen branch's stock.
  * The page tells us how to read its list:  LBCalcSale.mount({ kind, anchor, branchSelect?, get })
- *   get() -> { items:[...], extrasTotal:number, customer:string }
+ *   get() -> { items:[...], extrasTotal:number, extrasList:[{desc,price}], customer:string }
  * Server: calcsale-fast (saveFlowerSale / saveChocolateSale). Admin can cancel a sale in calc-sales.html.
  */
 (function () {
@@ -68,7 +68,7 @@
       // one key per sale: if the reply is lost and they press again, the server sees the same key and does not save twice
       if (sig !== pendSig) { pendSig = sig; pendKey = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
       btn.disabled = true; btn.textContent = 'Saving…'; res.innerHTML = '';
-      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), reqKey: pendKey, disp: window.LB_CALC_DISP || '', branch: branch, source: src, ref: refVal, customer: g.customer || (refVal === src ? src : ''), extras: String(g.extrasTotal || 0), items: JSON.stringify(items) });
+      var body = new URLSearchParams({ action: o.kind === 'flower' ? 'saveFlowerSale' : 'saveChocolateSale', token: token(), reqKey: pendKey, disp: window.LB_CALC_DISP || '', branch: branch, source: src, ref: refVal, customer: g.customer || (refVal === src ? src : ''), extras: String(g.extrasTotal || 0), extrasList: JSON.stringify(g.extrasList || []), items: JSON.stringify(items) });
       fetch(API, { method: 'POST', body: body }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.success) { res.innerHTML = '<span class="warn">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
         if (!d.saleNo) d.saleNo = 'already saved'; window.LB_CALC_DISP = ''; lastSig = sig; lastNo = d.saleNo; lastInfo = { branch: d.branch || branch, source: src, ref: refVal !== src ? refVal : '', saleNo: d.saleNo === 'already saved' ? '' : d.saleNo }; pendSig = ''; pendKey = '';

@@ -60,6 +60,15 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
 const txt = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 const who = (u: any) => txt(u && (u.full_name || u.username), 60);
 async function mode() { try { const r = await sbGet('order_settings?select=value&key=eq.deduct_source&limit=1'); return String((r[0] && r[0].value) || 'calc'); } catch { return 'calc'; } }
+// Nov 15 2026: the extras lines themselves (name + price), so reprints and edits show them
+function parseExtras(v: any): any[] | null {
+  if (v == null || v === '') return null;
+  let a: any[] = []; try { a = typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; }
+  if (!Array.isArray(a)) return null;
+  return a.slice(0, 40).map((x: any) => ({ desc: txt(x && (x.desc ?? x.description), 120), price: r3(Math.min(100000, Math.max(0, Number(x && (x.price ?? x.amount)) || 0))) })).filter((x: any) => x.desc && x.price > 0);
+}
+const extrasSum = (a: any[]) => r3(a.reduce((s: number, x: any) => s + (Number(x.price) || 0), 0));
+function itemsTotal(kind: string, items: any[]) { return r3((items || []).reduce((a: number, it: any) => a + (kind === 'flower' ? (Number(it.qty) || 0) * (Number(it.rate) || 0) : (Number(it.total) || 0)), 0)); }
 async function nextSaleNo(saleId: number) { return 'CS-' + String(saleId).padStart(6, '0'); }
 
 // ---------------- FLOWER ----------------
@@ -97,8 +106,9 @@ async function saveFlowerSale(p: any, u: any) {
   if (!names.length) return { success: false, error: 'Add at least one flower with a Qty.' };
   const avail = await flowerAvailable(branch, names);
   const short = names.filter((n) => avail[n] < sum[n]).map((n) => ({ name: n, need: sum[n], have: avail[n] }));
-  const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (Number(p.extras) || 0));
-  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const exList = parseExtras(p.extrasList);
+  const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0)));
+  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
@@ -116,7 +126,8 @@ async function saveChocolateSale(p: any, u: any) {
   items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (Number(p.extras) || 0)), created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const exList = parseExtras(p.extrasList);
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   let releaseNo = '';
   const deducted: any[] = [], short: any[] = [];
@@ -161,7 +172,8 @@ async function listSales(p: any) {
   if (p.kind === 'flower' || p.kind === 'chocolate') q += '&kind=eq.' + p.kind;
   if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
   const rows = await sbGet(q);
-  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at, editedBy: r.edited_by || '', editedAt: r.edited_at || null })) };
+  return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at, editedBy: r.edited_by || '', editedAt: r.edited_at || null,
+    extras: Array.isArray(r.extras) ? r.extras : [], extrasTotal: r3(Math.max(0, (Number(r.total) || 0) - itemsTotal(r.kind, r.items))) })) };
 }
 async function cancelSale(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
@@ -192,7 +204,11 @@ async function editSale(p: any, u: any) {
   if (s.status !== 'Active') return { success: false, error: 'This sale is cancelled — it cannot be edited.' };
   const src = txt(p.source, 30); if (src && SRC_OK.indexOf(src) === -1) return { success: false, error: 'Pick a source from the list.' };
   const fields: any = { source: src || s.source || null, ref: txt(p.ref, 60) || null, customer: txt(p.customer, 80) || null };
-  const before = { source: s.source, ref: s.ref, customer: s.customer, branch: s.branch, items: s.items, total: s.total };
+  const before = { source: s.source, ref: s.ref, customer: s.customer, branch: s.branch, items: s.items, total: s.total, extras: s.extras || null };
+  const exNew = parseExtras(p.extrasList);   // null = extras not sent (keep as they were)
+  const oldExtras = r3(Math.max(0, (Number(s.total) || 0) - itemsTotal(s.kind, s.items)));
+  const exTotal = exNew ? extrasSum(exNew) : oldExtras;
+  if (exNew) { fields.extras = exNew; fields.total = r3(itemsTotal(s.kind, s.items) + exTotal); }
   if (s.kind === 'flower' && p.items != null) {
     let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
     const branch = txt(p.branch, 30) || s.branch; if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch.' };
@@ -204,8 +220,7 @@ async function editSale(p: any, u: any) {
     const unknown = names.filter((n) => oldRate[n] === undefined);
     // a flower added during the edit: take its rate from the flower list (Legacy price first)
     for (const n of unknown) { const r = await sbGet(`flower_item?select=rate,origin&flower_name=eq.${encodeURIComponent(n)}&status=eq.Active`); if (!r.length) return { success: false, error: `"${n}" is not in the flower list.` }; const lg = r.find((x: any) => String(x.origin) === 'Legacy/Unknown') || r[0]; oldRate[n] = Number(lg.rate) || 0; }
-    const oldItemsTotal = (s.items || []).reduce((a: number, it: any) => a + (Number(it.qty) || 0) * (Number(it.rate) || 0), 0);
-    const extras = r3(Math.max(0, (Number(s.total) || 0) - oldItemsTotal));
+    const extras = exTotal;
     // put back the old lines, take out the new ones (same sale no. + original sale time)
     await sbDelete('flower_arrangement_fulfillments', `arrangement_code=eq.${encodeURIComponent(s.sale_no)}`);
     await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: s.sale_no, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + (s.created_by || who(u)) + ' (edited by ' + who(u) + ')', fulfilled_date: s.created_at })));
