@@ -69,9 +69,7 @@
 
   .cart-row{ border-top:1px solid var(--blush-2); padding:11px 0; display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .cart-row:first-child{ border-top:none; }
-  /* Nov 2026: picture of the picked flower (from Flower Photos) — tap to view big */
-  #selectedName .selPic{ display:inline-flex; align-items:center; font-weight:600; color:var(--ink); }
-  #selectedName .lbflw-t{ width:54px; height:54px; border-radius:10px; margin-right:8px; }
+
   .cart-row-name{ font-weight:600; font-size:13px; }
   .cart-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
   .remove-btn{ background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; flex-shrink:0; padding:4px 8px; }
@@ -224,6 +222,7 @@
           <div style="display:flex;gap:8px;align-items:stretch;">
             <div style="flex:1;min-width:0;position:relative;">
               <input type="text" id="searchInput" placeholder="Type a flower name or item code…" autocomplete="off" style="width:100%;padding-right:40px;" />
+              <img id="searchPic" class="lbflw-t" alt="" title="Tap to view" style="display:none;position:absolute;right:40px;top:50%;transform:translateY(-50%);width:30px;height:30px;margin:0;border-radius:7px;object-fit:cover;cursor:zoom-in;">
               <button type="button" id="searchClear" title="Clear" aria-label="Clear" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:0;background:#e9d6dc;color:#7a3a4e;font-size:15px;font-weight:700;line-height:1;cursor:pointer;">✕</button>
             </div>
             <button type="button" id="scanBtn" title="Scan barcode" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:#2f2024;color:#fff;">📷</button>
@@ -376,7 +375,16 @@
 
   // Nov 2026: ✕ clears the search and the picked flower
   const searchClear = document.getElementById('searchClear');
-  function paintSearchClear(){ searchClear.style.display = searchInput.value ? 'block' : 'none'; }
+  function paintSearchClear(){ searchClear.style.display = searchInput.value ? 'block' : 'none'; if(!selected || searchInput.value !== selected.name) paintSearchPic(''); }
+  // picture of the picked flower inside the search box, next to the ✕ (tap = big view, handled by shared/flower-photos.js)
+  function paintSearchPic(name){
+    const im = document.getElementById('searchPic'); let url = '';
+    if(name){ try{ const c = JSON.parse(localStorage.getItem('lbFlowerPhotosV1') || 'null'); const k = String(name).trim().toLowerCase();
+      const hit = c && (c.items || []).find(it => String(it.name || '').replace(/\s+/g,' ').trim().toLowerCase() === k); url = hit && /^https:\/\//.test(hit.photo || '') ? hit.photo : ''; }catch(e){} }
+    if(!url){ im.style.display = 'none'; im.removeAttribute('src'); searchInput.style.paddingRight = '40px'; return; }
+    im.src = url; im.setAttribute('data-name', name); im.style.display = 'block'; searchInput.style.paddingRight = '76px';
+    im.onerror = ()=>{ im.style.display = 'none'; searchInput.style.paddingRight = '40px'; };
+  }
   searchClear.addEventListener('click', ()=>{
     searchInput.value = ''; selected = null;
     document.getElementById('rateInput').value = '';
@@ -412,7 +420,7 @@
     selected = { name: item.dataset.name, rate: Number(item.dataset.rate) };
     searchInput.value = selected.name;
     document.getElementById('rateInput').value = selected.rate.toFixed(3);
-    document.getElementById('selectedName').innerHTML = 'Napili: <span class="selPic">' + lbEsc(selected.name) + '</span>';
+    document.getElementById('selectedName').textContent = 'Napili: ' + selected.name; paintSearchPic(selected.name);
     searchResults.classList.remove('show');
     document.getElementById('addBtn').disabled = false;
     document.getElementById('qtyInput').focus();
@@ -429,7 +437,7 @@
     selected = { name: f.name, rate: f.rate };
     searchInput.value = f.name; paintSearchClear();
     document.getElementById('rateInput').value = f.rate.toFixed(3);
-    document.getElementById('selectedName').innerHTML = 'Napili: <span class="selPic">' + lbEsc(f.name) + '</span>';
+    document.getElementById('selectedName').textContent = 'Napili: ' + f.name; paintSearchPic(f.name);
     searchResults.classList.remove('show');
     document.getElementById('addBtn').disabled = false;
     document.getElementById('qtyInput').focus();
