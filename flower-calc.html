@@ -556,7 +556,7 @@
     const desc = document.getElementById('extraDesc').value.trim();
     const each = parseFloat(document.getElementById('extraPrice').value) || 0;
     const qty = Math.max(1, parseFloat(document.getElementById('extraQty').value) || 1);
-    if(!desc || each <= 0){ alert('Enter a Description and Price.'); return; }
+    if(!desc || (each <= 0 && !/free/i.test(desc))){ alert('Enter a Description and Price.'); return; }   // a 'Free Delivery' line may be 0
     extras.push({ desc, qty, each, price: Math.round(qty * each * 1000) / 1000 });   // price = line total
     try{ LBExtrasPick.noteAdd(document.getElementById('extraDesc'), each, 'flower'); }catch(e){}
     document.getElementById('extraDesc').value = '';
@@ -579,7 +579,7 @@
         cart[i].qty = q; cart[i].rate = rt;
       } else {
         const d = String(v('desc') || '').trim(), pr = parseFloat(v('price'));
-        if(!d || !(pr > 0)){ alert('Enter a Description and Price.'); return; }
+        if(!d || (!(pr > 0) && !(pr === 0 && /free/i.test(d)))){ alert('Enter a Description and Price.'); return; }
         const xq = Math.max(1, parseFloat(v('qty')) || 1);
         extras[i].desc = d; extras[i].qty = xq; extras[i].each = pr; extras[i].price = Math.round(xq * pr * 1000) / 1000;
       }
@@ -838,7 +838,7 @@
 
 <script src="shared/calc-sale.js?v=8"></script>
 <script src="shared/calc-stock.js?v=1"></script>
-<script src="shared/extras-pick.js?v=4"></script>
+<script src="shared/extras-pick.js?v=5"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)

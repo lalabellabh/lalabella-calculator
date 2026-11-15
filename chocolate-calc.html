@@ -1571,7 +1571,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       en.amount = n; en.kg = kg; en.total = byPiece ? n * unit : kg * unit;
     } else {
       const d = String(v('desc') || '').trim(), a = parseFloat(v('amount'));
-      if(!d || !(a > 0)){ alert('Enter a Description and Price.'); return; }
+      if(!d || (!(a > 0) && !(a === 0 && /free/i.test(d)))){ alert('Enter a Description and Price.'); return; }
       const xq = Math.max(1, parseFloat(v('qty')) || 1);
       extras[i].description = d; extras[i].qty = xq; extras[i].each = a; extras[i].amount = Math.round(xq * a * 1000) / 1000;
     }
@@ -1677,7 +1677,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   function addExtra(){
     const description = extraDescriptionEl.value.trim();
     const amount = parseFloat(extraAmountEl.value);
-    if(!description || isNaN(amount) || amount <= 0) return;
+    if(!description || isNaN(amount) || (amount <= 0 && !(amount === 0 && /free/i.test(description)))) return;   // 'Free Delivery' may be 0
 
     const qtyEl = document.getElementById('extraQty'), xq = Math.max(1, parseFloat(qtyEl && qtyEl.value) || 1);
     extras.push({ description, qty: xq, each: amount, amount: Math.round(xq * amount * 1000) / 1000 });   // amount = line total
@@ -2538,7 +2538,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <script src="shared/calc-sale.js?v=8"></script>
 <script src="shared/calc-stock.js?v=1"></script>
 <script src="shared/disp-guard.js?v=2"></script>
-<script src="shared/extras-pick.js?v=4"></script>
+<script src="shared/extras-pick.js?v=5"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDescription"), document.getElementById("extraAmount")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)

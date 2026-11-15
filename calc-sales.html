@@ -205,8 +205,9 @@
       if(fl && !keep.length){ alert('At least one flower must stay. To remove everything, use Cancel.'); return; }
       var body = { action:'editSale', id:s.id, token:token(), source:bg.querySelector('[data-f=source]').value, ref:bg.querySelector('[data-f=ref]').value.trim(), customer:s.customer || '' };
       if(fl){ body.branch = bg.querySelector('[data-f=branch]').value; body.items = JSON.stringify(keep); }
-      var exKeep = exs.filter(function(x){ return x.desc && x.price > 0; });
-      if(exs.some(function(x){ return (x.desc && !(x.price > 0)) || (!x.desc && x.price > 0); })){ alert('Each extra needs a name and a price (or remove it with ✕).'); return; }
+      var okX = function(x){ return x.desc && (x.price > 0 || (x.price === 0 && /free/i.test(x.desc))); };
+      var exKeep = exs.filter(okX);
+      if(exs.some(function(x){ return (x.desc && !okX(x)) || (!x.desc && x.price > 0); })){ alert('Each extra needs a name and a price (or remove it with ✕).'); return; }
       body.extrasList = JSON.stringify(exKeep);
       var lines = (fl ? '\n\n' + keep.map(function(it){ return '• ' + it.name + ' × ' + it.qty; }).join('\n') : '') + (exKeep.length ? '\n' + exKeep.map(function(x){ return '• ' + x.desc + ' ' + f3(x.price); }).join('\n') : '');
       if(!confirm('Save changes to ' + s.saleNo + '?' + lines)) return;

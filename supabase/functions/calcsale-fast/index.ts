@@ -65,7 +65,7 @@ function parseExtras(v: any): any[] | null {
   if (v == null || v === '') return null;
   let a: any[] = []; try { a = typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; }
   if (!Array.isArray(a)) return null;
-  return a.slice(0, 40).map((x: any) => ({ desc: txt(x && (x.desc ?? x.description), 120), price: r3(Math.min(100000, Math.max(0, Number(x && (x.price ?? x.amount)) || 0))) })).filter((x: any) => x.desc && x.price > 0);
+  return a.slice(0, 40).map((x: any) => ({ desc: txt(x && (x.desc ?? x.description), 120), price: r3(Math.min(100000, Math.max(0, Number(x && (x.price ?? x.amount)) || 0))) })).filter((x: any) => x.desc && (x.price > 0 || /free/i.test(x.desc)));   // 'Free Delivery' may be 0
 }
 const extrasSum = (a: any[]) => r3(a.reduce((s: number, x: any) => s + (Number(x.price) || 0), 0));
 function itemsTotal(kind: string, items: any[]) { return r3((items || []).reduce((a: number, it: any) => a + (kind === 'flower' ? (Number(it.qty) || 0) * (Number(it.rate) || 0) : (Number(it.total) || 0)), 0)); }

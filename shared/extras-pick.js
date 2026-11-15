@@ -67,7 +67,7 @@
     function pick(i) { var it = list[i]; if (!it) return; inp.value = it.name + (it.size ? ' (' + it.size + ')' : ''); hide();
       inp.__lbxpPick = it.price > 0 ? { code: it.code, name: inp.value, price: it.price } : null;
       inp.__lbxpSel = { label: inp.value, photo: it.photo || '' }; paint();
-      if (priceInp) { if (it.price > 0) priceInp.value = it.price.toFixed(3); priceInp.focus(); priceInp.select && priceInp.select(); } }
+      if (priceInp) { if (it.price > 0 || /free/i.test(it.name)) priceInp.value = (it.price || 0).toFixed(3); priceInp.focus(); priceInp.select && priceInp.select(); } }
     function show() {
       var q = inp.value.trim().toLowerCase(); if (q.length < 2) { hide(); return; }
       load().then(function (all) {
