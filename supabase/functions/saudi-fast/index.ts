@@ -216,6 +216,17 @@ Deno.serve(async (req) => {
     if (a === 'list') return json(await list(u));
     if (a === 'send') return json(await send(p, u));
     if (a === 'returnItems') return json(await returnItems(p, u));
+    // Nov 15 2026: anyone who can open Saudi Transfers can add a picture to a transfer (chat screenshot, delivery list, photo)
+    if (a === 'addBatchPhoto') {
+      const bl = txt(p.batch, 60), bd = String(p.batchDate || '').slice(0, 10);
+      const b = await sbGet(`saudi_transfers?select=id,batch_date&batch_label=eq.${encodeURIComponent(bl)}${/^\d{4}-\d{2}-\d{2}$/.test(bd) ? '&batch_date=eq.' + bd : ''}&limit=1`);
+      if (!b.length) return json({ success: false, error: 'Transfer not found.' });
+      const n = (await sbGet(`saudi_photos?select=id&batch_label=eq.${encodeURIComponent(bl)}&line_id=is.null`)).length;
+      if (n >= 30) return json({ success: false, error: 'This transfer already has 30 pictures.' });
+      const url = await savePhoto(String(p.photo || '')); if (!url) return json({ success: false, error: 'Picture not saved (JPEG/PNG only).' });
+      await sbPost('saudi_photos', [{ line_id: null, batch_label: bl, batch_date: b[0].batch_date, url, sort_order: 100 + n, caption: txt(p.caption, 60) || null, source: 'added', created_by: who(u) }]);
+      return json({ success: true });
+    }
     if (a === 'importPhoto') {   // Admin: pictures that were inside TRANSFERS_TO_SAUDI.xlsx
       if (!isAdmin(u)) return json({ success: false, error: 'Admin only.' });
       const bl = txt(p.batch, 60), so = parseInt(String(p.item || ''), 10), ord = parseInt(String(p.order || '0'), 10) || 0;

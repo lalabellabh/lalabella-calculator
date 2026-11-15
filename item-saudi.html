@@ -157,6 +157,18 @@
   <div class="btns"><button type="button" class="no-print" id="eDel" style="margin-right:auto;color:#c5483a;border-color:#c5483a">🗑️ Delete</button><button type="button" data-close>Cancel</button><button type="button" class="go" id="eSave">Save</button></div>
 </div></div>
 
+<!-- ADD A PICTURE TO A TRANSFER (chat screenshot / delivery list / photo) -->
+<div class="modal" id="mPic"><div class="box">
+  <h3>📎 Add a picture</h3>
+  <div style="font-size:13px;color:#7a6670;margin-bottom:6px" id="pFor"></div>
+  <label>What is it? (optional)</label><input id="pCap" placeholder="e.g. WhatsApp chat with Kelvin, delivery list">
+  <label>📷 Take a photo or choose a file</label>
+  <div class="photo"><input type="file" accept="image/*" id="pPhoto"><img id="pPrev" alt=""></div>
+  <div class="paste" id="pPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
+  <div class="msg" id="pMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="pSave">Save</button></div>
+</div></div>
+
 <div class="lb" id="lb"><img alt=""></div>
 
 <script>
@@ -188,7 +200,7 @@
     });
   }
   function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
-  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev'));
+  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev'));
   function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
   // Paste a snipped picture (Ctrl+V) — in the paste box, or anywhere in the open Send / Return form
   function takePaste(e, inpId, imId, boxId){
@@ -202,7 +214,29 @@
   document.addEventListener('paste', function(e){
     if($('mSend').classList.contains('show')) takePaste(e, 'sPhoto', 'sPrev', 'sPaste');
     else if($('mRet').classList.contains('show')) takePaste(e, 'rPhoto', 'rPrev', 'rPaste');
+    else if($('mPic').classList.contains('show')) takePaste(e, 'pPhoto', 'pPrev', 'pPaste');
   });
+  // ＋ on a transfer -> add a picture (paste a snip, choose a file or take a photo)
+  var PIC_FOR = null;
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-addpic]'); if(!b) return;
+    PIC_FOR = { batch: b.getAttribute('data-addpic'), date: b.getAttribute('data-adddate') };
+    $('pFor').textContent = 'Transfer: ' + PIC_FOR.batch + (PIC_FOR.date ? ' · ' + PIC_FOR.date : '');
+    $('pCap').value = ''; $('pPhoto').value = ''; $('pPrev').style.display = 'none'; resetPaste('pPhoto', 'pPaste'); $('pMsg').textContent = '';
+    $('mPic').classList.add('show');
+  });
+  $('pSave').onclick = function(){
+    if(!PIC_FOR) return;
+    if(!hasPhoto('pPhoto')){ $('pMsg').textContent = 'Paste, choose or take a picture first.'; return; }
+    var btn = $('pSave'); btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('pPhoto')).then(function(photo){
+      return api({ action:'addBatchPhoto', batch: PIC_FOR.batch, batchDate: PIC_FOR.date, caption: $('pCap').value.trim(), photo: photo }, true);
+    }).then(function(d){
+      btn.disabled = false; btn.textContent = 'Save';
+      if(!d || !d.success){ $('pMsg').textContent = (d && d.error) || 'Not saved.'; return; }
+      $('mPic').classList.remove('show'); load();
+    }).catch(function(){ btn.disabled = false; btn.textContent = 'Save'; $('pMsg').textContent = 'No connection.'; });
+  };
   function resetPaste(inpId, boxId){ delete PASTED[inpId]; $(boxId).innerHTML = '📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)'; }
 
   function load(){
@@ -255,7 +289,7 @@
       var who = [f0.from ? 'from ' + f0.from : '', f0.givenTo ? 'given to ' + f0.givenTo : ''].filter(Boolean).join(' · ');
       return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + (who ? ' · ' + esc(who) : '') + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
         (f0.source === 'excel' ? '<span class="tag">from Excel</span>' : '') +
-        (function(){ var bp = BPICS.filter(function(x){ return x.batch === b.batch && x.batchDate === b.date; }); return bp.length ? '<span class="m">📄 ' + bp.map(function(x){ return '<img class="ph" src="' + esc(x.url) + '" alt="" title="Delivery list">'; }).join('') + '</span>' : ''; })() + '</div>' +
+        (function(){ var bp = BPICS.filter(function(x){ return x.batch === b.batch && x.batchDate === b.date; }); return '<span class="m">' + (bp.length ? '📄 ' + bp.map(function(x){ return '<img class="ph" src="' + esc(x.url) + '" alt="" title="' + esc(x.caption || 'Picture') + '">'; }).join('') : '') + ' <button type="button" class="no-print" data-addpic="' + esc(b.batch) + '" data-adddate="' + esc(b.date || '') + '" title="Add a picture (chat screenshot, delivery list, photo)" style="width:26px;height:26px;border-radius:50%;border:1px dashed #9e2f4a;background:#fff;color:#9e2f4a;font-weight:800;font-size:15px;line-height:1;cursor:pointer;vertical-align:middle">＋</button></span>'; })() + '</div>' +
         '<table><thead><tr class="t"><th colspan="6">TRANSFERS (BAHRAIN TO KSA)</th><th class="no-print"></th></tr>' +
         '<tr><th>NO.</th><th>REFERENCE</th><th>QUANTITY</th><th>NOTES</th><th>RETURNED / RECEIVED</th><th>STATUS</th><th class="no-print"></th></tr></thead><tbody>' + body + '</tbody></table></div>';
     }).join('');
