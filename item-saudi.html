@@ -79,6 +79,10 @@
   .xs.open{ background:#ffe9cc; color:#8a4a0c; } .xs.matched{ background:#e3f4e8; color:#2f7a4f; } .xs.saudi{ background:#ececfb; color:#5a5aa8; } .xs.done{ background:#eee; color:#666; }
   .big .rcv{ background:linear-gradient(135deg,#2f6f9a,#3f8fc0); } .big .bk{ background:linear-gradient(135deg,#2f7a4f,#3f9a65); }
   .big button{ position:relative; } .big .bd{ position:absolute; top:-6px; right:-4px; background:#c5483a; color:#fff; border-radius:99px; font-size:12px; min-width:22px; height:22px; line-height:22px; padding:0 6px; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+  .ipic{ width:46px; height:46px; border:1px dashed #d9b8c3; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; background:#fdf8fa; font-size:19px; flex:none; }
+  .ipic img{ width:100%; height:100%; object-fit:cover; } .ipic.new{ border:2px solid #2f7a4f; }
+  #kList .r{ grid-template-columns:26px 46px 1fr 84px; }
+  .fr{ grid-template-columns:46px 2fr 70px 80px 26px !important; } .fr .n{ grid-column:1 / 5 !important; }
   .mini{ border:0; background:none; color:var(--dim); font:inherit; font-size:12px; text-decoration:underline; cursor:pointer; padding:0 0 8px; }
   .ships{ background:#f2f8fc; border:1px solid #cfe2ef; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
   .ships h3{ margin:0 0 8px; font-size:16px; }
@@ -295,6 +299,16 @@
       img.onerror = function(){ res(''); }; img.src = url;
     });
   }
+  // one picture per item (Send to Saudi / Send to Bahrain): 📷 opens camera / files, max 1000 px
+  function shrink(f){ return new Promise(function(res){ if(!f) return res(''); var img = new Image(), url = URL.createObjectURL(f);
+    img.onload = function(){ var k = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.8)); };
+    img.onerror = function(){ res(''); }; img.src = url; }); }
+  function picBtn(old){ return '<label class="ipic" title="Picture of this item"><input type="file" accept="image/*" style="display:none"><img alt="" src="' + esc(old || '') + '"' + (old ? '' : ' style="display:none"') + '><span' + (old ? ' style="display:none"' : '') + '>📷</span></label>'; }
+  function wirePic(root){ var lb = root.querySelector('.ipic'); if(!lb) return; var inp = lb.querySelector('input');
+    lb.addEventListener('click', function(e){ e.stopPropagation(); });
+    inp.onchange = function(){ var f = inp.files && inp.files[0]; if(!f) return; var im = lb.querySelector('img'); im.src = URL.createObjectURL(f); im.style.display = ''; lb.querySelector('span').style.display = 'none'; lb.classList.add('new'); }; }
+  function picOf(root){ var lb = root && root.querySelector('.ipic'), inp = lb && lb.querySelector('input'); return shrink(inp && inp.files && inp.files[0]); }
   function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
   preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev')); preview($('kPhoto'), $('kPrev')); preview($('vPhoto'), $('vPrev'));
   function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
@@ -416,8 +430,8 @@
   // ---- Send to Bahrain (Saudi Team) ----
   function freeRow(box){
     var d = document.createElement('div'); d.className = 'fr';
-    d.innerHTML = '<input data-f="item" placeholder="Item not on the list"><input data-f="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="qty"><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select><button type="button" title="Remove">✕</button><input class="n" data-f="note" placeholder="📝 Note (needed) — why it is not on the list">';
-    d.querySelector('button').onclick = function(){ d.remove(); }; $(box).appendChild(d); d.querySelector('input').focus();
+    d.innerHTML = picBtn('') + '<input data-f="item" placeholder="Item not on the list"><input data-f="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="qty"><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select><button type="button" title="Remove">✕</button><input class="n" data-f="note" placeholder="📝 Note (needed) — why it is not on the list">';
+    d.querySelector('button').onclick = function(){ d.remove(); }; $(box).appendChild(d); wirePic(d); d.querySelector('[data-f=item]').focus();
   }
   function freeItems(box){ return Array.prototype.map.call(document.querySelectorAll('#' + box + ' .fr'), function(d){ var g = function(f){ return d.querySelector('[data-f=' + f + ']').value; }; return { item:g('item').trim(), qty:g('qty'), unit:g('unit'), note:g('note').trim() }; }).filter(function(x){ return x.item; }); }
   function renderBack(){
@@ -427,11 +441,13 @@
       if(!open.length) return;
       html += '<div class="g">' + esc(g[0].batch) + ' · ' + fd(g[0].batchDate) + '</div>' + open.map(function(r){
         var left = r.left != null ? Math.max(0, r.left - (r.backOnWay || 0)) : null;
-        return '<label class="r"><input type="checkbox" data-kline="' + r.id + '"><span>' + esc(r.reference).replace(/\n/g, ' ') + '<div class="s">' + esc(stText0(r)) + (r.backOnWay != null ? ' · 🚚 ' + esc(n3(r.backOnWay)) + ' already coming back' : '') + '</div></span>' +
+        var old = r.photo || (r.photos || [])[0] || '';
+        return '<label class="r" data-krow="' + r.id + '"><input type="checkbox" data-kline="' + r.id + '">' + picBtn(old) + '<span>' + esc(r.reference).replace(/\n/g, ' ') + '<div class="s">' + esc(stText0(r)) + (r.backOnWay != null ? ' · 🚚 ' + esc(n3(r.backOnWay)) + ' already coming back' : '') + '</div></span>' +
           '<input type="number" min="0" step="any" inputmode="decimal" data-kqty="' + r.id + '" value="' + (left != null ? n3(left) : '') + '" placeholder="qty"></label>';
       }).join('');
     });
     $('kList').innerHTML = html || '<div class="empty">Nothing is waiting in Saudi.</div>';
+    document.querySelectorAll('#kList .r').forEach(wirePic);
   }
   $('kFind').oninput = renderBack;
   $('kAddFree').onclick = function(){ freeRow('kFree'); };
@@ -443,7 +459,11 @@
     if(free.some(function(x){ return !x.note; })){ $('kMsg').textContent = 'Add a note for every item that is not on the list.'; return; }
     if(!$('kDate').value){ $('kMsg').textContent = 'Pick the date.'; return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Sending…';
-    readPhoto($('kPhoto')).then(function(photo){
+    var rowsK = items.map(function(x){ return document.querySelector('[data-krow="' + x.lineId + '"]'); }), rowsF = Array.prototype.filter.call(document.querySelectorAll('#kFree .fr'), function(d){ return d.querySelector('[data-f=item]').value.trim(); });
+    Promise.all(rowsK.concat(rowsF).map(picOf)).then(function(pics){
+      items.concat(free).forEach(function(x, i){ if(pics[i]) x.photo = pics[i]; });
+      return readPhoto($('kPhoto'));
+    }).then(function(photo){
       return api({ action:'sendBack', date:$('kDate').value, to:$('kTo').value, sentBy:$('kBy').value, note:$('kNote').value, items:JSON.stringify(items.concat(free)), photo:photo || '' }, true);
     }).then(function(d){ if(!d || !d.success){ $('kMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mBack').classList.remove('show'); load(); })
       .catch(function(){ $('kMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Send'; });
@@ -583,23 +603,24 @@
   // ---------- SEND ----------
   function addLine(){
     var d = document.createElement('div'); d.className = 'line';
-    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div class="grid3"><div><label>Item</label><input data-f="reference" placeholder="e.g. Gold Stand"></div>' +
+    d.innerHTML = '<button type="button" class="x" title="Remove">✕</button><div style="display:flex;gap:8px;align-items:center;margin-bottom:2px">' + picBtn('') + '<span style="font-size:11.5px;color:#7a6670">📷 Picture of this item (optional)</span></div><div class="grid3"><div><label>Item</label><input data-f="reference" placeholder="e.g. Gold Stand"></div>' +
       '<div><label>Qty</label><input data-f="qty" type="number" min="0" step="any" inputmode="decimal"></div><div><label>Unit</label><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select></div></div>' +
       '<label>Details (optional)</label><input data-f="details" placeholder="e.g. Entrance 6 · Dining 12 · Extra 2">';
     d.querySelector('.x').onclick = function(){ d.remove(); };
-    $('sLines').appendChild(d);
+    $('sLines').appendChild(d); wirePic(d);
     try{ if(window.LBExtrasPick) LBExtrasPick.attach(d.querySelector('[data-f=reference]'), d.querySelector('[data-f=qty]')); }catch(e){}
     d.querySelector('input').focus();
   }
   $('bSend').onclick = function(){ $('sDate').value = today(); $('sLabel').value = ''; opts($('sFrom'), BRANCHES, 'Galali'); $('sTo').value = ''; $('sNotes').value = ''; $('sLines').innerHTML = ''; $('sPhoto').value = ''; $('sPrev').style.display = 'none'; resetPaste('sPhoto', 'sPaste'); $('sMsg').textContent = ''; addLine(); $('mSend').classList.add('show'); };
   $('sAdd').onclick = addLine;
   $('sSave').onclick = function(){
-    var lines = Array.prototype.map.call(document.querySelectorAll('#sLines .line'), function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details') }; }).filter(function(l){ return l.reference.trim(); });
+    var lineEls = Array.prototype.filter.call(document.querySelectorAll('#sLines .line'), function(l){ return l.querySelector('[data-f=reference]').value.trim(); });
+    var lines = lineEls.map(function(l){ var g = function(f){ return l.querySelector('[data-f=' + f + ']').value; }; return { reference:g('reference'), qty:g('qty'), unit:g('unit'), details:g('details') }; });
     if(!$('sDate').value){ $('sMsg').textContent = 'Pick the date it was sent.'; return; }
     if(!lines.length){ $('sMsg').textContent = 'Add at least one item.'; return; }
     if(!hasPhoto('sPhoto')){ $('sMsg').textContent = 'Add a picture of what was sent.'; return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
-    readPhoto($('sPhoto')).then(function(photo){
+    Promise.all(lineEls.map(picOf)).then(function(pics){ lines.forEach(function(l, i){ if(pics[i]) l.photo = pics[i]; }); return readPhoto($('sPhoto')); }).then(function(photo){
       return api({ action:'send', batchDate:$('sDate').value, batch:$('sLabel').value, from:$('sFrom').value, givenTo:$('sTo').value, notes:$('sNotes').value, lines:JSON.stringify(lines), photo:photo }, true);
     }).then(function(d){ if(!d || !d.success){ $('sMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mSend').classList.remove('show'); load(); })
       .catch(function(){ $('sMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save'; });
