@@ -23,6 +23,7 @@
     '.lbxp .c{font-size:10.5px;color:#8a7680}.lbxp .n{font-size:11.5px;color:#8a7680;padding:6px 8px}' +
     '.lbxp-pic{position:absolute;width:30px;height:30px;border-radius:7px;object-fit:cover;cursor:zoom-in;display:none;z-index:2;background:#f3e8ec}' +
     '.lbxp-x{position:absolute;width:26px;height:26px;border-radius:50%;border:0;background:#e9d6dc;color:#7a3a4e;font-size:14px;font-weight:700;line-height:1;cursor:pointer;display:none;z-index:2;padding:0}' +
+    '.lbxp-t{width:30px;height:30px;object-fit:cover;border-radius:7px;vertical-align:middle;margin-right:7px;cursor:zoom-in;background:#f6ecec}' +
     '.lbxp-lb{position:fixed;inset:0;z-index:10050;background:rgba(20,10,15,.82);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;cursor:zoom-out;padding:16px}' +
     '.lbxp-lb.show{display:flex}.lbxp-lb img{max-width:92vw;max-height:80vh;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5);background:#fff}.lbxp-lb div{color:#fff;font-size:15px;font-weight:600;text-align:center}';
   // big view for an item picture (tap anywhere to close)
@@ -37,6 +38,7 @@
 
   function attach(inp, priceInp) {
     if (!inp || inp.__lbxp) return; inp.__lbxp = 1; inp.setAttribute('autocomplete', 'off');
+    setTimeout(load, 1500);   // preload names + pictures (for the list thumbnails)
     var box = document.createElement('div'); box.className = 'lbxp'; box.style.display = 'none'; document.body.appendChild(box);
     var list = [], idx = -1;
     // Nov 2026: picture of the picked item + ✕ inside the box (same as the calc search box)
@@ -102,5 +104,16 @@
     fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logExtraPrice', token: token(), kind: kind, branch: br,
       itemCode: pk.code, itemName: pk.name, listPrice: pk.price, usedPrice: used }) }).catch(function () {});
   }
-  window.LBExtrasPick = { attach: attach, noteAdd: noteAdd };
+  // small picture for an extra already in the list (matched by the name the picker filled in); '' when not an Item Inventory item
+  function label(it) { return it.name + (it.size ? ' (' + it.size + ')' : ''); }
+  function thumb(desc) {
+    var d = String(desc || '').trim().toLowerCase(); if (!d || !ITEMS) return '';
+    var it = ITEMS.find(function (x) { return x.photo && (label(x).toLowerCase() === d || x.name.toLowerCase() === d); });
+    return it ? '<img class="lbxp-t" src="' + esc(it.photo) + '" data-big="' + esc(it.photo) + '" data-name="' + esc(label(it)) + '" alt="" loading="lazy" onerror="this.remove()">' : '';
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t || !t.classList || !t.classList.contains('lbxp-t')) return;
+    e.preventDefault(); e.stopPropagation(); openBig(t.getAttribute('data-big'), t.getAttribute('data-name'));
+  }, true);
+  window.LBExtrasPick = { attach: attach, noteAdd: noteAdd, thumb: thumb, ready: function (cb) { load().then(function () { cb && cb(); }); } };
 })();
