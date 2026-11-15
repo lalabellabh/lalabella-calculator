@@ -219,7 +219,8 @@
   function setZoom(z){ zoomGoal = Math.max(.6, Math.min(6, z)); }
   function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
-  function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom); }
+  function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom);
+    if(!custom && window.LBOfficeOnSelect){ try{ window.LBOfficeOnSelect(k); }catch(e){} } }   // Nov 2026: e.g. tapping Bea checks Bleems right away
   // ---------- Nov 2026: whoever you tap reports to you, the President (text box + their voice when sound is on) ----------
   var repTimer = null;
   function closeReport(){ var b = root.querySelector('.o3-rep'); if(b) b.remove(); clearInterval(repTimer); try { if(window.LBOfficeStopVoice) window.LBOfficeStopVoice(); } catch(e){} }

@@ -956,6 +956,23 @@
     }catch(e){ $('deckBox').textContent = 'Could not reach the server. Retrying…'; setTimeout(load, 8000); }
     finally{ busy = false; }
   }
+  // Nov 15 2026: tap Bea -> she checks Bleems right now (same sync as the 1-minute job), then reports the fresh numbers
+  var beaAt = 0;
+  window.LBOfficeOnSelect = function(k){
+    if(k !== 'bleems' || Date.now() - beaAt < 20000) return; beaAt = Date.now();
+    var url = (window.LB_CONFIG && LB_CONFIG.SUPABASE_URL ? LB_CONFIG.SUPABASE_URL : 'https://zoratiahjeldgsognfsj.supabase.co') + '/functions/v1/bleems-fast';
+    fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ action:'sync', token: token() }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ return load().then(function(){ return d; }); })
+      .then(function(d){
+        var r = window.LBOfficeReport && window.LBOfficeReport('bleems'); if(!r) return;
+        var ok = d && d.success, n = ok ? (Number(d.added) || 0) : 0;
+        var head = ok ? (n ? L('🔄 I just checked Bleems: ' + n + ' new order' + (n > 1 ? 's' : '') + '!', '🔄 Kakatingin ko lang sa Bleems: ' + n + ' bagong order!') : L('🔄 I just checked Bleems: no new order.', '🔄 Kakatingin ko lang sa Bleems: walang bagong order.'))
+          : L('⚠ I could not reach Bleems right now (' + ((d && d.error) || 'error') + ').', '⚠ Hindi ko maabot ang Bleems ngayon (' + ((d && d.error) || 'error') + ').');
+        r.text = head + '\n\n' + r.text; r.speak = head.replace(/^\S+\s/, '') + ' ' + (r.speak || '');
+        if(window.LBOffice3D && window.LBOffice3D.answer && document.body.classList.contains('v3d')) window.LBOffice3D.answer('bleems', r);
+      }).catch(function(){});
+  };
   // Nov 2026: Cali reads YOUR notes + reminders from the Schedule calendar (same data as schedule.html, via schedule-fast)
   var SCHED = (window.LB_CONFIG && LB_CONFIG.SCHEDULE_FAST_API) || '';
   async function schedApi(params, post){ var p = new URLSearchParams(Object.assign({ token: token() }, params));
@@ -994,7 +1011,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=19'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=20'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);

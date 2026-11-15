@@ -176,7 +176,14 @@ Deno.serve(async (req) => {
     {
       const kr = await rest('GET', 'push_config?select=internal_key&id=eq.1&limit=1');
       const ik = kr && kr[0] && kr[0].internal_key;
-      if (!ik || String(p.key || '') !== String(ik)) return json({ success: false, error: 'Unauthorized.' }, 401);
+      let ok = !!ik && String(p.key || '') === String(ik);
+      // Nov 15 2026: an Admin can ask for a check now (HQ: tap Bea) — sync only, last 2 days, no backfill
+      if (!ok && p.action === 'sync' && /^[A-Za-z0-9]{20,128}$/.test(String(p.token || ''))) {
+        const ur = await rest('GET', `users?select=role,status&token=eq.${encodeURIComponent(String(p.token))}&limit=1`);
+        const usr = ur && ur[0];
+        if (usr && String(usr.role || '').toLowerCase() === 'admin' && String(usr.status || 'Active') !== 'Pending') { ok = true; p.days = 2; p.backfill = '0'; }
+      }
+      if (!ok) return json({ success: false, error: 'Unauthorized.' }, 401);
     }
     if (p.action === 'probe') return json(await probe(Math.max(1, Math.min(45, parseInt(p.days, 10) || 2))));
     if (p.action === 'sync') return json(await sync(Math.max(1, Math.min(45, parseInt(p.days, 10) || 2)), String(p.backfill) === '1'));
