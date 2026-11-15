@@ -619,8 +619,13 @@ body>.wrap{position:relative;z-index:1}
     <div class="grid-2">
       <div><label>Unit</label>
         <select id="eiUnit"><option>Piece</option><option>Roll</option><option>Box</option><option>Pack</option><option>Set</option></select></div>
-      <div><label>Price (BHD)</label>
+      <div><label>Sale price (BHD)</label>
         <input type="number" id="eiPrice" min="0" step="0.001"></div>
+    </div>
+    <div class="grid-2">
+      <div><label>Cost price (BHD) — bought for</label>
+        <input type="number" id="eiCost" min="0" step="0.001" placeholder="Optional"></div>
+      <div></div>
     </div>
     <div class="grid-2">
       <div><label>Min Stock</label>
@@ -965,9 +970,16 @@ body>.wrap{position:relative;z-index:1}
           <input type="number" id="addItemQty" min="0" step="1" placeholder="0">
         </div>
         <div>
-          <label>Price (BHD)</label>
+          <label>Sale price (BHD)</label>
           <input type="number" id="addItemPrice" min="0" step="0.001" placeholder="0.000">
         </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Cost price (BHD) — bought for</label>
+          <input type="number" id="addItemCost" min="0" step="0.001" placeholder="Optional">
+        </div>
+        <div></div>
       </div>
 
       <label>Size <span style="text-transform:none;">(optional — e.g. ribbon 2.5 cm, vase Large; pick or type)</span></label>
@@ -1740,7 +1752,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
           ${photo ? `<img class="item-thumb" src="${photo}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<div class="item-thumb"></div>`}
           <div class="item-info">
             <div class="item-name">${it['Item Name']}${it['Size'] ? ' <span style="font-weight:500;color:var(--ink-dim);">· ' + String(it['Size']).replace(/[<>&]/g,'') + '</span>' : ''}</div>
-            <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · ${fmtBD(it['Price (BHD)'])}</div>
+            <div class="item-meta">${it['Item Type']||''} · ${it['Item Code']||''} · Sale ${fmtBD(it['Price (BHD)'])}${it['Cost (BHD)'] != null && it['Cost (BHD)'] !== '' ? ' · Cost ' + fmtBD(it['Cost (BHD)']) : ''}</div>
           </div>
           <div class="item-qty ${isLow?'low':''}">${qty} ${it['Unit']||''}</div>
         </div>
@@ -1765,7 +1777,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     selectedBarcodeItem = item;
     document.getElementById('barcodeCard').style.display = 'block';
     document.getElementById('bcName').textContent = item['Item Name'] + (item['Size'] ? ' · ' + item['Size'] : '');
-    document.getElementById('bcPrice').textContent = fmtBD(item['Price (BHD)']);
+    document.getElementById('bcPrice').textContent = 'Sale ' + fmtBD(item['Price (BHD)']) + (item['Cost (BHD)'] != null && item['Cost (BHD)'] !== '' ? ' · Cost ' + fmtBD(item['Cost (BHD)']) : '');
     document.getElementById('bcCode').textContent = item['Item Code'];
     const bp = document.getElementById('bcPhoto'), ph = item['Photo Link (Drive)'] || '';
     if(ph){ bp.src = ph; bp.style.display = 'block'; } else { bp.removeAttribute('src'); bp.style.display = 'none'; }
@@ -1843,6 +1855,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     eiSet('eiCategory', it['Category'] || '');
     eiSet('eiUnit', it['Unit'] || 'Piece');
     eiSet('eiPrice', it['Price (BHD)'] === undefined || it['Price (BHD)'] === null ? '' : it['Price (BHD)']);
+    eiSet('eiCost', it['Cost (BHD)'] === undefined || it['Cost (BHD)'] === null ? '' : it['Cost (BHD)']);
     eiSet('eiMin', it['Min Stock'] === undefined || it['Min Stock'] === null ? '' : it['Min Stock']);
     eiSet('eiCode', it['Item Code'] || '');
     eiSet('eiSize', it['Size'] || '');
@@ -1977,6 +1990,8 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
     if(!newName) return fail('Item name is required.');
     if(!code) return fail('Item code is required.');
     if(price !== '' && Number(price) < 0) return fail('Price cannot be negative.');
+    const cost = document.getElementById('eiCost').value;
+    if(cost !== '' && Number(cost) < 0) return fail('Cost cannot be negative.');
     btn.disabled = true; btn.textContent = 'Saving…'; box.className = 'result';
     const oldName = eiItem['Item Name'];
     const params = new URLSearchParams({
@@ -1987,6 +2002,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       category: document.getElementById('eiCategory').value,
       unit: document.getElementById('eiUnit').value,
       price,
+      cost,
       minStock: document.getElementById('eiMin').value,
       itemCode: code,
       size: document.getElementById('eiSize').value.trim(),
@@ -2311,6 +2327,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       qty: document.getElementById('addItemQty').value || 0,
       unit: document.getElementById('addItemUnit').value,
       price: document.getElementById('addItemPrice').value || 0,
+      cost: document.getElementById('addItemCost').value,
       minStock: document.getElementById('addItemMinStock').value,
       size: document.getElementById('addItemSize').value.trim(),
       notes: document.getElementById('addItemNotes').value,
@@ -2340,7 +2357,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
       document.getElementById('addItemCode').value = '';
       document.getElementById('addItemCategory').value = '';
       document.getElementById('addItemQty').value = '';
-      document.getElementById('addItemPrice').value = '';
+      document.getElementById('addItemPrice').value = ''; document.getElementById('addItemCost').value = '';
       document.getElementById('addItemMinStock').value = '';
       document.getElementById('addItemSize').value = '';
       document.getElementById('addItemNotes').value = '';
