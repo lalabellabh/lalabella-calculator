@@ -1,0 +1,57 @@
+# Lalabella — files that must NEVER go to GitHub (the repo is PUBLIC).
+# Already-tracked files are not affected. Keys live in Supabase Secrets / GitHub Secrets only.
+
+# ---- secrets / keys ----
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+*credentials*.json
+*secret*.json
+# a real Tampermonkey script with the key filled in (the repo copy keeps PASTE-YOUR-KEY-HERE)
+*.local.user.js
+
+# ---- Supabase CLI local files ----
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# ---- Android / build output (the APKs to download live in downloads/ and stay tracked) ----
+**/build/
+.gradle/
+local.properties
+captures/
+*.aab
+!downloads/*.apk
+
+# ---- Node / tools ----
+node_modules/
+npm-debug.log*
+.npm/
+
+# ---- backups, dumps, temp ----
+*.bundle
+*.sql.gz
+*.dump
+backup-*.json
+*.log
+*.tmp
+*.bak
+*.swp
+~$*
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
