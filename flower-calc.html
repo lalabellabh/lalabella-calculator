@@ -219,7 +219,10 @@
         <div class="card-title">🌸 Search a Flower</div>
         <div class="search-box">
           <div style="display:flex;gap:8px;align-items:stretch;">
-            <input type="text" id="searchInput" placeholder="Type a flower name or item code…" autocomplete="off" style="flex:1;min-width:0;" />
+            <div style="flex:1;min-width:0;position:relative;">
+              <input type="text" id="searchInput" placeholder="Type a flower name or item code…" autocomplete="off" style="width:100%;padding-right:40px;" />
+              <button type="button" id="searchClear" title="Clear" aria-label="Clear" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:0;background:#e9d6dc;color:#7a3a4e;font-size:15px;font-weight:700;line-height:1;cursor:pointer;">✕</button>
+            </div>
             <button type="button" id="scanBtn" title="Scan barcode" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:#2f2024;color:#fff;">📷</button>
           </div>
           <div id="searchResults"></div>
@@ -368,6 +371,21 @@
   const searchInput = document.getElementById('searchInput');
   const searchResults = document.getElementById('searchResults');
 
+  // Nov 2026: ✕ clears the search and the picked flower
+  const searchClear = document.getElementById('searchClear');
+  function paintSearchClear(){ searchClear.style.display = searchInput.value ? 'block' : 'none'; }
+  searchClear.addEventListener('click', ()=>{
+    searchInput.value = ''; selected = null;
+    document.getElementById('rateInput').value = '';
+    document.getElementById('qtyInput').value = '';
+    document.getElementById('selectedName').textContent = '';
+    document.getElementById('addBtn').disabled = true;
+    searchResults.classList.remove('show');
+    paintSearchClear(); searchInput.focus();
+  });
+  searchInput.addEventListener('input', paintSearchClear);
+  searchResults.addEventListener('click', ()=> setTimeout(paintSearchClear, 0));
+
   searchInput.addEventListener('input', ()=>{
     const q = searchInput.value.trim().toLowerCase();
     if(!q){ searchResults.classList.remove('show'); return; }
@@ -406,7 +424,7 @@
     const f = CATALOG.find(c => c.name.toLowerCase() === String(name).toLowerCase());
     if(!f) return false;
     selected = { name: f.name, rate: f.rate };
-    searchInput.value = f.name;
+    searchInput.value = f.name; paintSearchClear();
     document.getElementById('rateInput').value = f.rate.toFixed(3);
     document.getElementById('selectedName').textContent = 'Napili: ' + f.name;
     searchResults.classList.remove('show');
@@ -488,7 +506,7 @@
     if(!selected || qty <= 0){ alert('Choose a flower and enter a Qty.'); return; }
     cart.push({ name: selected.name, qty, rate });
     selected = null;
-    searchInput.value = '';
+    searchInput.value = ''; paintSearchClear();
     document.getElementById('qtyInput').value = '';
     document.getElementById('rateInput').value = '';
     document.getElementById('selectedName').textContent = '';
