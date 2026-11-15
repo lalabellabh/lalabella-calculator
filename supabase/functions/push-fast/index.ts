@@ -84,7 +84,7 @@ async function sendTo(subs: any[], payload: Record<string, unknown>) {
   return { sent, removed: dead.length };
 }
 
-async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '') {
+async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '', branch = '') {
   let q = 'push_subscriptions?select=id,user_id,endpoint,p256dh,auth,mute_chat,mute_orders,mute_approvals&limit=500';
   if (userIds) {
     if (!userIds.length) return [];
@@ -97,13 +97,15 @@ async function subsFor(userIds: number[] | null, excludeUserId = 0, kind = '') {
   if (kind === 'approvals') subs = subs.filter((s: any) => !s.mute_approvals);
   if (!subs.length) return [];
   const uids = Array.from(new Set(subs.map((s: any) => s.user_id)));
-  const act = await rest('GET', `users?select=id,role&status=eq.Active&id=in.(${uids.join(',')})`);
+  const act = await rest('GET', `users?select=id,role,branch&status=eq.Active&id=in.(${uids.join(',')})`);
   // approvals: Admins only. orders: never to Saudi Team / Visitor accounts (Nov 2026: Saudi only gets Saudi transfer alerts + chat).
   const ok = new Set((act || []).filter((u: any) => {
     const r = String(u.role || '');
     if (kind === 'approvals') return r.toLowerCase() === 'admin';
     if (kind === 'orders') return r !== 'Saudi Team' && r !== 'Visitor';
     if (kind === 'saudi') return r === 'Saudi Team';
+    // Nov 15 2026: Saudi -> Bahrain checklist: Admins + the staff of the receiving branch
+    if (kind === 'saudiBh') return r.toLowerCase() === 'admin' || (r !== 'Saudi Team' && r !== 'Visitor' && (!branch || String(u.branch || '') === branch));
     return true;
   }).map((u: any) => u.id));
   return subs.filter((s: any) => ok.has(s.user_id));
@@ -147,7 +149,8 @@ Deno.serve(async (req) => {
 
       if (p.action === 'saudiNotify') {
         // Nov 2026: a new transfer was sent to Saudi -> only the Saudi Team accounts get it (not the person who sent it).
-        const subs = await subsFor(null, Number(p.excludeUserId) || 0, 'saudi');
+        const toBh = p.to === 'bahrain';
+        const subs = await subsFor(null, Number(p.excludeUserId) || 0, toBh ? 'saudiBh' : 'saudi', toBh ? clip(String(p.branch || ''), 40) : '');
         const r = await sendTo(subs, { title: clip(String(p.title || '📦 New transfer to Saudi'), 80), body: clip(String(p.body || ''), 160), url: 'item-saudi.html', tag: 'saudi-' + clip(String(p.batch || ''), 40) });
         return json({ success: true, ...r });
       }

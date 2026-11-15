@@ -7,6 +7,7 @@
 //      Editing or deleting anything = Admin only.
 // Photos: private bucket saudi-photos, signed links (1 h).
 // Actions: list | send | returnItems | editLine (Admin) | editReturn (Admin) | deleteLine (Admin) | deleteReturn (Admin)
+//          Shipments (checklist, Nov 15 2026): send also makes a Bahrain->Saudi shipment | sendBack (Saudi -> Bahrain) | receiveShipment | deleteShipment (Admin, on the way only)
 //          addExtra (anyone: came back / received but NOT on any list, note required) | editExtra (Admin) | deleteExtra (Admin)
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -101,7 +102,9 @@ async function list(u: any) {
     sbGetAll('saudi_photos?select=*&order=sort_order.asc,id.asc'),
   ]);
   const exs = await sbGetAll('saudi_extras?select=*&order=created_at.desc').catch(() => []);
-  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url), ...exs.map((r: any) => r.photo_url)].filter(Boolean));
+  const ships = await sbGet('saudi_shipments?select=*&order=created_at.desc&limit=150').catch(() => []);
+  const sitems = ships.length ? await sbGetAll(`saudi_shipment_items?select=*&shipment_id=in.(${ships.map((x: any) => x.id).join(',')})&order=sort_order.asc,id.asc`).catch(() => []) : [];
+  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url), ...exs.map((r: any) => r.photo_url), ...ships.map((r: any) => r.photo_url), ...ships.map((r: any) => r.received_photo)].filter(Boolean));
   const linePics: Record<string, string[]> = {}, lineInfo: Record<string, any[]> = {}, batchPics: any[] = [];
   pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
     if (x.line_id) { (linePics[x.line_id] = linePics[x.line_id] || []).push(u); (lineInfo[x.line_id] = lineInfo[x.line_id] || []).push({ id: x.id, url: u, canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); }
@@ -109,6 +112,10 @@ async function list(u: any) {
   const byLine: Record<string, any[]> = {};
   rets.forEach((r: any) => { (byLine[r.line_id] = byLine[r.line_id] || []).push({ id: r.id, kind: r.kind, qty: r.qty == null ? null : Number(r.qty), date: r.return_date || '', branch: r.branch || '',
     by: r.received_by || '', notes: r.notes || '', photo: r.photo_url ? (signed[r.photo_url] || '') : '', source: r.source, savedBy: r.created_by || '', at: r.created_at }); });
+  const onWayTo: Record<string, boolean> = {}, onWayBack: Record<string, number> = {};
+  const shipById: Record<string, any> = {}; ships.forEach((x: any) => { shipById[x.id] = x; });
+  sitems.forEach((it: any) => { const sh = shipById[it.shipment_id]; if (!sh || sh.status !== 'on_way' || !it.line_id) return;
+    if (sh.direction === 'to_saudi') onWayTo[it.line_id] = true; else onWayBack[it.line_id] = (onWayBack[it.line_id] || 0) + Number(it.qty_sent || 0); });
   const rows = lines.map((r: any) => {
     const moves = byLine[r.id] || [];
     const sent = r.qty_sent == null ? null : Number(r.qty_sent);
@@ -122,12 +129,18 @@ async function list(u: any) {
     return { id: r.id, batch: r.batch_label, batchDate: r.batch_date, no: r.line_no, reference: r.reference || '', quantity: r.quantity || '', qtySent: sent, unit: r.unit || '',
       notes: r.notes || '', notesRows: r.notes_rows || 1, excelReturned: r.source === 'excel' ? (r.returned || '') : '', from: r.from_branch || '', givenTo: r.given_to || '',
       photo: r.photo_url ? (signed[r.photo_url] || '') : '', photos: linePics[r.id] || [], photoInfo: lineInfo[r.id] || [], source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
-      moves, returned: nBack, kept: nKept, left, status };
+      moves, returned: nBack, kept: nKept, left, status, onWay: !!onWayTo[r.id], backOnWay: onWayBack[r.id] != null ? onWayBack[r.id] : null };
   });
   const extras = exs.map((x: any) => ({ id: x.id, kind: x.kind, item: x.item, qty: x.qty == null ? null : Number(x.qty), unit: x.unit || '', date: x.item_date || '', branch: x.branch || '',
     by: x.received_by || '', note: x.note || '', photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, lineId: x.line_id, adminNote: x.admin_note || '',
     resolvedBy: x.resolved_by || '', resolvedAt: x.resolved_at, savedBy: x.created_by || '', at: x.created_at }));
-  return { success: true, rows, extras, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
+  const shipments = ships.map((x: any) => ({ id: x.id, direction: x.direction, date: x.ship_date, label: x.label || '', from: x.from_place || '', to: x.to_place || '', note: x.note || '',
+    photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, sentBy: x.sent_by || '', at: x.created_at,
+    recDate: x.received_date || '', recBy: x.received_by || '', recNote: x.received_note || '', recPhoto: x.received_photo ? (signed[x.received_photo] || '') : '', recSavedBy: x.received_saved_by || '', recAt: x.received_at,
+    items: sitems.filter((it: any) => it.shipment_id === x.id).map((it: any) => ({ id: it.id, lineId: it.line_id, item: it.item, qty: it.qty_sent == null ? null : Number(it.qty_sent), unit: it.unit || '',
+      got: it.got, qtyGot: it.qty_received == null ? null : Number(it.qty_received), note: it.note || '' })),
+    extras: exs.filter((e: any) => e.shipment_id === x.id).map((e: any) => ({ item: e.item, qty: e.qty == null ? null : Number(e.qty), unit: e.unit || '', note: e.note || '' })) }));
+  return { success: true, rows, extras, shipments, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
 }
 
 async function send(p: any, u: any) {
@@ -148,20 +161,94 @@ async function send(p: any, u: any) {
       photo_url: photo, source: 'manual', created_by: who(u) };
   });
   const r = await sbPost('saudi_transfers', rows);
+  // Nov 15 2026: the same send is a shipment (checklist) — Saudi ticks it when it arrives
+  try {
+    const sh = (await sbPost('saudi_shipments', [{ direction: 'to_saudi', ship_date: bd, label, from_place: BR(p.from) || 'Bahrain', to_place: 'Saudi', note: notes, photo_url: photo, status: 'on_way', sent_by: who(u), sent_by_id: u.id }]))[0];
+    if (sh) await sbPost('saudi_shipment_items', r.map((x: any, i: number) => ({ shipment_id: sh.id, line_id: x.id, item: String(x.reference || '').split('\n')[0].slice(0, 300) || 'Item', qty_sent: x.qty_sent, unit: x.unit, note: (x.quantity && x.qty_sent == null) ? String(x.quantity).slice(0, 200) : null, sort_order: i + 1 })));
+  } catch (e) { console.error('shipment', e); }
   // Nov 2026: tell the Saudi Team (phone notification). Never blocks or fails the save.
   try {
     const items = lines.slice(0, 3).map((l: any) => txt(l.reference, 60).split('\n')[0]).join(', ') + (lines.length > 3 ? ' +' + (lines.length - 3) + ' more' : '');
     const from = BR(p.from), giv = txt(p.givenTo, 60);
-    await saudiPush('📦 New transfer to Saudi', lines.length + ' item' + (lines.length > 1 ? 's' : '') + (from ? ' from ' + from : '') + (giv ? ' · given to ' + giv : '') + ': ' + items, label, u.id);
+    await saudiPush('📦 On the way to Saudi — checklist ready', lines.length + ' item' + (lines.length > 1 ? 's' : '') + (from ? ' from ' + from : '') + (giv ? ' · given to ' + giv : '') + ': ' + items, label, u.id);
   } catch (e) { console.error('saudi push', e); }
   return { success: true, added: r.length, batch: label };
 }
 
-async function saudiPush(title: string, body: string, batch: string, excludeUserId: number) {
+async function saudiPush(title: string, body: string, batch: string, excludeUserId: number, to = 'saudi', branch = '') {
   const cfg = await sbGet('push_config?select=internal_key&id=eq.1&limit=1');
   const key = cfg && cfg[0] && cfg[0].internal_key; if (!key) return;
   await fetch(`${SB_URL}/functions/v1/push-fast`, { method: 'POST', headers: H, signal: AbortSignal.timeout(8000),
-    body: JSON.stringify({ action: 'saudiNotify', key, title, body, batch, excludeUserId }) });
+    body: JSON.stringify({ action: 'saudiNotify', key, title, body, batch, excludeUserId, to, branch }) });
+}
+
+// ---------- SHIPMENTS (checklist) — Nov 15 2026 ----------
+const isSaudi = (u: any) => String(u.role) === SAUDI_ROLE;
+// Saudi -> Bahrain: the Saudi Team sends things back. Nothing counts as returned until Bahrain ticks Receive.
+async function sendBack(p: any, u: any) {
+  const d = String(p.date || ''); if (!isDate(d)) return { success: false, error: 'Pick the date it was sent.' };
+  const to = BR(p.to) || 'Galali';
+  let items: any[] = []; try { items = JSON.parse(String(p.items || '[]')); } catch { return { success: false, error: 'Bad list.' }; }
+  items = (Array.isArray(items) ? items : []).slice(0, 200);
+  const withLine = items.filter((x: any) => Number.isInteger(Number(x.lineId)) && Number(x.lineId) > 0);
+  const free = items.filter((x: any) => !(Number(x.lineId) > 0) && txt(x.item, 300));
+  if (!withLine.length && !free.length) return { success: false, error: 'Tick at least one item.' };
+  if (free.some((x: any) => !txt(x.note, 300))) return { success: false, error: 'Add a note for every item that is not on the list.' };
+  const ids = [...new Set(withLine.map((x: any) => Number(x.lineId)))];
+  const found = ids.length ? await sbGet(`saudi_transfers?select=id,reference,unit&id=in.(${ids.join(',')})`) : [];
+  if (found.length !== ids.length) return { success: false, error: 'Some items were not found. Refresh and try again.' };
+  const byId: Record<string, any> = {}; found.forEach((x: any) => { byId[x.id] = x; });
+  let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' }; }
+  const sh = (await sbPost('saudi_shipments', [{ direction: 'to_bahrain', ship_date: d, label: txt(p.label, 60) || null, from_place: 'Saudi', to_place: to, note: txt(p.note, 400) || null,
+    photo_url: photo || null, status: 'on_way', sent_by: txt(p.sentBy, 60) || who(u), sent_by_id: u.id }]))[0];
+  const rows = withLine.map((x: any, i: number) => { const l = byId[Number(x.lineId)]; return { shipment_id: sh.id, line_id: l.id, item: String(l.reference || '').split('\n')[0].slice(0, 300) || 'Item',
+    qty_sent: num(x.qty), unit: txt(x.unit, 20) || l.unit || null, note: txt(x.note, 300) || null, sort_order: i + 1 }; })
+    .concat(free.map((x: any, i: number) => ({ shipment_id: sh.id, line_id: null, item: txt(x.item, 300), qty_sent: num(x.qty), unit: txt(x.unit, 20) || null, note: 'Not on the list: ' + txt(x.note, 280), sort_order: withLine.length + i + 1 })));
+  await sbPost('saudi_shipment_items', rows);
+  try {
+    const names = rows.slice(0, 3).map((x: any) => x.item.slice(0, 40)).join(', ') + (rows.length > 3 ? ' +' + (rows.length - 3) + ' more' : '');
+    await saudiPush('🚚 Coming back from Saudi — checklist ready', rows.length + ' item(s) to ' + to + ': ' + names, 'ship-' + sh.id, u.id, 'bahrain', to);
+  } catch (e) { console.error('push', e); }
+  return { success: true, id: sh.id };
+}
+async function receiveShipment(p: any, u: any) {
+  const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid.' };
+  const sh = (await sbGet(`saudi_shipments?select=*&id=eq.${id}&limit=1`))[0]; if (!sh) return { success: false, error: 'Not found. Refresh.' };
+  if (sh.status !== 'on_way') return { success: false, error: 'This one was already received.' };
+  if (!isAdmin(u) && (sh.direction === 'to_saudi') !== isSaudi(u)) return { success: false, error: sh.direction === 'to_saudi' ? 'Only the Saudi Team can receive this.' : 'Only Bahrain can receive this.' };
+  const d = String(p.date || ''); if (!isDate(d)) return { success: false, error: 'Pick the date it arrived.' };
+  let ticks: any[] = [], extras: any[] = [];
+  try { ticks = JSON.parse(String(p.items || '[]')); extras = JSON.parse(String(p.extras || '[]')); } catch { return { success: false, error: 'Bad list.' }; }
+  extras = (Array.isArray(extras) ? extras : []).slice(0, 50).filter((x: any) => txt(x.item, 300));
+  if (extras.some((x: any) => !txt(x.note, 300))) return { success: false, error: 'Add a note for every item that is not on the list.' };
+  const items = await sbGet(`saudi_shipment_items?select=*&shipment_id=eq.${id}&order=sort_order.asc`);
+  const tk: Record<string, any> = {}; (Array.isArray(ticks) ? ticks : []).forEach((x: any) => { tk[Number(x.id)] = x; });
+  let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' }; }
+  const by = txt(p.receivedBy, 60) || who(u), place = sh.direction === 'to_bahrain' ? (sh.to_place || 'Galali') : 'Saudi';
+  let full = true, nGot = 0;
+  for (const it of items) {
+    const t = tk[it.id] || {}, got = !!t.got, q = got ? (num(t.qty) != null ? num(t.qty) : (it.qty_sent == null ? null : Number(it.qty_sent))) : 0;
+    if (!got || (it.qty_sent != null && q != null && q < Number(it.qty_sent))) full = false;
+    if (got) nGot++;
+    const f: any = { got, qty_received: q, note: txt(t.note, 300) || it.note || null };
+    // came back to Bahrain -> now it is a real return on its transfer line
+    if (got && sh.direction === 'to_bahrain' && it.line_id && !it.return_id && (q == null || q > 0)) {
+      const r = await sbPost('saudi_returns', [{ line_id: it.line_id, kind: 'return', qty: q, return_date: d, branch: place, received_by: by,
+        notes: txt('Checklist #' + id + (t.note ? ' · ' + t.note : ''), 300), photo_url: photo || sh.photo_url || null, source: 'shipment', created_by: who(u) }]);
+      f.return_id = r[0] && r[0].id;
+    }
+    await sbPatch('saudi_shipment_items', `id=eq.${it.id}`, f);
+  }
+  if (extras.length) await sbPost('saudi_extras', extras.map((x: any) => ({ kind: sh.direction === 'to_bahrain' ? 'return' : 'receive', item: txt(x.item, 300), qty: num(x.qty), unit: txt(x.unit, 20) || null,
+    item_date: d, branch: place, received_by: by, note: txt(x.note, 500), photo_url: photo || null, status: 'open', shipment_id: id, created_by: who(u) })));
+  await sbPatch('saudi_shipments', `id=eq.${id}`, { status: full ? 'received' : 'partial', received_date: d, received_by: by, received_note: txt(p.note, 400) || null,
+    received_photo: photo || null, received_saved_by: who(u), received_at: new Date().toISOString() });
+  try {
+    const miss = items.length - nGot, txtB = nGot + ' of ' + items.length + ' received' + (miss ? ' · ' + miss + ' missing' : '') + (extras.length ? ' · ' + extras.length + ' not on the list' : '') + ' · by ' + by;
+    if (sh.direction === 'to_bahrain') await saudiPush((full ? '✅' : '⚠️') + ' Received in ' + place, txtB, 'ship-' + id, u.id, 'saudi');
+    else await saudiPush((full ? '✅' : '⚠️') + ' Received in Saudi', txtB, 'ship-' + id, u.id, 'bahrain', sh.from_place || '');
+  } catch (e) { console.error('push', e); }
+  return { success: true, full, got: nGot, of: items.length };
 }
 
 async function returnItems(p: any, u: any) {
@@ -275,9 +362,19 @@ Deno.serve(async (req) => {
     const u = await me(p.token); if (!u) return json({ success: false, error: 'Please log in again.' }, 401);
     const a = String(p.action || '');
     if (a === 'list') return json(await list(u));
-    if (a === 'send') return json(await send(p, u));
+    if (a === 'send') { if (isSaudi(u)) return json({ success: false, error: 'Saudi Team: use "Send to Bahrain".' }); return json(await send(p, u)); }
     if (a === 'returnItems') return json(await returnItems(p, u));
     if (a === 'addExtra') return json(await addExtra(p, u));
+    if (a === 'sendBack') return json(await sendBack(p, u));
+    if (a === 'receiveShipment') return json(await receiveShipment(p, u));
+    if (a === 'deleteShipment') {
+      if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can delete.' });
+      const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return json({ success: false, error: 'Invalid.' });
+      const sh = (await sbGet(`saudi_shipments?select=id,status&id=eq.${id}&limit=1`))[0]; if (!sh) return json({ success: false, error: 'Not found.' });
+      if (sh.status !== 'on_way') return json({ success: false, error: 'Already received — delete its returns on the lines instead.' });
+      await sbDelete('saudi_shipments', `id=eq.${id}`);   // only the checklist; the transfer lines stay
+      return json({ success: true });
+    }
     if (a === 'editExtra' || a === 'deleteExtra') {
       if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can change or delete. Tell the admin what to fix.' });
       if (a === 'editExtra') return json(await editExtra(p, u));

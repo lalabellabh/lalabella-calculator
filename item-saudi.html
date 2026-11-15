@@ -77,6 +77,23 @@
   .ext table{ min-width:760px; } .ext thead th{ background:#8a4a0c; }
   .xs{ font-size:11px; font-weight:800; border-radius:99px; padding:2px 9px; white-space:nowrap; }
   .xs.open{ background:#ffe9cc; color:#8a4a0c; } .xs.matched{ background:#e3f4e8; color:#2f7a4f; } .xs.saudi{ background:#ececfb; color:#5a5aa8; } .xs.done{ background:#eee; color:#666; }
+  .big .rcv{ background:linear-gradient(135deg,#2f6f9a,#3f8fc0); } .big .bk{ background:linear-gradient(135deg,#2f7a4f,#3f9a65); }
+  .big button{ position:relative; } .big .bd{ position:absolute; top:-6px; right:-4px; background:#c5483a; color:#fff; border-radius:99px; font-size:12px; min-width:22px; height:22px; line-height:22px; padding:0 6px; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+  .mini{ border:0; background:none; color:var(--dim); font:inherit; font-size:12px; text-decoration:underline; cursor:pointer; padding:0 0 8px; }
+  .ships{ background:#f2f8fc; border:1px solid #cfe2ef; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
+  .ships h3{ margin:0 0 8px; font-size:16px; }
+  .sc{ background:#fff; border:1px solid #dbe8f1; border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  .sc .t{ font-weight:800; font-size:14px; } .sc .m{ color:var(--dim); font-size:12px; margin-top:2px; }
+  .sc .b{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; } .sc .b button{ font:inherit; font-size:12.5px; font-weight:700; border:1px solid #cfe2ef; background:#fff; border-radius:9px; padding:7px 11px; cursor:pointer; }
+  .sc .b .go{ background:#2f7a4f; color:#fff; border-color:#2f7a4f; }
+  .sc .it{ font-size:12.5px; margin-top:6px; display:none; } .sc.open .it{ display:block; }
+  .ss{ font-size:11px; font-weight:800; border-radius:99px; padding:2px 9px; } .ss.on_way{ background:#e3effa; color:#2f6f9a; } .ss.received{ background:#e3f4e8; color:#2f7a4f; } .ss.partial{ background:#ffe9cc; color:#8a4a0c; }
+  .ck{ display:grid; grid-template-columns:26px 1fr 78px; gap:6px 8px; align-items:center; padding:7px 9px; border-top:1px solid #f3e8eb; font-size:13px; }
+  .ck input[type=checkbox]{ width:22px; height:22px; } .ck input[type=number]{ padding:7px; font-size:14px; } .ck .s{ font-size:11.5px; color:var(--dim); } .ck .nt{ grid-column:2 / 4; padding:6px 8px; font-size:12.5px; }
+  .fr{ display:grid; grid-template-columns:2fr 70px 80px 26px; gap:6px; margin-top:6px; align-items:center; } .fr .n{ grid-column:1 / 4; } .fr button{ border:0; background:none; color:var(--bad); cursor:pointer; font-size:15px; }
+  #ckPrint{ display:none; }
+  @media print{ body.ck{ display:block !important; background:#fff !important; } body.ck > *:not(#ckPrint){ display:none !important; } body.ck #ckPrint{ display:block !important; width:100% !important; flex:1 1 100%; max-width:none; font-family:Arial,sans-serif; color:#000; }
+    #ckPrint table{ min-width:0; font-size:12px; } #ckPrint td,#ckPrint th{ border:1px solid #444; padding:6px; color:#000; background:#fff !important; } #ckPrint .cbx{ display:inline-block; width:16px; height:16px; border:1.5px solid #000; } }
   .lb{ position:fixed; inset:0; background:rgba(20,8,12,.85); display:none; align-items:center; justify-content:center; z-index:2147483001; cursor:zoom-out; } .lb.show{ display:flex; } .lb img{ max-width:94vw; max-height:88vh; border-radius:12px; }
   @media (max-width:600px){ header{ padding-left:52px; } .grid2,.grid3{ grid-template-columns:1fr; } .bar .q{ min-width:100%; } .big button{ font-size:15px; padding:14px 8px; } }
   @media print{
@@ -97,9 +114,12 @@
     <div class="sub">TRANSFERS (BAHRAIN TO KSA) — what was sent for events in Saudi, and what came back. Record only (stock is not changed).</div>
   </header>
   <div class="big">
-    <button class="snd" id="bSend" type="button">📤 Send to Saudi<small>items leaving Bahrain</small></button>
-    <button class="ret" id="bRet" type="button">📥 Return<small>items back in a branch / kept in Saudi</small></button>
+    <button class="snd" id="bSend" type="button" style="display:none">📤 Send to Saudi<small>items leaving Bahrain</small></button>
+    <button class="rcv" id="bRecvS" type="button" style="display:none">📥 Receive from Saudi<small>tick what arrived in Bahrain</small><span class="bd" id="bdS" style="display:none"></span></button>
+    <button class="bk" id="bBack" type="button" style="display:none">📤 Send to Bahrain<small>items going back (return)</small></button>
+    <button class="rcv" id="bRecvB" type="button" style="display:none">📦 Receive from Bahrain<small>tick what arrived in Saudi</small><span class="bd" id="bdB" style="display:none"></span></button>
   </div>
+  <button class="mini" id="bRet" type="button" style="display:none">📥 Manual return / kept in Saudi (Admin)</button>
   <button class="xbtn" id="bExtra" type="button">＋ Item not on the list <small>— came back / received but not on any transfer (add a note)</small></button>
   <div class="bar">
     <label class="q">Search<input id="q" placeholder="Item, quantity, notes, person, branch… e.g. vase, Kelvin"></label>
@@ -111,6 +131,7 @@
     <button id="xls" type="button">📊 Excel</button>
   </div>
   <div class="sum" id="sum"></div>
+  <div id="ships"></div>
   <div id="extras"></div>
   <div id="list"><div class="empty">Loading…</div></div>
 </div>
@@ -158,6 +179,48 @@
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="rSave">Save</button></div>
 </div></div>
 
+<!-- SEND TO BAHRAIN (Saudi Team) -->
+<div class="modal" id="mBack"><div class="box">
+  <h3>📤 Send to Bahrain</h3>
+  <div class="hint">Tick what you are sending back and put the qty. Bahrain gets a notification and a checklist. It counts as returned only when Bahrain ticks it as received.</div>
+  <input id="kFind" placeholder="Find an item…" style="margin-top:4px">
+  <div class="pick" id="kList"></div>
+  <div id="kFree"></div>
+  <button type="button" id="kAddFree" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #a8560b;color:#8a4a0c;background:#fff8ef;border-radius:9px;padding:8px 12px;cursor:pointer">＋ Item not on the list</button>
+  <div class="grid2">
+    <div><label>Date sent</label><input type="date" id="kDate"></div>
+    <div><label>Going to</label><select id="kTo"></select></div>
+    <div><label>Sent by</label><input id="kBy" placeholder="Your name"></div>
+    <div><label>Note (optional)</label><input id="kNote" placeholder="e.g. driver Ali, 3 boxes"></div>
+  </div>
+  <label>📷 Picture (optional)</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="kPhoto"><img id="kPrev" alt=""></div>
+  <div class="paste" id="kPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
+  <div class="msg" id="kMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="kSave">Send</button></div>
+</div></div>
+
+<!-- RECEIVE A SHIPMENT (checklist) -->
+<div class="modal" id="mRecv"><div class="box">
+  <h3 id="vTitle">📥 Receive</h3>
+  <label>Which delivery</label><select id="vShip"></select>
+  <div class="hint" id="vInfo" style="margin-top:6px"></div>
+  <button type="button" id="vAll" style="font:inherit;font-size:12.5px;font-weight:700;border:1px solid #cfe2ef;background:#fff;border-radius:9px;padding:6px 11px;cursor:pointer">✓ Tick all</button>
+  <div class="pick" id="vList"></div>
+  <div id="vFree"></div>
+  <button type="button" id="vAddFree" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #a8560b;color:#8a4a0c;background:#fff8ef;border-radius:9px;padding:8px 12px;cursor:pointer">＋ Arrived but not on the list</button>
+  <div class="grid2">
+    <div><label>Date arrived</label><input type="date" id="vDate"></div>
+    <div><label>Received by</label><input id="vBy" placeholder="Name of the person who received it"></div>
+  </div>
+  <label>Note (optional)</label><input id="vNote" placeholder="e.g. 1 vase broken">
+  <label>📷 Picture (optional)</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="vPhoto"><img id="vPrev" alt=""></div>
+  <div class="paste" id="vPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
+  <div class="msg" id="vMsg"></div>
+  <div class="btns"><button type="button" id="vPrint" style="margin-right:auto">🖨️ Print checklist</button><button type="button" data-close>Cancel</button><button type="button" class="go" id="vSave">Save received</button></div>
+</div></div>
+
 <!-- EXTRA: NOT ON THE LIST -->
 <div class="modal" id="mExtra"><div class="box">
   <h3>＋ Item not on the list</h3>
@@ -201,6 +264,7 @@
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="pSave">Save</button></div>
 </div></div>
 
+<div id="ckPrint"></div>
 <div class="lb" id="lb"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><img alt=""><div id="lbCap" style="color:#fff;font-size:14px;font-weight:600"></div><button type="button" id="lbDel" style="display:none;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:800;background:#c5483a;color:#fff;cursor:pointer">🗑️ Delete this picture</button></div></div>
 
 <script>
@@ -210,7 +274,7 @@
   var UNITS = ['pcs', 'set', 'stems', 'bags', 'roll', 'box', 'kg', 'plastic', 'lot'];
   var esc = window.lbEsc, $ = function(id){ return document.getElementById(id); };
   function token(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
-  var ROWS = [], EXTRAS = [], XK = 'return', BPICS = [], ADMIN = false, ME = '', KIND = 'return', EDIT = null;
+  var ROWS = [], SHIPS = [], LIMITED = false, EXTRAS = [], XK = 'return', BPICS = [], ADMIN = false, ME = '', KIND = 'return', EDIT = null;
   function today(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
   function fd(d){ if(!d) return ''; var x = new Date(d + 'T00:00:00'); return x.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
   function n3(v){ return v == null ? '' : String(Math.round(v * 1000) / 1000); }
@@ -232,7 +296,7 @@
     });
   }
   function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
-  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev'));
+  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev')); preview($('kPhoto'), $('kPrev')); preview($('vPhoto'), $('vPrev'));
   function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
   // Paste a snipped picture (Ctrl+V) — in the paste box, or anywhere in the open Send / Return form
   function takePaste(e, inpId, imId, boxId){
@@ -247,6 +311,8 @@
     if($('mSend').classList.contains('show')) takePaste(e, 'sPhoto', 'sPrev', 'sPaste');
     else if($('mRet').classList.contains('show')) takePaste(e, 'rPhoto', 'rPrev', 'rPaste');
     else if($('mPic').classList.contains('show')) takePaste(e, 'pPhoto', 'pPrev', 'pPaste');
+    else if($('mBack').classList.contains('show')) takePaste(e, 'kPhoto', 'kPrev', 'kPaste');
+    else if($('mRecv').classList.contains('show')) takePaste(e, 'vPhoto', 'vPrev', 'vPaste');
     else if($('mExtra').classList.contains('show')) takePaste(e, 'xPhoto', 'xPrev', 'xPaste');
     else if($('mEdit').classList.contains('show') && $('fAdd')) takePaste(e, 'fAdd', 'fAddPrev', 'fAddPaste');
   });
@@ -276,7 +342,7 @@
   function load(){
     api({ action:'list' }).then(function(d){
       if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
-      ROWS = d.rows || []; EXTRAS = d.extras || []; BPICS = d.batchPhotos || []; ADMIN = !!d.admin; ME = d.me || ''; render();
+      ROWS = d.rows || []; EXTRAS = d.extras || []; SHIPS = d.shipments || []; LIMITED = !!d.limited; BPICS = d.batchPhotos || []; ADMIN = !!d.admin; ME = d.me || ''; buttons(); render();
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
   // every line knows the NOTES of its merged cell (for search / filtered views)
@@ -293,13 +359,143 @@
     return res;
   }
   var ST = { still:'⏳ In Saudi', back:'✅ Back', kept:'🏷️ Kept in Saudi', unknown:'— No info' };
-  function stText(r){ if(r.status === 'still') return '⏳ ' + (r.left != null ? n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : 'Still in Saudi'); return ST[r.status] || ''; }
+  function stText0(r){ if(r.status === 'still') return '⏳ ' + (r.left != null ? n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : 'Still in Saudi'); return ST[r.status] || ''; }
+  function stText(r){ return (r.onWay ? '🚚 On the way to Saudi · ' : '') + stText0(r) + (r.backOnWay != null ? ' · 🚚 ' + n3(r.backOnWay) + ' coming back' : ''); }
   function moveHtml(m, q){
     var head = m.kind === 'keep' ? '🏷️ ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'kept in Saudi' : '📥 ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'back' + (m.date ? ' · ' + fd(m.date) : '') + (m.branch ? ' · ' + esc(m.branch) : '');
     return '<div class="mv">' + head + (m.by && m.source !== 'excel' ? ' · by ' + hl(m.by, q) : '') + (m.photo ? ' <img class="ph" src="' + esc(m.photo) + '" alt="">' : '') +
       (ADMIN ? ' <button class="no-print" title="Edit (Admin)" data-em="' + m.id + '">✏️</button>' : '') +
       (m.notes ? '<div class="ex">' + hl(m.notes, q) + '</div>' : '') + '</div>';
   }
+  // ---------- SHIPMENTS (checklist): Send -> notification -> Receive with ticks ----------
+  var DIR = { to_saudi:'Bahrain → Saudi', to_bahrain:'Saudi → Bahrain' }, SST = { on_way:'🚚 On the way', received:'✅ Received', partial:'⚠️ Received (some missing)' };
+  function canRecv(sh){ return sh.status === 'on_way' && (ADMIN || (sh.direction === 'to_saudi') === LIMITED); }
+  function buttons(){
+    var bh = ADMIN || !LIMITED, sa = ADMIN || LIMITED;
+    $('bSend').style.display = bh ? '' : 'none'; $('bRecvS').style.display = bh ? '' : 'none';
+    $('bBack').style.display = sa ? '' : 'none'; $('bRecvB').style.display = sa ? '' : 'none'; $('bRet').style.display = ADMIN ? '' : 'none';
+    var nS = SHIPS.filter(function(x){ return x.status === 'on_way' && x.direction === 'to_bahrain'; }).length, nB = SHIPS.filter(function(x){ return x.status === 'on_way' && x.direction === 'to_saudi'; }).length;
+    $('bdS').style.display = nS ? '' : 'none'; $('bdS').textContent = nS; $('bdB').style.display = nB ? '' : 'none'; $('bdB').textContent = nB;
+  }
+  function shipName(sh){ return (sh.direction === 'to_saudi' ? '📦 ' : '📤 ') + DIR[sh.direction] + ' · ' + fd(sh.date) + (sh.label ? ' · ' + sh.label : '') + ' · ' + sh.items.length + ' item(s)'; }
+  function qtyTxt(q, u){ return q == null ? '' : n3(q) + ' ' + (u || ''); }
+  function renderShips(){
+    var open = SHIPS.filter(function(x){ return x.status === 'on_way'; }), done = SHIPS.filter(function(x){ return x.status !== 'on_way'; }).slice(0, 6);
+    if(!open.length && !done.length){ $('ships').innerHTML = ''; return; }
+    function card(sh){
+      var items = sh.items.map(function(it){ var g = sh.status === 'on_way' ? '☐' : (it.got ? '✅' : '❌'); return '<div>' + g + ' ' + esc(it.item) + ' — ' + esc(qtyTxt(it.qty, it.unit)) + (sh.status !== 'on_way' && it.got && it.qtyGot != null && it.qty != null && it.qtyGot < it.qty ? ' <b style="color:#a8560b">(got ' + esc(n3(it.qtyGot)) + ')</b>' : '') + (it.note ? ' <span style="color:#7a6670">· ' + esc(it.note) + '</span>' : '') + '</div>'; }).join('') +
+        sh.extras.map(function(e){ return '<div>➕ ' + esc(e.item) + ' — ' + esc(qtyTxt(e.qty, e.unit)) + ' <span style="color:#a8560b">· not on the list: ' + esc(e.note) + '</span></div>'; }).join('');
+      var got = sh.items.filter(function(it){ return it.got; }).length;
+      return '<div class="sc" data-sc="' + sh.id + '"><div class="t">' + esc(shipName(sh)) + ' <span class="ss ' + sh.status + '">' + SST[sh.status] + (sh.status !== 'on_way' ? ' ' + got + '/' + sh.items.length : '') + '</span></div>' +
+        '<div class="m">' + esc(sh.from) + ' → ' + esc(sh.to) + ' · sent by ' + esc(sh.sentBy) + (sh.note ? ' · ' + esc(sh.note) : '') +
+        (sh.status !== 'on_way' ? '<br>Received ' + esc(fd(sh.recDate)) + ' by ' + esc(sh.recBy) + (sh.recNote ? ' · ' + esc(sh.recNote) : '') : '') +
+        (sh.photo ? ' <img class="ph" src="' + esc(sh.photo) + '" alt="">' : '') + (sh.recPhoto ? ' <img class="ph" src="' + esc(sh.recPhoto) + '" alt="">' : '') + '</div>' +
+        '<div class="it">' + items + '</div>' +
+        '<div class="b no-print"><button type="button" data-scopen="' + sh.id + '">👁 Items</button><button type="button" data-scprint="' + sh.id + '">🖨️ Print checklist</button>' +
+        (canRecv(sh) ? '<button type="button" class="go" data-screcv="' + sh.id + '">✅ Receive</button>' : '') +
+        (ADMIN && sh.status === 'on_way' ? '<button type="button" data-scdel="' + sh.id + '" style="color:#c5483a">🗑️</button>' : '') + '</div></div>';
+    }
+    $('ships').innerHTML = '<div class="ships"><h3>🚚 Deliveries (checklist)</h3>' + (open.length ? open.map(card).join('') : '<div class="m" style="color:#7a6670;font-size:12.5px;margin-bottom:6px">Nothing on the way.</div>') +
+      (done.length ? '<details><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#2f6f9a;margin:4px 0">Recently received (' + done.length + ')</summary>' + done.map(card).join('') + '</details>' : '') + '</div>';
+  }
+  function printChecklist(sh){
+    var rows = sh.items.map(function(it, i){
+      var got = sh.status === 'on_way' ? '<span class="cbx"></span>' : (it.got ? '✔' : '✘');
+      return '<tr><td style="width:30px;text-align:center">' + (i + 1) + '</td><td>' + esc(it.item) + (it.note ? '<div style="font-size:11px">' + esc(it.note) + '</div>' : '') + '</td><td style="width:90px">' + esc(qtyTxt(it.qty, it.unit)) + '</td><td style="width:60px;text-align:center">' + got + '</td><td style="width:90px">' + (sh.status !== 'on_way' && it.got ? esc(qtyTxt(it.qtyGot, it.unit)) : '') + '</td><td style="width:160px"></td></tr>';
+    }).join('') + sh.extras.map(function(e){ return '<tr><td>＋</td><td>' + esc(e.item) + '<div style="font-size:11px">Not on the list: ' + esc(e.note) + '</div></td><td></td><td style="text-align:center">✔</td><td>' + esc(qtyTxt(e.qty, e.unit)) + '</td><td></td></tr>'; }).join('');
+    var blank = sh.status === 'on_way' ? '<tr><td>＋</td><td></td><td></td><td style="text-align:center"><span class="cbx"></span></td><td></td><td></td></tr>'.repeat(4) : '';
+    $('ckPrint').innerHTML = '<h2 style="margin:0">Lalabella — Delivery checklist</h2><div style="font-size:16px;font-weight:700;margin:4px 0">' + esc(DIR[sh.direction]) + ' · #' + sh.id + '</div>' +
+      '<div style="font-size:13px;margin-bottom:8px">Sent: ' + esc(fd(sh.date)) + ' · From: ' + esc(sh.from) + ' · To: ' + esc(sh.to) + ' · Sent by: ' + esc(sh.sentBy) + (sh.note ? '<br>Note: ' + esc(sh.note) : '') +
+      (sh.status !== 'on_way' ? '<br>Received: ' + esc(fd(sh.recDate)) + ' by ' + esc(sh.recBy) + (sh.recNote ? ' · ' + esc(sh.recNote) : '') : '') + '</div>' +
+      '<table style="width:100%;border-collapse:collapse"><thead><tr><th>#</th><th>ITEM</th><th>QTY SENT</th><th>✔</th><th>QTY RECEIVED</th><th>NOTES</th></tr></thead><tbody>' + rows + blank + '</tbody></table>' +
+      '<div style="margin-top:28px;display:flex;gap:40px;font-size:13px"><div>Sent by: ____________________</div><div>Received by: ____________________</div><div>Date: ____________</div></div>';
+    document.body.classList.add('ck');
+    var done = function(){ document.body.classList.remove('ck'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done); setTimeout(function(){ window.print(); setTimeout(done, 1500); }, 60);
+  }
+  // ---- Send to Bahrain (Saudi Team) ----
+  function freeRow(box){
+    var d = document.createElement('div'); d.className = 'fr';
+    d.innerHTML = '<input data-f="item" placeholder="Item not on the list"><input data-f="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="qty"><select data-f="unit">' + UNITS.map(function(u){ return '<option>' + u + '</option>'; }).join('') + '</select><button type="button" title="Remove">✕</button><input class="n" data-f="note" placeholder="📝 Note (needed) — why it is not on the list">';
+    d.querySelector('button').onclick = function(){ d.remove(); }; $(box).appendChild(d); d.querySelector('input').focus();
+  }
+  function freeItems(box){ return Array.prototype.map.call(document.querySelectorAll('#' + box + ' .fr'), function(d){ var g = function(f){ return d.querySelector('[data-f=' + f + ']').value; }; return { item:g('item').trim(), qty:g('qty'), unit:g('unit'), note:g('note').trim() }; }).filter(function(x){ return x.item; }); }
+  function renderBack(){
+    var q = $('kFind').value.trim().toLowerCase(), html = '';
+    groups().forEach(function(g){
+      var open = g.filter(function(r){ return (r.status === 'still' || r.status === 'unknown') && !r.onWay && (!q || hay(r).indexOf(q) !== -1); });
+      if(!open.length) return;
+      html += '<div class="g">' + esc(g[0].batch) + ' · ' + fd(g[0].batchDate) + '</div>' + open.map(function(r){
+        var left = r.left != null ? Math.max(0, r.left - (r.backOnWay || 0)) : null;
+        return '<label class="r"><input type="checkbox" data-kline="' + r.id + '"><span>' + esc(r.reference).replace(/\n/g, ' ') + '<div class="s">' + esc(stText0(r)) + (r.backOnWay != null ? ' · 🚚 ' + esc(n3(r.backOnWay)) + ' already coming back' : '') + '</div></span>' +
+          '<input type="number" min="0" step="any" inputmode="decimal" data-kqty="' + r.id + '" value="' + (left != null ? n3(left) : '') + '" placeholder="qty"></label>';
+      }).join('');
+    });
+    $('kList').innerHTML = html || '<div class="empty">Nothing is waiting in Saudi.</div>';
+  }
+  $('kFind').oninput = renderBack;
+  $('kAddFree').onclick = function(){ freeRow('kFree'); };
+  $('bBack').onclick = function(){ $('kFind').value = ''; renderBack(); $('kFree').innerHTML = ''; $('kDate').value = today(); opts($('kTo'), BRANCHES.filter(function(b){ return b !== 'Other'; }), 'Galali'); $('kBy').value = ME; $('kNote').value = ''; $('kPhoto').value = ''; $('kPrev').style.display = 'none'; resetPaste('kPhoto', 'kPaste'); $('kMsg').textContent = ''; $('mBack').classList.add('show'); };
+  $('kSave').onclick = function(){
+    var items = Array.prototype.map.call(document.querySelectorAll('#kList input[data-kline]:checked'), function(c){ var id = c.getAttribute('data-kline'); return { lineId:id, qty: document.querySelector('[data-kqty="' + id + '"]').value }; });
+    var free = freeItems('kFree');
+    if(!items.length && !free.length){ $('kMsg').textContent = 'Tick at least one item.'; return; }
+    if(free.some(function(x){ return !x.note; })){ $('kMsg').textContent = 'Add a note for every item that is not on the list.'; return; }
+    if(!$('kDate').value){ $('kMsg').textContent = 'Pick the date.'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Sending…';
+    readPhoto($('kPhoto')).then(function(photo){
+      return api({ action:'sendBack', date:$('kDate').value, to:$('kTo').value, sentBy:$('kBy').value, note:$('kNote').value, items:JSON.stringify(items.concat(free)), photo:photo || '' }, true);
+    }).then(function(d){ if(!d || !d.success){ $('kMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mBack').classList.remove('show'); load(); })
+      .catch(function(){ $('kMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Send'; });
+  };
+  // ---- Receive (both sides) ----
+  var RDIR = 'to_bahrain';
+  function openRecv(dir, id){
+    RDIR = dir; var list = SHIPS.filter(function(x){ return x.direction === dir && canRecv(x); });
+    if(!list.length){ alert(dir === 'to_saudi' ? 'Nothing on the way to Saudi.' : 'Nothing on the way from Saudi.'); return; }
+    $('vTitle').textContent = dir === 'to_saudi' ? '📦 Receive from Bahrain' : '📥 Receive from Saudi';
+    $('vShip').innerHTML = list.map(function(x){ return '<option value="' + x.id + '"' + (String(x.id) === String(id) ? ' selected' : '') + '>' + esc(shipName(x)) + '</option>'; }).join('');
+    $('vFree').innerHTML = ''; $('vDate').value = today(); $('vBy').value = ME; $('vNote').value = ''; $('vPhoto').value = ''; $('vPrev').style.display = 'none'; resetPaste('vPhoto', 'vPaste'); $('vMsg').textContent = '';
+    fillRecv(); $('mRecv').classList.add('show');
+  }
+  function curShip(){ return SHIPS.find(function(x){ return String(x.id) === $('vShip').value; }); }
+  function fillRecv(){
+    var sh = curShip(); if(!sh) return;
+    $('vInfo').textContent = sh.from + ' → ' + sh.to + ' · sent ' + fd(sh.date) + ' by ' + sh.sentBy + (sh.note ? ' · ' + sh.note : '') + '. Tick what arrived; change the qty if less came.';
+    $('vList').innerHTML = sh.items.map(function(it){
+      return '<div class="ck"><input type="checkbox" data-vid="' + it.id + '"><span>' + esc(it.item) + '<div class="s">sent: ' + esc(qtyTxt(it.qty, it.unit) || '—') + (it.note ? ' · ' + esc(it.note) : '') + '</div></span>' +
+        '<input type="number" min="0" step="any" inputmode="decimal" data-vq="' + it.id + '" value="' + (it.qty != null ? n3(it.qty) : '') + '" placeholder="qty"><input class="nt" data-vn="' + it.id + '" placeholder="Note (optional) e.g. 1 broken"></div>';
+    }).join('');
+  }
+  $('vShip').onchange = fillRecv;
+  $('vAll').onclick = function(){ document.querySelectorAll('#vList input[data-vid]').forEach(function(c){ c.checked = true; }); };
+  $('vAddFree').onclick = function(){ freeRow('vFree'); };
+  $('vPrint').onclick = function(){ var sh = curShip(); if(sh) printChecklist(sh); };
+  $('bRecvS').onclick = function(){ openRecv('to_bahrain'); };
+  $('bRecvB').onclick = function(){ openRecv('to_saudi'); };
+  $('vSave').onclick = function(){
+    var sh = curShip(); if(!sh) return;
+    var ticks = sh.items.map(function(it){ return { id:it.id, got: document.querySelector('[data-vid="' + it.id + '"]').checked, qty: document.querySelector('[data-vq="' + it.id + '"]').value, note: document.querySelector('[data-vn="' + it.id + '"]').value }; });
+    var free = freeItems('vFree');
+    if(free.some(function(x){ return !x.note; })){ $('vMsg').textContent = 'Add a note for every item that is not on the list.'; return; }
+    if(!$('vDate').value){ $('vMsg').textContent = 'Pick the date it arrived.'; return; }
+    var miss = ticks.filter(function(t){ return !t.got; }).length;
+    if(miss && !confirm(miss + ' item(s) are NOT ticked — they will be saved as missing. Continue?')) return;
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('vPhoto')).then(function(photo){
+      return api({ action:'receiveShipment', id:sh.id, date:$('vDate').value, receivedBy:$('vBy').value, note:$('vNote').value, items:JSON.stringify(ticks), extras:JSON.stringify(free), photo:photo || '' }, true);
+    }).then(function(d){ if(!d || !d.success){ $('vMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mRecv').classList.remove('show'); load(); })
+      .catch(function(){ $('vMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save received'; });
+  };
+  document.addEventListener('click', function(e){
+    var t = e.target.closest && e.target.closest('[data-scopen],[data-scprint],[data-screcv],[data-scdel]'); if(!t) return;
+    var id = t.getAttribute('data-scopen') || t.getAttribute('data-scprint') || t.getAttribute('data-screcv') || t.getAttribute('data-scdel'), sh = SHIPS.find(function(x){ return String(x.id) === id; }); if(!sh) return;
+    if(t.hasAttribute('data-scopen')) t.closest('.sc').classList.toggle('open');
+    else if(t.hasAttribute('data-scprint')) printChecklist(sh);
+    else if(t.hasAttribute('data-screcv')) openRecv(sh.direction, sh.id);
+    else if(confirm('Delete this delivery checklist? (the transfer lines stay)')) api({ action:'deleteShipment', id:id }, true).then(function(d){ if(!d || !d.success){ alert((d && d.error) || 'Not deleted.'); return; } load(); });
+  });
+
   // ---------- NOT ON THE LIST ----------
   var XST = { open:'⏳ Waiting for admin', matched:'✅ Matched to a transfer', saudi:'🏷️ Saudi-owned', done:'✔ Done' };
   function lineName(id){ var r = ROWS.find(function(x){ return x.id === id; }); return r ? r.batch + ' · ' + fd(r.batchDate) + ' · #' + (r.no == null ? '' : r.no) + ' ' + String(r.reference).split('\n')[0] : ''; }
@@ -355,7 +551,7 @@
   }
   function render(){
     var res = filtered(), q = $('q').value.trim(), n = 0, still = 0;
-    renderExtras(q);
+    renderExtras(q); renderShips();
     res.forEach(function(b){ n += b.rows.length; b.rows.forEach(function(r){ if(r.status === 'still') still++; }); });
     $('sum').innerHTML = '<b>' + res.length + '</b> transfer(s) · <b>' + n + '</b> line(s) · <b style="color:#a8560b">' + still + '</b> still in Saudi' + (($('from').value || $('to').value) ? ' · ' + esc(($('from').value ? fd($('from').value) : 'start') + ' – ' + ($('to').value ? fd($('to').value) : 'today')) : '');
     if(!res.length){ $('list').innerHTML = '<div class="empty">' + (ROWS.length ? 'Nothing matches.' : 'No transfers yet.') + '</div>'; return; }
