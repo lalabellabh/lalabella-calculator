@@ -383,7 +383,7 @@
     var open = SHIPS.filter(function(x){ return x.status === 'on_way'; }), done = SHIPS.filter(function(x){ return x.status !== 'on_way'; }).slice(0, 6);
     if(!open.length && !done.length){ $('ships').innerHTML = ''; return; }
     function card(sh){
-      var items = sh.items.map(function(it){ var g = sh.status === 'on_way' ? '☐' : (it.got ? '✅' : '❌'); return '<div>' + g + ' ' + esc(it.item) + ' — ' + esc(qtyTxt(it.qty, it.unit)) + (sh.status !== 'on_way' && it.got && it.qtyGot != null && it.qty != null && it.qtyGot < it.qty ? ' <b style="color:#a8560b">(got ' + esc(n3(it.qtyGot)) + ')</b>' : '') + (it.note ? ' <span style="color:#7a6670">· ' + esc(it.note) + '</span>' : '') + '</div>'; }).join('') +
+      var items = sh.items.map(function(it){ var g = sh.status === 'on_way' ? '☐' : (it.got ? '✅' : '❌'); return '<div>' + g + ' ' + (it.photo ? '<img class="ph" src="' + esc(it.photo) + '" alt=""> ' : '') + esc(it.item) + ' — ' + esc(qtyTxt(it.qty, it.unit)) + (sh.status !== 'on_way' && it.got && it.qtyGot != null && it.qty != null && it.qtyGot < it.qty ? ' <b style="color:#a8560b">(got ' + esc(n3(it.qtyGot)) + ')</b>' : '') + (it.note ? ' <span style="color:#7a6670">· ' + esc(it.note) + '</span>' : '') + '</div>'; }).join('') +
         sh.extras.map(function(e){ return '<div>➕ ' + esc(e.item) + ' — ' + esc(qtyTxt(e.qty, e.unit)) + ' <span style="color:#a8560b">· not on the list: ' + esc(e.note) + '</span></div>'; }).join('');
       var got = sh.items.filter(function(it){ return it.got; }).length;
       return '<div class="sc" data-sc="' + sh.id + '"><div class="t">' + esc(shipName(sh)) + ' <span class="ss ' + sh.status + '">' + SST[sh.status] + (sh.status !== 'on_way' ? ' ' + got + '/' + sh.items.length : '') + '</span></div>' +
@@ -401,7 +401,7 @@
   function printChecklist(sh){
     var rows = sh.items.map(function(it, i){
       var got = sh.status === 'on_way' ? '<span class="cbx"></span>' : (it.got ? '✔' : '✘');
-      return '<tr><td style="width:30px;text-align:center">' + (i + 1) + '</td><td>' + esc(it.item) + (it.note ? '<div style="font-size:11px">' + esc(it.note) + '</div>' : '') + '</td><td style="width:90px">' + esc(qtyTxt(it.qty, it.unit)) + '</td><td style="width:60px;text-align:center">' + got + '</td><td style="width:90px">' + (sh.status !== 'on_way' && it.got ? esc(qtyTxt(it.qtyGot, it.unit)) : '') + '</td><td style="width:160px"></td></tr>';
+      return '<tr><td style="width:30px;text-align:center">' + (i + 1) + '</td><td>' + (it.photo ? '<img src="' + esc(it.photo) + '" alt="" style="width:70px;height:46px;object-fit:cover;float:left;margin-right:8px;border:1px solid #999">' : '') + esc(it.item) + (it.note ? '<div style="font-size:11px">' + esc(it.note) + '</div>' : '') + '</td><td style="width:90px">' + esc(qtyTxt(it.qty, it.unit)) + '</td><td style="width:60px;text-align:center">' + got + '</td><td style="width:90px">' + (sh.status !== 'on_way' && it.got ? esc(qtyTxt(it.qtyGot, it.unit)) : '') + '</td><td style="width:160px"></td></tr>';
     }).join('') + sh.extras.map(function(e){ return '<tr><td>＋</td><td>' + esc(e.item) + '<div style="font-size:11px">Not on the list: ' + esc(e.note) + '</div></td><td></td><td style="text-align:center">✔</td><td>' + esc(qtyTxt(e.qty, e.unit)) + '</td><td></td></tr>'; }).join('');
     var blank = sh.status === 'on_way' ? '<tr><td>＋</td><td></td><td></td><td style="text-align:center"><span class="cbx"></span></td><td></td><td></td></tr>'.repeat(4) : '';
     $('ckPrint').innerHTML = '<h2 style="margin:0">Lalabella — Delivery checklist</h2><div style="font-size:16px;font-weight:700;margin:4px 0">' + esc(DIR[sh.direction]) + ' · #' + sh.id + '</div>' +
@@ -463,7 +463,7 @@
     var sh = curShip(); if(!sh) return;
     $('vInfo').textContent = sh.from + ' → ' + sh.to + ' · sent ' + fd(sh.date) + ' by ' + sh.sentBy + (sh.note ? ' · ' + sh.note : '') + '. Tick what arrived; change the qty if less came.';
     $('vList').innerHTML = sh.items.map(function(it){
-      return '<div class="ck"><input type="checkbox" data-vid="' + it.id + '"><span>' + esc(it.item) + '<div class="s">sent: ' + esc(qtyTxt(it.qty, it.unit) || '—') + (it.note ? ' · ' + esc(it.note) : '') + '</div></span>' +
+      return '<div class="ck"><input type="checkbox" data-vid="' + it.id + '"><span>' + (it.photo ? '<img class="ph" src="' + esc(it.photo) + '" alt="" style="width:44px;height:44px;float:left;margin:0 8px 0 0">' : '') + esc(it.item) + '<div class="s">sent: ' + esc(qtyTxt(it.qty, it.unit) || '—') + (it.note ? ' · ' + esc(it.note) : '') + '</div></span>' +
         '<input type="number" min="0" step="any" inputmode="decimal" data-vq="' + it.id + '" value="' + (it.qty != null ? n3(it.qty) : '') + '" placeholder="qty"><input class="nt" data-vn="' + it.id + '" placeholder="Note (optional) e.g. 1 broken"></div>';
     }).join('');
   }

@@ -104,7 +104,7 @@ async function list(u: any) {
   const exs = await sbGetAll('saudi_extras?select=*&order=created_at.desc').catch(() => []);
   const ships = await sbGet('saudi_shipments?select=*&order=created_at.desc&limit=150').catch(() => []);
   const sitems = ships.length ? await sbGetAll(`saudi_shipment_items?select=*&shipment_id=in.(${ships.map((x: any) => x.id).join(',')})&order=sort_order.asc,id.asc`).catch(() => []) : [];
-  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url), ...exs.map((r: any) => r.photo_url), ...ships.map((r: any) => r.photo_url), ...ships.map((r: any) => r.received_photo)].filter(Boolean));
+  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url), ...exs.map((r: any) => r.photo_url), ...ships.map((r: any) => r.photo_url), ...ships.map((r: any) => r.received_photo), ...sitems.map((r: any) => r.photo_url)].filter(Boolean));
   const linePics: Record<string, string[]> = {}, lineInfo: Record<string, any[]> = {}, batchPics: any[] = [];
   pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
     if (x.line_id) { (linePics[x.line_id] = linePics[x.line_id] || []).push(u); (lineInfo[x.line_id] = lineInfo[x.line_id] || []).push({ id: x.id, url: u, canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); }
@@ -138,7 +138,7 @@ async function list(u: any) {
     photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, sentBy: x.sent_by || '', at: x.created_at,
     recDate: x.received_date || '', recBy: x.received_by || '', recNote: x.received_note || '', recPhoto: x.received_photo ? (signed[x.received_photo] || '') : '', recSavedBy: x.received_saved_by || '', recAt: x.received_at,
     items: sitems.filter((it: any) => it.shipment_id === x.id).map((it: any) => ({ id: it.id, lineId: it.line_id, item: it.item, qty: it.qty_sent == null ? null : Number(it.qty_sent), unit: it.unit || '',
-      got: it.got, qtyGot: it.qty_received == null ? null : Number(it.qty_received), note: it.note || '' })),
+      got: it.got, qtyGot: it.qty_received == null ? null : Number(it.qty_received), note: it.note || '', photo: it.photo_url ? (signed[it.photo_url] || '') : '' })),
     extras: exs.filter((e: any) => e.shipment_id === x.id).map((e: any) => ({ item: e.item, qty: e.qty == null ? null : Number(e.qty), unit: e.unit || '', note: e.note || '' })) }));
   return { success: true, rows, extras, shipments, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
 }
@@ -201,9 +201,13 @@ async function sendBack(p: any, u: any) {
   let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' }; }
   const sh = (await sbPost('saudi_shipments', [{ direction: 'to_bahrain', ship_date: d, label: txt(p.label, 60) || null, from_place: 'Saudi', to_place: to, note: txt(p.note, 400) || null,
     photo_url: photo || null, status: 'on_way', sent_by: txt(p.sentBy, 60) || who(u), sent_by_id: u.id }]))[0];
-  const rows = withLine.map((x: any, i: number) => { const l = byId[Number(x.lineId)]; return { shipment_id: sh.id, line_id: l.id, item: String(l.reference || '').split('\n')[0].slice(0, 300) || 'Item',
+  // per-item picture (optional, max 40 per send)
+  const pics: string[] = [];
+  for (const x of items.slice(0, 40)) pics.push(x && x.photo ? await savePhoto(String(x.photo)) : '');
+  const picOf = (x: any) => pics[items.indexOf(x)] || null;
+  const rows = withLine.map((x: any, i: number) => { const l = byId[Number(x.lineId)]; return { shipment_id: sh.id, line_id: l.id, item: txt(x.item, 300) || String(l.reference || '').split('\n')[0].slice(0, 300) || 'Item', photo_url: picOf(x),
     qty_sent: num(x.qty), unit: txt(x.unit, 20) || l.unit || null, note: txt(x.note, 300) || null, sort_order: i + 1 }; })
-    .concat(free.map((x: any, i: number) => ({ shipment_id: sh.id, line_id: null, item: txt(x.item, 300), qty_sent: num(x.qty), unit: txt(x.unit, 20) || null, note: 'Not on the list: ' + txt(x.note, 280), sort_order: withLine.length + i + 1 })));
+    .concat(free.map((x: any, i: number) => ({ shipment_id: sh.id, line_id: null, item: txt(x.item, 300), photo_url: picOf(x), qty_sent: num(x.qty), unit: txt(x.unit, 20) || null, note: 'Not on the list: ' + txt(x.note, 280), sort_order: withLine.length + i + 1 })));
   await sbPost('saudi_shipment_items', rows);
   try {
     const names = rows.slice(0, 3).map((x: any) => x.item.slice(0, 40)).join(', ') + (rows.length > 3 ? ' +' + (rows.length - 3) + ' more' : '');
