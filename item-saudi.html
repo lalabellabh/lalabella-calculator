@@ -71,6 +71,12 @@
   .btns button{ font:inherit; font-weight:700; border-radius:10px; padding:10px 16px; cursor:pointer; border:1px solid var(--line); background:#fff; }
   .btns .go{ background:var(--ok); color:#fff; border-color:var(--ok); }
   .msg{ font-size:12.5px; color:var(--bad); margin-top:6px; }
+  .xbtn{ width:100%; border:2px dashed #a8560b; background:#fff8ef; color:#8a4a0c; border-radius:14px; padding:11px; font:inherit; font-size:14.5px; font-weight:800; cursor:pointer; margin-bottom:6px; }
+  .xbtn small{ font-weight:600; opacity:.85; }
+  .ext{ background:#fffaf2; border:1px solid #f0d9b8; border-radius:14px; padding:12px 14px; margin-bottom:14px; overflow-x:auto; }
+  .ext table{ min-width:760px; } .ext thead th{ background:#8a4a0c; }
+  .xs{ font-size:11px; font-weight:800; border-radius:99px; padding:2px 9px; white-space:nowrap; }
+  .xs.open{ background:#ffe9cc; color:#8a4a0c; } .xs.matched{ background:#e3f4e8; color:#2f7a4f; } .xs.saudi{ background:#ececfb; color:#5a5aa8; } .xs.done{ background:#eee; color:#666; }
   .lb{ position:fixed; inset:0; background:rgba(20,8,12,.85); display:none; align-items:center; justify-content:center; z-index:2147483001; cursor:zoom-out; } .lb.show{ display:flex; } .lb img{ max-width:94vw; max-height:88vh; border-radius:12px; }
   @media (max-width:600px){ header{ padding-left:52px; } .grid2,.grid3{ grid-template-columns:1fr; } .bar .q{ min-width:100%; } .big button{ font-size:15px; padding:14px 8px; } }
   @media print{
@@ -94,6 +100,7 @@
     <button class="snd" id="bSend" type="button">📤 Send to Saudi<small>items leaving Bahrain</small></button>
     <button class="ret" id="bRet" type="button">📥 Return<small>items back in a branch / kept in Saudi</small></button>
   </div>
+  <button class="xbtn" id="bExtra" type="button">＋ Item not on the list <small>— came back / received but not on any transfer (add a note)</small></button>
   <div class="bar">
     <label class="q">Search<input id="q" placeholder="Item, quantity, notes, person, branch… e.g. vase, Kelvin"></label>
     <label>From<input type="date" id="from"></label>
@@ -104,6 +111,7 @@
     <button id="xls" type="button">📊 Excel</button>
   </div>
   <div class="sum" id="sum"></div>
+  <div id="extras"></div>
   <div id="list"><div class="empty">Loading…</div></div>
 </div>
 
@@ -134,6 +142,7 @@
   <div class="hint" style="margin-top:8px">Tick what came back. The number is already filled with what is still in Saudi — change it if only part came back.</div>
   <input id="rFind" placeholder="Find an item…" style="margin-top:4px">
   <div class="pick" id="rList"></div>
+  <button type="button" id="rExtra" style="margin-top:8px;font:inherit;font-size:13px;font-weight:700;border:1px dashed #a8560b;color:#8a4a0c;background:#fff8ef;border-radius:9px;padding:8px 12px;cursor:pointer">＋ It came back but it is not on this list</button>
   <div class="grid2" id="rWhere">
     <div><label>Date</label><input type="date" id="rDate"></div>
     <div><label>Received in</label><select id="rBranch"></select></div>
@@ -147,6 +156,29 @@
   <div class="paste" id="rPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
   <div class="msg" id="rMsg"></div>
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="rSave">Save</button></div>
+</div></div>
+
+<!-- EXTRA: NOT ON THE LIST -->
+<div class="modal" id="mExtra"><div class="box">
+  <h3>＋ Item not on the list</h3>
+  <div class="hint">For something that came back / was received but is not on any transfer. The admin will match it to the right transfer later.</div>
+  <div class="seg" id="xSeg"><button type="button" class="on" data-xk="return">📥 Came back to Bahrain</button><button type="button" class="k" data-xk="receive">📦 Received in Saudi</button></div>
+  <div class="grid3">
+    <div><label>Item</label><input id="xItem" placeholder="e.g. Green Cushions"></div>
+    <div><label>Qty</label><input id="xQty" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div><label>Unit</label><select id="xUnit"></select></div>
+  </div>
+  <div class="grid2">
+    <div><label>Date</label><input type="date" id="xDate"></div>
+    <div id="xWhere"><label>Received in</label><select id="xBranch"></select></div>
+    <div><label>Received by</label><input id="xBy" placeholder="Name of the person who received it"></div>
+  </div>
+  <label>📝 Note (needed)</label><textarea id="xNote" placeholder="e.g. Came with the 16/11 delivery, not on the list. Maybe from the 08-Oct transfer."></textarea>
+  <label>📷 Picture (optional)</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="xPhoto"><img id="xPrev" alt=""></div>
+  <div class="paste" id="xPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
+  <div class="msg" id="xMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="xSave">Save</button></div>
 </div></div>
 
 <!-- ADMIN EDIT -->
@@ -178,7 +210,7 @@
   var UNITS = ['pcs', 'set', 'stems', 'bags', 'roll', 'box', 'kg', 'plastic', 'lot'];
   var esc = window.lbEsc, $ = function(id){ return document.getElementById(id); };
   function token(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
-  var ROWS = [], BPICS = [], ADMIN = false, ME = '', KIND = 'return', EDIT = null;
+  var ROWS = [], EXTRAS = [], XK = 'return', BPICS = [], ADMIN = false, ME = '', KIND = 'return', EDIT = null;
   function today(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
   function fd(d){ if(!d) return ''; var x = new Date(d + 'T00:00:00'); return x.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
   function n3(v){ return v == null ? '' : String(Math.round(v * 1000) / 1000); }
@@ -200,7 +232,7 @@
     });
   }
   function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
-  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev'));
+  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev'));
   function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
   // Paste a snipped picture (Ctrl+V) — in the paste box, or anywhere in the open Send / Return form
   function takePaste(e, inpId, imId, boxId){
@@ -215,6 +247,7 @@
     if($('mSend').classList.contains('show')) takePaste(e, 'sPhoto', 'sPrev', 'sPaste');
     else if($('mRet').classList.contains('show')) takePaste(e, 'rPhoto', 'rPrev', 'rPaste');
     else if($('mPic').classList.contains('show')) takePaste(e, 'pPhoto', 'pPrev', 'pPaste');
+    else if($('mExtra').classList.contains('show')) takePaste(e, 'xPhoto', 'xPrev', 'xPaste');
     else if($('mEdit').classList.contains('show') && $('fAdd')) takePaste(e, 'fAdd', 'fAddPrev', 'fAddPaste');
   });
   // ＋ on a transfer -> add a picture (paste a snip, choose a file or take a photo)
@@ -243,7 +276,7 @@
   function load(){
     api({ action:'list' }).then(function(d){
       if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
-      ROWS = d.rows || []; BPICS = d.batchPhotos || []; ADMIN = !!d.admin; ME = d.me || ''; render();
+      ROWS = d.rows || []; EXTRAS = d.extras || []; BPICS = d.batchPhotos || []; ADMIN = !!d.admin; ME = d.me || ''; render();
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
   // every line knows the NOTES of its merged cell (for search / filtered views)
@@ -267,8 +300,62 @@
       (ADMIN ? ' <button class="no-print" title="Edit (Admin)" data-em="' + m.id + '">✏️</button>' : '') +
       (m.notes ? '<div class="ex">' + hl(m.notes, q) + '</div>' : '') + '</div>';
   }
+  // ---------- NOT ON THE LIST ----------
+  var XST = { open:'⏳ Waiting for admin', matched:'✅ Matched to a transfer', saudi:'🏷️ Saudi-owned', done:'✔ Done' };
+  function lineName(id){ var r = ROWS.find(function(x){ return x.id === id; }); return r ? r.batch + ' · ' + fd(r.batchDate) + ' · #' + (r.no == null ? '' : r.no) + ' ' + String(r.reference).split('\n')[0] : ''; }
+  function renderExtras(q){
+    var f = $('from').value, t = $('to').value, words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    var list = EXTRAS.filter(function(x){
+      if(f && x.date && x.date < f) return false; if(t && x.date && x.date > t) return false;
+      var h = [x.item, x.note, x.adminNote, x.branch, x.by, x.savedBy, x.unit, fd(x.date), XST[x.status], x.kind === 'receive' ? 'received in saudi' : 'came back bahrain', 'not on the list extra'].join(' ').toLowerCase();
+      return words.every(function(w){ return h.indexOf(w) !== -1; });
+    });
+    if(!list.length){ $('extras').innerHTML = ''; return; }
+    var open = list.filter(function(x){ return x.status === 'open'; }).length;
+    $('extras').innerHTML = '<div class="ext"><div class="bh"><h3>⚠️ Not on the list</h3><span class="m">' + list.length + ' item(s)' + (open ? ' · <b style="color:#a8560b">' + open + ' waiting for admin</b>' : '') + '</span></div>' +
+      '<table><thead><tr><th>DATE</th><th>ITEM</th><th>QTY</th><th>WHERE</th><th>NOTE</th><th>STATUS</th><th class="no-print"></th></tr></thead><tbody>' +
+      list.map(function(x){
+        return '<tr><td style="width:96px">' + esc(fd(x.date)) + '</td><td>' + hl(x.item, q) + (x.photo ? '<br><img class="ph" src="' + esc(x.photo) + '" alt="">' : '') + '</td>' +
+          '<td style="width:80px">' + esc(x.qty == null ? '' : n3(x.qty) + ' ' + x.unit) + '</td>' +
+          '<td style="width:150px">' + (x.kind === 'receive' ? '📦 Received in Saudi' : '📥 ' + hl(x.branch, q)) + (x.by ? '<div class="ex" style="color:#7a6670;font-size:11.5px">by ' + hl(x.by, q) + '</div>' : '') + '</td>' +
+          '<td>' + hl(x.note, q) + '<div style="color:#7a6670;font-size:11px">saved by ' + esc(x.savedBy) + '</div>' + (x.adminNote ? '<div style="margin-top:4px;font-size:12px"><b>Admin:</b> ' + hl(x.adminNote, q) + '</div>' : '') + '</td>' +
+          '<td style="width:170px;white-space:normal"><span class="xs ' + esc(x.status) + '">' + esc(XST[x.status] || x.status) + '</span>' + (x.lineId ? '<div style="font-size:11.5px;margin-top:3px">' + esc(lineName(x.lineId)) + '</div>' : '') + (x.resolvedBy ? '<div style="color:#7a6670;font-size:11px">by ' + esc(x.resolvedBy) + '</div>' : '') + '</td>' +
+          '<td class="act no-print">' + (ADMIN ? '<button title="Edit (Admin)" data-ex="' + x.id + '">✏️</button>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function setXK(k){ XK = k; document.querySelectorAll('#xSeg button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-xk') === k); }); $('xWhere').style.display = k === 'receive' ? 'none' : ''; }
+  document.querySelectorAll('#xSeg button').forEach(function(b){ b.onclick = function(){ setXK(b.getAttribute('data-xk')); }; });
+  function openExtra(k, by){
+    setXK(k || 'return'); $('xItem').value = ''; $('xQty').value = ''; opts($('xUnit'), UNITS, 'pcs'); $('xDate').value = today(); opts($('xBranch'), BRANCHES, 'Galali');
+    $('xBy').value = by || ''; $('xNote').value = ''; $('xPhoto').value = ''; $('xPrev').style.display = 'none'; resetPaste('xPhoto', 'xPaste'); $('xMsg').textContent = '';
+    $('mExtra').classList.add('show'); setTimeout(function(){ $('xItem').focus(); }, 50);
+  }
+  $('bExtra').onclick = function(){ openExtra('return'); };
+  $('rExtra').onclick = function(){ var by = $('rBy').value; $('mRet').classList.remove('show'); openExtra(KIND === 'keep' ? 'receive' : 'return', by); };
+  $('xSave').onclick = function(){
+    if(!$('xItem').value.trim()){ $('xMsg').textContent = 'Write what the item is.'; return; }
+    if(!$('xDate').value){ $('xMsg').textContent = 'Pick the date.'; return; }
+    if(!$('xNote').value.trim()){ $('xMsg').textContent = 'Add a note — why it is not on the list / where it came from.'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('xPhoto')).then(function(photo){
+      return api({ action:'addExtra', kind:XK, item:$('xItem').value, qty:$('xQty').value, unit:$('xUnit').value, date:$('xDate').value, branch:$('xBranch').value, receivedBy:$('xBy').value, note:$('xNote').value, photo:photo || '' }, true);
+    }).then(function(d){ if(!d || !d.success){ $('xMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mExtra').classList.remove('show'); load(); })
+      .catch(function(){ $('xMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save'; });
+  };
+  function openExtraEdit(x){
+    EDIT = { type:'extra', id:x.id }; $('eTitle').textContent = 'Not on the list (Admin)'; $('eMsg').textContent = '';
+    var lines = ROWS.slice().sort(function(a, b){ return (a.status === 'still' ? 0 : 1) - (b.status === 'still' ? 0 : 1); });
+    $('eBody').innerHTML = '<label>Status</label><select id="fXs">' + ['open','matched','saudi','done'].map(function(k){ return '<option value="' + k + '"' + (x.status === k ? ' selected' : '') + '>' + XST[k] + '</option>'; }).join('') + '</select>' +
+      '<label>Belongs to transfer line (for "Matched")</label><select id="fXl"><option value="">— none —</option>' + lines.map(function(r){ return '<option value="' + r.id + '"' + (x.lineId === r.id ? ' selected' : '') + '>' + esc((r.status === 'still' ? '⏳ ' : '') + lineName(r.id)) + '</option>'; }).join('') + '</select>' +
+      (x.kind === 'return' ? '<div class="hint" style="margin-top:4px">When matched, it is also saved as a return on that line (only once), so "still in Saudi" goes down.</div>' : '') +
+      field('Admin note', 'fXa', x.adminNote, 'area') +
+      field('Item', 'fXi', x.item) + '<div class="grid2"><div>' + field('Qty', 'fXq', x.qty == null ? '' : x.qty, 'number') + '</div><div>' + field('Unit', 'fXu', x.unit) + '</div><div>' + field('Date', 'fXd', x.date, 'date') + '</div><div>' + field('Received in', 'fXb', x.branch) + '</div></div>' +
+      field('Received by', 'fXby', x.by) + field('Note', 'fXn', x.note, 'area') + '<input type="file" id="fPh" style="display:none">';
+    $('mEdit').classList.add('show');
+  }
   function render(){
     var res = filtered(), q = $('q').value.trim(), n = 0, still = 0;
+    renderExtras(q);
     res.forEach(function(b){ n += b.rows.length; b.rows.forEach(function(r){ if(r.status === 'still') still++; }); });
     $('sum').innerHTML = '<b>' + res.length + '</b> transfer(s) · <b>' + n + '</b> line(s) · <b style="color:#a8560b">' + still + '</b> still in Saudi' + (($('from').value || $('to').value) ? ' · ' + esc(($('from').value ? fd($('from').value) : 'start') + ' – ' + ($('to').value ? fd($('to').value) : 'today')) : '');
     if(!res.length){ $('list').innerHTML = '<div class="empty">' + (ROWS.length ? 'Nothing matches.' : 'No transfers yet.') + '</div>'; return; }
@@ -374,6 +461,7 @@
   $('eSave').onclick = function(){
     var btn = this, v = function(id){ return $(id).value; }; btn.disabled = true;
     readPhoto($('fPh')).then(function(photo){
+      if(EDIT.type === 'extra') return api({ action:'editExtra', id:EDIT.id, status:v('fXs'), lineId:v('fXl'), adminNote:v('fXa'), item:v('fXi'), qty:v('fXq'), unit:v('fXu'), date:v('fXd'), branch:v('fXb'), receivedBy:v('fXby'), note:v('fXn') }, true);
       var p = EDIT.type === 'line' ? { action:'editLine', id:EDIT.id, no:v('fNo'), qtySent:v('fQs'), reference:v('fRef'), quantity:v('fQty'), unit:v('fUnit'), notes:v('fNotes'), from:v('fFrom'), givenTo:v('fTo') }
         : { action:'editReturn', id:EDIT.id, kind:v('fKind'), qty:v('fQ'), date:v('fD'), branch:v('fB'), receivedBy:v('fBy'), notes:v('fN') };
       if(photo) p.photo = photo;
@@ -383,8 +471,8 @@
       .catch(function(){ $('eMsg').textContent = 'Connection problem.'; }).then(function(){ btn.disabled = false; });
   };
   $('eDel').onclick = function(){
-    if(!confirm(EDIT.type === 'line' ? 'Delete this whole line (and its returns)?' : 'Delete this return?')) return;
-    api({ action: EDIT.type === 'line' ? 'deleteLine' : 'deleteReturn', id:EDIT.id }, true).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not deleted.'; return; } $('mEdit').classList.remove('show'); load(); });
+    if(!confirm(EDIT.type === 'line' ? 'Delete this whole line (and its returns)?' : EDIT.type === 'extra' ? 'Delete this "not on the list" item?' : 'Delete this return?')) return;
+    api({ action: EDIT.type === 'line' ? 'deleteLine' : EDIT.type === 'extra' ? 'deleteExtra' : 'deleteReturn', id:EDIT.id }, true).then(function(d){ if(!d || !d.success){ $('eMsg').textContent = (d && d.error) || 'Not deleted.'; return; } $('mEdit').classList.remove('show'); load(); });
   };
 
   document.addEventListener('click', function(e){
@@ -396,6 +484,7 @@
       var pd = im.getAttribute('data-pid'); $('lbDel').style.display = pd ? '' : 'none'; if(pd) $('lbDel').setAttribute('data-pid', pd); $('lb').classList.add('show'); return; }
     if(e.target.closest('#lb')){ $('lb').classList.remove('show'); return; }
     var el = e.target.closest('[data-el]'); if(el){ var r = ROWS.find(function(x){ return String(x.id) === el.getAttribute('data-el'); }); if(r) openLine(r); return; }
+    var ex = e.target.closest('[data-ex]'); if(ex){ var xx = EXTRAS.find(function(y){ return String(y.id) === ex.getAttribute('data-ex'); }); if(xx) openExtraEdit(xx); return; }
     var em = e.target.closest('[data-em]'); if(em){ var m = null; ROWS.some(function(x){ m = x.moves.find(function(y){ return String(y.id) === em.getAttribute('data-em'); }); return !!m; }); if(m) openMove(m); return; }
   });
   var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(render, 200); };
@@ -430,6 +519,12 @@
       });
       lines.push({ cells:[] });
     });
+    var XL = EXTRAS.filter(function(x){ var f = $('from').value, t = $('to').value; return !(f && x.date && x.date < f) && !(t && x.date && x.date > t); });
+    if(XL.length){
+      lines.push({ cells:['NOT ON THE LIST'], style:3 });
+      lines.push({ cells:['DATE', 'ITEM', 'PICTURE', 'QTY', 'NOTE', 'WHERE', 'STATUS', 'Matched to'], style:2, head:true });
+      XL.forEach(function(x){ lines.push({ cells:[fd(x.date), x.item, '', x.qty == null ? '' : n3(x.qty) + ' ' + x.unit, x.note + (x.adminNote ? '\nAdmin: ' + x.adminNote : ''), (x.kind === 'receive' ? 'Received in Saudi' : 'Back in ' + x.branch) + (x.by ? ' by ' + x.by : ''), XST[x.status] || x.status, x.lineId ? lineName(x.lineId) : ''], style:1, pics: x.photo ? [x.photo] : [] }); });
+    }
     // fetch every picture (small) first
     var jobs = [];
     lines.forEach(function(l){ l.imgs = []; (l.pics || []).slice(0, 4).forEach(function(u){ jobs.push(thumb(u, PIC).then(function(t){ if(t) l.imgs.push(t); })); }); });

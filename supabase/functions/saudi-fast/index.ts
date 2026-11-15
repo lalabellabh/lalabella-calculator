@@ -7,6 +7,7 @@
 //      Editing or deleting anything = Admin only.
 // Photos: private bucket saudi-photos, signed links (1 h).
 // Actions: list | send | returnItems | editLine (Admin) | editReturn (Admin) | deleteLine (Admin) | deleteReturn (Admin)
+//          addExtra (anyone: came back / received but NOT on any list, note required) | editExtra (Admin) | deleteExtra (Admin)
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -99,7 +100,8 @@ async function list(u: any) {
     sbGetAll('saudi_returns?select=*&order=return_date.asc.nullsfirst,id.asc'),
     sbGetAll('saudi_photos?select=*&order=sort_order.asc,id.asc'),
   ]);
-  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url)].filter(Boolean));
+  const exs = await sbGetAll('saudi_extras?select=*&order=created_at.desc').catch(() => []);
+  const signed = await sign([...lines.map((r: any) => r.photo_url), ...rets.map((r: any) => r.photo_url), ...pics.map((r: any) => r.url), ...exs.map((r: any) => r.photo_url)].filter(Boolean));
   const linePics: Record<string, string[]> = {}, lineInfo: Record<string, any[]> = {}, batchPics: any[] = [];
   pics.forEach((x: any) => { const u = signed[x.url]; if (!u) return;
     if (x.line_id) { (linePics[x.line_id] = linePics[x.line_id] || []).push(u); (lineInfo[x.line_id] = lineInfo[x.line_id] || []).push({ id: x.id, url: u, canDelete: isAdmin(u0) || (x.source === 'added' && x.created_by === who(u0)) }); }
@@ -122,7 +124,10 @@ async function list(u: any) {
       photo: r.photo_url ? (signed[r.photo_url] || '') : '', photos: linePics[r.id] || [], photoInfo: lineInfo[r.id] || [], source: r.source, order: r.sort_order, by: r.created_by || '', at: r.created_at,
       moves, returned: nBack, kept: nKept, left, status };
   });
-  return { success: true, rows, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
+  const extras = exs.map((x: any) => ({ id: x.id, kind: x.kind, item: x.item, qty: x.qty == null ? null : Number(x.qty), unit: x.unit || '', date: x.item_date || '', branch: x.branch || '',
+    by: x.received_by || '', note: x.note || '', photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, lineId: x.line_id, adminNote: x.admin_note || '',
+    resolvedBy: x.resolved_by || '', resolvedAt: x.resolved_at, savedBy: x.created_by || '', at: x.created_at }));
+  return { success: true, rows, extras, batchPhotos: batchPics, admin: isAdmin(u), limited: String(u.role) === SAUDI_ROLE, me: who(u) };
 }
 
 async function send(p: any, u: any) {
@@ -177,6 +182,54 @@ async function returnItems(p: any, u: any) {
   return { success: true, saved: r.length };
 }
 
+// Nov 15 2026: "Extra – not on list" — something came back to Bahrain (or was received in Saudi) that is not on any transfer. Note is required.
+async function addExtra(p: any, u: any) {
+  const kind = p.kind === 'receive' ? 'receive' : 'return';
+  const item = txt(p.item, 300); if (!item) return { success: false, error: 'Write what the item is.' };
+  const note = txt(p.note, 500); if (!note) return { success: false, error: 'Add a note (why it is not on the list / where it came from).' };
+  const d = String(p.date || ''); if (!isDate(d)) return { success: false, error: 'Pick the date.' };
+  const branch = kind === 'receive' ? 'Saudi' : BR(p.branch); if (!branch) return { success: false, error: 'Choose where it was received.' };
+  let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' }; }
+  const r = await sbPost('saudi_extras', [{ kind, item, qty: num(p.qty), unit: txt(p.unit, 20) || null, item_date: d, branch, received_by: txt(p.receivedBy, 60) || null,
+    note, photo_url: photo || null, status: 'open', created_by: who(u) }]);
+  try {
+    await saudiPush(kind === 'receive' ? '📦 Received in Saudi — not on the list' : '📥 Came back — not on the list',
+      (num(p.qty) != null ? num(p.qty) + ' ' + (txt(p.unit, 20) || '') + ' ' : '') + item.split('\n')[0].slice(0, 60) + ' · ' + branch + ' · ' + note.slice(0, 80), 'Extra', u.id);
+  } catch (e) { console.error('saudi push', e); }
+  return { success: true, id: r[0] && r[0].id };
+}
+async function editExtra(p: any, u: any) {
+  const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid.' };
+  const x = (await sbGet(`saudi_extras?select=*&id=eq.${id}&limit=1`))[0]; if (!x) return { success: false, error: 'Not found.' };
+  const f: any = { updated_by: who(u), updated_at: new Date().toISOString() };
+  if (p.item !== undefined) { f.item = txt(p.item, 300); if (!f.item) return { success: false, error: 'Item cannot be empty.' }; }
+  if (p.note !== undefined) { f.note = txt(p.note, 500); if (!f.note) return { success: false, error: 'The note cannot be empty.' }; }
+  if (p.qty !== undefined) f.qty = num(p.qty);
+  if (p.unit !== undefined) f.unit = txt(p.unit, 20) || null;
+  if (p.date !== undefined) f.item_date = isDate(String(p.date)) ? String(p.date) : null;
+  if (p.branch !== undefined) f.branch = BR(p.branch);
+  if (p.receivedBy !== undefined) f.received_by = txt(p.receivedBy, 60) || null;
+  if (p.adminNote !== undefined) f.admin_note = txt(p.adminNote, 400) || null;
+  const st = ['open', 'matched', 'saudi', 'done'].includes(String(p.status)) ? String(p.status) : x.status;
+  f.status = st;
+  if (st !== x.status) { f.resolved_by = st === 'open' ? null : who(u); f.resolved_at = st === 'open' ? null : new Date().toISOString(); }
+  const lineId = Number(p.lineId) > 0 ? Number(p.lineId) : null;
+  if (st === 'matched') {
+    if (!lineId) return { success: false, error: 'Pick the transfer line it belongs to.' };
+    const ln = (await sbGet(`saudi_transfers?select=id&id=eq.${lineId}&limit=1`))[0]; if (!ln) return { success: false, error: 'Line not found.' };
+    f.line_id = lineId;
+    // a returned extra that now has its line -> it counts as a return on that line (once)
+    if (x.kind === 'return' && !x.return_id) {
+      const q = f.qty !== undefined ? f.qty : x.qty;
+      const r = await sbPost('saudi_returns', [{ line_id: lineId, kind: 'return', qty: q, return_date: f.item_date !== undefined ? f.item_date : x.item_date, branch: f.branch !== undefined ? f.branch : x.branch,
+        received_by: f.received_by !== undefined ? f.received_by : x.received_by, notes: txt('Not on the list: ' + (f.note || x.note), 300), photo_url: x.photo_url, source: 'extra', created_by: who(u) }]);
+      f.return_id = r[0] && r[0].id;
+    }
+  } else if (p.lineId !== undefined) f.line_id = lineId;
+  await sbPatch('saudi_extras', `id=eq.${id}`, f);
+  return { success: true, linkedReturn: !!f.return_id };
+}
+
 async function editLine(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid.' };
   const f: any = { updated_by: who(u), updated_at: new Date().toISOString() };
@@ -224,6 +277,14 @@ Deno.serve(async (req) => {
     if (a === 'list') return json(await list(u));
     if (a === 'send') return json(await send(p, u));
     if (a === 'returnItems') return json(await returnItems(p, u));
+    if (a === 'addExtra') return json(await addExtra(p, u));
+    if (a === 'editExtra' || a === 'deleteExtra') {
+      if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can change or delete. Tell the admin what to fix.' });
+      if (a === 'editExtra') return json(await editExtra(p, u));
+      const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return json({ success: false, error: 'Invalid.' });
+      await sbDelete('saudi_extras', `id=eq.${id}`);   // a return it already made stays on its line (delete that one separately)
+      return json({ success: true });
+    }
     // Nov 15 2026: anyone who can open Saudi Transfers can add a picture to a transfer (chat screenshot, delivery list, photo)
     if (a === 'addBatchPhoto') {
       const bl = txt(p.batch, 60), bd = String(p.batchDate || '').slice(0, 10);
