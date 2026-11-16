@@ -146,7 +146,7 @@
   function timing(o){
     if(o.source !== 'bleems' || !o.placedAt) return '';
     var d = mins(o.placedAt, o.inAt), col = d == null ? '#7a6670' : d <= 15 ? '#2f7a4f' : d <= 60 ? '#a8560b' : '#b2402e';
-    return '<div class="m" style="grid-column:1/-1;font-size:12px">⏱ Ordered <b>' + hm(o.placedAt) + '</b> → in system <b>' + hm(o.inAt) + '</b>' + (d != null ? ' <b style="color:' + col + '">(+' + dl(d) + ')</b>' : '') +
+    return '<div class="m" style="grid-column:1/-1;font-size:12px">⏱ Ordered <b>' + hm(o.placedAt) + '</b> → accepted (in system) <b>' + hm(o.inAt) + '</b>' + (d != null ? ' <b style="color:' + col + '">(+' + dl(d) + ')</b>' : '') +
       (o.assignedAt ? ' → given to branch <b>' + hm(o.assignedAt) + '</b>' : '') + (o.ackAt ? ' → seen <b>' + hm(o.ackAt) + '</b>' + (o.ackBy ? ' by ' + esc(o.ackBy) : '') : '') + '</div>';
   }
   function ordRow(o, isDone){
@@ -216,7 +216,7 @@
 <div id="tmBox" style="display:none;position:fixed;inset:0;background:rgba(30,18,24,.5);z-index:9999;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto">
   <div style="background:#fff;color:#2a1d23;border-radius:16px;max-width:980px;width:100%;padding:18px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.3)">
     <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;font-size:18px">⏱ Bleems timing log</h3><button id="tmX" style="margin-left:auto;border:1px solid #ddd;background:#fff;border-radius:9px;width:34px;height:34px;font-size:16px;cursor:pointer">✕</button></div>
-    <div style="font-size:12.5px;color:#7a6670;margin:4px 0 10px">Ordered by the customer → came into our system (we check Bleems every minute) → given to the branch → seen. Green ≤ 15 min, orange ≤ 1 h, red more.</div>
+    <div style="font-size:12.5px;color:#7a6670;margin:4px 0 10px">Ordered by the customer → <b>accepted on Bleems</b> (Bleems gives an order to our system only after someone accepts it; we check every minute) → given to the branch → seen. Green ≤ 15 min, orange ≤ 1 h, red more.</div>
     <div id="tmSum" style="font-size:13.5px;margin-bottom:8px"></div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px" id="tmTbl"></table></div>
   </div>
@@ -238,9 +238,9 @@
     fetch(API + '?' + new URLSearchParams({ action:'bleemsTiming', token: tk() })).then(function(r){ return r.json(); }).then(function(d){
       if(!d || !d.success){ document.getElementById('tmSum').textContent = (d && d.error) || 'Could not load.'; return; }
       var s = d.summary || {};
-      document.getElementById('tmSum').innerHTML = s.count ? 'Last <b>' + s.count + '</b> orders: delay before Bleems gives the order — average <b style="color:' + col(s.avg) + '">' + dl(s.avg) + '</b> · middle ' + dl(s.median) + ' · fastest ' + dl(s.min) + ' · slowest <b style="color:' + col(s.max) + '">' + dl(s.max) + '</b>' : 'No live orders yet.';
+      document.getElementById('tmSum').innerHTML = s.count ? 'Last <b>' + s.count + '</b> orders: time until someone accepted on Bleems — average <b style="color:' + col(s.avg) + '">' + dl(s.avg) + '</b> · middle ' + dl(s.median) + ' · fastest ' + dl(s.min) + ' · slowest <b style="color:' + col(s.max) + '">' + dl(s.max) + '</b>' : 'No live orders yet.';
       var th = 'style="text-align:left;padding:6px;border-bottom:2px solid #3c2a32;white-space:nowrap"', td = 'style="padding:6px;border-bottom:1px solid #eee;white-space:nowrap"';
-      document.getElementById('tmTbl').innerHTML = '<thead><tr><th ' + th + '>Order</th><th ' + th + '>Branch</th><th ' + th + '>Ordered</th><th ' + th + '>In system</th><th ' + th + '>Delay</th><th ' + th + '>Seen</th><th ' + th + '>Seen after</th><th ' + th + '>Delivery</th><th ' + th + '>Status log (Bleems)</th></tr></thead><tbody>' +
+      document.getElementById('tmTbl').innerHTML = '<thead><tr><th ' + th + '>Order</th><th ' + th + '>Branch</th><th ' + th + '>Ordered</th><th ' + th + '>Accepted (in system)</th><th ' + th + '>Time to accept</th><th ' + th + '>Seen</th><th ' + th + '>Seen after</th><th ' + th + '>Delivery</th><th ' + th + '>Status log (Bleems)</th></tr></thead><tbody>' +
         (d.rows || []).map(function(r){ var old = r.delayIn != null && r.delayIn >= 24 * 60;
           return '<tr><td ' + td + '><b>' + e(r.orderNo) + '</b></td><td ' + td + '>' + e(r.branch || '—') + '</td><td ' + td + '>' + dt(r.placedAt) + '</td><td ' + td + '>' + dt(r.inAt) + '</td><td ' + td + '>' + (old ? '<span style="color:#7a6670">old (first sync)</span>' : '<b style="color:' + col(r.delayIn) + '">' + dl(r.delayIn) + '</b>') + '</td><td ' + td + '>' + (r.seenAt ? dt(r.seenAt) + (r.seenBy ? '<br><span style="color:#7a6670">' + e(r.seenBy) + '</span>' : '') : '—') + '</td><td ' + td + '>' + dl(r.delaySeen) + '</td><td ' + td + '>' + e(r.slot) + '</td><td style="padding:6px;border-bottom:1px solid #eee;font-size:11.5px">' + (r.events || []).map(function(v){ return dt(v.at).replace(/^\d+ \w+, /, '') + ' ' + e(v.status || ''); }).join(' → ') + '</td></tr>'; }).join('') + '</tbody>';
     }).catch(function(){ document.getElementById('tmSum').textContent = 'Connection problem.'; });
