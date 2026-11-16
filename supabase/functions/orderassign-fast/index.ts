@@ -202,7 +202,7 @@ const T = (v: unknown, n: number) => String(v ?? '').replace(/[\u0000-\u001f]/g,
 function cleanLive(o: any) {
   return { orderNo: T(o && o.orderNo, 30), branch: T(o && o.branch, 40), tag: T(o && o.tag, 40), method: T(o && o.method, 20), date: T(o && o.date, 40), time: T(o && o.time, 40),
     sender: T(o && o.sender, 60), senderPhone: T(o && o.senderPhone, 30), receiver: T(o && o.receiver, 60), receiverPhone: T(o && o.receiverPhone, 30), address: T(o && o.address, 200), price: T(o && o.price, 30),
-    stage: (o && o.stage) === 'processed' ? 'processed' : 'new' };
+    stage: (o && o.stage) === 'processed' ? 'processed' : 'new', placedAt: T(o && o.placedAt, 40), inAt: T(o && o.inAt, 40) };
 }
 async function reportNewOrders(p: any) {
   if (String(p.found || '') !== '1') return { success: true, skipped: 'list not on screen' };
@@ -239,17 +239,34 @@ async function reportNewOrders(p: any) {
 function liveOut(r: any) {
   const d = r.details || {};
   return { id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, section: r.section, assignedAt: r.assigned_at, goneAt: r.gone_at, ackAt: r.ack_at, ackBy: r.ack_by || '',
-    tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '', stage: d.stage || 'new' };
+    tag: d.tag || '', method: d.method || '', date: d.date || '', time: d.time || '', sender: d.sender || '', senderPhone: d.senderPhone || '', receiver: d.receiver || '', receiverPhone: d.receiverPhone || '', address: d.address || '', price: d.price || '', stage: d.stage || 'new',
+    placedAt: d.placedAt || '', inAt: d.inAt || '' };
 }
 // Bleems orders (bleems-fast) also go into Live Orders, per branch, so the branch sees them with NEW + "Nakita ko".
 // Throttled: runs at most every 20 s, from getLiveOrders / getUnassignedStatus.
 let bleemsSyncAt = 0;
+// Nov 16 2026: Bleems timing log — ordered (customer) -> in our system -> given to the branch -> seen, to watch the delays
+async function bleemsTiming() {
+  const [bl, lv] = await Promise.all([
+    sbGet('bleems_orders', 'select=order_no,branch,placed_at,received_at,total,delivery_date,delivery_time,status&order=received_at.desc&limit=40'),
+    sbGet('live_orders', 'select=order_no,assigned_at,ack_at,ack_by&source=eq.bleems&order=id.desc&limit=200'),
+  ]);
+  const byNo: Record<string, any> = {}; (lv || []).forEach((r: any) => { if (!byNo[r.order_no]) byNo[r.order_no] = r; });
+  const mins = (a: any, b: any) => (a && b) ? Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000) : null;
+  const rows = (bl || []).map((b: any) => { const l = byNo[b.order_no] || {};
+    return { orderNo: b.order_no, branch: b.branch || '', placedAt: b.placed_at, inAt: b.received_at, givenAt: l.assigned_at || null, seenAt: l.ack_at || null, seenBy: l.ack_by || '',
+      delayIn: mins(b.placed_at, b.received_at), delaySeen: mins(b.received_at, l.ack_at), total: b.total, slot: [b.delivery_date, b.delivery_time].filter(Boolean).join(' '), status: b.status || '' }; });
+  // live = orders that came in while the sync was running (not the 1 Nov backfill)
+  const live = rows.filter((r: any) => r.delayIn != null && r.delayIn >= 0 && r.delayIn < 24 * 60);
+  const d = live.map((r: any) => r.delayIn).sort((a: number, b: number) => a - b);
+  return { success: true, rows, summary: { count: d.length, avg: d.length ? Math.round(d.reduce((s: number, x: number) => s + x, 0) / d.length) : null, min: d.length ? d[0] : null, max: d.length ? d[d.length - 1] : null, median: d.length ? d[Math.floor(d.length / 2)] : null } };
+}
 async function syncBleemsLive() {
   if (Date.now() - bleemsSyncAt < 20000) return; bleemsSyncAt = Date.now();
   try {
     const since = new Date(Date.now() - 3 * 86400000).toISOString();
     const [bl, cur] = await Promise.all([
-      sbGet('bleems_orders', `select=order_no,branch,status,recipient,recipient_phone,customer,phone,address,total,delivery_date,delivery_time,delivery_type&received_at=gte.${since}&limit=100`),
+      sbGet('bleems_orders', `select=order_no,branch,status,placed_at,received_at,recipient,recipient_phone,customer,phone,address,total,delivery_date,delivery_time,delivery_type&received_at=gte.${since}&limit=100`),
       sbGet('live_orders', 'select=id,order_no,branch,section&source=eq.bleems'),
     ]);
     const now = new Date().toISOString();
@@ -259,7 +276,7 @@ async function syncBleemsLive() {
     for (const b of (bl || [])) {
       const r = byNo[b.order_no];
       const d = cleanLive({ orderNo: b.order_no, branch: b.branch, tag: 'Bleems', method: b.delivery_type || 'Delivery', date: b.delivery_date, time: b.delivery_time,
-        sender: b.customer, senderPhone: b.phone, receiver: b.recipient, receiverPhone: b.recipient_phone, address: b.address, price: b.total ? b.total + ' BHD' : '' });
+        sender: b.customer, senderPhone: b.phone, receiver: b.recipient, receiverPhone: b.recipient_phone, address: b.address, price: b.total ? b.total + ' BHD' : '', placedAt: b.placed_at || '', inAt: b.received_at || '' });
       if (done(b.status)) { if (r && r.section === 'new') await sbPatch('live_orders', `id=eq.${r.id}`, { section: 'gone', gone_at: now }); continue; }
       if (!r) { ins.push({ source: 'bleems', order_no: b.order_no, branch: b.branch || '', section: 'new', details: d, first_seen_at: now, assigned_at: now, last_seen_at: now }); continue; }
       const patch: any = { details: d, last_seen_at: now };
@@ -341,6 +358,7 @@ Deno.serve(async (req) => {
     if (action === 'getUnassignedStatus') return json(await getUnassignedStatus(!!me && String(me.role || '').toLowerCase() === 'admin'));
     if (action === 'reportNewOrders') { if (!viaAutomation) return json({ success: false, error: 'Automation key needed.' }); return json(await reportNewOrders(p)); }
     if (action === 'getLiveOrders') return json(await getLiveOrders());
+    if (action === 'bleemsTiming') { if (!me || String(me.role || '').toLowerCase() !== 'admin') return json({ success: false, error: 'Admin only.' }); return json(await bleemsTiming()); }
     if (action === 'ackLiveOrder') return json(await ackLiveOrder(p, me));
     if (action === 'doneLiveOrder') return json(await doneLiveOrder(p, me));
     if (action === 'logAssignedOrder') return json(await logAssignedOrder(p));
