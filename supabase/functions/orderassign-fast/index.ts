@@ -247,15 +247,17 @@ function liveOut(r: any) {
 let bleemsSyncAt = 0;
 // Nov 16 2026: Bleems timing log — ordered (customer) -> in our system -> given to the branch -> seen, to watch the delays
 async function bleemsTiming() {
-  const [bl, lv] = await Promise.all([
+  const [bl, lv, ev] = await Promise.all([
     sbGet('bleems_orders', 'select=order_no,branch,placed_at,received_at,total,delivery_date,delivery_time,status&order=received_at.desc&limit=40'),
     sbGet('live_orders', 'select=order_no,assigned_at,ack_at,ack_by&source=eq.bleems&order=id.desc&limit=200'),
+    sbGet('bleems_order_events', 'select=order_no,status,event,at&order=at.asc&limit=1000').catch(() => []),
   ]);
+  const evBy: Record<string, any[]> = {}; (ev || []).forEach((e: any) => { (evBy[e.order_no] = evBy[e.order_no] || []).push({ status: e.status, event: e.event, at: e.at }); });
   const byNo: Record<string, any> = {}; (lv || []).forEach((r: any) => { if (!byNo[r.order_no]) byNo[r.order_no] = r; });
   const mins = (a: any, b: any) => (a && b) ? Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000) : null;
   const rows = (bl || []).map((b: any) => { const l = byNo[b.order_no] || {};
     return { orderNo: b.order_no, branch: b.branch || '', placedAt: b.placed_at, inAt: b.received_at, givenAt: l.assigned_at || null, seenAt: l.ack_at || null, seenBy: l.ack_by || '',
-      delayIn: mins(b.placed_at, b.received_at), delaySeen: mins(b.received_at, l.ack_at), total: b.total, slot: [b.delivery_date, b.delivery_time].filter(Boolean).join(' '), status: b.status || '' }; });
+      delayIn: mins(b.placed_at, b.received_at), delaySeen: mins(b.received_at, l.ack_at), total: b.total, slot: [b.delivery_date, b.delivery_time].filter(Boolean).join(' '), status: b.status || '', events: evBy[b.order_no] || [] }; });
   // live = orders that came in while the sync was running (not the 1 Nov backfill)
   const live = rows.filter((r: any) => r.delayIn != null && r.delayIn >= 0 && r.delayIn < 24 * 60);
   const d = live.map((r: any) => r.delayIn).sort((a: number, b: number) => a - b);

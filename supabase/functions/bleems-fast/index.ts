@@ -133,10 +133,14 @@ async function sync(days: number, backfill: boolean) {
         const addr = clip([it0.house_number && 'House ' + it0.house_number, it0.building_number && 'Bldg ' + it0.building_number, it0.street, it0.avenue, it0.block && 'Block ' + it0.block, it0.area, it0.hospital_name, it0.extra_details].filter(Boolean).join(', '), 250);
         const status = clip(o.order_status, 30);
         const thumb = picFor(pics, it0.item_name);
-        const existing = await rest('GET', `bleems_orders?select=id,status,thumb&order_id=eq.${encodeURIComponent(oid)}&limit=1`);
+        const existing = await rest('GET', `bleems_orders?select=id,status,thumb,order_no&order_id=eq.${encodeURIComponent(oid)}&limit=1`);
         if (existing && existing.length) {
           const patch: Record<string, unknown> = {};
-          if (existing[0].status !== status) patch.status = status;
+          if (existing[0].status !== status) {
+            patch.status = status;
+            // Nov 16 2026: timeline of the order (when Bleems changed its status), to compare with what the branch did
+            try { await rest('POST', 'bleems_order_events', [{ order_no: existing[0].order_no || ('BL ' + oid), status, event: 'status ' + (existing[0].status || '?') + ' → ' + status }]); } catch (e) { console.error('event', e); }
+          }
           if (!existing[0].thumb && thumb) patch.thumb = thumb;
           if (Object.keys(patch).length) { await rest('PATCH', `bleems_orders?id=eq.${existing[0].id}`, patch); changed++; }
           continue;
@@ -154,6 +158,7 @@ async function sync(days: number, backfill: boolean) {
           alerted: backfill || /completed|cancel/i.test(status), raw: o,
         };
         await rest('POST', 'bleems_orders', [row]);
+        try { await rest('POST', 'bleems_order_events', [{ order_no: row.order_no, status, event: 'first seen' }]); } catch (e) { console.error('event', e); }
         added++;
         if (!row.alerted) toAlert.push({ orderNo: row.order_no, branch: row.branch, address: row.address });
       }
