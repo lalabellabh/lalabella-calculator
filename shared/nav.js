@@ -151,6 +151,12 @@
     ['flower-tools.html', '🌸', 'Flower', 'flower'],
     ['item-inventory.html', '📦', 'Item Inv.', 'item']
   ];
+  // Nov 17 2026 (Bench): the three calculators, right under the three hubs
+  const CALCS = [
+    ['chocolate-calc.html', '🧮', 'Choco Calc', 'chocolate'],
+    ['flower-calc.html', '🧮', 'Flower Calc', 'flower'],
+    ['mixed-calc.html', '💐', 'Mixed Calc', 'flower']
+  ];
 
   const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   const stem = page.replace(/\.html$/, '');
@@ -476,6 +482,9 @@
       (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
       hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
+    const calcs = CALCS.filter(h => moduleAllowed(h[3]) && (h[0] !== 'mixed-calc.html' || moduleAllowed('chocolate')));
+    if (calcs.length) html += '<div class="' + esc(hubClass) + ' lbnav-calcs">' + calcs.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
+        '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + '</div>';
 
     // Home keeps id="chocoHomeLink" — some pages' own scripts look it up.
     const firstHub = hub[0] || HUB[0];
