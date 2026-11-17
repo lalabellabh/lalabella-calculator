@@ -454,7 +454,10 @@
     if(!lowMode && perf.length >= 40 && perf.reduce(function(a, b){ return a + b; }, 0) / perf.length > 70){ lowMode = true; renderer.shadowMap.enabled = false; renderer.setPixelRatio(1); scene.traverse(function(o){ if(o.material) o.material.needsUpdate = true; }); resize(); }
     var dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
     if(stage.clientWidth !== W || stage.clientHeight !== H) resize();
+    var nowMs = Date.now();
     Object.keys(AG).forEach(function(k){ var a = AG[k]; think(a, dt); step(a, dt, t);
+      if(a.turnUntil > nowMs && a.mode === 'sit') a.head.rotation.y = a.turnY;
+      if(a.laughUntil > nowMs){ a.body.position.y += Math.abs(Math.sin(t * 15 + a.seed)) * .05; a.head.rotation.x = -.12 + Math.sin(t * 15) * .06; }
       a.g.position.copy(a.pos); if(a.paceX) a.g.position.x += a.paceX; var dr = a.face - a.g.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); a.g.rotation.y += dr * Math.min(1, dt * 8);
       a.desk.ring.scale.setScalar(a.st === 'alert' ? 1 + Math.sin(t * 6) * .12 : 1); });
     scrT += dt; if(scrT > .12){ scrT = 0; Object.keys(AG).forEach(function(k){ var a = AG[k]; var near = !follow || follow === k || camera.zoom < 2.5; if(near) drawScreen(a, a.st, t); }); }
@@ -754,6 +757,56 @@
     if(OUT.cshadows){ var cv = (.4 + w / 12) * dt; OUT.cshadows.forEach(function(m){ if(!m.visible) return; m.position.x += cv; m.position.z += cv * .3; if(m.position.x > 110){ m.position.x = -110; m.position.z = -40 + Math.random() * 100; } }); }
     if(OUT.over){ var fl = OUT.over.querySelector('.o3-flash'); fl.style.opacity = String((SKY.flash || 0) * .55); }
   }
+
+  // ---------- small talk (Nov 17 2026, Bench): café chats, desk questions to the neighbour, and laughing ----------
+  var CAFE_TALK = [
+    [['Coffee break! ☕', 'Kape muna tayo! ☕'], ['Same, I needed this 😅', 'Uy sakto, pagod na ako 😅']],
+    [['Did you see the new chocolate boxes?', 'Nakita mo na yung bagong chocolate boxes?'], ['Yes! So pretty 😍', 'Oo! Ang ganda 😍']],
+    [['Busy day today, huh?', 'Ang busy ngayon no?'], ['Super! But we got this 💪', 'Sobra! Pero kaya natin 💪']],
+    [["What's for lunch?", 'Anong ulam mamaya?'], ['Adobo, I hope 🍗', 'Sana adobo 🍗']],
+    [['Boss looks happy today', 'Mukhang masaya si Boss ngayon'], ['Sales are good! 📈', 'Maganda kasi benta! 📈']],
+    [['This coffee is strong!', 'Ang tapang ng kape!'], ['That is why I am awake 😆', 'Kaya pala gising na gising ako 😆']],
+    [['Weekend plans?', 'May lakad sa weekend?'], ['Sleep. Lots of sleep 😴', 'Tulog. Maraming tulog 😴']],
+    [['Valentine season is coming…', 'Malapit na Valentines…'], ['Roses everywhere again 🌹😂', 'Rosas na naman lahat 🌹😂']]
+  ];
+  var DESK_TALK = {
+    orders:[[['Is #20245 assigned yet?', 'Na-assign na ba yung #20245?'], ['Yes, Moda Mall got it ✅', 'Oo, sa Moda Mall na ✅']], [['Did the Bleems order come in?', 'Pumasok na ba yung Bleems order?'], ['Waiting for accept ⏳', 'Hinihintay pa ma-accept ⏳']]],
+    hr:[[['Who is late today?', 'Sino late ngayon?'], ['Nobody, miracle! 🙏', 'Wala, himala! 🙏']], [['Day-off list ready?', 'Ready na day-off list?'], ['Almost done 📋', 'Malapit na 📋']]],
+    boss:[[['Any report for me?', 'May report ba ako?'], ['On your desk, Boss 📑', 'Nasa mesa niyo na, Boss 📑']]],
+    tech:[[['System OK?', 'Okay ba ang system?'], ['All green 💚', 'Lahat green 💚']], [['Any errors today?', 'May error ba ngayon?'], ['Just one blip, fixed 🔧', 'Isang maliit lang, ayos na 🔧']]],
+    records:[[['Did you log the fix?', 'Na-log mo na yung fix?'], ['In the Brain already 🧠', 'Nasa Brain na 🧠']], [['Stock count matched?', 'Tugma ba ang stock count?'], ['Almost, 2 roses missing 🌹', 'Halos, kulang 2 rosas 🌹']]],
+    deliv:[[['Driver on the way?', 'Papunta na ba driver?'], ['Yes, 10 minutes 🚗', 'Oo, 10 minuto 🚗']]],
+    saudi:[[['Saudi delivery received?', 'Na-receive na padala ng Saudi?'], ['17 of 17! ✅', '17 sa 17! ✅']]],
+    cafe:[[['Coffee machine clean?', 'Malinis na coffee machine?'], ['Shining ✨', 'Kumikinang ✨']]]
+  };
+  var LAUGH = [['Hahaha 😂', 'Hahaha 😂'], ['LOL 🤣', 'Grabe ka 🤣'], ['Hehe 😄', 'Hehe 😄']];
+  function pickL(x){ return TL() ? x[1] : x[0]; }
+  function rnd(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function busyTalk(a){ return a.tag.classList.contains('talk') || follow === a.k || a.st === 'alert' || a.st === 'warn' || a.hidden; }
+  function bubble(a, text, ms){ if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); }
+  function lookAt(a, b){ var dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
+    if(a.mode === 'sit'){ a.turnY = dx > 0 ? -.85 : .85; a.turnUntil = Date.now() + 9000; } else a.face = Math.atan2(dx, dz) + Math.PI; }
+  function chat(a, b, line, then){
+    a.chatAt = b.chatAt = Date.now(); lookAt(a, b); lookAt(b, a);
+    bubble(a, pickL(line[0]), 3200);
+    setTimeout(function(){ if(!AG[b.k]) return; bubble(b, pickL(line[1]), 3200);
+      setTimeout(function(){ var l = rnd(LAUGH); a.laughUntil = b.laughUntil = Date.now() + 1800; if(Math.random() < .7) bubble(a, pickL(l), 2000); bubble(b, pickL(rnd(LAUGH)), 2000); if(then) then(); }, 3300); }, 3300);
+  }
+  function chatter(){
+    if(!T || !scene || document.hidden) return;
+    var now = Date.now(), list = Object.keys(AG).map(function(k){ return AG[k]; }).filter(function(a){ return !busyTalk(a) && (!a.chatAt || now - a.chatAt > 25000); });
+    // café: two on a break talk
+    var cafe = list.filter(function(a){ return a.mode === 'cafe'; });
+    if(cafe.length >= 2 && Math.random() < .6){ var x = cafe[0], y = cafe[1]; x.wait = Math.max(x.wait || 0, 9); y.wait = Math.max(y.wait || 0, 9); chat(x, y, rnd(CAFE_TALK)); return; }
+    // desk: one asks the neighbour something about work (not too often)
+    if(Math.random() < .35){
+      var sit = list.filter(function(a){ return a.mode === 'sit' && (a.st === 'ok' || a.st === 'working'); });
+      for(var i = 0; i < sit.length; i++){ var p = sit[(i + Math.floor(Math.random() * sit.length)) % sit.length];
+        var nb = sit.filter(function(q){ return q !== p && q.room === p.room; })[0];
+        if(nb){ chat(p, nb, rnd(DESK_TALK[p.room.id] || DESK_TALK.records)); return; } }
+    }
+  }
+  setInterval(chatter, 6000);
 
   // ---------- public API ----------
   window.LBOffice3D = {
