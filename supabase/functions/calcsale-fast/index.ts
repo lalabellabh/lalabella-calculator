@@ -175,6 +175,34 @@ async function saveChocolateSale(p: any, u: any) {
   return { success: true, saleNo, releaseNo, branch, lines: deducted.length, short };
 }
 
+// ---------------- MIXED (flower + chocolate in one order, Nov 17 2026) ----------------
+// One ✓ Sold = two linked sales (a flower sale and a chocolate sale) with the same group_no — so every report, the
+// dashboard and Odoo stay per kind. Extras go with the flower sale (or the chocolate sale when there are no flowers).
+async function saveMixedSale(p: any, u: any) {
+  let fl: any[] = [], ch: any[] = [];
+  try { fl = JSON.parse(p.flowers || '[]'); } catch { fl = []; }
+  try { ch = JSON.parse(p.chocs || '[]'); } catch { ch = []; }
+  fl = (Array.isArray(fl) ? fl : []).filter((x: any) => x && txt(x.name, 80) && Number(x.qty) > 0);
+  ch = (Array.isArray(ch) ? ch : []).filter((x: any) => x && txt(x.name, 120) && (Number(x.amount) > 0 || Number(x.kg) > 0));
+  if (!fl.length && !ch.length) return { success: false, error: 'The list is empty.' };
+  const key = p._reqKey || '';
+  const out: any = { success: true, branch: txt(p.branch, 30), short: [], saleNos: [] };
+  if (fl.length) {
+    const r = await saveFlowerSale({ ...p, items: JSON.stringify(fl), _reqKey: key ? key + 'f' : null }, u);
+    if (!r.success) return r;
+    out.flowerSaleNo = r.saleNo; out.saleNos.push(r.saleNo); out.short.push(...(r.short || []).map((x: any) => ({ ...x, need: x.need + ' stems' })));
+  }
+  if (ch.length) {
+    const r = await saveChocolateSale({ ...p, items: JSON.stringify(ch), extrasList: fl.length ? '[]' : p.extrasList, extras: fl.length ? '0' : p.extras, _reqKey: key ? key + 'c' : null }, u);
+    if (!r.success) { out.chocError = r.error || 'Chocolate not saved.'; }
+    else { out.chocSaleNo = r.saleNo; out.releaseNo = r.releaseNo; out.saleNos.push(r.saleNo); out.short.push(...(r.short || [])); }
+  }
+  out.groupNo = 'MX-' + out.saleNos[0];
+  if (out.saleNos.length) await sbPatch('calc_sales', `sale_no=in.(${out.saleNos.map((n: string) => encodeURIComponent(n)).join(',')})`, { group_no: out.groupNo });
+  out.saleNo = out.saleNos.join(' + ');
+  return out;
+}
+
 // ---------------- LIST / CANCEL ----------------
 async function listSales(p: any) {
   const dRx = /^\d{4}-\d{2}-\d{2}$/, from = String(p.from || ''), to = String(p.to || '');
@@ -186,7 +214,7 @@ async function listSales(p: any) {
   if (BRANCHES.indexOf(String(p.branch)) !== -1) q += '&branch=eq.' + p.branch;
   const rows = await sbGet(q);
   return { success: true, mode: await mode(), sales: rows.map((r: any) => ({ id: r.id, saleNo: r.sale_no, kind: r.kind, branch: r.branch, ref: r.ref || '', source: r.source || '', customer: r.customer || '', items: r.items, deducted: r.deducted, short: r.short, total: Number(r.total) || 0, releaseNo: r.release_no || '', by: r.created_by || '', at: r.created_at, status: r.status, cancelledBy: r.cancelled_by || '', cancelledAt: r.cancelled_at, editedBy: r.edited_by || '', editedAt: r.edited_at || null,
-    extras: Array.isArray(r.extras) ? r.extras : [], extrasTotal: r3(Math.max(0, (Number(r.total) || 0) - itemsTotal(r.kind, r.items))) })) };
+    groupNo: r.group_no || '', extras: Array.isArray(r.extras) ? r.extras : [], extrasTotal: r3(Math.max(0, (Number(r.total) || 0) - itemsTotal(r.kind, r.items))) })) };
 }
 async function cancelSale(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
@@ -292,6 +320,16 @@ Deno.serve(async (req) => {
       try { return json(a === 'saveFlowerSale' ? await saveFlowerSale(p, u) : await saveChocolateSale(p, u)); }
       catch (e) { const w = await same(); if (w) return json({ success: true, duplicate: true, saleNo: w.sale_no, releaseNo: w.release_no || '', branch: w.branch, short: w.short || [] }); throw e; }
     }
+    if (a === 'saveMixedSale') {
+      if ((await mode()) !== 'calc') return json({ success: false, error: 'Odoo is now the one that takes sales out of stock. The calc is for quotes only.' });
+      const key = /^[A-Za-z0-9_-]{8,60}$/.test(String(p.reqKey || '')) ? String(p.reqKey) : '';
+      if (key) {   // same key again (double tap / lost reply) = the first sale
+        const was = await sbGet(`calc_sales?select=sale_no,branch,release_no,short,group_no&req_key=in.(${key}f,${key}c)`);
+        if (was && was.length) return json({ success: true, duplicate: true, saleNo: was.map((w: any) => w.sale_no).join(' + '), groupNo: was[0].group_no || '', releaseNo: (was.find((w: any) => w.release_no) || {}).release_no || '', branch: was[0].branch, short: [] });
+      }
+      p._reqKey = key;
+      return json(await saveMixedSale(p, u));
+    }
     if (a === 'listSales') return json(await listSales(p));
     // receiving approved (called by flower-fast / chocolate-fast with the approver's token): the stock now already has it -> before = now - qty
     if (a === 'logReceived') {
@@ -369,7 +407,17 @@ Deno.serve(async (req) => {
         item_name: txt(p.itemName, 120), list_price: lp, used_price: up, created_by: who(u) }]);
       return json({ success: true });
     }
-    if (a === 'cancelSale') { if (!admin) return json({ success: false, error: 'Admin only.' }); return json(await cancelSale(p, u)); }
+    if (a === 'cancelSale') {
+      if (!admin) return json({ success: false, error: 'Admin only.' });
+      const r: any = await cancelSale(p, u);
+      // Nov 17 2026: a mixed order (flower + chocolate) is cancelled together
+      if (r && r.success) {
+        const s0 = (await sbGet(`calc_sales?select=group_no&id=eq.${Number(p.id)}&limit=1`))[0];
+        if (s0 && s0.group_no) { const sib = await sbGet(`calc_sales?select=id,sale_no&group_no=eq.${encodeURIComponent(s0.group_no)}&status=eq.Active&id=neq.${Number(p.id)}`);
+          r.alsoCancelled = []; for (const x of sib) { const rr: any = await cancelSale({ ...p, id: x.id }, u); if (rr && rr.success) r.alsoCancelled.push(x.sale_no); } }
+      }
+      return json(r);
+    }
     if (a === 'flowerNames') {
       const rows = await sbGet('flower_item?select=flower_name&status=eq.Active&order=flower_name.asc&limit=2000');
       const seen: Record<string, boolean> = {}; const names: string[] = [];

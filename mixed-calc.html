@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flower &amp; Chocolate Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#fdf1f0; --blush-2:#f6e0da; --mint:#eaf3ec;
+    --rose:#c9506b; --rose-deep:#9e2f4a; --gold:#d9a441; --leaf:#5f8f63;
+    --ink:#3a2530; --ink-dim:#8a7078; --line:#f0d9d9; --ok:#3d7a4f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(201,80,107,0.08), transparent 40%),
+      radial-gradient(circle at 92% 12%, rgba(95,143,99,0.10), transparent 40%),
+      linear-gradient(160deg, var(--blush) 0%, var(--mint) 100%);
+    color:var(--ink); font-family:'Space Grotesk',sans-serif; min-height:100vh;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:26px 18px 60px; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; color:var(--ink-dim); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:18px; }
+  .back-link:hover{ color:var(--rose-deep); }
+  header{ text-align:center; margin-bottom:22px; padding:24px 18px; background:linear-gradient(135deg, #fff 0%, var(--blush) 60%, var(--blush-2) 100%); border-radius:18px; border:1px solid var(--line); box-shadow:0 8px 26px rgba(158,47,74,0.08); position:relative; overflow:hidden; }
+  header::before{ content:'🌹'; position:absolute; font-size:64px; opacity:0.08; left:-12px; top:-16px; transform:rotate(-16deg); }
+  .eyebrow{ font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; font-weight:600; position:relative; z-index:1; }
+  h1{ font-family:'Great Vibes', cursive; font-weight:400; color:var(--rose-deep); font-size:clamp(2rem,7vw,2.6rem); margin:0; line-height:1; position:relative; z-index:1; }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
+  .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:12px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=number], input[type=date]{
+    width:100%; background:var(--blush); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; font-size:14px; color:var(--ink); outline:none;
+  }
+
+  .search-box{ position:relative; }
+  #searchResults{
+    display:none; position:absolute; top:100%; left:0; right:0; z-index:20;
+    background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:4px;
+    max-height:260px; overflow-y:auto; box-shadow:0 12px 28px rgba(0,0,0,0.12);
+  }
+  #searchResults.show{ display:block; }
+  .result-item{ padding:11px 14px; border-top:1px solid var(--blush-2); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .result-item:first-child{ border-top:none; }
+  .result-item:hover{ background:var(--blush); }
+  .result-name{ font-weight:600; font-size:13px; }
+  .result-rate{ font-size:12px; color:var(--rose-deep); font-weight:700; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid-3{ display:grid; grid-template-columns:2fr 1fr auto; gap:8px; align-items:end; }
+  .btn{ padding:11px 0; width:100%; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-primary{ background:linear-gradient(135deg, var(--rose), var(--rose-deep)); color:#fff; }
+  .btn-leaf{ background:linear-gradient(135deg, var(--leaf), #3f6b45); color:#fff; }
+  .btn-outline{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+  .btn-sm{ padding:9px 14px; width:auto; font-size:12px; }
+  .btn:disabled{ opacity:0.5; pointer-events:none; }
+
+  .cart-row{ border-top:1px solid var(--blush-2); padding:11px 0; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .cart-row:first-child{ border-top:none; }
+
+  .cart-row-name{ font-weight:600; font-size:13px; }
+  .cart-row-meta{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .remove-btn{ background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; flex-shrink:0; padding:4px 8px; }
+  .edit-btn{ background:none; border:none; font-size:14px; cursor:pointer; flex-shrink:0; padding:4px 6px; opacity:.8; }
+  .edit-btn:hover{ opacity:1; }
+  .cart-edit{ align-items:flex-end; background:rgba(255,255,255,.55); border-radius:10px; padding:10px; }
+  .edit-fields{ display:flex; gap:8px; margin-top:6px; }
+  .edit-fields label{ flex:1; min-width:0; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); display:flex; flex-direction:column; gap:3px; margin:0; }
+  .edit-fields input{ padding:7px 8px; font-size:13px; }
+  .edit-btns{ display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+  .edit-btns button{ border:0; border-radius:8px; padding:7px 12px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .edit-save{ background:#2f7a4f; color:#fff; } .edit-cancel{ background:#eee3e6; color:#5a4650; }
+
+  .total-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+  .total-row.grand{ border-top:2px solid var(--rose); margin-top:8px; padding-top:12px; font-size:17px; font-weight:800; color:var(--rose-deep); }
+
+  .print-options{ display:flex; gap:10px; margin-top:6px; }
+  .toggle-row{ display:flex; align-items:center; gap:8px; margin-top:14px; font-size:12.5px; color:var(--ink-dim); }
+  .toggle-row input{ width:auto; }
+
+  /* ---------- On-screen preview hidden by default; only the print
+     templates render, and only during window.print() ---------- */
+  .receipt{ display:none; }
+
+  @media (min-width: 900px){
+    .wrap{ max-width:1080px; padding:34px 30px 70px; }
+    .layout{ display:flex; gap:18px; align-items:flex-start; }
+    .col-main{ flex:1.3; display:flex; flex-direction:column; gap:16px; }
+    .col-side{ flex:1; display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
+  }
+
+  /* ================= PRINT STYLES ================= */
+  @media print{
+    /* Nov 2026: hidden page content must not make extra blank pages -> only ONE page prints */
+    html, body{ margin:0 !important; padding:0 !important; height:0 !important; min-height:0 !important; overflow:hidden !important; background:#fff !important; }
+    body *{ visibility:hidden; }
+    body.print-a4 .receipt-a4, body.print-thermal .receipt-thermal{ position:fixed !important; }
+
+    body.print-a4 .receipt-a4,
+    body.print-a4 .receipt-a4 *{ visibility:visible; }
+    body.print-a4 .receipt-a4{
+      display:block; position:absolute; top:0; left:0; width:100%;
+      font-family:'Space Grotesk', sans-serif; color:#000; padding:30px;
+    }
+    body.print-a4 .receipt-a4 table{ width:100%; border-collapse:collapse; margin-top:16px; }
+    body.print-a4 .receipt-a4 th, body.print-a4 .receipt-a4 td{ padding:8px 6px; border-bottom:1px solid #ddd; text-align:left; font-size:13px; }
+    body.print-a4 .receipt-a4 th{ font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
+    body.print-a4 .receipt-a4 .r-total{ text-align:right; font-size:20px; font-weight:800; margin-top:14px; }
+
+    body.print-thermal .receipt-thermal,
+    body.print-thermal .receipt-thermal *{ visibility:visible; }
+    body.print-thermal .receipt-thermal{
+      display:block; position:absolute; top:0; left:0; width:72mm;
+      font-family:'Space Mono', monospace; color:#000; font-size:11px; padding:2mm;
+    }
+    body.print-thermal .receipt-thermal .t-line{ border-top:1px dashed #000; margin:5px 0; }
+    body.print-thermal .receipt-thermal .t-row{ display:flex; justify-content:space-between; padding:2px 0; }
+    body.print-thermal .receipt-thermal .t-total{ font-weight:800; font-size:14px; }
+  }
+</style>
+<style id="chocoSharedNavStyles">
+.choco-nav-toggle{
+  position:fixed; top:16px; left:16px; z-index:9210;
+  width:44px; height:44px; border-radius:12px; border:1px solid rgba(158,47,74,0.16);
+  background:rgba(255,255,255,0.9); color:#9e2f4a; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  box-shadow:0 5px 16px rgba(158,47,74,.14);
+}
+.choco-nav-backdrop{
+  position:fixed; inset:0; z-index:9205; background:rgba(60,30,30,0.35); backdrop-filter:blur(3px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.choco-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+.choco-drawer{
+  position:fixed; top:0; left:0; bottom:0; width:min(270px,80vw); z-index:9206;
+  background:rgba(255,255,255,.94);
+  border-right:1px solid #f0dede; box-shadow:12px 0 40px rgba(158,47,74,.14);
+  transform:translateX(-100%); transition:transform .25s ease;
+  padding:70px 16px 20px; display:flex; flex-direction:column; gap:6px; overflow-y:auto;
+  font-family:Arial,sans-serif; backdrop-filter:blur(18px);
+}
+.choco-drawer.show{ transform:translateX(0); }
+.choco-drawer a{
+  display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:10px;
+  color:#2f2024; text-decoration:none; font-size:14px; font-weight:600;
+}
+.choco-drawer a:hover{ background:rgba(201,80,107,0.08); }
+.choco-drawer .choco-drawer-title{
+  color:#9e2f4a; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+  padding:0 12px 8px; opacity:0.8;
+}
+.choco-hub-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+.choco-hub-grid a{
+  flex-direction:column; text-align:center; gap:4px; padding:12px 4px;
+  font-size:10.5px; background:rgba(201,80,107,0.05); border:1px solid #f0dede;
+  min-height:76px; justify-content:center; white-space:nowrap;
+}
+.choco-hub-grid a span.hub-icon{ font-size:20px; }
+.choco-drawer .choco-music-box{
+  margin-top:10px; padding:12px; border-radius:12px; background:rgba(201,80,107,0.05);
+  border:1px solid #f0dede;
+}
+.choco-drawer .choco-music-box input{
+  width:100%; padding:9px 10px; border:1px solid #f0dede; border-radius:9px;
+  background:#fdf9f8; color:#2f2024; font-size:12px; outline:none; margin-bottom:8px;
+  box-sizing:border-box;
+}
+.choco-drawer .choco-music-box button{
+  width:100%; padding:9px 0; border:0; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer;
+  background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff;
+}
+.choco-drawer .choco-music-now{ font-size:10.5px; color:#8a7078; margin-top:8px; word-break:break-all; line-height:1.4; }
+/* hamburger stays visible on mobile too now */
+/* The fixed hamburger button sits at top:16px, extending to about
+   60px tall — without extra clearance it was sitting on top of (and
+   hiding) each page's own title/back-link in that same corner. */
+.wrap{ padding-top:76px !important; }
+</style>
+
+
+</head>
+<body>
+
+
+<button class="choco-nav-toggle" id="chocoNavToggle" aria-label="Open menu">☰</button>
+<div class="choco-nav-backdrop" id="chocoNavBackdrop"></div>
+<nav class="choco-drawer" id="chocoDrawer">
+  <div data-lb-menu></div>
+  <div class="choco-music-box">
+    <label style="display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#f1d38c;margin-bottom:6px;">Music</label>
+    <input type="text" id="chocoMusicUrlInput" placeholder="YouTube link or mp3 URL">
+    <button id="chocoMusicToggleBtn">♫ Music</button>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="chocoMusicSearchInput" placeholder="Or search a song name…" style="flex:1;margin-bottom:0;">
+      <button id="chocoMusicSearchBtn" style="width:auto;padding:9px 12px;margin-top:0;">🔍</button>
+    </div>
+    <div class="choco-music-now" id="chocoMusicNow"></div>
+  </div>
+</nav>
+<script src="shared/scanner.js"></script>
+<script src="shared/nav.js"></script>
+<audio id="chocoAudioPlayer" loop></audio>
+<div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
+
+<style>
+  /* Nov 17 2026 — Mixed calc (flower + chocolate + extras) */
+  .wrap{ max-width:1180px; }
+  .mx-layout{ display:grid; grid-template-columns:1fr; gap:16px; }
+  @media (min-width:960px){ .mx-layout{ grid-template-columns:1.05fr .95fr; align-items:start; } .mx-side{ position:sticky; top:12px; } }
+  .mx-search{ position:relative; }
+  .mx-search input{ padding-right:84px; }
+  .mx-in{ position:absolute; right:8px; top:50%; transform:translateY(-50%); display:flex; gap:6px; align-items:center; }
+  .mx-in img{ width:30px; height:30px; border-radius:7px; object-fit:cover; cursor:zoom-in; display:none; }
+  .mx-in button{ width:26px; height:26px; border-radius:50%; border:0; background:#e9d6dc; color:#7a3a4e; font-size:14px; font-weight:700; cursor:pointer; display:none; }
+  .mx-dd{ display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid var(--line); border-radius:12px; max-height:300px; overflow:auto; z-index:60; box-shadow:0 12px 28px rgba(0,0,0,.14); }
+  .mx-dd.show{ display:block; }
+  .mx-dd .o{ display:flex; gap:10px; align-items:center; padding:8px 12px; border-top:1px solid var(--blush-2); cursor:pointer; }
+  .mx-dd .o:first-child{ border-top:0; } .mx-dd .o:hover,.mx-dd .o.on{ background:var(--blush); }
+  .mx-dd .o img,.mx-dd .o .ph{ width:36px; height:36px; border-radius:8px; object-fit:cover; background:#f6ecec; flex:none; display:flex; align-items:center; justify-content:center; }
+  .mx-dd .o .n{ flex:1; min-width:0; font-size:13px; font-weight:600; } .mx-dd .o .n small{ display:block; font-weight:500; color:var(--ink-dim); font-size:11px; }
+  .mx-dd .o .p{ font-size:12px; font-weight:700; color:var(--rose-deep); white-space:nowrap; }
+  .mx-picked{ font-size:12px; color:var(--ink-dim); margin-top:6px; min-height:16px; }
+  .mx-st{ display:block; font-size:11.5px; font-weight:700; color:#2f7a4f; margin-top:2px; } .mx-st.low{ color:#c97a14; } .mx-st.out{ color:#c0392b; }
+  .mx-row{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; margin-top:8px; }
+  .mx-seg{ display:flex; gap:6px; margin-top:8px; } .mx-seg button{ flex:1; font:inherit; font-size:12.5px; font-weight:700; padding:7px; border-radius:9px; border:1px solid var(--line); background:#fff; cursor:pointer; color:var(--ink); }
+  .mx-seg button.on{ background:var(--rose-deep); color:#fff; border-color:var(--rose-deep); }
+  .mx-add{ border:0; border-radius:10px; padding:10px 16px; font:inherit; font-weight:800; background:linear-gradient(135deg,var(--rose),var(--rose-deep)); color:#fff; cursor:pointer; }
+  .mx-add:disabled{ opacity:.5; cursor:not-allowed; }
+  .mx-line{ display:grid; grid-template-columns:38px 1fr auto 26px; gap:8px; align-items:center; padding:9px 0; border-bottom:1px solid var(--blush-2); font-size:13px; }
+  .mx-line img,.mx-line .ph{ width:38px; height:38px; border-radius:8px; object-fit:cover; background:#f6ecec; display:flex; align-items:center; justify-content:center; cursor:zoom-in; }
+  .mx-line .nm{ font-weight:700; } .mx-line .d{ font-size:11.5px; color:var(--ink-dim); }
+  .mx-line .am{ font-weight:800; white-space:nowrap; } .mx-line .x{ border:0; background:none; color:#b0442e; font-size:15px; cursor:pointer; }
+  .mx-grp{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin:12px 0 2px; font-weight:700; }
+  .mx-tot{ display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; } .mx-tot.big{ font-size:18px; font-weight:900; color:var(--rose-deep); border-top:2px solid var(--rose); margin-top:6px; padding-top:10px; }
+  .mx-sold{ margin-top:14px; border:2px dashed #2f7a4f; border-radius:14px; padding:12px; background:rgba(240,250,244,.9); }
+  .mx-sold h4{ margin:0 0 4px; font-size:14px; color:#1f5a38; } .mx-sold .s{ font-size:11.5px; color:#5a6a60; margin-bottom:8px; }
+  .mx-sold .r{ display:flex; gap:8px; flex-wrap:wrap; } .mx-sold select,.mx-sold input{ flex:1; min-width:120px; font:inherit; font-size:13px; padding:8px 10px; border:1px solid #b9d6c4; border-radius:9px; background:#fff; color:#1f2a24; }
+  .mx-sold .go{ width:100%; margin-top:8px; border:0; border-radius:11px; padding:11px; font:inherit; font-weight:800; font-size:15px; background:linear-gradient(135deg,#2f7a4f,#3f9a65); color:#fff; cursor:pointer; }
+  .mx-sold .go:disabled{ opacity:.6; } .mx-sold .res{ margin-top:8px; font-size:12.5px; line-height:1.45; } .mx-sold .ok{ color:#1f5a38; font-weight:700; } .mx-sold .warn{ color:#a8560b; }
+  .mx-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; } .mx-btns button{ font:inherit; font-weight:700; padding:10px; border-radius:11px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .mx-lb{ position:fixed; inset:0; z-index:2147483001; background:rgba(20,8,12,.82); display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; cursor:zoom-out; padding:16px; }
+  .mx-lb.show{ display:flex; } .mx-lb img{ max-width:min(92vw,640px); max-height:78vh; border-radius:14px; background:#fff; } .mx-lb div{ color:#fff; font-weight:600; }
+  #mxPrint{ display:none; }
+  @media print{ body.mxp > *:not(#mxPrint){ display:none !important; } body.mxp{ display:block !important; background:#fff !important; } body.mxp #mxPrint{ display:block !important; color:#000; font-family:Arial,sans-serif; }
+    #mxPrint table{ width:100%; border-collapse:collapse; font-size:12px; } #mxPrint td,#mxPrint th{ border-bottom:1px solid #999; padding:5px 4px; text-align:left; } }
+</style>
+
+<div class="wrap" data-lbflw-skip="1">
+  <a class="back-link" href="flower-tools.html">&larr; Flower Tools</a>
+  <span style="float:right;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+    <a href="flower-calc.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🧮 Flower calc</a>
+    <a href="chocolate-calc.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🍫 Chocolate calc</a>
+    <a href="calc-sales.html" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🧾 Calc Sales</a>
+  </span>
+  <header>
+    <div class="eyebrow">Lalabella · Flowers &amp; Chocolate</div>
+    <h1>Mixed Calculator</h1>
+    <div style="font-size:12px;color:var(--ink-dim);margin-top:6px;position:relative;z-index:1">Flowers + chocolate + extras in one order. ✓ Sold takes both out of the branch stock.</div>
+  </header>
+
+  <div class="card" style="padding:12px 16px">
+    <label style="margin:0 0 4px">Branch (stock shown for)</label>
+    <select id="mxBranch" style="width:100%;font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--blush)"><option value="">— branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+  </div>
+
+  <div class="mx-layout">
+    <div>
+      <div class="card" style="position:relative;z-index:42">
+        <div class="card-title">🌸 Flower</div>
+        <div class="mx-search"><input type="text" id="fSearch" placeholder="Type a flower name or code…" autocomplete="off"><div class="mx-in"><img id="fPic" alt=""><button type="button" id="fClr">✕</button></div><div class="mx-dd" id="fDD"></div></div>
+        <div class="mx-picked" id="fPicked"></div>
+        <div class="mx-row">
+          <div><label>Qty (stems)</label><input type="number" id="fQty" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+          <div><label>Rate (BD)</label><input type="number" id="fRate" min="0" step="0.001" inputmode="decimal" placeholder="0.000"></div>
+          <button class="mx-add" id="fAdd" type="button" disabled>Add</button>
+        </div>
+      </div>
+
+      <div class="card" style="position:relative;z-index:41">
+        <div class="card-title">🍫 Chocolate</div>
+        <div class="mx-search"><input type="text" id="cSearch" placeholder="Type a chocolate name or code…" autocomplete="off"><div class="mx-in"><img id="cPic" alt=""><button type="button" id="cClr">✕</button></div><div class="mx-dd" id="cDD"></div></div>
+        <div class="mx-picked" id="cPicked"></div>
+        <div class="mx-seg" id="cSeg"><button type="button" class="on" data-m="pieces">Pieces</button><button type="button" data-m="grams">Grams</button></div>
+        <div class="mx-row">
+          <div><label id="cAmtL">How many pieces</label><input type="number" id="cAmt" min="0" step="any" inputmode="decimal" placeholder="0"></div>
+          <div><label>Total (BD)</label><input type="number" id="cTot" min="0" step="0.001" inputmode="decimal" placeholder="0.000"></div>
+          <button class="mx-add" id="cAdd" type="button" disabled>Add</button>
+        </div>
+        <div class="mx-picked" id="cEq"></div>
+      </div>
+
+      <div class="card" style="position:relative;z-index:40">
+        <div class="card-title">🎀 Extras <span style="font-size:11px;font-weight:400;color:var(--ink-dim)">(from Item Inventory — vase, box, ribbon, delivery…)</span></div>
+        <div class="mx-row" style="grid-template-columns:2fr .6fr 1fr auto">
+          <div><label>Description</label><input type="text" id="xDesc" placeholder="e.g. Vase, Handwork, Box" autocomplete="off"></div>
+          <div><label>Qty</label><input type="number" id="xQty" min="1" step="1" value="1" inputmode="numeric"></div>
+          <div><label>Price each (BD)</label><input type="number" id="xPrice" min="0" step="0.001" inputmode="decimal" placeholder="0.000"></div>
+          <button class="mx-add" id="xAdd" type="button">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mx-side">
+      <div class="card">
+        <div class="card-title">🧾 Order List</div>
+        <div id="mxList"><div class="empty-note">Nothing yet — add flowers, chocolate or extras.</div></div>
+        <div style="margin-top:10px">
+          <div class="mx-tot"><span>🌸 Flowers</span><b id="tF">0.000 BD</b></div>
+          <div class="mx-tot"><span>🍫 Chocolate</span><b id="tC">0.000 BD</b></div>
+          <div class="mx-tot"><span>🎀 Extras</span><b id="tX">0.000 BD</b></div>
+          <div class="mx-tot big"><span>Grand Total</span><span id="tG">0.000 BD</span></div>
+        </div>
+        <label>For / customer (optional)</label>
+        <input type="text" id="mxCustomer" placeholder="optional">
+        <div class="mx-btns"><button type="button" id="mxPrintBtn">🖨️ Print</button><button type="button" id="mxShare">📤 WhatsApp</button></div>
+        <div class="mx-sold">
+          <h4>✓ Sold — take out of stock</h4>
+          <div class="s">Flowers and chocolate both leave the branch stock. Press only when the customer is <b>sure</b>. For a quotation just Print.</div>
+          <div class="r">
+            <select id="mxSrc" style="flex:0 1 170px"><option value="">Source — pick —</option><option value="Walk-in">🚶 Walk-in</option><option value="Pick-up">🛍️ Pick-up</option><option value="Website order">🌐 Website order</option><option value="WhatsApp">💬 WhatsApp</option><option value="Corporate">🏢 Corporate</option><option value="Others">📝 Others</option></select>
+            <input id="mxRef" placeholder="Invoice no. or customer name / phone" maxlength="60">
+          </div>
+          <button class="go" type="button" id="mxSold">✓ Sold</button>
+          <div class="res" id="mxRes"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mx-lb" id="mxLb"><img alt=""><div></div></div>
+<div id="mxPrint"></div>
+
+<script src="shared/extras-pick.js?v=5"></script>
+<script>
+(function(){
+  'use strict';
+  var C = window.LB_CONFIG || {};
+  var FAPI = C.FLOWER_FAST_API, CAPI = C.CHOCOLATE_FAST_API, SAPI = C.CALC_SALE_API || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/calcsale-fast';
+  function $(id){ return document.getElementById(id); }
+  function tk(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
+  function e(v){ return lbEsc(v); }
+  function f3(n){ return (Math.round((Number(n) || 0) * 1000) / 1000).toFixed(3); }
+  function n3(n){ return String(Math.round((Number(n) || 0) * 1000) / 1000); }
+  function norm(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
+  function ls(k, v){ try{ if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); }catch(x){ return null; } }
+
+  var FL = [], CH = [], FPH = {}, CPH = {}, STF = null, STC = null, LIST = [], selF = null, selC = null, cMode = 'pieces';
+  // ---------- pictures ----------
+  try{ var c1 = JSON.parse(ls('lbFlowerPhotosV1') || 'null'); (c1 && c1.items || []).forEach(function(g){ if(g && g.name && g.photo) FPH[norm(g.name)] = g.photo; }); }catch(x){}
+  try{ var c2 = JSON.parse(ls('lbChocPhotosV1') || 'null'); (c2 && c2.items || []).forEach(function(g){ if(g && g.name && g.photo) CPH[norm(g.name)] = g.photo; }); }catch(x){}
+  if(C.FLOWER_PHOTO_API) fetch(C.FLOWER_PHOTO_API + '?action=names&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(d){ if(d && d.success && Array.isArray(d.items)){ d.items.forEach(function(g){ if(g && g.name && g.photo) FPH[norm(g.name)] = g.photo; }); render(); } }).catch(function(){});
+  if(C.CHOC_PHOTO_FAST_API) fetch(C.CHOC_PHOTO_FAST_API + '?action=list&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(d){ if(d && d.success && Array.isArray(d.items)){ d.items.forEach(function(g){ if(g && g.name && g.photo) CPH[norm(g.name)] = g.photo; }); render(); } }).catch(function(){});
+  function pic(kind, name){ return (kind === 'flower' ? FPH : CPH)[norm(name)] || ''; }
+  var LB = $('mxLb'); LB.onclick = function(){ LB.classList.remove('show'); };
+  function big(src, cap){ if(!src) return; LB.querySelector('img').src = src; LB.querySelector('div').textContent = cap || ''; LB.classList.add('show'); }
+  document.addEventListener('click', function(ev){ var t = ev.target; if(t && t.tagName === 'IMG' && t.hasAttribute('data-big')){ ev.preventDefault(); ev.stopPropagation(); big(t.getAttribute('src'), t.getAttribute('data-big')); } }, true);
+
+  // ---------- catalogs ----------
+  fetch(FAPI + '?action=getFlowerItems&_ts=' + Date.now() + '&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(rows){
+    if(!Array.isArray(rows)) return;
+    var by = {};
+    rows.filter(function(it){ return String(it['Status'] || '').trim() === 'Active'; }).forEach(function(it){
+      var n = String(it['Flowers'] || '').trim(); if(!n) return; var k = norm(n), legacy = String(it['Origin'] || '').trim() === 'Legacy/Unknown';
+      if(!by[k] || (legacy && !by[k].legacy)) by[k] = { name:n, rate:Number(it['Rate']) || 0, code:String(it['Item Code'] || ''), legacy:legacy, codes:(by[k] ? by[k].codes : []) };
+      if(it['Item Code']) by[k].codes.push(norm(it['Item Code']));
+    });
+    FL = Object.keys(by).map(function(k){ return by[k]; }).sort(function(a, b){ return a.name.localeCompare(b.name); });
+  }).catch(function(){});
+  fetch(CAPI + '?action=getItems&_ts=' + Date.now() + '&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(rows){
+    if(!Array.isArray(rows)) return;
+    CH = rows.filter(function(it){ return it['Chocolate Name']; }).map(function(it){ return { name:it['Chocolate Name'], code:it['Product Code'] || '', perKg:parseFloat(String(it['Standard Price / Kg'] || '0').replace(/[^0-9.]/g, '')) || 0, grams:parseFloat(it['Grams']) || 0, whole:String(it['Packaging Type'] || 'Piece').trim().toLowerCase() !== 'piece', cat:it['Category'] || '' }; });
+  }).catch(function(){});
+
+  // ---------- stock of the branch ----------
+  function branch(){ return $('mxBranch').value; }
+  function loadStock(){
+    var b = branch(); STF = null; STC = null; render(); paintPicked();
+    if(!b) return;
+    ['flower', 'chocolate'].forEach(function(k){
+      fetch(SAPI + '?' + new URLSearchParams({ action:'stockList', kind:k, branch:b, token:tk() })).then(function(r){ return r.json(); }).then(function(d){
+        if(!d || !d.success || d.branch !== branch()) return;
+        if(k === 'flower') STF = d.stock || {}; else STC = d.stock || [];
+        render(); paintPicked();
+      }).catch(function(){});
+    });
+  }
+  $('mxBranch').addEventListener('change', function(){ ls('lbCalcSaleBranch', branch()); loadStock(); });
+  (function(){ var s = ls('lbCalcSaleBranch'); if(s) $('mxBranch').value = s;
+    fetch(SAPI + '?action=getMode&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(d){
+      if(d && d.success){ if(!branch() && d.userBranch){ var o = Array.prototype.find.call($('mxBranch').options, function(x){ return norm(x.value) === norm(d.userBranch); }); if(o) $('mxBranch').value = o.value; }
+        if(d.mode === 'odoo'){ $('mxSold').disabled = true; $('mxRes').innerHTML = '<span class="warn">🔗 Odoo now takes sales out of stock — this calc is for quotes and printing only.</span>'; } }
+      loadStock();
+    }).catch(function(){ loadStock(); }); })();
+  // stock now (before this order) and what is in the list
+  function flowerStock(name){ if(!STF) return null; var k = Object.keys(STF).find(function(x){ return norm(x) === norm(name); }); return k == null ? 0 : Number(STF[k]) || 0; }
+  function chocStock(name){ if(!STC) return null; var g = STC.find(function(x){ return norm(x.name) === norm(name); }); return g || { total:{}, batches:[] }; }
+  function usedF(name, skip){ return LIST.reduce(function(s, l, i){ return s + (l.type === 'flower' && norm(l.name) === norm(name) && i !== skip ? l.qty : 0); }, 0); }
+  // chocolate in the list, in the unit the stock uses (kg / g / pcs)
+  function chocNeed(l, unit){ var u = norm(unit); var grams = l.mode === 'grams' ? l.amount : (l.gpp ? l.amount * l.gpp : null);
+    if(/^kg/.test(u)) return grams == null ? null : grams / 1000; if(u === 'g' || u === 'grams') return grams; return l.mode === 'pieces' ? l.amount : (l.gpp && grams ? grams / l.gpp : null); }
+  function usedC(name, unit, skip){ var s = 0, unk = false; LIST.forEach(function(l, i){ if(l.type !== 'choc' || norm(l.name) !== norm(name) || i === skip) return; var q = chocNeed(l, unit); if(q == null) unk = true; else s += q; }); return unk ? null : s; }
+  function stTxtF(name, extra){ var st = flowerStock(name); if(st == null) return branch() ? '<span class="mx-st">Stock loading…</span>' : '<span class="mx-st low">Pick the branch to see the stock</span>';
+    var left = st - usedF(name) - (extra || 0), cls = left < 0 ? 'out' : left < 10 ? 'low' : '';
+    return '<span class="mx-st ' + cls + '">Stock ' + n3(st) + ' stems · ' + e(branch()) + ' → left after this order: <b>' + n3(left) + '</b>' + (left < 0 ? ' ⚠ not enough' : '') + '</span>'; }
+  function stTxtC(name, extraLine){ var g = chocStock(name); if(g == null) return branch() ? '<span class="mx-st">Stock loading…</span>' : '<span class="mx-st low">Pick the branch to see the stock</span>';
+    var units = Object.keys(g.total || {}); if(!units.length) return '<span class="mx-st out">No stock in ' + e(branch()) + '</span>';
+    return units.map(function(u){ var have = Number(g.total[u]) || 0, used = usedC(name, u), ex = extraLine ? chocNeed(extraLine, u) : 0;
+      if(used == null || ex == null) return '<span class="mx-st">Stock ' + n3(have) + ' ' + e(u) + ' · ' + e(branch()) + '</span>';
+      var left = have - used - ex, cls = left < 0 ? 'out' : left <= have * 0.15 ? 'low' : '';
+      return '<span class="mx-st ' + cls + '">Stock ' + n3(have) + ' ' + e(u) + ' (' + (g.batches || []).length + ' batch) · ' + e(branch()) + ' → left after this order: <b>' + n3(left) + ' ' + e(u) + '</b>' + (left < 0 ? ' ⚠ not enough' : '') + '</span>'; }).join(''); }
+
+  // ---------- search boxes ----------
+  function setupSearch(inp, dd, picEl, clr, list, kind, onPick){
+    var on = -1, rows = [];
+    function show(){
+      var q = norm(inp.value); clr.style.display = inp.value ? 'block' : 'none';
+      if(!q){ dd.classList.remove('show'); return; }
+      rows = list().filter(function(x){ return norm(x.name).indexOf(q) !== -1 || norm(x.code) === q || (x.codes || []).indexOf(q) !== -1; }).slice(0, 30);
+      dd.innerHTML = rows.length ? rows.map(function(x, i){ var p = pic(kind, x.name);
+        var price = kind === 'flower' ? f3(x.rate) + ' BD' : (x.whole ? f3(x.perKg) + ' BD/pc' : f3(x.perKg) + ' BD/kg');
+        return '<div class="o" data-i="' + i + '">' + (p ? '<img src="' + e(p) + '" alt="">' : '<span class="ph">' + (kind === 'flower' ? '🌸' : '🍫') + '</span>') + '<div class="n">' + e(x.name) + '<small>' + e(x.code || '') + (kind === 'choc' && x.grams ? ' · ' + n3(x.grams) + ' g/pc' : '') + '</small></div><div class="p">' + price + '</div></div>'; }).join('')
+        : '<div class="empty-note">No match.</div>';
+      dd.classList.add('show'); on = -1;
+    }
+    inp.addEventListener('input', function(){ onPick(null, true); show(); });
+    inp.addEventListener('focus', show);
+    inp.addEventListener('keydown', function(ev){ if(!dd.classList.contains('show')) return; var o = dd.querySelectorAll('.o');
+      if(ev.key === 'ArrowDown'){ on = Math.min(o.length - 1, on + 1); } else if(ev.key === 'ArrowUp'){ on = Math.max(0, on - 1); } else if(ev.key === 'Enter'){ ev.preventDefault(); if(on < 0 && rows.length === 1) on = 0; if(rows[on]) pick(rows[on]); return; } else return;
+      ev.preventDefault(); o.forEach(function(x, i){ x.classList.toggle('on', i === on); }); });
+    dd.addEventListener('mousedown', function(ev){ var o = ev.target.closest('.o'); if(!o) return; ev.preventDefault(); pick(rows[Number(o.getAttribute('data-i'))]); });
+    document.addEventListener('click', function(ev){ if(!ev.target.closest || !ev.target.closest('.mx-search')) dd.classList.remove('show'); });
+    function pick(x){ if(!x) return; inp.value = x.name; dd.classList.remove('show'); clr.style.display = 'block'; var p = pic(kind, x.name); picEl.style.display = p ? 'block' : 'none'; if(p){ picEl.src = p; picEl.setAttribute('data-big', x.name); } onPick(x); }
+    clr.onclick = function(){ inp.value = ''; clr.style.display = 'none'; picEl.style.display = 'none'; onPick(null); inp.focus(); };
+  }
+  setupSearch($('fSearch'), $('fDD'), $('fPic'), $('fClr'), function(){ return FL; }, 'flower', function(x, typing){ selF = x; if(x){ $('fRate').value = f3(x.rate); $('fQty').focus(); } else if(!typing){ $('fRate').value = ''; } if(typing) $('fPic').style.display = 'none'; paintPicked(); });
+  setupSearch($('cSearch'), $('cDD'), $('cPic'), $('cClr'), function(){ return CH; }, 'choc', function(x, typing){ selC = x; if(typing) $('cPic').style.display = 'none'; if(x){ setMode(x.whole ? 'pieces' : cMode); $('cAmt').focus(); } calcC(); paintPicked(); });
+
+  function paintPicked(){
+    $('fPicked').innerHTML = selF ? 'Picked: <b>' + e(selF.name) + '</b> · ' + f3(selF.rate) + ' BD/stem' + stTxtF(selF.name, Number($('fQty').value) || 0) : '';
+    $('fAdd').disabled = !(selF && Number($('fQty').value) > 0);
+    $('cPicked').innerHTML = selC ? 'Picked: <b>' + e(selC.name) + '</b> · ' + (selC.whole ? f3(selC.perKg) + ' BD per box/pc' : f3(selC.perKg) + ' BD/kg' + (selC.grams ? ' · ' + n3(selC.grams) + ' g per piece' : '')) + stTxtC(selC.name, curC()) : '';
+  }
+  $('fQty').addEventListener('input', paintPicked); $('fRate').addEventListener('input', paintPicked);
+
+  // ---------- chocolate amount -> price ----------
+  function setMode(m){ cMode = m; document.querySelectorAll('#cSeg button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-m') === m); }); $('cAmtL').textContent = m === 'pieces' ? 'How many pieces' : 'How many grams'; calcC(); }
+  document.querySelectorAll('#cSeg button').forEach(function(b){ b.onclick = function(){ if(selC && selC.whole && b.getAttribute('data-m') !== 'pieces'){ alert('This is sold per box/piece.'); return; } setMode(b.getAttribute('data-m')); }; });
+  var cTotTouched = false;
+  function curC(){ var n = Number($('cAmt').value); if(!selC || !(n > 0)) return null;
+    var kg = cMode === 'pieces' ? (n * selC.grams) / 1000 : n / 1000;
+    return { type:'choc', name:selC.name, code:selC.code, mode:cMode, amount:n, kg:Math.round(kg * 100000) / 100000, gpp:selC.grams, whole:selC.whole, total:Number(cTotTouched ? $('cTot').value : 0) || 0 }; }
+  function calcC(){
+    var n = Number($('cAmt').value);
+    if(!selC || !(n > 0)){ if(!cTotTouched) $('cTot').value = ''; $('cEq').textContent = ''; $('cAdd').disabled = true; paintPicked(); return; }
+    var kg = cMode === 'pieces' ? (n * selC.grams) / 1000 : n / 1000;
+    var tot = (selC.whole && cMode === 'pieces') ? n * selC.perKg : kg * selC.perKg;
+    if(!cTotTouched) $('cTot').value = f3(tot);
+    $('cEq').textContent = selC.whole ? '' : (cMode === 'pieces' ? (selC.grams ? '= ' + n3(kg * 1000) + ' g' : '') : (selC.grams ? '≈ ' + n3(n / selC.grams) + ' pcs' : ''));
+    $('cAdd').disabled = !(Number($('cTot').value) >= 0); paintPicked();
+  }
+  $('cAmt').addEventListener('input', function(){ cTotTouched = false; calcC(); });
+  $('cTot').addEventListener('input', function(){ cTotTouched = true; paintPicked(); });
+
+  // ---------- add ----------
+  $('fAdd').onclick = function(){ var q = Number($('fQty').value), r = Number($('fRate').value) || 0; if(!selF || !(q > 0)) return;
+    LIST.push({ type:'flower', name:selF.name, qty:q, rate:r, total:Math.round(q * r * 1000) / 1000 }); $('fQty').value = ''; $('fClr').click(); render(); };
+  $('cAdd').onclick = function(){ var l = curC(); if(!l) return; l.total = Number($('cTot').value) || 0; LIST.push(l); $('cAmt').value = ''; $('cTot').value = ''; cTotTouched = false; $('cClr').click(); render(); };
+  $('xAdd').onclick = function(){ var d = $('xDesc').value.trim(), q = Math.max(1, Number($('xQty').value) || 1), each = Number($('xPrice').value);
+    if(!d){ alert('Write the extra (e.g. Vase).'); return; } if(!($('xPrice').value !== '' && each >= 0)){ alert('Put the price.'); return; }
+    try{ LBExtrasPick.noteAdd($('xDesc'), each, 'flower'); }catch(x){}
+    LIST.push({ type:'extra', desc:d, qty:q, each:each, total:Math.round(q * each * 1000) / 1000 }); $('xDesc').value = ''; $('xQty').value = '1'; $('xPrice').value = ''; render(); };
+  try{ LBExtrasPick.attach($('xDesc'), $('xPrice')); }catch(x){}
+
+  // ---------- list + totals ----------
+  function qtyTxt(l){ if(l.type === 'flower') return l.qty + ' stem' + (l.qty == 1 ? '' : 's') + ' × ' + f3(l.rate); if(l.type === 'extra') return l.qty + ' × ' + f3(l.each);
+    return l.mode === 'pieces' ? l.amount + (l.whole ? ' box/pc' : ' pc' + (l.amount == 1 ? '' : 's')) + (l.gpp && !l.whole ? ' (' + n3(l.kg * 1000) + ' g)' : '') : n3(l.amount) + ' g' + (l.gpp ? ' (≈ ' + n3(l.amount / l.gpp) + ' pcs)' : ''); }
+  function sums(){ var s = { f:0, c:0, x:0 }; LIST.forEach(function(l){ s[l.type === 'flower' ? 'f' : l.type === 'choc' ? 'c' : 'x'] += Number(l.total) || 0; }); s.g = s.f + s.c + s.x; return s; }
+  function render(){
+    var html = '', groups = [['flower', '🌸 Flowers'], ['choc', '🍫 Chocolate'], ['extra', '🎀 Extras']];
+    groups.forEach(function(g){ var rows = LIST.map(function(l, i){ return [l, i]; }).filter(function(x){ return x[0].type === g[0]; }); if(!rows.length) return;
+      html += '<div class="mx-grp">' + g[1] + '</div>' + rows.map(function(x){ var l = x[0], i = x[1], nm = l.type === 'extra' ? l.desc : l.name, p = l.type === 'extra' ? '' : pic(l.type === 'flower' ? 'flower' : 'choc', nm);
+        var st = l.type === 'flower' ? stTxtF(l.name) : l.type === 'choc' ? stTxtC(l.name) : '';
+        var th = l.type === 'extra' && window.LBExtrasPick && LBExtrasPick.thumb ? LBExtrasPick.thumb(nm) : '';
+        return '<div class="mx-line">' + (p ? '<img src="' + e(p) + '" alt="" data-big="' + e(nm) + '">' : (th ? '<span>' + th + '</span>' : '<span class="ph">' + (l.type === 'flower' ? '🌸' : l.type === 'choc' ? '🍫' : '🎀') + '</span>')) +
+          '<div><div class="nm">' + e(nm) + '</div><div class="d">' + e(qtyTxt(l)) + '</div>' + st + '</div><div class="am">' + f3(l.total) + ' BD</div><button type="button" class="x" data-del="' + i + '" title="Remove">✕</button></div>'; }).join(''); });
+    $('mxList').innerHTML = html || '<div class="empty-note">Nothing yet — add flowers, chocolate or extras.</div>';
+    var s = sums(); $('tF').textContent = f3(s.f) + ' BD'; $('tC').textContent = f3(s.c) + ' BD'; $('tX').textContent = f3(s.x) + ' BD'; $('tG').textContent = f3(s.g) + ' BD';
+  }
+  $('mxList').addEventListener('click', function(ev){ var b = ev.target.closest('[data-del]'); if(!b) return; LIST.splice(Number(b.getAttribute('data-del')), 1); render(); paintPicked(); });
+
+  // ---------- print / share ----------
+  var lastSale = null, lastSig = '';
+  function sig(){ return JSON.stringify([branch(), LIST]); }
+  function lines(){ return LIST.map(function(l){ return (l.type === 'flower' ? '🌸 ' : l.type === 'choc' ? '🍫 ' : '🎀 ') + (l.type === 'extra' ? l.desc : l.name) + ' — ' + qtyTxt(l) + ' = ' + f3(l.total) + ' BD'; }); }
+  $('mxPrintBtn').onclick = function(){
+    if(!LIST.length){ alert('The list is empty.'); return; }
+    var s = sums(), when = new Date().toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }), sold = lastSale && sig() === lastSig ? lastSale : null;
+    $('mxPrint').innerHTML = '<h2 style="margin:0">Lalabella</h2><div style="font-size:12px;margin:2px 0 10px">' + e(branch() || '') + ' · ' + when + (sold ? ' · ' + e(sold) : '') + ($('mxCustomer').value ? '<br>For: ' + e($('mxCustomer').value) : '') + '</div>' +
+      '<table><thead><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + LIST.map(function(l){ return '<tr><td>' + (l.type === 'flower' ? '🌸 ' : l.type === 'choc' ? '🍫 ' : '🎀 ') + e(l.type === 'extra' ? l.desc : l.name) + '</td><td>' + e(qtyTxt(l)) + '</td><td style="text-align:right">' + f3(l.total) + ' BD</td></tr>'; }).join('') + '</tbody></table>' +
+      '<div style="margin-top:8px;font-size:12px">Flowers ' + f3(s.f) + ' · Chocolate ' + f3(s.c) + ' · Extras ' + f3(s.x) + '</div><div style="font-size:18px;font-weight:800;margin-top:6px">TOTAL ' + f3(s.g) + ' BD</div>';
+    document.body.classList.add('mxp'); var done = function(){ document.body.classList.remove('mxp'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done); setTimeout(function(){ window.print(); setTimeout(done, 1500); }, 60);
+  };
+  $('mxShare').onclick = function(){ if(!LIST.length){ alert('The list is empty.'); return; }
+    var s = sums(), t = '*Lalabella*' + ($('mxCustomer').value ? ' — ' + $('mxCustomer').value : '') + '\n' + lines().join('\n') + '\n*Total: ' + f3(s.g) + ' BD*';
+    if(navigator.share){ navigator.share({ text:t }).catch(function(){}); } else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); };
+
+  // ---------- ✓ Sold: both kinds leave the stock ----------
+  var busy = false, pendSig = '', pendKey = '';
+  $('mxSold').onclick = function(){
+    var b = branch(), src = $('mxSrc').value, ref = ($('mxRef').value || '').trim() || ($('mxCustomer').value || '').trim() || src;
+    if(!b){ alert('Choose the branch first (top of the page).'); $('mxBranch').focus(); return; }
+    if(!src){ alert('Choose the source first.'); $('mxSrc').focus(); return; }
+    var fl = LIST.filter(function(l){ return l.type === 'flower'; }), ch = LIST.filter(function(l){ return l.type === 'choc'; }), ex = LIST.filter(function(l){ return l.type === 'extra'; });
+    if(!fl.length && !ch.length){ alert('Add at least one flower or chocolate.'); return; }
+    if(sig() === lastSig && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastSale + '.\n\nPress OK ONLY if this is a NEW customer buying the same again.')) return;
+    if(!confirm('Source: ' + src + (ref !== src ? '\nSold to: ' + ref : '') + '\nTake this out of ' + b + ' stock?\n\n' + lines().join('\n'))) return;
+    if(busy) return; busy = true;
+    if(sig() !== pendSig){ pendSig = sig(); pendKey = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…'; $('mxRes').innerHTML = '';
+    var exList = ex.map(function(x){ return { desc: x.desc + (x.qty > 1 ? ' × ' + x.qty : ''), price: x.total }; });
+    var body = new URLSearchParams({ action:'saveMixedSale', token:tk(), reqKey:pendKey, branch:b, source:src, ref:ref, customer:($('mxCustomer').value || '').trim() || (ref === src ? src : ''),
+      flowers: JSON.stringify(fl.map(function(l){ return { name:l.name, qty:l.qty, rate:l.rate }; })),
+      chocs: JSON.stringify(ch.map(function(l){ return { name:l.name, code:l.code, amount:l.amount, mode:l.mode, kg:l.kg, gpp:l.gpp, total:l.total }; })),
+      extras: String(ex.reduce(function(s, x){ return s + x.total; }, 0)), extrasList: JSON.stringify(exList) });
+    fetch(SAPI, { method:'POST', body:body }).then(function(r){ return r.json(); }).then(function(d){
+      if(!d || !d.success){ $('mxRes').innerHTML = '<span class="warn">⚠ ' + e((d && d.error) || 'Not saved.') + '</span>'; return; }
+      lastSale = d.saleNo; lastSig = sig(); pendSig = ''; pendKey = '';
+      var sh = (d.short || []).map(function(s){ return '<div class="warn">⚠ ' + e(s.name) + ': needed ' + e(s.need) + ', the system has only ' + e(s.have) + '</div>'; }).join('');
+      $('mxRes').innerHTML = '<div class="ok">✓ ' + e(src) + (ref !== src ? ' · sold to ' + e(ref) : '') + ' — taken out of ' + e(d.branch || b) + ' stock · ' + e(d.saleNo) + (d.releaseNo ? ' · ' + e(d.releaseNo) : '') + '</div>' +
+        (d.chocError ? '<div class="warn">⚠ Chocolate was NOT saved: ' + e(d.chocError) + '</div>' : '') + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
+      $('mxRef').value = ''; $('mxSrc').value = ''; loadStock();
+    }).catch(function(){ $('mxRes').innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
+      .then(function(){ busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; });
+  };
+  setInterval(function(){ if(busy) return; var done = !!lastSig && sig() === lastSig; $('mxSold').textContent = done ? '✓ Already sold · ' + lastSale : '✓ Sold'; $('mxSold').style.background = done ? '#9aa79f' : ''; }, 800);
+  render();
+})();
+</script>
+<script>
+(function(){
+  const btn=document.getElementById('chocoNavToggle');
+  const backdrop=document.getElementById('chocoNavBackdrop');
+  const drawer=document.getElementById('chocoDrawer');
+  if(!btn||!backdrop||!drawer) return;
+  function openDrawer(){ drawer.classList.add('show'); backdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); backdrop.classList.remove('show'); }
+  btn.addEventListener('click', ()=> drawer.classList.contains('show') ? closeDrawer() : openDrawer());
+  backdrop.addEventListener('click', closeDrawer);
+
+  // Smart Home — goes to the Flower hub from a flower page, or the
+  // Chocolate hub from a chocolate page.
+  const homeLink=document.getElementById('chocoHomeLink');
+  if(homeLink){
+    const isFlowerPage = 'flower' === 'flower';
+    homeLink.href = isFlowerPage ? 'flower-tools.html' : 'index.html';
+    homeLink.textContent = isFlowerPage ? '🏠 Flower Tools' : '🏠 Chocolate Home';
+  }
+})();
+
+// ---------- Shared music player (same saved sound as the rest of
+// Lalabella on THIS device — set it once anywhere, it follows you
+// across every page on this same browser/phone). ----------
+(function(){
+  const audio = document.getElementById('chocoAudioPlayer');
+  const musicBtn = document.getElementById('chocoMusicToggleBtn');
+  const urlInput = document.getElementById('chocoMusicUrlInput');
+  const nowText = document.getElementById('chocoMusicNow');
+  const searchInput = document.getElementById('chocoMusicSearchInput');
+  const searchBtn = document.getElementById('chocoMusicSearchBtn');
+  if(!audio || !musicBtn) return;
+  let isPlaying = false;
+  let ytVideoId = null;
+
+  function extractYouTubeId(url){
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+    for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
+    return null;
+  }
+  function playYouTube(id){
+    document.getElementById('chocoYtPlayerWrap').innerHTML =
+      `<iframe width="200" height="150" src="https://www.youtube.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&controls=0" frameborder="0" allow="autoplay" allowfullscreen></iframe>`;
+  }
+  function stopYouTube(){ document.getElementById('chocoYtPlayerWrap').innerHTML = ''; }
+
+  function saveSoundChoice(url, isYouTube){
+    try{
+      localStorage.setItem('lalabellaSoundUrl', url);
+      localStorage.setItem('lalabellaSoundIsYouTube', isYouTube ? '1' : '0');
+    }catch(e){}
+  }
+
+  function loadSavedSound(){
+    try{
+      const savedUrl = localStorage.getItem('lalabellaSoundUrl');
+      const savedIsYT = localStorage.getItem('lalabellaSoundIsYouTube') === '1';
+      if(!savedUrl) return;
+      urlInput.value = savedUrl;
+      if(savedIsYT){
+        ytVideoId = extractYouTubeId(savedUrl);
+      } else {
+        audio.src = savedUrl;
+      }
+      // sessionStorage clears itself the moment the browser tab/window
+      // closes — exactly the reset point we want. If this session has
+      // already pressed ♫ once (on any page), every other page picks
+      // right back up automatically; otherwise it stays silent until
+      // tapped, same as a first-ever visit.
+      const sessionPlaying = sessionStorage.getItem('lalabellaMusicSessionPlaying') === '1';
+      if(sessionPlaying){
+        if(savedIsYT){ playYouTube(ytVideoId); } else { audio.play().catch(()=>{}); }
+        isPlaying = true;
+        musicBtn.textContent = '♫ Playing';
+        nowText.textContent = 'Playing: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl);
+      } else {
+        isPlaying = false;
+        musicBtn.textContent = '♫ Music';
+        nowText.textContent = 'Saved: ' + (savedUrl.length > 40 ? savedUrl.slice(0,40) + '…' : savedUrl) + ' (tap ♫ to play)';
+      }
+    }catch(e){}
+  }
+  loadSavedSound();
+
+  function applyUrl(url){
+    const id = extractYouTubeId(url);
+    if(id){
+      ytVideoId = id; audio.pause(); audio.removeAttribute('src');
+      playYouTube(id);
+      nowText.textContent = 'Now playing YouTube track';
+      isPlaying = true; musicBtn.textContent = '♫ Playing';
+      saveSoundChoice(url, true);
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    } else {
+      ytVideoId = null; stopYouTube();
+      audio.src = url;
+      nowText.textContent = 'Now loaded: ' + (url.length > 40 ? url.slice(0,40) + '…' : url);
+      saveSoundChoice(url, false);
+      audio.play().then(()=>{
+        isPlaying = true; musicBtn.textContent = '♫ Playing';
+        sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+      }).catch(()=>{ musicBtn.textContent = '♫ Tap to Play'; });
+    }
+  }
+
+  musicBtn.addEventListener('click', ()=>{
+    const url = urlInput.value.trim();
+    if(url && url !== localStorage.getItem('lalabellaSoundUrl')){
+      applyUrl(url);
+      return;
+    }
+    // No new URL typed — just toggle play/pause of whatever's loaded.
+    if(!audio.src && !ytVideoId) return;
+    if(isPlaying){
+      if(ytVideoId) stopYouTube(); else audio.pause();
+      musicBtn.textContent = '♫ Music'; isPlaying = false;
+      // Pausing here means "stop following me" — the next page won't
+      // resume on its own until ♫ is pressed again.
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '0');
+    } else {
+      if(ytVideoId) playYouTube(ytVideoId); else audio.play().catch(()=>{});
+      musicBtn.textContent = '♫ Playing'; isPlaying = true;
+      sessionStorage.setItem('lalabellaMusicSessionPlaying', '1');
+    }
+  });
+
+  // "Search" doesn't auto-pick a video (no API key set up) — it opens
+  // YouTube's own search in a new tab so you can pick the exact one,
+  // then paste that video's link back into the URL box above.
+  if(searchBtn && searchInput){
+    searchBtn.addEventListener('click', ()=>{
+      const q = searchInput.value.trim();
+      if(!q) return;
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank');
+    });
+    searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+  }
+})();
+</script>
+
+<script src="joyboy-bubble.js"></script>
+</body>
+</html>

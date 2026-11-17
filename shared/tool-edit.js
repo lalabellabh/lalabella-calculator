@@ -44,7 +44,7 @@
     ['flower-tools.html', '🌸', 'Flower Tools'], ['flower-dashboard.html', '📊', 'Flower Dashboard'], ['flower-receiving.html', '🛒', 'Flower Receiving'],
     ['flower-purchase.html', '🧾', 'Flower Purchase'], ['flower-stock-count.html', '📋', 'Flower Stock Count'], ['flower-catalog.html', '📚', 'Flower Catalog'],
     ['flower-arrangements.html', '💐', 'Flower Arrangements'], ['flower-transfer.html', '🔄', 'Flower Transfer'], ['flower-barcode.html', '🏷️', 'Flower Barcode'],
-    ['flower-calc.html', '🧮', 'Flower Calculator'], ['flower-admin.html', '🔐', 'Flower Admin', 1], ['flower-photos.html', '🖼️', 'Flower Photos', 1],
+    ['flower-calc.html', '🧮', 'Flower Calculator'], ['mixed-calc.html', '💐', 'Mixed Calc (Flower + Chocolate)'], ['flower-admin.html', '🔐', 'Flower Admin', 1], ['flower-photos.html', '🖼️', 'Flower Photos', 1],
     ['flower-odoo-import.html', '📥', 'Flower Odoo Price Import', 1], ['flower-guide.html', '📖', 'Flower Guide'],
     ['dashboard.html', '📊', 'Chocolate Dashboard'], ['chocolate-receiving.html', '📥', 'Chocolate Receiving'], ['chocolate-release.html', '📤', 'Chocolate Release'],
     ['stock-count.html', '📋', 'Chocolate Stock Count'], ['stock-approval.html', '✅', 'Stock Approval'], ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],

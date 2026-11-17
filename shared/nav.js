@@ -66,6 +66,7 @@
       ['flower-transfer.html', '🔄', 'Flower Transfer'],
       ['flower-barcode.html', '🏷️', 'Barcode'],
       ['flower-calc.html', '🧮', 'Flower Calculator'],
+      ['mixed-calc.html', '💐', 'Mixed Calc (Flower + Chocolate)'],
       ['calc-sales.html', '🧾', 'Calc Sales'],
       ['flower-admin.html', '🔐', 'Flower Admin', 'admin'],
       ['flower-photos.html', '🖼️', 'Flower Photos', 'admin'],
