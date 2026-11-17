@@ -50,6 +50,9 @@
   .modal{ position:fixed; inset:0; background:rgba(30,10,20,.45); display:none; align-items:flex-start; justify-content:center; z-index:2147483000; overflow:auto; padding:20px 10px; }
   .modal.show{ display:flex; }
   .modal .box{ background:#fff; border-radius:16px; width:min(680px,100%); padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .modal .box{ position:relative; } .modal .box > h3{ padding-right:44px; }
+  .mx{ position:absolute; top:10px; right:10px; width:34px; height:34px; border:1px solid var(--line); background:#fff; border-radius:10px; font-size:16px; font-weight:800; color:#5a3a46; cursor:pointer; z-index:2; }
+  .mx:hover{ background:#fbeef2; }
   .modal h3{ margin:0 0 6px; } .modal .hint{ font-size:12px; color:var(--dim); margin-bottom:6px; }
   .modal label{ display:block; font-size:11px; font-weight:700; color:var(--dim); margin:8px 0 3px; }
   .modal input,.modal textarea,.modal select{ width:100%; font:inherit; font-size:14px; border:1px solid #e3cfd6; border-radius:9px; padding:9px 10px; background:#fff; color:var(--ink); }
@@ -273,6 +276,10 @@
 </div></div>
 
 <div id="ckPrint"></div>
+<script>
+// Nov 17 2026: ✕ at the top of every window (same as Cancel)
+document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document.createElement('button'); x.type = 'button'; x.className = 'mx'; x.setAttribute('data-close', ''); x.title = 'Close'; x.textContent = '✕'; b.insertBefore(x, b.firstChild); });
+</script>
 <div class="lb" id="lb"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><img alt=""><div id="lbCap" style="color:#fff;font-size:14px;font-weight:600"></div><button type="button" id="lbDel" style="display:none;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:800;background:#c5483a;color:#fff;cursor:pointer">🗑️ Delete this picture</button></div></div>
 
 <script>
