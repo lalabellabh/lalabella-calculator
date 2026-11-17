@@ -86,7 +86,14 @@
     '.lbfs-modal button{margin-top:16px;background:#b0413e;color:#fff;border:0;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer}' +
     '.lbfs-lb{position:fixed;inset:0;z-index:2147483001;background:rgba(20,8,12,.82);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:18px;cursor:zoom-out}' +
     '.lbfs-lb.show{display:flex}.lbfs-lb img{max-width:min(92vw,640px);max-height:76vh;border-radius:14px;background:#fff}' +
-    '.lbfs-lb div{color:#fff;font-weight:600;font-size:16px;text-align:center}';
+    '.lbfs-lb div{color:#fff;font-weight:600;font-size:16px;text-align:center}' +
+    /* Nov 17 2026: compact — 📷 and the picture sit inside the flower name box (no extra rows) */
+    '.lbfs-wrap{position:relative;display:block}.lbfs-wrap>input,.lbfs-pad{padding-right:96px !important}.lbcx.lbfs-pad2>input{padding-right:118px !important}' +
+    '.lbfs-in{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;gap:6px;align-items:center;z-index:3}' +
+    '.lbfs-in img{width:32px;height:32px;border-radius:8px;object-fit:cover;cursor:zoom-in;background:#f6ecec;box-shadow:0 1px 3px rgba(0,0,0,.15);display:none}' +
+    '.lbfs-in img.on{display:block}' +
+    '.lbfs-cam{width:32px;height:32px;border:0;border-radius:8px;background:#2f2024;color:#fff;font-size:15px;cursor:pointer;padding:0;line-height:1}' +
+    '.lbfs-sub{font-size:11.5px;opacity:.75;margin:3px 2px 0;min-height:0}';
   document.head.appendChild(css);
 
   // ---------- big picture ----------
@@ -131,7 +138,54 @@
   }
 
   // ---------- the code box + picture card ----------
+  // compact: 📷 + picture inside the name box; the name box also takes a code (typed or scanned)
+  function attachInline(o) {
+    var nm = byId(o.nameId); if (!nm || nm.__lbfs) return; nm.__lbfs = 1;
+    nm.setAttribute('data-lbflw-nochip', '1');
+    var wrap = nm.parentNode;
+    if (!(wrap.classList && wrap.classList.contains('lbcx'))) { wrap = document.createElement('span'); wrap.className = 'lbfs-wrap'; nm.parentNode.insertBefore(wrap, nm); wrap.appendChild(nm); }
+    else wrap.classList.add('lbfs-pad2');
+    var inn = document.createElement('div'); inn.className = 'lbfs-in'; inn.setAttribute('data-lbflw-skip', '1');
+    inn.innerHTML = '<img alt="" title="Tap to see big">' + '<button type="button" class="lbfs-cam" title="Scan barcode">📷</button>';
+    wrap.appendChild(inn);
+    if (wrap.classList.contains('lbcx')) inn.style.right = '38px';
+    var sub = document.createElement('div'); sub.className = 'lbfs-sub'; sub.setAttribute('data-lbflw-skip', '1');
+    var msg = document.createElement('div'); msg.className = 'lbfs-msg';
+    wrap.parentNode.insertBefore(sub, wrap.nextSibling); sub.parentNode.insertBefore(msg, sub.nextSibling);
+    nm.placeholder = (nm.placeholder || 'e.g. Rose') + ' — or code / 📷 scan';
+    var img = inn.querySelector('img'), cur = '';
+    function place() { inn.style.top = (nm.offsetTop + nm.offsetHeight / 2) + 'px'; }
+    function show(it) {
+      var name = it ? it['Flowers'] : ''; cur = name;
+      var ph = name ? photoOf(name) : '';
+      if (ph) { img.src = ph; img.classList.add('on'); img.setAttribute('data-n', name); } else { img.classList.remove('on'); img.removeAttribute('src'); }
+      sub.textContent = it ? [it['Item Code'], it['Origin'], it['Unit']].filter(Boolean).join(' · ') : '';
+      place();
+    }
+    img.onerror = function () { img.classList.remove('on'); };
+    img.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); bigPic(img.getAttribute('src'), cur); });
+    function lookup(code) {
+      msg.style.display = 'none';
+      var it = findByCode(code);
+      if (!it) { msg.textContent = 'No flower found for code: ' + code; msg.style.display = 'block'; return; }
+      show(it); try { o.onPick(it); } catch (e) { console.error(e); }
+    }
+    inn.querySelector('.lbfs-cam').addEventListener('click', function () { scan(function (code) { ready(function () { lookup(code); }); }); });
+    function follow() {
+      msg.style.display = 'none';
+      var v = nm.value.trim(); if (!v) { show(null); return; }
+      var it = findByName(v);
+      if (!it) { var c = findByCode(v); if (c) { show(c); try { o.onPick(c); } catch (e) {} return; } }
+      show(it || null);
+    }
+    nm.addEventListener('input', function () { ready(follow); }); nm.addEventListener('change', function () { ready(follow); });
+    nm.addEventListener('keydown', function (e) { if (e.key === 'Enter' && findByCode(nm.value)) { e.preventDefault(); ready(follow); } });
+    setInterval(function () { place(); if (nm.value.trim() && norm(nm.value) !== norm(cur)) ready(follow); else if (!nm.value.trim() && cur) show(null); }, 800);
+    place(); ready(follow);
+  }
+
   function attach(o) {
+    if (o.nameId && byId(o.nameId)) return attachInline(o);
     var anchor = byId(o.anchorId); if (!anchor || anchor.__lbfs) return; anchor.__lbfs = 1;
     var box = document.createElement('div'); box.className = 'lbfs'; box.setAttribute('data-lbflw-skip', '1'); box.setAttribute('data-lbitm-skip', '1');
     box.innerHTML =
