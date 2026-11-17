@@ -302,7 +302,9 @@ Deno.serve(async (req) => {
       for (const k of Object.keys(by)) {
         const x = by[k]; let now = 0;
         if (kind === 'flower') now = (await flowerAvailable(x.br, [x.it]))[x.it] || 0; else now = (await chocBranchStock(x.br, x.it))[x.un] || 0;
-        mv.push({ kind, branch: x.br, item: x.it, unit: x.un, before: r3(now - x.q), change: x.q, after: r3(now), ref: txt(p.ref, 60) || null, action: 'Received', by: who(u) });
+        // Nov 17 2026: also used for chocolate transfers (dir out = taken out of this branch)
+        const out = p.dir === 'out';
+        mv.push({ kind, branch: x.br, item: x.it, unit: x.un, before: r3(out ? now + x.q : now - x.q), change: out ? -x.q : x.q, after: r3(now), ref: txt(p.ref, 60) || null, action: txt(p.act, 40) || 'Received', by: who(u) });
       }
       await logMoves(mv); return json({ success: true, logged: mv.length });
     }

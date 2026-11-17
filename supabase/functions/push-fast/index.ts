@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return json({ success: false, error: 'Bad request.' }, 400); }
 
   try {
-    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify' || p.action === 'saudiNotify') {
+    if (p.action === 'chatNotify' || p.action === 'orderNotify' || p.action === 'approvalNotify' || p.action === 'saudiNotify' || p.action === 'branchNotify') {
       const c = await config();
       if (!p.key || String(p.key) !== c.internal_key) return json({ success: false, error: 'Unauthorized.' }, 401);
 
@@ -152,6 +152,14 @@ Deno.serve(async (req) => {
         const toBh = p.to === 'bahrain';
         const subs = await subsFor(null, Number(p.excludeUserId) || 0, toBh ? 'saudiBh' : 'saudi', toBh ? clip(String(p.branch || ''), 40) : '');
         const r = await sendTo(subs, { title: clip(String(p.title || '📦 New transfer to Saudi'), 80), body: clip(String(p.body || ''), 160), url: 'item-saudi.html', tag: 'saudi-' + clip(String(p.batch || ''), 40) });
+        return json({ success: true, ...r });
+      }
+
+      if (p.action === 'branchNotify') {
+        // Nov 17 2026: e.g. chocolate transfer on the way -> Admins + staff of that branch
+        const pages = ['chocolate-release.html', 'item-saudi.html', 'flower-transfer.html'];
+        const subs = await subsFor(null, Number(p.excludeUserId) || 0, 'saudiBh', clip(String(p.branch || ''), 40));
+        const r = await sendTo(subs, { title: clip(String(p.title || 'Lalabella'), 80), body: clip(String(p.body || ''), 160), url: pages.indexOf(String(p.url)) !== -1 ? String(p.url) : 'index.html', tag: 'branch-' + clip(String(p.branch || ''), 30) });
         return json({ success: true, ...r });
       }
 

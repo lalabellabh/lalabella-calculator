@@ -352,6 +352,12 @@ body{background:
 
   <button class="refresh-link" id="refreshBtn">↻ Refresh Data</button>
 
+  <!-- Nov 17 2026: chocolate transfers between branches — on the way until the other branch ticks Receive -->
+  <div class="card" id="trCard" style="display:none">
+    <div class="card-title">🚚 Chocolate transfers <span id="trCount" style="font-size:12px;font-weight:400;color:var(--ink-dim)"></span></div>
+    <div id="trList"></div>
+  </div>
+
   <div class="card">
     <div class="card-title">Release Details</div>
 
@@ -554,7 +560,7 @@ body{background:
     'Wholesale': 'Bulk order, lower price — for resellers or large quantities.',
     'Internal Use': 'Used within the business (e.g. samples, kitchen, promo) — not sold.',
     'Damage': 'Damaged or expired item, no longer sellable.',
-    'Transfer': 'Internal stock movement to another branch.',
+    'Transfer': 'Send stock to another branch. It is "On the way" until that branch ticks Receive, then it is added there.',
     'Other': 'A different kind of transaction not on this list.'
   };
 
@@ -1068,7 +1074,8 @@ body{background:
           preparedByNames.map(n => `<option value="${lbEsc(n)}"></option>`).join('');
       }
 
-      alert('Release saved: ' + data.releaseNo);
+      alert(transactionType === 'Transfer' ? 'Transfer saved: ' + data.releaseNo + '\n\nIt is now "On the way". ' + toBranch + ' will get a notification and must tick Receive — then it is added to ' + toBranch + '.' : 'Release saved: ' + data.releaseNo);
+      try{ window.lbLoadTransfers && window.lbLoadTransfers(); }catch(_){}
       releaseDisp = '';
       cart = [];
       extras = [];
@@ -1517,5 +1524,93 @@ body{background:
 
 
 <script src="joyboy-bubble.js"></script>
+<div id="trModal" style="display:none;position:fixed;inset:0;background:rgba(30,10,20,.5);z-index:2147483000;overflow:auto;padding:20px 10px;align-items:flex-start;justify-content:center">
+  <div style="background:#fff;color:#2a1d23;border-radius:16px;width:min(640px,100%);padding:16px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <button type="button" id="trX" title="Close" style="position:absolute;top:10px;right:10px;width:34px;height:34px;border:1px solid #e6d4da;background:#fff;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">✕</button>
+    <h3 style="margin:0 44px 4px 0;font-size:18px" id="trTitle">✅ Receive chocolate</h3>
+    <div id="trInfo" style="font-size:12.5px;color:#7a6670;margin-bottom:8px"></div>
+    <button type="button" id="trAll" style="font:inherit;font-size:12.5px;font-weight:700;border:1px solid #e6d4da;background:#fff;border-radius:9px;padding:6px 11px;cursor:pointer">✓ Tick all</button>
+    <div id="trItems" style="border:1px solid #f0e2e6;border-radius:12px;margin-top:8px;max-height:46vh;overflow:auto"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+      <div><label style="font-size:12px;font-weight:700">Received by</label><input id="trBy" style="width:100%"></div>
+      <div><label style="font-size:12px;font-weight:700">Note (optional)</label><input id="trNote" style="width:100%" placeholder="e.g. 1 box damaged"></div>
+    </div>
+    <div id="trMsg" style="color:#b2402e;font-size:13px;min-height:18px;margin-top:6px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button type="button" id="trCancel" style="font:inherit;padding:9px 16px;border-radius:10px;border:1px solid #e6d4da;background:#fff;cursor:pointer">Cancel</button><button type="button" id="trSave" style="font:inherit;font-weight:800;padding:9px 16px;border-radius:10px;border:0;background:#2f7a4f;color:#fff;cursor:pointer">Save received</button></div>
+  </div>
+</div>
+<script>
+(function(){
+  var API = LB_CONFIG.CHOCOLATE_FAST_API, TR = [], CUR = null;
+  function tk(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+  function me(){ try{ return window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){ return {}; } }
+  function isAdmin(){ return String(me().role || '').toLowerCase() === 'admin'; }
+  function e(v){ return lbEsc(v); }
+  function q3(n){ n = Number(n) || 0; return String(Math.round(n * 1000) / 1000); }
+  function fd(d){ try{ return d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : ''; }catch(x){ return d || ''; } }
+  function branch(){ try{ return currentBranch; }catch(x){ return ''; } }
+  function canRecv(t){ return t.status === 'on_way' && (isAdmin() || String(me().branch || '') === t.to); }
+  function render(){
+    var b = branch(), open = TR.open || [], done = (TR.done || []).slice(0, 5);
+    var mine = open.filter(function(t){ return t.to === b || t.from === b; });
+    var card = document.getElementById('trCard');
+    if(!mine.length && !done.filter(function(t){ return t.to === b || t.from === b; }).length){ card.style.display = 'none'; return; }
+    card.style.display = '';
+    var inc = mine.filter(function(t){ return t.to === b; }).length;
+    document.getElementById('trCount').textContent = inc ? '· ' + inc + ' coming to ' + b : '';
+    function row(t){
+      var stTxt = { on_way:'🚚 On the way', received:'✅ Received', partial:'⚠️ Received (some missing)', cancelled:'✖ Cancelled' }[t.status] || t.status;
+      var col = { on_way:'#2f6f9a', received:'#2f7a4f', partial:'#a8560b', cancelled:'#888' }[t.status];
+      var its = (t.items || []).map(function(it){ return '<div style="font-size:12.5px">' + (t.status === 'on_way' ? '☐' : (it.got ? '✅' : '❌')) + ' ' + e(it.chocolateName) + ' <span style="color:#7a6670">· batch ' + e(it.batch) + '</span> — <b>' + q3(it.qty) + ' ' + e(it.unit) + '</b>' + (t.status !== 'on_way' && it.got && Number(it.qtyReceived) < Number(it.qty) ? ' <b style="color:#a8560b">(got ' + q3(it.qtyReceived) + ')</b>' : '') + (it.recNote ? ' <span style="color:#7a6670">· ' + e(it.recNote) + '</span>' : '') + '</div>'; }).join('');
+      return '<div style="border:1px solid #f0e2e6;border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff">' +
+        '<div style="font-weight:800;font-size:14px">' + e(t.releaseNo) + ' · ' + e(t.from) + ' → ' + e(t.to) + ' <span style="font-size:11px;font-weight:800;color:' + col + '">' + stTxt + '</span></div>' +
+        '<div style="font-size:12px;color:#7a6670;margin:2px 0 6px">' + fd(t.date) + ' · sent by ' + e(t.sentBy) + (t.note ? ' · ' + e(t.note) : '') + (t.status !== 'on_way' && t.receivedBy ? ' · received by ' + e(t.receivedBy) : '') + (t.receivedNote ? ' · ' + e(t.receivedNote) : '') + '</div>' + its +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + (canRecv(t) ? '<button type="button" data-trrecv="' + t.id + '" style="font:inherit;font-weight:800;border:0;border-radius:9px;padding:8px 14px;background:#2f7a4f;color:#fff;cursor:pointer">✅ Receive</button>' : (t.status === 'on_way' && t.to !== b ? '<span style="font-size:12px;color:#7a6670">Waiting for ' + e(t.to) + ' to receive</span>' : '')) +
+        (isAdmin() && t.status === 'on_way' ? '<button type="button" data-trcancel="' + t.id + '" style="font:inherit;border:1px solid #e6d4da;border-radius:9px;padding:7px 12px;background:#fff;color:#b2402e;cursor:pointer">✖ Cancel (stock goes back)</button>' : '') + '</div></div>';
+    }
+    var recent = done.filter(function(t){ return t.to === b || t.from === b; });
+    document.getElementById('trList').innerHTML = (mine.length ? mine.map(row).join('') : '<div style="font-size:12.5px;color:#7a6670;margin-bottom:6px">Nothing on the way for ' + e(b) + '.</div>') +
+      (recent.length ? '<details style="margin-top:4px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700">Recent (' + recent.length + ')</summary>' + recent.map(row).join('') + '</details>' : '');
+  }
+  window.lbLoadTransfers = function(){
+    fetch(API + '?' + new URLSearchParams({ action:'getTransfers', token: tk(), _ts: Date.now() }), { headers:{ apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })
+      .then(function(r){ return r.json(); }).then(function(d){ if(d && d.success){ TR = d; render(); } }).catch(function(){});
+  };
+  document.getElementById('branchTabs').addEventListener('click', function(){ setTimeout(render, 0); });
+  document.getElementById('refreshBtn').addEventListener('click', function(){ window.lbLoadTransfers(); });
+  var M = document.getElementById('trModal');
+  function close(){ M.style.display = 'none'; }
+  document.getElementById('trX').onclick = close; document.getElementById('trCancel').onclick = close;
+  document.getElementById('trAll').onclick = function(){ M.querySelectorAll('input[data-tri]').forEach(function(c){ c.checked = true; }); };
+  document.addEventListener('click', function(ev){
+    var r = ev.target.closest && ev.target.closest('[data-trrecv]'), c = ev.target.closest && ev.target.closest('[data-trcancel]');
+    if(r){ CUR = (TR.open || []).find(function(t){ return String(t.id) === r.getAttribute('data-trrecv'); }); if(!CUR) return;
+      document.getElementById('trTitle').textContent = '✅ Receive chocolate in ' + CUR.to;
+      document.getElementById('trInfo').textContent = CUR.releaseNo + ' · from ' + CUR.from + ' · sent ' + fd(CUR.date) + ' by ' + CUR.sentBy + '. Tick what arrived; change the qty if less came.';
+      document.getElementById('trItems').innerHTML = (CUR.items || []).map(function(it, i){
+        return '<div style="display:grid;grid-template-columns:26px 1fr 90px;gap:6px 8px;align-items:center;padding:8px 10px;border-top:1px solid #f6ecef;font-size:13px">' +
+          '<input type="checkbox" data-tri="' + i + '" style="width:22px;height:22px"><span>' + e(it.chocolateName) + '<div style="font-size:11.5px;color:#7a6670">batch ' + e(it.batch) + (it.expiry ? ' · exp ' + e(fd(it.expiry)) : '') + ' · sent ' + q3(it.qty) + ' ' + e(it.unit) + '</div></span>' +
+          '<input type="number" min="0" step="any" inputmode="decimal" data-trq="' + i + '" value="' + q3(it.qty) + '" style="padding:7px">' +
+          '<input data-trn="' + i + '" placeholder="Note (optional)" style="grid-column:2/4;padding:6px 8px;font-size:12.5px"></div>'; }).join('');
+      document.getElementById('trBy').value = me().fullName || me().full_name || me().username || ''; document.getElementById('trNote').value = ''; document.getElementById('trMsg').textContent = '';
+      M.style.display = 'flex'; return; }
+    if(c){ if(!confirm('Cancel this transfer? The chocolate goes back to the stock of the sending branch.')) return;
+      fetch(API + '?' + new URLSearchParams({ action:'cancelTransfer', id: c.getAttribute('data-trcancel'), token: tk() }), { headers:{ apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })
+        .then(function(x){ return x.json(); }).then(function(d){ if(!d || d.error){ alert((d && d.error) || 'Not cancelled.'); return; } window.lbLoadTransfers(); try{ loadData(); }catch(x){} }); }
+  });
+  document.getElementById('trSave').onclick = function(){
+    if(!CUR) return;
+    var ticks = (CUR.items || []).map(function(it, i){ return { i:i, got: M.querySelector('[data-tri="' + i + '"]').checked, qty: M.querySelector('[data-trq="' + i + '"]').value, note: M.querySelector('[data-trn="' + i + '"]').value }; });
+    var miss = ticks.filter(function(t){ return !t.got; }).length;
+    if(miss && !confirm(miss + ' item(s) are NOT ticked — they will be saved as missing. Continue?')) return;
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    fetch(API + '?' + new URLSearchParams({ action:'receiveTransfer', id: CUR.id, items: JSON.stringify(ticks), receivedBy: document.getElementById('trBy').value, note: document.getElementById('trNote').value, token: tk() }), { headers:{ apikey: LB_CONFIG.SUPABASE_PUBLISHABLE_KEY } })
+      .then(function(x){ return x.json(); }).then(function(d){ if(!d || d.error){ document.getElementById('trMsg').textContent = (d && d.error) || 'Not saved.'; return; } close(); window.lbLoadTransfers(); try{ loadData(); }catch(x){} })
+      .catch(function(){ document.getElementById('trMsg').textContent = 'Connection problem. Please try again.'; })
+      .then(function(){ btn.disabled = false; btn.textContent = 'Save received'; });
+  };
+  window.lbLoadTransfers();
+})();
+</script>
 </body>
 </html>

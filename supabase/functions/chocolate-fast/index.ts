@@ -65,7 +65,7 @@ async function sbRpc(fn: string, args: Record<string, unknown>) {
 async function isValidToken(token: string) {
   const t = String(token || '').trim();
   if (!t) return null;
-  const rows = await sbGet('users', `select=status,token_created,role,full_name,username&limit=1&token=eq.${encodeURIComponent(t)}`);
+  const rows = await sbGet('users', `select=id,status,token_created,role,full_name,username,branch&limit=1&token=eq.${encodeURIComponent(t)}`);
   const u = rows && rows[0];
   if (!u) return null;
   if (String(u.status || 'Active') === 'Inactive') return null;
@@ -73,7 +73,7 @@ async function isValidToken(token: string) {
   return (!!created && Date.now() - created <= SESSION_MAX_AGE_MS) ? u : null;
 }
 // Security audit 2026-11-10: these actions are Admin only on the server (not only on the page).
-const ADMIN_ONLY = new Set(['approveCount', 'rejectCount', 'requestRecount', 'addChocolateItem', 'updateChocolateItem', 'updateChocolateRates', 'backfillItemList', 'checkFixBarcodes', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving']);
+const ADMIN_ONLY = new Set(['cancelTransfer', 'approveCount', 'rejectCount', 'requestRecount', 'addChocolateItem', 'updateChocolateItem', 'updateChocolateRates', 'backfillItemList', 'checkFixBarcodes', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving']);
 
 const DUP_WRITE_ACTIONS = new Set([
   'saveRelease', 'addEntry', 'editEntry', 'addInitialStock', 'saveCountSession',
@@ -697,8 +697,13 @@ async function saveRelease(p: Record<string, any>) {
   for (const it of items) {
     const row = batchById[String(it.databaseId)];
     if (!row) return { error: 'Batch not found for ' + it.chocolateName };
+    // Nov 17 2026: receiving that is not approved yet is not stock yet (Bench's rule)
+    if (String(row.approval_status || 'Approved') !== 'Approved') return { error: it.chocolateName + ' (batch ' + (row.batch_no || '') + ') is not approved yet. Approve the receiving first.' };
+    if (String(row.branch || '') !== String(branch || '')) return { error: it.chocolateName + ' batch is not in ' + branch + '. Refresh and pick again.' };
     if (Number(it.qty) > Number(row.current_stock)) return { error: 'Insufficient stock for ' + it.chocolateName };
   }
+  const isTransfer = transactionType === 'Transfer' && toBranch && toBranch !== branch;
+  const moving: any[] = [];
   const counter = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Release No', start_at: 1 });
   const releaseNo = 'REL-' + String(counter).padStart(6, '0');
   for (const it of items) {
@@ -706,20 +711,97 @@ async function saveRelease(p: Record<string, any>) {
     const src = batchById[String(it.databaseId)];
     const newUsed = Number(src.qty_used) + Number(it.qty), newStock = Number(src.current_stock) - Number(it.qty);
     await sbPatch('chocolate_database', `id=eq.${it.databaseId}`, { qty_used: newUsed, current_stock: newStock });
-    if (transactionType === 'Transfer' && toBranch && toBranch !== branch) {
-      const destRows = await sbGet('chocolate_database', `select=id,current_stock&chocolate_name=eq.${encodeURIComponent(it.chocolateName)}&batch_no=eq.${encodeURIComponent(it.batch)}&branch=eq.${encodeURIComponent(toBranch)}&approval_status=eq.Approved`);
-      if (destRows.length) { await sbPatch('chocolate_database', `id=eq.${destRows[0].id}`, { current_stock: Number(destRows[0].current_stock) + Number(it.qty) }); }
-      else {
-        const branchPrefixMap: Record<string, string> = { ModaMall: 'MM', Hamala: 'HM', Galali: 'GL' };
-        const transferCounter = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Chocolate ID (Transfer)', start_at: 1 });
-        const newID = (branchPrefixMap[toBranch] || 'XX') + '-CHO' + String(transferCounter).padStart(6, '0');
-        await sbPost('chocolate_database', [{ legacy_id: newID, chocolate_name: it.chocolateName, batch_no: it.batch, branch: toBranch, product_code: it.productCode || '', brand: src.brand || '', category: src.category || '', expiry_date: src.expiry_date || null, current_stock: Number(it.qty), qty_used: 0, status: 'GOOD', unit: src.unit || '', price_per_kg: src.price_per_kg ?? null, price_per_piece: src.price_per_piece ?? null, weight_per_piece: src.weight_per_piece ?? null }]);
-      }
-    }
+    // Nov 17 2026: a Transfer is "on the way" — the other branch ticks Receive, then it is added there (receiveTransfer)
+    if (isTransfer) moving.push({ chocolateName: it.chocolateName, batch: it.batch, qty: Number(it.qty), unit: src.unit || it.unit || '', productCode: it.productCode || src.product_code || '',
+      brand: src.brand || '', category: src.category || '', expiry: src.expiry_date || null, pricePerKg: src.price_per_kg ?? null, pricePerPiece: src.price_per_piece ?? null,
+      weightPerPiece: src.weight_per_piece ?? null, srcId: src.id });
+  }
+  if (isTransfer && moving.length) {
+    const me = p._me || {};
+    await sbPost('chocolate_transfers', [{ release_no: releaseNo, from_branch: branch, to_branch: toBranch, release_date: releaseDate || null, items: moving, status: 'on_way', sent_by: preparedBy || String(me.full_name || me.username || ''), sent_by_id: me.id || null, note: remarks || null }]);
+    await logChocMoves(p.token, branch, moving.map((m) => ({ item: m.chocolateName, unit: m.unit, qty: m.qty })), 'out', 'Transfer out → ' + toBranch, releaseNo);
+    await branchPush('🍫 Chocolate on the way to ' + toBranch, moving.length + ' item(s) from ' + branch + ' · ' + releaseNo + ' — tick Receive when it arrives', toBranch, Number(me.id) || 0);
   }
   const now = new Date().toISOString();
   for (const ex of extras) { await sbPost('chocolate_release_extras', [{ release_no: releaseNo, description: ex.description, amount: Number(ex.amount), added_at: now, added_by: preparedBy }]); }
   return { success: true, releaseNo };
+}
+
+// ---------- Chocolate transfers between branches (Nov 17 2026) ----------
+async function logChocMoves(token: string, branch: string, lines: any[], dir: 'in' | 'out', act: string, ref: string) {
+  try {
+    await Promise.race([fetch(`${SB_URL}/functions/v1/calcsale-fast`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logReceived', token, kind: 'chocolate', dir, act, ref, lines: JSON.stringify(lines.map((l) => ({ branch, item: l.item, unit: l.unit, qty: l.qty }))) }) }),
+      new Promise((r) => setTimeout(r, 6000))]);
+  } catch (_) { /* never block */ }
+}
+async function branchPush(title: string, body: string, branch: string, excludeUserId: number) {
+  try {
+    const cfg = await sbGet('push_config', 'select=internal_key&id=eq.1&limit=1');
+    const key = cfg && cfg[0] && cfg[0].internal_key; if (!key) return;
+    await Promise.race([fetch(`${SB_URL}/functions/v1/push-fast`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'branchNotify', key, title, body, branch, excludeUserId, url: 'chocolate-release.html' }) }), new Promise((r) => setTimeout(r, 6000))]);
+  } catch (_) { /* never block */ }
+}
+function mapTransfer(t: any) {
+  return { id: t.id, releaseNo: t.release_no, from: t.from_branch, to: t.to_branch, date: t.release_date, items: t.items || [], status: t.status, sentBy: t.sent_by || '', note: t.note || '',
+    receivedBy: t.received_by || '', receivedNote: t.received_note || '', receivedAt: t.received_at, createdAt: t.created_at };
+}
+async function getTransfers(p: Record<string, any>) {
+  const b = String(p.branch || '');
+  const f = b ? `&or=(to_branch.eq.${encodeURIComponent(b)},from_branch.eq.${encodeURIComponent(b)})` : '';
+  const open = await sbGet('chocolate_transfers', `select=*&status=eq.on_way${f}&order=id.desc&limit=50`);
+  const done = await sbGet('chocolate_transfers', `select=*&status=neq.on_way${f}&order=id.desc&limit=10`);
+  return { success: true, open: open.map(mapTransfer), done: done.map(mapTransfer) };
+}
+async function receiveTransfer(p: Record<string, any>) {
+  const me = p._me || {}, isAdm = String(me.role || '') === 'Admin';
+  const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { error: 'Invalid.' };
+  const t = (await sbGet('chocolate_transfers', `select=*&id=eq.${id}&limit=1`))[0]; if (!t) return { error: 'Transfer not found. Refresh.' };
+  if (t.status !== 'on_way') return { error: 'This transfer was already received.' };
+  if (!isAdm && String(me.branch || '') !== String(t.to_branch)) return { error: 'Only ' + t.to_branch + ' (or an Admin) can receive this.' };
+  let ticks: any[] = []; try { ticks = JSON.parse(String(p.items || '[]')); } catch { return { error: 'Bad list.' }; }
+  const items: any[] = Array.isArray(t.items) ? t.items : [];
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  const by = String(p.receivedBy || '').trim().slice(0, 60) || String(me.full_name || me.username || '');
+  const today = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+  let full = true; const added: any[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i], tk = ticks.find((x: any) => Number(x.i) === i) || {};
+    const got = !!tk.got, q = got ? Math.max(0, Math.min(Number(it.qty) || 0, Number(tk.qty) >= 0 && tk.qty !== '' && tk.qty != null ? Number(tk.qty) : Number(it.qty) || 0)) : 0;
+    it.got = got; it.qtyReceived = r3(q); it.recNote = String(tk.note || '').slice(0, 200);
+    if (!got || q < (Number(it.qty) || 0)) full = false;
+    if (q <= 0) continue;
+    const dest = await sbGet('chocolate_database', `select=id,current_stock,qty_received&chocolate_name=eq.${encodeURIComponent(it.chocolateName)}&batch_no=eq.${encodeURIComponent(it.batch)}&branch=eq.${encodeURIComponent(t.to_branch)}&approval_status=eq.Approved&limit=1`);
+    if (dest.length) await sbPatch('chocolate_database', `id=eq.${dest[0].id}`, { current_stock: r3(Number(dest[0].current_stock) + q), qty_received: r3(Number(dest[0].qty_received || 0) + q) });
+    else {
+      const pre: Record<string, string> = { ModaMall: 'MM', Hamala: 'HM', Galali: 'GL' };
+      const c = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Chocolate ID (Transfer)', start_at: 1 });
+      await sbPost('chocolate_database', [{ legacy_id: (pre[t.to_branch] || 'XX') + '-CHO' + String(c).padStart(6, '0'), receive_date: today, delivery_note_no: 'TRANSFER ' + t.release_no,
+        supplier: 'Transfer from ' + t.from_branch, chocolate_name: it.chocolateName, batch_no: it.batch, branch: t.to_branch, product_code: it.productCode || '', brand: it.brand || '', category: it.category || '',
+        expiry_date: it.expiry || null, qty_received: q, current_stock: q, qty_used: 0, status: 'GOOD', unit: it.unit || '', price_per_kg: it.pricePerKg ?? null, price_per_piece: it.pricePerPiece ?? null,
+        weight_per_piece: it.weightPerPiece ?? null, approval_status: 'Approved', approved_by: by, approved_at: new Date().toISOString(), created_by: by, remarks: 'Received from ' + t.from_branch + ' (' + t.release_no + ')' }]);
+    }
+    added.push({ item: it.chocolateName, unit: it.unit, qty: q });
+  }
+  await sbPatch('chocolate_transfers', `id=eq.${id}`, { items, status: full ? 'received' : 'partial', received_by: by, received_note: String(p.note || '').slice(0, 300) || null,
+    received_saved_by: String(me.full_name || me.username || ''), received_at: new Date().toISOString() });
+  if (added.length) await logChocMoves(p.token, t.to_branch, added, 'in', 'Transfer in ← ' + t.from_branch, t.release_no);
+  const nGot = items.filter((x: any) => x.got).length;
+  await branchPush((full ? '✅' : '⚠️') + ' Chocolate received in ' + t.to_branch, nGot + ' of ' + items.length + ' received · ' + t.release_no + ' · by ' + by, t.from_branch, Number(me.id) || 0);
+  return { success: true, full, got: nGot, of: items.length };
+}
+async function cancelTransfer(p: Record<string, any>) {
+  const id = Number(p.id); const t = (await sbGet('chocolate_transfers', `select=*&id=eq.${id}&limit=1`))[0];
+  if (!t) return { error: 'Not found.' }; if (t.status !== 'on_way') return { error: 'Already received — cannot cancel.' };
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  for (const it of (t.items || [])) {
+    const src = (await sbGet('chocolate_database', `select=id,current_stock,qty_used&id=eq.${Number(it.srcId)}&limit=1`))[0];
+    if (src) await sbPatch('chocolate_database', `id=eq.${src.id}`, { current_stock: r3(Number(src.current_stock) + Number(it.qty)), qty_used: r3(Math.max(0, Number(src.qty_used || 0) - Number(it.qty))) });
+  }
+  await sbPatch('chocolate_transfers', `id=eq.${id}`, { status: 'cancelled', received_note: 'Cancelled by Admin — stock returned to ' + t.from_branch, received_at: new Date().toISOString() });
+  await logChocMoves(p.token, t.from_branch, (t.items || []).map((m: any) => ({ item: m.chocolateName, unit: m.unit, qty: m.qty })), 'in', 'Transfer cancelled (back)', t.release_no);
+  return { success: true };
 }
 
 async function saveDisplay(p: Record<string, any>) {
@@ -754,6 +836,7 @@ Deno.serve(async (req) => {
     const isAdmin = String(me.role || '') === 'Admin';
     const unlocking = action === 'setLock' && String(p.value || '').trim() !== 'Yes';
     if ((ADMIN_ONLY.has(action) || unlocking) && !isAdmin) return json({ error: 'Admin only. Please ask an Admin.' }, 403);
+    p._me = me;
     // The approver name always comes from the login, not from the page.
     if (action === 'approveCount') p.approvedBy = String(me.full_name || me.username || '');
 
@@ -779,7 +862,7 @@ Deno.serve(async (req) => {
       const itemRows = await sbGet('chocolate_item_list', `select=grams,packaging_type&chocolate_name=eq.${encodeURIComponent(p.chocolateName)}`);
       const catalogGrams = itemRows.length ? (Number(itemRows[0].grams) || 0) : 0;
       const packagingType = itemRows.length ? (itemRows[0].packaging_type || 'Piece') : 'Piece';
-      const dbRows = await sbGet('chocolate_database', `select=*&branch=eq.${encodeURIComponent(p.branch)}&chocolate_name=eq.${encodeURIComponent(p.chocolateName)}&current_stock=gt.0`);
+      const dbRows = await sbGet('chocolate_database', `select=*&branch=eq.${encodeURIComponent(p.branch)}&chocolate_name=eq.${encodeURIComponent(p.chocolateName)}&current_stock=gt.0&approval_status=eq.Approved`);
       return json(dbRows.map((r: any) => ({ Batch: r.batch_no, DatabaseID: String(r.id), AvailableStock: Number(r.current_stock), Unit: r.unit, WeightPerPiece: catalogGrams > 0 ? catalogGrams : r.weight_per_piece, PricePerKg: r.price_per_kg, PricePerPiece: r.price_per_piece, ProductCode: r.product_code, ExpiryDate: r.expiry_date, PackagingType: packagingType })));
     }
     if (action === 'getReleaseByNo') {
@@ -827,6 +910,9 @@ Deno.serve(async (req) => {
       return json(result);
     }
 
+    if (action === 'getTransfers') return json(await getTransfers(p));
+    if (action === 'receiveTransfer') return json(await receiveTransfer(p));
+    if (action === 'cancelTransfer') return json(await cancelTransfer(p));
     if (action === 'setLock') { const key = 'Initial Stock Locked: ' + p.branch; await sbUpsert('chocolate_settings', [{ key, value: p.value }], 'key'); return json({ success: true }); }
     if (action === 'updateChocolateItem') return json(await updateChocolateItem(p));
     if (action === 'updateChocolateRates') return json(await updateChocolateRates(p));
