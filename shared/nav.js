@@ -787,10 +787,14 @@
       '<div class="lbset-note">On = one slim glass handle on the screen edge that slides out Chat, Nova, the orders bell and your own shortcuts. Off = nothing floats on the screen (open Chat and Nova from the list below).</div>';
     // New-order alert sound (Shopify orders): volume of the ring on this device
     { let av = 80; try { const v = parseInt(localStorage.getItem('lbAlertVol'), 10); if (isFinite(v)) av = Math.max(0, Math.min(100, v)); } catch (e) {}
-      h += '<h4>New-order alert sound</h4><div class="lbset-rl"><span>Volume</span><span id="lbsetVolVal">' + (av ? av + '%' : 'Silent') + '</span></div>' +
+      let am = 'alarm'; try { am = localStorage.getItem('lbAlertMode') === 'voice' ? 'voice' : 'alarm'; } catch (e) {}
+      h += '<h4>New-order alert sound</h4><div class="lbset-seg lbset-seg2" style="margin-bottom:8px">' +
+        '<button type="button" data-alertmode="alarm" class="' + (am === 'alarm' ? 'on' : '') + '">🔔 Alarm</button>' +
+        '<button type="button" data-alertmode="voice" class="' + (am === 'voice' ? 'on' : '') + '">🗣️ Voice</button></div>' +
+        '<div class="lbset-rl"><span>Volume</span><span id="lbsetVolVal">' + (av ? av + '%' : 'Silent') + '</span></div>' +
         '<input class="lbset-range" type="range" min="0" max="100" step="5" value="' + av + '" data-alertvol aria-label="Alert volume">' +
         '<button type="button" class="lbset-reset" style="margin-top:8px" data-alerttest>🔔 Test sound</button>' +
-        '<div class="lbset-note">Rings when a new Shopify order comes in and stays until you tap the pop-up. 0 = silent (you still get the pop-up). The phone\'s own notification sound (app closed) follows the phone\'s volume. Saved on this device.</div>'; }
+        '<div class="lbset-note">Alarm = ring tone. Voice = it speaks, e.g. "New order, 2 0 2 4 5, for Moda Mall" and on a branch device "Moda Mall, you have a new order". Rings / speaks when a new order comes in and stays until you tap the pop-up. 0 = silent (you still get the pop-up). The phone\'s own notification sound (app closed) follows the phone\'s volume. Saved on this device.</div>'; }
     // Notifications on this device (push): on/off + which kinds
     h += '<h4>Notifications (this device)</h4><div id="lbsetPush" class="lbset-note">Checking…</div>';
     // Chat alerts (Android app only): how a new message shows up on the phone
@@ -937,6 +941,13 @@
       return;
     }
     if (t.hasAttribute('data-alerttest')) { if (window.lbAlertTest) window.lbAlertTest(); return; }
+    if (t.hasAttribute('data-alertmode')) {
+      const m = t.getAttribute('data-alertmode') === 'voice' ? 'voice' : 'alarm';
+      try { localStorage.setItem('lbAlertMode', m); } catch (x) {}
+      t.parentNode.querySelectorAll('[data-alertmode]').forEach(b => b.classList.toggle('on', b === t));
+      if (window.lbAlertTest) window.lbAlertTest();
+      return;
+    }
     if (t.dataset.dock) { try { if (t.dataset.dock === 'on') localStorage.removeItem('lbDockOff'); else localStorage.setItem('lbDockOff', '1'); } catch (x) {} location.reload(); return; }
     if (t.dataset.chatmode) {
       const m = t.dataset.chatmode;
@@ -1195,9 +1206,9 @@
   }
 
   // Floating unassigned-orders bell (draggable). On pages that have their own #lalaBellBtn it only adds the new-order pop-up. See shared/order-bell.js.
-  if (!window.LBOrderBell && !document.querySelector('script[src="shared/order-bell.js"]')) {
+  if (!window.LBOrderBell && !document.querySelector('script[src^="shared/order-bell.js"]')) {
     const ob = document.createElement('script');
-    ob.src = 'shared/order-bell.js';
+    ob.src = 'shared/order-bell.js?v=2';
     document.body.appendChild(ob);
   }
 

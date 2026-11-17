@@ -86,6 +86,7 @@
     toast.firstChild.textContent = '📦'; toast.removeAttribute('data-go');
     toast.classList.add('show');
     clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 14000);
+    toast.__say = rows.length === 1 ? 'New ' + noSay(rows[0].orderNo) + (rows[0].branch ? ', for ' + brSay(rows[0].branch) : ', please assign it to a branch') + '.' : rows.length + ' new orders to assign.';
   }
   // Flower rate changes waiting for an Admin's approval (the server only sends these to Admins).
   function showApprToast(n, rows) {
@@ -150,7 +151,10 @@
     clearTimeout(toastTimer);
     if (!keep) toastTimer = setTimeout(hideToast, 90000);   // Bleems: closes by itself after 1.5 min (stays in the 🔔 list)
     shopRangAt = Date.now();
-    ringLoop();
+    var no1 = bl ? '' : ' ' + noSay(rows[0].orderNo);
+    toast.__say = keep ? (rows.length === 1 ? 'Reminder: ' + src + no1 + ' is not in a branch yet.' : rows.length + ' ' + src + ' orders are not in a branch yet.')
+      : (rows.length === 1 ? 'New ' + src + ' order!' + no1 + '.' : rows.length + ' new ' + src + ' orders!');
+    ringLoop(toast.__say);
   }
   // a customer started checkout, left a phone/email, and never finished: a quiet notice (no alarm sound), logged in shopify_checkouts
   var AB_SEEN = 'lbobAbSeen';
@@ -281,15 +285,31 @@
       o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.2);
     });
   }
-  function alarm() { try { beep(); } catch (e) {} }
-  var loopT = 0;
-  function stopRing() { if (loopT) { clearInterval(loopT); loopT = 0; } }
-  function ringLoop() {
-    stopRing(); beep();
-    var n = 0;
-    loopT = setInterval(function () { if (++n >= 12 || !toast.classList.contains('show')) { stopRing(); return; } beep(); }, 3000);
+  // Nov 17 2026: 🔔 Alarm or 🗣️ Voice (⚙️ Settings). Voice = the browser / phone voice speaks the order.
+  function voiceMode() { try { return localStorage.getItem('lbAlertMode') === 'voice'; } catch (e) { return false; } }
+  function say(text) {
+    var v = vol(); if (!v || !text || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return false;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.95; u.volume = Math.max(0.1, v / 100);
+      var vs = speechSynthesis.getVoices() || [], pick = vs.filter(function (x) { return /^en/i.test(x.lang) && /female|samantha|zira|google us|aria|jenny/i.test(x.name); })[0] || vs.filter(function (x) { return /^en/i.test(x.lang); })[0];
+      if (pick) u.voice = pick;
+      speechSynthesis.speak(u); return true;
+    } catch (e) { return false; }
   }
-  window.lbAlertTest = function () { try { beep(); } catch (e) {} };
+  function brSay(b) { var k = String(b || '').toLowerCase().replace(/[^a-z]/g, ''); return k === 'modamall' ? 'Moda Mall' : (k === 'qalali' || k === 'galali') ? 'Galali' : k === 'hamala' ? 'Hamala' : String(b || ''); }
+  function noSay(no) { no = String(no || '').trim(); if (/^bl\b/i.test(no)) return 'a Bleems order'; var d = no.replace(/[^0-9]/g, ''); return d ? 'order ' + d.split('').join(' ') : 'an order'; }
+  window.lbOrderSay = { say: say, voiceMode: voiceMode, brSay: brSay, noSay: noSay };
+  function sound(text) { if (voiceMode() && say(text)) return; beep(); }
+  function alarm(text) { try { sound(text || 'New order! Please check the orders.'); } catch (e) {} }
+  var loopT = 0;
+  function stopRing() { if (loopT) { clearInterval(loopT); loopT = 0; } try { if (voiceMode() && window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} }
+  function ringLoop(text) {
+    stopRing(); sound(text);
+    var n = 0, voice = voiceMode() && text;
+    loopT = setInterval(function () { if (++n >= (voice ? 6 : 12) || !toast.classList.contains('show')) { stopRing(); return; } sound(text); }, voice ? 15000 : 3000);
+  }
+  window.lbAlertTest = function () { try { if (voiceMode()) { if (!say('New order, for Moda Mall. Moda Mall, you have a new order.')) beep(); } else beep(); } catch (e) {} };
 
   // ---- new Shopify orders (webhook -> shopify-orders-fast): works even when the Tampermonkey script is off ----
   var SHOP_SEEN = 'lbobShopSeen';
@@ -317,7 +337,7 @@
     if (Date.now() < shopSnooze) return;
     var nos = pend.map(function (o) { return onum(o.order_no); }).join(',');
     var showing = toast.classList.contains('show') && shopShown.length;
-    if (showing && shopShown.join(',') === nos) { if (Date.now() - shopRangAt > 2 * 60000) { shopRangAt = Date.now(); ringLoop(); } return; }
+    if (showing && shopShown.join(',') === nos) { if (Date.now() - shopRangAt > 2 * 60000) { shopRangAt = Date.now(); ringLoop(toast.__say); } return; }
     showShopToast(pend, true);
   }
   function shopSeen() { try { var a = JSON.parse(localStorage.getItem(SHOP_SEEN) || 'null'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
@@ -379,7 +399,11 @@
       rows.slice(0, 3).map(function (o) { return '<div><b style="display:inline;font-size:13px">' + esc(o.orderNo) + '</b> → ' + esc(o.branch || '—') + '</div>'; }).join('') +
       (rows.length > 3 ? '<div style="color:#8a7078">+ ' + (rows.length - 3) + ' more</div>' : '') + '<div style="color:#8a7078;margin-top:2px">Tap to open Live Orders</div>';
     toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 120000);
-    ringLoop();
+    // staff of the branch hear "Moda Mall, you have a new order"; Admin hears the order and the branch
+    var u = me(), admin = String(u.role || '').toLowerCase() === 'admin';
+    var txt = admin ? rows.slice(0, 3).map(function (o) { return 'New ' + noSay(o.orderNo) + ', for ' + brSay(o.branch); }).join('. ') + '.'
+      : brSay(rows[0].branch || u.branch) + ', you have ' + (rows.length > 1 ? rows.length + ' new orders' : 'a new order') + '! ' + rows.slice(0, 2).map(function (o) { return noSay(o.orderNo); }).join(', ') + '.';
+    ringLoop(txt);
   }
 
   var lastCount = null;

@@ -123,8 +123,9 @@
   // ---- alarm sound (browsers need one tap first) ----
   var ctx = null, soundOn = ls('lbLiveSound') === '1';
   function audio(){ try{ ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if(ctx.state === 'suspended') ctx.resume(); }catch(e){} return ctx; }
-  function paintSnd(){ $('snd').textContent = soundOn ? '🔔 Sound on' : '🔕 Sound off — tap to turn on'; $('snd').classList.toggle('on', soundOn); }
-  $('snd').onclick = function(){ soundOn = !soundOn; ls('lbLiveSound', soundOn ? '1' : '0'); if(soundOn){ audio(); chime(); } paintSnd(); };
+  function paintSnd(){ var v = window.lbOrderSay && window.lbOrderSay.voiceMode(); $('snd').textContent = soundOn ? (v ? '🗣️ Voice on' : '🔔 Sound on') : '🔕 Sound off — tap to turn on'; $('snd').title = 'Alarm or Voice: ⚙️ Settings → New-order alert sound'; $('snd').classList.toggle('on', soundOn); }
+  $('snd').onclick = function(){ soundOn = !soundOn; ls('lbLiveSound', soundOn ? '1' : '0'); if(soundOn){ audio(); if(window.lbOrderSay && window.lbOrderSay.voiceMode()) window.lbOrderSay.say('Voice alerts are on.'); else chime(); } paintSnd(); };
+  setTimeout(paintSnd, 1500);
   document.addEventListener('pointerdown', function(){ if(soundOn) audio(); }, { once:true });
   paintSnd();
   function chime(){
@@ -134,8 +135,18 @@
       o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + .32); });
   }
   var ringT = 0;
-  function ringOn(){ if(ringT) return; chime(); ringT = setInterval(chime, 6000); }
-  function ringOff(){ clearInterval(ringT); ringT = 0; }
+  // Nov 17 2026: ⚙️ Settings → 🔔 Alarm or 🗣️ Voice. Voice: "Moda Mall, you have a new order!" (branch view) / "New order 2 0 2 4 5, for Moda Mall" (All).
+  function voiceText(){
+    var S = window.lbOrderSay; if(!S || !DATA) return '';
+    var rows = mine(DATA.orders || []).filter(function(o){ return !o.ackAt; }); if(!rows.length) return '';
+    var b = $('br').value;
+    if(b !== 'All') return S.brSay(b) + ', you have ' + (rows.length > 1 ? rows.length + ' new orders' : 'a new order') + '! ' + rows.slice(0, 2).map(function(o){ return S.noSay(o.orderNo); }).join(', ') + '.';
+    return rows.slice(0, 3).map(function(o){ return 'New ' + S.noSay(o.orderNo) + ', for ' + S.brSay(o.branch); }).join('. ') + '.';
+  }
+  function useVoice(){ return soundOn && window.lbOrderSay && window.lbOrderSay.voiceMode(); }
+  function ring(){ if(useVoice() && window.lbOrderSay.say(voiceText())) return; chime(); }
+  function ringOn(){ if(ringT) return; ring(); ringT = setInterval(ring, useVoice() ? 20000 : 6000); }
+  function ringOff(){ clearInterval(ringT); ringT = 0; try{ if(useVoice()) speechSynthesis.cancel(); }catch(e){} }
 
   var DATA = null, giftShown = {};
   function mine(rows){ var b = $('br').value; return b === 'All' ? rows : rows.filter(function(o){ return brKey(o.branch) === brKey(b); }); }
