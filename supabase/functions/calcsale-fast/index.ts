@@ -407,6 +407,22 @@ Deno.serve(async (req) => {
         item_name: txt(p.itemName, 120), list_price: lp, used_price: up, created_by: who(u) }]);
       return json({ success: true });
     }
+    // Nov 17 2026 (Bench): 🗑️ delete a sale (Admin). Still active -> put back in stock first. A mixed order is deleted together.
+    if (a === 'deleteSale') {
+      if (!admin) return json({ success: false, error: 'Admin only.' });
+      const s0 = (await sbGet(`calc_sales?select=id,group_no&id=eq.${Number(p.id)}&limit=1`))[0];
+      if (!s0) return json({ success: false, error: 'Sale not found. Refresh.' });
+      const all = s0.group_no ? await sbGet(`calc_sales?select=*&group_no=eq.${encodeURIComponent(s0.group_no)}`) : await sbGet(`calc_sales?select=*&id=eq.${s0.id}`);
+      const done: string[] = [];
+      for (const s of all) {
+        if (s.status === 'Active') { const r: any = await cancelSale({ ...p, id: s.id }, u); if (!r || !r.success) return json({ success: false, error: 'Could not put ' + s.sale_no + ' back in stock: ' + ((r && r.error) || 'error') }); }
+        const fresh = (await sbGet(`calc_sales?select=*&id=eq.${s.id}`))[0] || s;
+        await sbPost('calc_sales_deleted', [{ sale_id: s.id, sale_no: s.sale_no, row_data: fresh, deleted_by: who(u) }]);
+        await sbDelete('calc_sales', `id=eq.${s.id}`);
+        done.push(s.sale_no);
+      }
+      return json({ success: true, deleted: done });
+    }
     if (a === 'cancelSale') {
       if (!admin) return json({ success: false, error: 'Admin only.' });
       const r: any = await cancelSale(p, u);

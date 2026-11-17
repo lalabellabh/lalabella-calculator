@@ -139,7 +139,7 @@
         return '<div class="sale' + (cx ? ' cx' : '') + '"><div class="top"><b>' + esc(s.saleNo || '…') + '</b><span class="tag ' + (s.kind === 'flower' ? 'f' : 'c') + '">' + (s.kind === 'flower' ? '🌸 Flower' : '🍫 Chocolate') + '</span><span class="tag">' + esc(s.branch) + '</span>' + (s.source ? '<span class="tag">' + esc(s.source) + '</span>' : '') +(s.groupNo ? '<span class="tag" title="Flower + chocolate sold together (Mixed calc). Cancelling one cancels both.">🔗 Mixed ' + esc(s.groupNo) + '</span>' : '') +
           (cx ? '<span class="tag x">Cancelled by ' + esc(s.cancelledBy) + '</span>' : '') + '<span class="m">' + when(s.at) + ' · ' + esc(s.by) + (s.ref ? ' · ' + esc(s.ref) : '') + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + (s.total ? ' · ' + Number(s.total).toFixed(3) + ' BD' : '') + '</span>' +
           '<span style="display:flex;gap:6px;margin-left:auto"><button class="pbtn" data-pr="th" data-i="' + i + '">🧾 Thermal</button><button class="pbtn" data-pr="a4" data-i="' + i + '">🖨️ A4</button></span>' +
-          (admin && !cx ? '<button class="edbtn" data-ed="' + i + '">✏️ Edit</button><button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + '</div>' +
+          (admin && !cx ? '<button class="edbtn" data-ed="' + i + '">✏️ Edit</button><button class="cxbtn" data-cx="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '">Cancel (put back in stock)</button>' : '') + (admin ? '<button class="cxbtn" data-del="' + esc(s.id) + '" data-no="' + esc(s.saleNo) + '" title="Delete this sale (Admin)" style="margin-left:6px">🗑️ Delete</button>' : '') + '</div>' +
           (s.editedBy ? '<div style="font-size:11.5px;color:#8a6400;margin-top:2px">✏️ Edited by ' + esc(s.editedBy) + ' · ' + when(s.editedAt) + '</div>' : '') +
           '<div class="items">' + itemText(s) + '</div>' +
           (s.short && s.short.length ? '<div class="short">⚠ Not enough in the system: ' + s.short.map(function(x){ return esc(x.name) + ' (needed ' + esc(x.need) + ', had ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
@@ -149,6 +149,11 @@
   document.addEventListener('click', function(e){
     var pr = e.target.closest('[data-pr]'); if(pr){ var sv = SALES[Number(pr.getAttribute('data-i'))]; if(sv) reprint(sv, pr.getAttribute('data-pr')); return; }
     var ed = e.target.closest('[data-ed]'); if(ed){ var se = SALES[Number(ed.getAttribute('data-ed'))]; if(se) openEdit(se); return; }
+    var dl = e.target.closest('[data-del]');
+    if(dl){ var sx = (SALES || []).find(function(x){ return String(x.id) === dl.getAttribute('data-del'); }) || {};
+      if(!confirm('DELETE ' + dl.getAttribute('data-no') + '?\n\n' + (sx.status === 'Active' ? 'It is still active: what it took out is put back in stock first, then the sale is removed.' : 'It is already cancelled: the sale is removed from the list.') + (sx.groupNo ? '\n\n🔗 Mixed order: the other sale of ' + sx.groupNo + ' is deleted too.' : '') + '\n\nA copy is kept for the Admin.')) return;
+      dl.disabled = true;
+      fetch(API, { method:'POST', body:new URLSearchParams({ action:'deleteSale', id:dl.getAttribute('data-del'), token:token() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) alert(d.error || 'Failed.'); else if(d.deleted && d.deleted.length > 1) alert('Deleted: ' + d.deleted.join(', ')); load(); }).catch(function(){ alert('Connection problem.'); dl.disabled = false; }); return; }
     var b = e.target.closest('[data-cx]');
     if(b){ var mx = (SALES || []).find(function(x){ return String(x.id) === b.getAttribute('data-cx'); }) || {};
       if(!confirm('Cancel ' + b.getAttribute('data-no') + '? Everything it took out goes back into stock.' + (mx.groupNo ? '\n\n🔗 This is a Mixed order (flower + chocolate): the other sale of ' + mx.groupNo + ' is cancelled too.' : ''))) return; b.disabled = true;
