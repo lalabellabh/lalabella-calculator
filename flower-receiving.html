@@ -178,6 +178,7 @@
     text-decoration:underline; padding:0;
   }
   .edit-link:hover{ color:var(--rose-deep); }
+  .del-link{ background:none; border:0; padding:0 0 0 10px; font:inherit; font-size:12px; color:#b0442e; text-decoration:underline; cursor:pointer; }
   .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:16px 0; }
   .loading{ text-align:center; padding:20px 0; color:var(--ink-dim); font-size:13px; }
 
@@ -1034,6 +1035,7 @@ body::after{
     });
     return _ht;
   }
+  function lbIsAdmin(){ try{ const u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}'); return String((u && u.role) || '').toLowerCase() === 'admin'; }catch(e){ return false; } }
   function renderHistory(){
     const el = document.getElementById('historyList');
     if(entries.length === 0){
@@ -1052,10 +1054,22 @@ body::after{
         <div class="hist-meta">Amount: <b>${fmtBD(e.Amount)}</b> <span style="color:var(--ink-dim); font-weight:400;">(VAT ${e['Tax%']||0}%: ${fmtBD(e.Tax)}, not included)</span></div>
         <div class="hist-meta">Supplier: ${lbEsc(e.Supplier || '—')} · Received by: ${lbEsc(e['Received By'] || '—')} · Invoice #${lbEsc(e['Invoice No'] || '—')}</div>
         ${e['Invoice Total'] ? `<div class="hist-meta">Whole Invoice Total: <b>${fmtBD(e['Invoice Total'])}</b></div>` : ''}
-        ${e.ID ? `<div class="hist-actions"><button class="edit-link" data-id="${lbEsc(e.ID)}">Edit</button></div>` : ''}
+        ${e.ID ? `<div class="hist-actions"><button class="edit-link" data-id="${lbEsc(e.ID)}">Edit</button>${lbIsAdmin() ? ` <button class="del-link" data-id="${lbEsc(e.ID)}" data-n="${lbEsc(e.Flower || '')}" title="Delete this line (Admin)">🗑️ Delete</button>` : ''}</div>` : ''}
       </div>
     `).join('');
 
+    el.querySelectorAll('.del-link').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('Delete this receiving line?\n\n' + (btn.dataset.n || '') + '\n\nIt is removed from the receiving (a copy is kept). Only Admin can do this.')) return;
+        btn.disabled = true; btn.textContent = 'Deleting…';
+        try{
+          const r = await fetch(LB_CONFIG.FLOWER_FAST_API + '?' + new URLSearchParams({ action:'deleteEntry', id: btn.dataset.id, token: window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '' }));
+          const d = await r.json();
+          if(!d || d.error){ alert((d && d.error) || 'Not deleted.'); btn.disabled = false; btn.textContent = '🗑️ Delete'; return; }
+          loadData();
+        }catch(err){ alert('Connection problem. Please try again.'); btn.disabled = false; btn.textContent = '🗑️ Delete'; }
+      });
+    });
     el.querySelectorAll('.edit-link').forEach(btn=>{
       btn.addEventListener('click', ()=> openEditModal(btn.dataset.id));
     });

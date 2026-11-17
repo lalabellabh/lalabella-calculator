@@ -46,6 +46,10 @@ async function sbPost(table: string, rows: unknown[]) {
   if (!res.ok) throw new Error(`db ${res.status}: ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : [];
 }
+async function sbDelete(table: string, filter: string) {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } });
+  if (!res.ok) throw new Error('Delete failed: ' + (await res.text()).slice(0, 200));
+}
 async function sbPatch(table: string, filter: string, fields: Record<string, unknown>) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, {
     method: 'PATCH',
@@ -336,6 +340,19 @@ async function saveReceiving(p: Record<string, any>) {
   const results = [];
   for (const it of items) results.push(it.type === 'Supply' ? await processSupplyItem(it, ctx) : await processFlowerItem(it, ctx));
   return { success: true, results, batchRef, waitingApproval: true };
+}
+// Nov 17 2026 (Bench): 🗑️ one receiving line — Admin only. A copy is kept in flower_deleted_entries; its waiting rate approval is cancelled.
+async function deleteEntry(p: Record<string, any>, u: any) {
+  const id = String(p.id || '');
+  let query = `legacy_id=eq.${encodeURIComponent(id)}`;
+  let rows = await sbGet('flower_database', `select=*&${query}`);
+  if (!rows.length && /^\d+$/.test(id)) { query = `id=eq.${id}`; rows = await sbGet('flower_database', `select=*&${query}`); }
+  if (!rows.length) return { error: 'Entry not found. Refresh.' };
+  const r = rows[0], who = String(u.full_name || u.username || '');
+  await sbPost('flower_deleted_entries', [{ entry_id: r.id, row_data: r, deleted_by: who }]);
+  await sbDelete('flower_database', `id=eq.${r.id}`);
+  try { await sbPatch('flower_rate_change_history', `source_id=eq.${r.id}&approval_status=eq.Pending%20Approval`, { approval_status: 'Cancelled' }); } catch (_) { /* ok */ }
+  return { success: true, deleted: r.flower_name, wasApproved: String(r.approval_status) === 'Approved' };
 }
 async function editEntry(p: Record<string, any>) {
   const id = p.id, qty = Number(p.qty) || 0, supplierRate = Number(p.supplierRate) || 0, taxPercent = Number(p.taxPercent) || 10;
@@ -861,7 +878,7 @@ Deno.serve(async (req) => {
     const authUser = await isValidToken(p.token);
     if (!authUser) return json({ error: 'Unauthorized. Please log in again.' }, 401);
     // Security audit 2026-11-10: Admin only on the server (not only on the page). Approver name comes from the login.
-    if (['approveRate', 'rejectRate', 'updateFlowerRates', 'addFlowerItem', 'setWeeklyBudget', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving'].includes(action) && String(authUser.role || '') !== 'Admin')
+    if (['approveRate', 'rejectRate', 'updateFlowerRates', 'addFlowerItem', 'setWeeklyBudget', 'getPendingReceiving', 'approveReceiving', 'rejectReceiving', 'deleteEntry'].includes(action) && String(authUser.role || '') !== 'Admin')
       return json({ error: 'Admin only. Please ask an Admin.' }, 403);
     if (action === 'approveRate' || action === 'rejectRate') p.approvedBy = String(authUser.full_name || authUser.username || '');
 
@@ -928,6 +945,7 @@ Deno.serve(async (req) => {
 
     // ---- Other writes (not duplicate-critical) ----
     if (action === 'editEntry') return json(await editEntry(p));
+    if (action === 'deleteEntry') return json(await deleteEntry(p, authUser));
     if (action === 'setWeeklyBudget') { await sbUpsert('flower_budgets', [{ branch: p.branch, weekly_budget: Number(p.value) || 0 }], 'branch'); return json({ success: true }); }
     if (action === 'updateFlowerRates') return json(await updateFlowerRates(p));
     if (action === 'setMinStockBulk') return json(await setMinStockBulk(p));
