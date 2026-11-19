@@ -602,6 +602,8 @@
     function flowerSeg(seg, names, done, talk, oops){
       let rate = null;
       seg = seg.replace(/\b(rate|price|presyo|at)\s+(\d+(?:\.\d+)?)\b/, (m, k, n) => { rate = Number(n); return ' '; });
+      seg = seg.replace(/^(quantity|qty|dami|ilan)\s+/, '');
+      if(!seg.trim() && rate != null){ document.getElementById('rateInput').value = rate.toFixed(3); talk.push('rate ' + rate); done.push('Rate ' + rate.toFixed(3)); return ''; }
       if(/^\d+(\.\d+)?( (pieces?|pcs|stems?))?$/.test(seg.trim())){   // just a number = qty
         const q = parseFloat(seg); document.getElementById('qtyInput').value = q; talk.push('quantity ' + q); done.push('Qty ' + q); return '';
       }
@@ -609,7 +611,9 @@
       const one = p.choices.filter(c => c.s >= .4);
       if(!(p.name && p.nameScore >= .8) && one.length === 1 && one[0].s >= .6){ p.name = one[0].name; p.nameScore = .8; }   // only one flower fits
       if(p.name && p.nameScore >= .8){
+        const before = selected ? selected.name : '';
         pickByName(p.name);
+        if(before !== p.name && !(p.qty > 0)) document.getElementById('qtyInput').value = '';   // new flower = new qty
         if(rate != null) document.getElementById('rateInput').value = rate.toFixed(3);
         if(p.qty != null && p.qty > 0) document.getElementById('qtyInput').value = p.qty;
         const r = parseFloat(document.getElementById('rateInput').value) || 0;
@@ -656,14 +660,29 @@
       document.getElementById('addBtn').click();
       done.push('Added ' + lbEsc(q + ' × ' + nm)); talk.push(q + ' ' + nice(nm) + ' added at ' + r + '. Total ' + money(grand()));
     }
+    const undoStack = [];
     async function once(){
       const names = CATALOG.map(c => c.name);
-      const alts = await LBVoice.listen({ hint:'Say one thing: spray rose — 6 — add. Or: red rose 6 add · extra vase · customer Maria · total · remove last' });
+      const alts = await LBVoice.listen({ hint:'Say one thing: spray rose — 6 — add. Also: quantity 7 · clear quantity · clear last · extra vase · total · remove last' });
       if(!alts.length) return;
       const said = alts[0];
       let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
       const done = [], talk = [], oops = [], warn = [];
       const out = (html, words) => { show('🎤 “' + lbEsc(said) + '”<br>' + html); say(words); };
+      // "clear last" / "undo" = put back how it was before the last voice input
+      if(/^(clear last|undo|undo last|cancel last|delete last input|bura (yung |ung )?huli)$/.test(t)){
+        const sn = undoStack.pop();
+        if(!sn) return out('Nothing to undo', 'Nothing to undo.');
+        cart = cart.slice(0, sn.cart); extras = extras.slice(0, sn.extras);
+        if(sn.flower) pickByName(sn.flower); else document.getElementById('searchClear').click();
+        document.getElementById('qtyInput').value = sn.qty; document.getElementById('rateInput').value = sn.rate; document.getElementById('customerName').value = sn.customer;
+        renderCart(); return out('↩️ Undone: “' + lbEsc(sn.said) + '”', 'Undone. ' + (sn.flower ? nice(sn.flower) + (sn.qty ? ', ' + sn.qty : '') + '.' : ''));
+      }
+      if(/^clear (the )?(quantity|qty)$/.test(t)){ document.getElementById('qtyInput').value = ''; return out('Quantity cleared', 'Quantity cleared. Say the quantity.'); }
+      if(/^clear (the )?rate$/.test(t)){ document.getElementById('rateInput').value = selected ? Number(selected.rate).toFixed(3) : ''; return out('Rate back to the list rate', 'Rate reset.'); }
+      if(/^clear (the )?(flower|search|name)$/.test(t)){ document.getElementById('searchClear').click(); return out('Flower cleared', 'Flower cleared. Say the flower.'); }
+      if(!/^(total|how much|magkano)/.test(t)) undoStack.push({ said, cart: cart.length, extras: extras.length, flower: selected ? selected.name : '', qty: document.getElementById('qtyInput').value, rate: document.getElementById('rateInput').value, customer: document.getElementById('customerName').value });
+      if(undoStack.length > 30) undoStack.shift();
       if(/\b(clear all|new order|reset|start over|bura lahat|cancel all)\b/.test(t)){
         if(confirm('Clear the whole order?')){ cart = []; extras = []; EDIT_KEY = ''; renderCart(); return out('↺ Order cleared', 'Order cleared.'); }
         return;

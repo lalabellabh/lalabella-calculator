@@ -115,13 +115,16 @@
   function sim(a, b) { var l = Math.max(a.length, b.length) || 1; return 1 - lev(a, b) / l; }
   // Score 0..1: whole-string likeness mixed with how many spoken words match a word of the name.
   function score(said, name) {
-    var s = norm(said), n = norm(name); if (!s || !n) return 0;
+    var one = function (w) { return w.length > 3 ? w.replace(/ies$/, 'y').replace(/([^s])s$/, '$1') : w; };   // "lilies" = "lily", "roses" = "rose"
+    var s = norm(said).split(' ').map(one).join(' '), n = norm(name).split(' ').map(one).join(' '); if (!s || !n) return 0;
     if (s === n) return 1;
     var sw = s.split(' '), nw = n.split(' '), hit = 0;
+    if (sw.slice().sort().join(' ') === nw.slice().sort().join(' ')) return 1;   // same words, other order ("oriental lily" = "Lily Oriental")
     nw.forEach(function (x) { var b = 0; sw.forEach(function (y) { b = Math.max(b, sim(x, y)); }); hit += b; });
     var words = hit / nw.length;
     var extra = Math.max(0, sw.length - nw.length) * .04;
-    return Math.max(0, Math.min(1, .65 * words + .35 * sim(s, n) - extra));
+    var whole = Math.max(sim(s, n), sim(sw.slice().sort().join(' '), nw.slice().sort().join(' ')));
+    return Math.max(0, Math.min(1, .65 * words + .35 * whole - extra));
   }
   // How a name is said out loud: "S-Rose" = "spray rose", "Stelitzia(BOP)" = "bird of paradise" / "strelitzia" (Bench, Nov 19)
   function spoken(n) {
@@ -198,6 +201,7 @@
     ['storage', /\b(storage location|location|put (it )?in|store (it )?in|ilagay sa|lagay sa|storage(?=\s+\S))\b/],
     ['delivery', /\b(delivery note( number| no\.?)?|delivery( number| no\.?)?)\b/],
     ['batch', /\b(batch( number| no\.?)?)\b/],
+    ['qty', /\b(quantity|qty|dami)\b/],
     ['price', /\b(price( per (kilo|kg|box|piece|can))?|presyo|cost)\b/],
     ['weight', /\b(weight( per (piece|box|can))?|bigat)\b/],
     ['tray', /\b(tray( code)?|colou?r code)\b/],
@@ -227,6 +231,7 @@
       if (h.k === 'supplier') { var sp = pick(val, lists.suppliers, lists.supplierAliases); if (sp) f.supplier = sp; else f.supplierHeard = val; return; }
       if (h.k === 'storage') { var lc = pick(val, lists.locations); if (lc) f.storage = lc; return; }
       if (h.k === 'receivedBy') { var pp = pick(val, lists.people); f.receivedBy = pp || val.replace(/\b\w/g, function (c) { return c.toUpperCase(); }); return; }
+      if (h.k === 'qty') { var q = val.match(/\d+(\.\d+)?/); if (q) { f.qty = Number(q[0]); var uu = val.match(/\b(kilos?|kg|grams?|pieces?|pcs|box(es)?)\b/); if (uu) f.qtyUnit = /^k/.test(uu[1]) ? 'Kg' : /^g/.test(uu[1]) ? 'g' : /^b/.test(uu[1]) ? 'Box' : 'Piece'; } return; }
       if (h.k === 'price' || h.k === 'weight') { var n = val.match(/\d+(\.\d+)?/); if (n) f[h.k] = Number(n[0]); return; }
       if (h.k === 'delivery' || h.k === 'batch' || h.k === 'tray') { if (val) f[h.k] = val.replace(/\s+(?=\d)/g, '').toUpperCase(); return; }
       if (h.k === 'remarks') { if (val) f.remarks = val.charAt(0).toUpperCase() + val.slice(1); }

@@ -1121,6 +1121,14 @@
         const uu = (u || unitSel.value || '').toLowerCase();
         talk.push(q + ' ' + (uu === 'kg' ? (q == 1 ? 'kilo' : 'kilos') : uu === 'piece' ? (q == 1 ? 'piece' : 'pieces') : uu));
       }
+      if(f.qty != null){   // "quantity 7 kilo"
+        const unitSel = document.getElementById('fUnit'), has = u => [...unitSel.options].find(o => o.value.toLowerCase() === u.toLowerCase());
+        let q = f.qty, u = f.qtyUnit || '';
+        if(u === 'g'){ q = Math.round(q) / 1000; u = 'Kg'; }
+        if(u === 'Box'){ document.getElementById('fPackagingType').value = 'Box'; applyPack(); u = 'Piece'; }
+        document.getElementById('fQty').value = q; if(u && has(u) && !unitSel.disabled) unitSel.value = has(u).value;
+        filled.push('Qty ' + q + ' ' + unitSel.value); talk.push('quantity ' + q + ' ' + unitSel.value);
+      }
       const exp = f.expiry || (it && it.expiry);
       if(exp){ document.getElementById('fExpiryDate').value = exp; filled.push('exp ' + exp); talk.push('expiry ' + spDate(exp)); }
       const set = (id, val, label, spoken) => { const el = document.getElementById(id); el.value = val; el.dispatchEvent(new Event('change')); el.dispatchEvent(new Event('input')); filled.push(label + ': ' + lbEsc(String(val))); talk.push(label.toLowerCase() + ' ' + (spoken || val)); };
