@@ -1104,10 +1104,11 @@
       let v = null;
       alts.forEach(a => { const x = LBVoice.parseForm(a, lists); const sc = (x.item ? x.item.nameScore : 0) + Object.keys(x.fields).length * .05; if(!v || sc > v._sc) { x._sc = sc; x._said = a; v = x; } });
       if(v.clear){ clearAll(true); show('🎤 Heard: “' + lbEsc(v._said) + '”<br>↺ Form cleared'); LBVoice.speak('Cleared. Start again.'); return; }
-      const filled = [], f = v.fields;
+      const filled = [], f = v.fields, talk = [], oops = [];
+      const spDate = d => { try{ return new Date(d + 'T00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }catch(e){ return d; } };
       let sure = false;
       const it = v.item;
-      if(it && it.name && it.nameScore >= .8){ setName(it.name); filled.push('<b>' + lbEsc(it.name) + '</b>'); sure = true; }
+      if(it && it.name && it.nameScore >= .8){ setName(it.name); filled.push('<b>' + lbEsc(it.name) + '</b>'); talk.push(it.name); sure = true; }
       if(it && it.pack){ document.getElementById('fPackagingType').value = it.pack; applyPack(); }
       if(it && it.qty != null){
         const unitSel = document.getElementById('fUnit'), has = u => [...unitSel.options].find(o => o.value.toLowerCase() === u.toLowerCase());
@@ -1117,14 +1118,16 @@
         document.getElementById('fQty').value = q;
         if(u && has(u) && !unitSel.disabled) unitSel.value = has(u).value;
         filled.push(q + ' ' + (u || unitSel.value));
+        const uu = (u || unitSel.value || '').toLowerCase();
+        talk.push(q + ' ' + (uu === 'kg' ? (q == 1 ? 'kilo' : 'kilos') : uu === 'piece' ? (q == 1 ? 'piece' : 'pieces') : uu));
       }
       const exp = f.expiry || (it && it.expiry);
-      if(exp){ document.getElementById('fExpiryDate').value = exp; filled.push('exp ' + exp); }
-      const set = (id, val, label) => { const el = document.getElementById(id); el.value = val; el.dispatchEvent(new Event('change')); el.dispatchEvent(new Event('input')); filled.push(label + ': ' + lbEsc(String(val))); };
+      if(exp){ document.getElementById('fExpiryDate').value = exp; filled.push('exp ' + exp); talk.push('expiry ' + spDate(exp)); }
+      const set = (id, val, label, spoken) => { const el = document.getElementById(id); el.value = val; el.dispatchEvent(new Event('change')); el.dispatchEvent(new Event('input')); filled.push(label + ': ' + lbEsc(String(val))); talk.push(label.toLowerCase() + ' ' + (spoken || val)); };
       if(f.supplier) set('fSupplier', f.supplier, 'Supplier');
       if(f.storage) set('fStorageLocation', f.storage, 'Storage');
       if(f.receivedBy) set('fReceivedBy', f.receivedBy, 'Received by');
-      if(f.receiveDate) set('fDate', f.receiveDate, 'Received');
+      if(f.receiveDate) set('fDate', f.receiveDate, 'Received', spDate(f.receiveDate));
       if(f.price != null) set('fPrice', f.price, 'Price');
       if(f.weight != null) set('fWeightPerPiece', f.weight, 'Weight');
       if(f.delivery) set('fDeliveryNo', f.delivery, 'Delivery no.');
@@ -1133,17 +1136,21 @@
       if(f.remarks) set('fRemarks', f.remarks, 'Remarks');
       let html = '🎤 Heard: “' + lbEsc(v._said) + '”';
       if(filled.length) html += '<br>✅ ' + filled.join(' · ');
-      if(f.supplierHeard) html += '<br>⚠️ Supplier “' + lbEsc(f.supplierHeard) + '” not found — please pick it.';
+      if(f.supplierHeard){ html += '<br>⚠️ Supplier “' + lbEsc(f.supplierHeard) + '” not found — please pick it.'; oops.push("I didn't get the supplier, please pick it"); }
       if(it && !sure){
-        if(it.choices.length && it.choices[0].s >= .45) html += '<br>Which one? ' + it.choices.filter(c => c.s >= .4).slice(0, 3).map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join('');
-        else if(it.rest) html += '<br>⚠️ Chocolate not found — please pick it.';
+        const ch = it.choices.filter(c => c.s >= .4).slice(0, 3);
+        if(it.choices.length && it.choices[0].s >= .45){ html += '<br>Which one? ' + ch.map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join(''); oops.push('Which one? ' + ch.map(c => c.name).join(', or ')); }
+        else if(it.rest){ html += '<br>⚠️ Chocolate not found — please pick it.'; oops.push("Sorry, I didn't get the chocolate name. Please pick it"); }
       }
-      if(!filled.length && !(it && it.choices.length)) html += '<br>⚠️ Did not catch anything to fill — please try again.';
+      if(!filled.length && !oops.length && !(it && it.choices.length)){ html += '<br>⚠️ Did not catch anything to fill — please try again.'; oops.push("Sorry, I didn't get that. Please try again"); }
       show(html);
+      // Say back what was filled, and what was not understood (Bench, Nov 19).
+      const words = (talk.length ? talk.join(', ') + '.' : '') + (oops.length ? ' ' + oops.join('. ') + '.' : '');
+      if(!v.add && words.trim()) LBVoice.speak(words.trim());
       if(v.add){
-        if(!$('fSearch').value.trim() || !$('fQty').value){ LBVoice.speak('Please say the chocolate and the quantity first.'); return; }
-        LBVoice.speak('Please check everything before adding.');
-        setTimeout(() => document.getElementById('addLineBtn').click(), 1600);
+        if(!$('fSearch').value.trim() || !$('fQty').value){ LBVoice.speak((oops.length ? oops.join('. ') + '. ' : '') + 'Please say the chocolate and the quantity first.'); return; }
+        LBVoice.speak((talk.length ? talk.join(', ') + '. ' : '') + 'Please check everything before adding.');
+        setTimeout(() => document.getElementById('addLineBtn').click(), 1600 + talk.length * 900);
       }
     });
   })();
