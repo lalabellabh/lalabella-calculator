@@ -123,8 +123,16 @@
     var extra = Math.max(0, sw.length - nw.length) * .04;
     return Math.max(0, Math.min(1, .65 * words + .35 * sim(s, n) - extra));
   }
+  // How a name is said out loud: "S-Rose" = "spray rose", "Stelitzia(BOP)" = "bird of paradise" / "strelitzia" (Bench, Nov 19)
+  function spoken(n) {
+    n = String(n || ''); var out = [];
+    var a = n.replace(/\bS[-.\s]+(?=[a-z])/gi, 'spray ').replace(/\s+/g, ' ').trim(); if (a !== n) out.push(a);
+    if (/\bBOP\b/i.test(n)) { out.push('bird of paradise'); out.push('bird paradise'); }
+    if (/stelitzia|strelitzia/i.test(n)) out.push('strelitzia');
+    return out;
+  }
   function match(said, names) {
-    var list = (names || []).map(function (n) { return { name: n, s: score(said, n) }; }).sort(function (a, b) { return b.s - a.s; });
+    var list = (names || []).map(function (n) { var s0 = score(said, n); spoken(n).forEach(function (x) { s0 = Math.max(s0, score(said, x)); }); return { name: n, s: s0 }; }).sort(function (a, b) { return b.s - a.s; });
     return list.slice(0, 4);
   }
 

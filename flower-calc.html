@@ -210,7 +210,7 @@
   </div>
 </nav>
 <script src="shared/scanner.js"></script>
-<script src="shared/voice.js?v=4"></script>
+<script src="shared/voice.js?v=5"></script>
 <style>
   .voice-note{ display:none; margin-top:10px; padding:8px 10px; border-radius:10px; background:#fff7fa; border:1px dashed #e5b8c8; font-size:12.5px; color:#5a4048; line-height:1.45; }
   .voice-note.show{ display:block; }
@@ -245,7 +245,7 @@
               <button type="button" id="searchClear" title="Clear" aria-label="Clear" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:0;background:#e9d6dc;color:#7a3a4e;font-size:15px;font-weight:700;line-height:1;cursor:pointer;">✕</button>
             </div>
             <button type="button" id="scanBtn" title="Scan barcode" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:#2f2024;color:#fff;">📷</button>
-            <button type="button" id="voiceBtn" title="One at a time: red rose 12 … extra vase … done" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;">🎤</button>
+            <button type="button" id="voiceBtn" title="Tap and say one thing: spray rose · 6 · add" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;">🎤</button>
           </div>
           <div id="searchResults"></div>
         </div>
@@ -578,9 +578,9 @@
   });
 
   // ---------- 🎤 Voice (Nov 19 2026, Bench) ----------
-  // "red rose 12, white lily 5 rate 1.2, extra vase 2, customer Maria" → goes straight into the Order List and says it back.
-  // "total" says the total · "remove red rose" / "remove last" · "clear all" empties the order (asks first).
-  // Nothing is sold by voice: Sold / Print / WhatsApp stay buttons.
+  // Like Chocolate Receiving: one tap = one thing. 🎤 "spray rose" → picks it · 🎤 "6" → qty · 🎤 "add" → into the Order List.
+  // ("red rose 6 add" in one go works too.) "extra vase", "customer Maria", "total", "remove last", "clear all".
+  // It says back what it filled and what it did not get. Nothing is sold by voice.
   (function(){
     const btn = document.getElementById('voiceBtn'), note = document.getElementById('voiceNote');
     if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
@@ -594,34 +594,37 @@
       const c = e.target.closest('.vn-ch'); if(!c) return;
       const q = parseFloat(document.getElementById('qtyInput').value) || 0;
       pickByName(c.dataset.n); note.classList.remove('show');
-      const next = () => { if(window.__lbVoiceAgain) window.__lbVoiceAgain(); };
-      if(q > 0){ document.getElementById('qtyInput').value = q; document.getElementById('addBtn').click(); say(q + ' ' + c.dataset.n + ' added. Total ' + money(grand()) + '.').then(next); }
-      else say(c.dataset.n + '. How many?').then(next);
+      if(q > 0) document.getElementById('qtyInput').value = q;
+      say(nice(c.dataset.n) + (q > 0 ? ', ' + q + '. Say add.' : '. Say the quantity.'));
     });
+    const nice = n => String(n).replace(/\bS[-.\s]+(?=[a-z])/gi, 'spray ').replace(/\(?\bBOP\b\)?/gi, '').trim();
+    // fills the flower (and qty / rate if said) — does NOT add; "add" does that
     function flowerSeg(seg, names, done, talk, oops){
       let rate = null;
       seg = seg.replace(/\b(rate|price|presyo|at)\s+(\d+(?:\.\d+)?)\b/, (m, k, n) => { rate = Number(n); return ' '; });
+      if(/^\d+(\.\d+)?( (pieces?|pcs|stems?))?$/.test(seg.trim())){   // just a number = qty
+        const q = parseFloat(seg); document.getElementById('qtyInput').value = q; talk.push('quantity ' + q); done.push('Qty ' + q); return '';
+      }
       const p = LBVoice.parse(seg, names);
+      const one = p.choices.filter(c => c.s >= .4);
+      if(!(p.name && p.nameScore >= .8) && one.length === 1 && one[0].s >= .6){ p.name = one[0].name; p.nameScore = .8; }   // only one flower fits
       if(p.name && p.nameScore >= .8){
-        const f = CATALOG.find(c => c.name === p.name);
-        const r = rate != null ? rate : (f ? f.rate : 0);
-        if(p.qty != null && p.qty > 0){
-          cart.push({ name: p.name, qty: p.qty, rate: r });
-          done.push(lbEsc(p.qty + ' × ' + p.name) + ' @ ' + r.toFixed(3));
-          talk.push(p.qty + ' ' + p.name + ' at ' + r);
-        } else {
-          pickByName(p.name); if(rate != null) document.getElementById('rateInput').value = rate.toFixed(3);
-          done.push('Picked ' + lbEsc(p.name)); oops.push(p.name + '. How many');
-        }
+        pickByName(p.name);
+        if(rate != null) document.getElementById('rateInput').value = rate.toFixed(3);
+        if(p.qty != null && p.qty > 0) document.getElementById('qtyInput').value = p.qty;
+        const r = parseFloat(document.getElementById('rateInput').value) || 0;
+        done.push(lbEsc(p.name) + (p.qty ? ' · qty ' + p.qty : '') + ' · ' + r.toFixed(3));
+        talk.push(nice(p.name) + (p.qty ? ', ' + p.qty : '') + (rate != null ? ', rate ' + rate : ''));
         return '';
       }
       if(p.choices.length && p.choices[0].s >= .45){
         const ch = p.choices.filter(c => c.s >= .4).slice(0, 3);
         if(p.qty) document.getElementById('qtyInput').value = p.qty;
-        oops.push('Which one? ' + ch.map(c => c.name).join(', or '));
+        oops.push('Which one? ' + ch.map(c => nice(c.name)).join(', or '));
         return 'Which one? ' + ch.map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join('');
       }
       if(p.rest){ oops.push("Sorry, I didn't get the flower " + p.rest); return '⚠️ Flower “' + lbEsc(p.rest) + '” not found.'; }
+      if(p.qty){ document.getElementById('qtyInput').value = p.qty; talk.push('quantity ' + p.qty); done.push('Qty ' + p.qty); }
       return '';
     }
     function extraSeg(seg, done, talk, oops){
@@ -645,63 +648,61 @@
       talk.push('extra ' + desc + (qty > 1 ? ' times ' + qty : '') + ', ' + money(each * qty));
       return '';
     }
-    // One item at a time, hands-free (Bench, Nov 19): tap 🎤 once, say one flower, it adds it and listens again.
-    // "red rose" → "How many?" → "12". Say "done" / "stop" to finish (it says the total).
-    let looping = false;
+    function addNow(talk, oops, done){
+      const q = parseFloat(document.getElementById('qtyInput').value) || 0;
+      if(!selected){ oops.push('Which flower? Say the flower first'); return; }
+      if(!(q > 0)){ oops.push(nice(selected.name) + '. Say the quantity first'); return; }
+      const nm = selected.name, r = parseFloat(document.getElementById('rateInput').value) || 0;
+      document.getElementById('addBtn').click();
+      done.push('Added ' + lbEsc(q + ' × ' + nm)); talk.push(q + ' ' + nice(nm) + ' added at ' + r + '. Total ' + money(grand()));
+    }
     async function once(){
-      looping = true;
       const names = CATALOG.map(c => c.name);
-      const alts = await LBVoice.listen({ hint:'One at a time: red rose 12 — extra vase — customer Maria — total — remove last — done' });
-      if(!alts.length){ looping = false; return; }
+      const alts = await LBVoice.listen({ hint:'Say one thing: spray rose — 6 — add. Or: red rose 6 add · extra vase · customer Maria · total · remove last' });
+      if(!alts.length) return;
       const said = alts[0];
       let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
       const done = [], talk = [], oops = [], warn = [];
-      const out = async (html, words) => { show('🎤 “' + lbEsc(said) + '”<br>' + html); await say(words); if(looping) once(); };
-      if(/^(done|stop|finish|tapos na|tapos|that'?s all|wala na|cancel)$/.test(t)){
-        looping = false; show('🎤 “' + lbEsc(said) + '”<br>⏹ Done — Total: <b>' + fmtBD(grand()) + '</b>');
-        say((cart.length || extras.length) ? 'Total is ' + money(grand()) + '.' : 'Stopped.'); return;
-      }
+      const out = (html, words) => { show('🎤 “' + lbEsc(said) + '”<br>' + html); say(words); };
       if(/\b(clear all|new order|reset|start over|bura lahat|cancel all)\b/.test(t)){
         if(confirm('Clear the whole order?')){ cart = []; extras = []; EDIT_KEY = ''; renderCart(); return out('↺ Order cleared', 'Order cleared.'); }
-        return out('Not cleared', 'Okay, not cleared.');
+        return;
       }
       if(/^(total|how much|magkano( lahat)?|what is the total)\b/.test(t)) return out('Total: ' + fmtBD(grand()), 'Total is ' + money(grand()) + '.');
       const rm = t.match(/^(remove|delete|tanggalin|alisin)\s+(.*)$/);
       if(rm){
         const what = rm[2].trim();
-        if(/^(the )?last( one)?$/.test(what) || what === 'huli'){ const c = cart.pop(); renderCart(); return out(c ? 'Removed ' + lbEsc(c.name) : 'Nothing to remove', c ? 'Removed ' + c.name + '. Total ' + money(grand()) + '.' : 'Nothing to remove.'); }
+        if(/^(the )?last( one)?$/.test(what) || what === 'huli'){ const c = cart.pop(); renderCart(); return out(c ? 'Removed ' + lbEsc(c.name) : 'Nothing to remove', c ? 'Removed ' + nice(c.name) + '. Total ' + money(grand()) + '.' : 'Nothing to remove.'); }
         const m = LBVoice.match(what, cart.map(c => c.name))[0];
-        if(m && m.s >= .7){ const i = cart.map(c => c.name).lastIndexOf(m.name); cart.splice(i, 1); renderCart(); return out('Removed ' + lbEsc(m.name), 'Removed ' + m.name + '. Total ' + money(grand()) + '.'); }
+        if(m && m.s >= .7){ const i = cart.map(c => c.name).lastIndexOf(m.name); cart.splice(i, 1); renderCart(); return out('Removed ' + lbEsc(m.name), 'Removed ' + nice(m.name) + '. Total ' + money(grand()) + '.'); }
         return out('⚠️ Not in the order list', "I didn't find that in the order.");
-      }
-      // just a number = the qty for the flower picked before ("red rose" → "How many?" → "12")
-      const onlyNum = t.match(/^(\d+(?:\.\d+)?)( (pieces?|pcs|stems?))?$/);
-      if(onlyNum && selected){
-        const nm = selected.name; document.getElementById('qtyInput').value = Number(onlyNum[1]); document.getElementById('addBtn').click();
-        return out('✅ ' + lbEsc(onlyNum[1] + ' × ' + nm) + '<br>Total: <b>' + fmtBD(grand()) + '</b>', onlyNum[1] + ' ' + nm + '. Total ' + money(grand()) + '.');
       }
       const cu = t.match(/\b(customer|para kay|for customer)\s+(.+)$/);
       if(cu){ const nm = cu[2].trim().replace(/\b\w/g, c => c.toUpperCase()); document.getElementById('customerName').value = nm; done.push('Customer: ' + lbEsc(nm)); talk.push('customer ' + nm); t = t.slice(0, cu.index).trim(); }
-      let waitTap = false;
+      // "add" / "add to list" at the end (or alone) = press Add
+      let add = false;
+      t = t.replace(/\b(add to (the )?list|add list|add it|add|idagdag|i-add)\s*$/, () => { add = true; return ''; }).trim();
       if(t){
-        const ex = t.match(/^(extras?|add extra|dagdag)\s+(.*)$/);
-        const w = ex ? extraSeg(ex[2], done, talk, oops) : flowerSeg(t.replace(/^add\s+/, ''), names, done, talk, oops);
-        if(w){ warn.push(w); if(/vn-ch/.test(w)) waitTap = true; }
+        const ex = t.match(/^(extras?|dagdag)\s+(.*)$/);
+        if(ex){ const w = extraSeg(ex[2], done, talk, oops); if(w) warn.push(w); add = false; }
+        else { const n0 = talk.length; const w = flowerSeg(t, names, done, talk, oops); if(w){ warn.push(w); add = false; } else if(add) talk.length = n0; }
+      }
+      if(add) addNow(talk, oops, done);
+      else if(done.length && selected && !t.match(/^(extras?|dagdag)\b/)){
+        const q = parseFloat(document.getElementById('qtyInput').value) || 0;
+        oops.push(q > 0 ? 'Say add' : 'Say the quantity');
       }
       renderCart();
       let html = '🎤 Heard: “' + lbEsc(said) + '”';
       if(done.length) html += '<br>✅ ' + done.join(' · ');
       if(warn.length) html += '<br>' + warn.join('<br>');
-      if(!done.length && !warn.length){ html += "<br>⚠️ Did not catch anything — please try again."; oops.push("Sorry, I didn't get that. Please say it again"); }
+      if(!done.length && !warn.length && !oops.length){ html += "<br>⚠️ Did not catch anything — please try again."; oops.push("Sorry, I didn't get that. Please say it again"); }
+      else if(!done.length && oops.length && !warn.length) html += '<br>⚠️ ' + lbEsc(oops.join('. '));
       if(cart.length || extras.length) html += '<br>Total: <b>' + fmtBD(grand()) + '</b>';
       show(html);
-      const words = (talk.length ? talk.join(', ') + '. ' : '') + (oops.length ? oops.join('. ') + '. ' : '') + (talk.length ? 'Total ' + money(grand()) + '.' : '');
-      await say(words.trim());
-      if(waitTap) return;          // waits for the "Which one?" tap, then listens again
-      if(looping) once();
+      say(((talk.length ? talk.join(', ') + '. ' : '') + (oops.length ? oops.join('. ') + '.' : '')).trim());
     }
-    btn.addEventListener('click', () => { if(!looping) once(); });
-    window.__lbVoiceAgain = () => { if(looping) once(); };
+    btn.addEventListener('click', once);
   })();
 
   document.addEventListener('click', (e)=>{
