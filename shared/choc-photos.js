@@ -111,14 +111,14 @@
     var visible = ph && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight && p.box.offsetParent !== null;
     if (!visible) { p.chip.style.display = 'none'; if (!ph) restorePad(p); return; }
     var size = Math.max(24, Math.min(36, Math.round(r.height - 8)));
-    var off = p.kind === 'select' ? 30 : 6;
+    var off = (p.kind === 'select' ? 30 : 6) + (p.box.parentNode && p.box.parentNode.classList && p.box.parentNode.classList.contains('lbcx') ? 30 : 0);   // leave room for the ✕ clear button
     p.chip.style.cssText = 'display:block;width:' + size + 'px;height:' + size + 'px;top:' + Math.round(r.top + (r.height - size) / 2) + 'px;left:' + Math.round(r.right - size - off) + 'px';
     p.chip.setAttribute('data-name', ph.name);
     if (p.img.getAttribute('src') !== ph.url) p.img.src = ph.url;
     if (!p.padded) { p.origPad = p.box.style.paddingRight; p.padded = true; }
-    p.box.style.paddingRight = (size + off + 14) + 'px';
+    p.box.style.setProperty('padding-right', (size + off + 14) + 'px', 'important');
   }
-  function restorePad(p) { if (p.padded) { p.box.style.paddingRight = p.origPad; p.padded = false; } }
+  function restorePad(p) { if (p.padded) { p.box.style.removeProperty('padding-right'); if (p.origPad) p.box.style.paddingRight = p.origPad; p.padded = false; } }
 
   function ddRows(p) {
     var q = norm(p.box.value), all = optionTexts(p.box), out = [], seen = {};

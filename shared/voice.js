@@ -92,6 +92,7 @@
       var year = nums.filter(function (n) { return n.v >= 2020 || (n.v >= 24 && n.v <= 99 && n.k > monAt); }).pop();
       var day = nums.filter(function (n) { return n !== year && n.v >= 1 && n.v <= 31; })[0];
       if (year) return mkDate(year.v, mon, day ? day.v : 1);
+      if (day) return mkDate(new Date().getFullYear(), mon, day.v);
     }
     return '';
   }
@@ -166,5 +167,73 @@
     return best;
   }
 
-  window.LBVoice = { supported: supported, listen: listen, parse: parse, parseBest: parseBest, parseDate: parseDate, wordsToDigits: wordsToDigits, match: match };
+  // ---------- whole-form commands: "supplier Lebanon", "storage chiller", "received by Joy", "price 24" ----------
+  // Short lists (suppliers, places, people): one spoken word that matches one word of the name is enough ("Lebanon").
+  function pick(said, options, aliases) {
+    var s = norm(String(said).replace(/&/g, ' and ')).split(' ').filter(function (w) { return w && !/^(and|at|the|sa|si|ni|kay)$/.test(w); });
+    if (!s.length) return null;
+    var best = null;
+    (options || []).forEach(function (o) {
+      var words = norm(String(o).replace(/&/g, ' ')).split(' ').concat(((aliases || {})[o] || []).map(norm));
+      var cov = 0; s.forEach(function (w) { var b = 0; words.forEach(function (x) { b = Math.max(b, x.indexOf(' ') > -1 ? sim(s.join(' '), x) : sim(w, x)); }); cov += b; });
+      var sc = cov / s.length * .85 + sim(s.join(' '), norm(o)) * .15;
+      if (!best || sc > best.s) best = { name: o, s: sc };
+    });
+    return best && best.s >= .72 ? best.name : null;
+  }
+  var KEYS = [
+    ['clear', /\b(cancel all|clear all|clear everything|reset( all| form)?|renew|start over|bura lahat|ulitin)\b/],
+    ['receivedBy', /\b(received by|receiver|tinanggap ni|tinanggap)\b/],
+    ['receiveDate', /\b(receive date|received date|date received|received on|received|arrived( on)?|dumating( noong)?)\b/],
+    ['expiry', /\b(expiry( date)?|expiration( date)?|expires?( on)?|best before|use by)\b/],
+    ['supplier', /\b(supplier|galing sa|from)\b/],
+    ['storage', /\b(storage location|location|put (it )?in|store (it )?in|ilagay sa|lagay sa|storage(?=\s+\S))\b/],
+    ['delivery', /\b(delivery note( number| no\.?)?|delivery( number| no\.?)?)\b/],
+    ['batch', /\b(batch( number| no\.?)?)\b/],
+    ['price', /\b(price( per (kilo|kg|box|piece|can))?|presyo|cost)\b/],
+    ['weight', /\b(weight( per (piece|box|can))?|bigat)\b/],
+    ['tray', /\b(tray( code)?|colou?r code)\b/],
+    ['remarks', /\b(remarks?|note)\b/]
+  ];
+  function parseForm(text, lists) {
+    lists = lists || {};
+    var t = ' ' + wordsToDigits(String(text || '')).toLowerCase() + ' ';
+    var out = { raw: text, fields: {}, item: null, add: false, clear: false };
+    var addRe = /\b(add to (the )?list|add it|add|idagdag)\s*\.?\s*$/i;
+    if (addRe.test(t.trim())) { out.add = true; t = ' ' + t.trim().replace(addRe, '') + ' '; }
+    var hits = [];
+    KEYS.forEach(function (k) { var re = new RegExp(k[1].source, 'gi'), m; while ((m = re.exec(t))) hits.push({ k: k[0], at: m.index, end: m.index + m[0].length }); });
+    hits.sort(function (a, b) { return a.at - b.at || (b.end - b.at) - (a.end - a.at); });
+    var cut = []; hits.forEach(function (h) { if (!cut.length || h.at >= cut[cut.length - 1].end) cut.push(h); });   // no overlaps
+    var head = (cut.length ? t.slice(0, cut[0].at) : t).trim();
+    cut.forEach(function (h, i) {
+      var val = t.slice(h.end, i + 1 < cut.length ? cut[i + 1].at : t.length).replace(/^[\s:,.-]+|[\s,.]+$/g, '').trim();
+      var f = out.fields;
+      if (h.k === 'clear') { out.clear = true; return; }
+      if (h.k === 'expiry') { var d = parseDate(val); if (d) f.expiry = d; return; }
+      if (h.k === 'receiveDate') {
+        if (/\b(today|ngayon)\b/.test(val) || !val) { f.receiveDate = iso(new Date()); return; }
+        if (/\b(yesterday|kahapon)\b/.test(val)) { var y = new Date(); y.setDate(y.getDate() - 1); f.receiveDate = iso(y); return; }
+        var d2 = parseDate(val); if (d2) f.receiveDate = d2; return;
+      }
+      if (h.k === 'supplier') { var sp = pick(val, lists.suppliers, lists.supplierAliases); if (sp) f.supplier = sp; else f.supplierHeard = val; return; }
+      if (h.k === 'storage') { var lc = pick(val, lists.locations); if (lc) f.storage = lc; return; }
+      if (h.k === 'receivedBy') { var pp = pick(val, lists.people); f.receivedBy = pp || val.replace(/\b\w/g, function (c) { return c.toUpperCase(); }); return; }
+      if (h.k === 'price' || h.k === 'weight') { var n = val.match(/\d+(\.\d+)?/); if (n) f[h.k] = Number(n[0]); return; }
+      if (h.k === 'delivery' || h.k === 'batch' || h.k === 'tray') { if (val) f[h.k] = val.replace(/\s+(?=\d)/g, '').toUpperCase(); return; }
+      if (h.k === 'remarks') { if (val) f.remarks = val.charAt(0).toUpperCase() + val.slice(1); }
+    });
+    // "storage" / "display" / "chiller" said alone also picks the place
+    if (!out.fields.storage && lists.locations) {
+      lists.locations.forEach(function (l) { if (new RegExp('\\b(in|sa|to) (the )?' + norm(l) + '\\b').test(head)) { out.fields.storage = l; head = head.replace(new RegExp('\\b(in|sa|to) (the )?' + norm(l) + '\\b'), ' ').trim(); } });
+    }
+    if (head && !out.fields.storage && lists.locations) { var only = lists.locations.filter(function (l) { return norm(l) === norm(head); })[0]; if (only) { out.fields.storage = only; head = ''; } }
+    if (head) out.item = parse(head, lists.names);
+    return out;
+  }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  // Talk back (free, built into the browser)
+  function speak(text) { try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch (e) {} }
+
+  window.LBVoice = { supported: supported, listen: listen, parse: parse, parseBest: parseBest, parseForm: parseForm, pick: pick, speak: speak, parseDate: parseDate, wordsToDigits: wordsToDigits, match: match };
 })();
