@@ -62,7 +62,10 @@
   #searchFlower{ padding-right:44px !important; }
   .search-x{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border:0; border-radius:50%; background:var(--blush-2,#f6e0da); color:var(--rose-deep); font-size:15px; line-height:1; cursor:pointer; display:none; }
   .search-x.on{ display:block; }
-  .voice-count-btn{ width:100%; margin:0 0 10px; padding:10px; border:0; border-radius:12px; background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer; }
+  .voice-count-btn{ border:0; border-radius:10px; padding:0 16px; min-height:40px; background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; font-size:18px; cursor:pointer; flex:none; margin:0 0 10px; }
+  .lbfs-row .voice-count-btn{ margin:0 0 0 8px; }
+  .voice-status{ display:none; margin:0 0 10px; padding:7px 10px; border-radius:10px; background:#fdeef3; color:#8a3a5a; font-weight:700; font-size:12.5px; }
+  .voice-status.on{ display:block; }
   .voice-note{ display:none; margin:-4px 0 10px; padding:8px 10px; border-radius:10px; background:#fff7fa; border:1px dashed #e5b8c8; font-size:12.5px; color:#5a4048; line-height:1.45; }
   .voice-note.show{ display:block; }
   .voice-note .vn-ch{ display:inline-block; margin:4px 6px 0 0; padding:4px 10px; border-radius:999px; border:1px solid #c98aa0; background:#fff; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:12px; }
@@ -238,7 +241,8 @@
           <input type="text" id="searchFlower" placeholder="Search flower or item code…" autocomplete="off" />
           <button type="button" class="search-x" id="searchClear" aria-label="Clear search">✕</button>
         </div>
-        <button type="button" class="voice-count-btn" id="voiceBtn">🎤 Say the count — e.g. “red rose 120, waste 5”</button>
+        <button type="button" class="voice-count-btn" id="voiceBtn" title="Say the count — e.g. red rose 120, waste 5">🎤</button>
+        <div class="voice-status" id="voiceStatus"></div>
         <div class="voice-note" id="voiceNote"></div>
         <div id="flowerList" style="max-height:56vh; overflow-y:auto;"></div>
         <button class="btn btn-secondary" id="addMissingBtn">+ Add Missing Flower</button>
@@ -485,7 +489,10 @@
     function row(name){ return backing.findIndex(b => b.flowerName.toLowerCase() === String(name).toLowerCase()); }
     function unitWord(b, n){ return b.unit === 'bunch' ? (n == 1 ? 'bunch' : 'bunches') : (n == 1 ? 'piece' : 'pieces'); }
     function flash(idx, f){ const inp = document.getElementById((f === 'waste' ? 'waste-' : 'count-') + idx); if(!inp) return; inp.scrollIntoView({ block:'center', behavior:'smooth' }); inp.classList.remove('count-flash'); void inp.offsetWidth; inp.classList.add('count-flash'); }
-    function paintBtn(){ btn.textContent = cur ? '🎤 On: ' + cur + ' (' + field + ') — say add 10 / done / stop' : '🎤 Say the count — e.g. “red rose 120, waste 5”'; }
+    const stat = document.getElementById('voiceStatus');
+    function paintBtn(){ stat.textContent = cur ? '🎤 On: ' + cur + ' (' + field + ') — say “add 10”, “waste 4”, “done”, or “stop”' : (looping ? '🎤 Listening — say a flower and its count, or “stop”' : ''); stat.classList.toggle('on', !!(cur || looping)); }
+    // the 🎤 sits next to the 📷 of the item-code row (that row is made by shared/flower-scan.js)
+    (function moveMic(n){ const row = document.querySelector('#countCard .lbfs-row'); if(row){ row.appendChild(btn); return; } if(n < 40) setTimeout(() => moveMic(n + 1), 250); })(0);
     function useFlower(name){
       let idx = row(name);
       if(idx < 0){ const m = addableFlowers().find(x => x.flowerName.toLowerCase() === name.toLowerCase()); if(!m) return false; addFlowerRow(m); idx = backing.length - 1; }
@@ -560,7 +567,7 @@
     });
     async function once(){
       if(isReadOnlyView){ alert('This is a read-only view.'); return; }
-      looping = true;
+      looping = true; paintBtn();
       const alts = await LBVoice.listen({ hint: cur ? 'On ' + cur + ' (' + field + '). Say: add 10 — waste 4 — done — stop' : 'Say: red rose 120 — rose add 10 … add 10 — wastage rose 4 … add 5 — done — stop' });
       if(!alts.length){ looping = false; paintBtn(); return; }     // cancelled or silence: stop listening
       const said = alts[0];
