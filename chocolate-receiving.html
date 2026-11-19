@@ -554,11 +554,11 @@
 
     <div class="grid-2">
       <div>
-        <label>Price / Kg (BD)</label>
+        <label id="lblPrice">Price / Kg (BD)</label>
         <input type="number" id="fPrice" min="0" step="0.001" placeholder="0.000" />
       </div>
       <div>
-        <label>Weight / Piece (g)</label>
+        <label id="lblWeight">Weight / Piece (g)</label>
         <input type="number" id="fWeightPerPiece" min="0" step="0.01" placeholder="0" />
       </div>
     </div>
@@ -839,6 +839,8 @@
       selectedItem = match;
       metaLine.textContent = `${match['Product Code'] || '—'} · ${match['Brand'] || '—'} · ${match['Category'] || '—'}`;
       metaLine.classList.add('show');
+      const pk = String(match['Packaging Type'] || 'Piece');
+      if(['Piece','Box','Can'].includes(pk)){ document.getElementById('fPackagingType').value = pk; applyPack(); }
       if(!document.getElementById('fPrice').value && match['Standard Price / Kg']){
         const p = String(match['Standard Price / Kg']).replace(/[^0-9.]/g,'');
         if(p) document.getElementById('fPrice').value = p;
@@ -1039,15 +1041,18 @@
   // A box or can is always counted whole, never weighed — auto-lock
   // the Unit to "Piece" so it can't be mismatched (e.g. "Can" +
   // "Kg", which wouldn't make sense to receive by weight).
-  document.getElementById('fPackagingType').addEventListener('change', function(){
+  // Nov 19 2026: a Box/Can is priced per box (the calc does boxes × price), so the labels say so;
+  // the weight of one box is only for reference (optional).
+  function applyPack(){
+    const v = document.getElementById('fPackagingType').value, whole = v === 'Box' || v === 'Can';
     const unitSelect = document.getElementById('fUnit');
-    if(this.value === 'Box' || this.value === 'Can'){
-      unitSelect.value = 'Piece';
-      unitSelect.disabled = true;
-    } else {
-      unitSelect.disabled = false;
-    }
-  });
+    if(whole){ unitSelect.value = 'Piece'; unitSelect.disabled = true; } else unitSelect.disabled = false;
+    const word = v === 'Can' ? 'Can' : 'Box';
+    document.getElementById('lblPrice').textContent = whole ? `Price / ${word} (BD)` : 'Price / Kg (BD)';
+    document.getElementById('lblWeight').textContent = whole ? `Weight / ${word} (g, optional)` : 'Weight / Piece (g)';
+    document.getElementById('fQty').placeholder = whole ? (v === 'Can' ? 'No. of cans' : 'No. of boxes') : '0';
+  }
+  document.getElementById('fPackagingType').addEventListener('change', applyPack);
 
   // Nov 19 2026 (Bench): one delivery can have many chocolates. "Add to list" keeps the delivery
   // details (date, delivery no., supplier, received by) and only clears the chocolate fields.
@@ -1071,7 +1076,8 @@
       unit: $('fUnit').value,
       price: isNaN(price) ? 0 : price,
       weightPerPiece: isNaN(weightPerPiece) ? '' : weightPerPiece,
-      pricePerPiece: (!isNaN(price) && !isNaN(weightPerPiece)) ? (price * weightPerPiece / 1000).toFixed(3) : '',
+      pricePerPiece: ['Box','Can'].includes($('fPackagingType').value) ? (isNaN(price) ? '' : price.toFixed(3))
+        : (!isNaN(price) && !isNaN(weightPerPiece)) ? (price * weightPerPiece / 1000).toFixed(3) : '',
       packagingType: $('fPackagingType').value,
       storageLocation: $('fStorageLocation').value,
       trayCode: $('fTrayCode').value.trim(),
@@ -1085,6 +1091,7 @@
     ['fSearch','fBatchNo','fExpiryDate','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks'].forEach(id => { $(id).value = ''; });
     $('itemMetaLine').classList.remove('show');
     selectedItem = null;
+    $('fPackagingType').value = 'Piece'; applyPack();
   }
   function renderLines(){
     const box = $('lineList');
