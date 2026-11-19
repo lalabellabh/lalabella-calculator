@@ -593,7 +593,7 @@
       }
       quiet = 0;
       // the phone gives up to 3 guesses: take the first one that has a number in it when the first one has none
-      const clean = a => LBVoice.wordsToDigits(a).toLowerCase().replace(/[.,?!;]/g, ' ').replace(/\s+/g, ' ').trim();
+      const clean = a => LBVoice.wordsToDigits(a).toLowerCase().replace(/(?<!\d)[.,]+|[.,]+(?!\d)|[?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
       let said = alts[0];
       if(!/\d/.test(clean(said))){ const withNum = alts.find(a => /\d/.test(clean(a))); if(withNum && !/^(stop|done|next|how many)/.test(clean(said))) said = withNum; }
       const t = clean(said);

@@ -631,26 +631,54 @@
       if(p.qty){ document.getElementById('qtyInput').value = p.qty; talk.push('quantity ' + p.qty); done.push('Qty ' + p.qty); }
       return '';
     }
+    // Extras (Bench, Nov 19): one strong match → fills name + price (no add yet). Many matches ("vase", "box") → opens the
+    // Item Inventory list to pick by hand (price fills when picked). Not in the list → name only, say the price.
+    let mode = 'flower';
+    const exDesc = () => document.getElementById('extraDesc'), exPrice = () => document.getElementById('extraPrice'), exQty = () => document.getElementById('extraQty');
+    function goExtras(){ mode = 'extra'; const c = exDesc().closest('.card'); if(c) c.scrollIntoView({ behavior:'smooth', block:'center' }); }
     function extraSeg(seg, done, talk, oops){
-      const list = (LBExtrasPick.items ? LBExtrasPick.items() : []), labels = list.map(it => it.name);   // match the name (sizes are not spoken)
-      let price = null;
+      const list = (LBExtrasPick.items ? LBExtrasPick.items() : []), labels = list.map(it => it.name);
+      let price = null, qty = null;
       seg = seg.replace(/\b(price|presyo|at)\s+(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?)\s*(bd|dinars?)\b/, (m, k, n, n2) => { price = Number(n || n2); return ' '; });
+      seg = seg.replace(/\b(quantity|qty|dami)\s+(\d+(?:\.\d+)?)\b/, (m, k, n) => { qty = Number(n); return ' '; }).trim();
+      if(/^\d+(\.\d+)?$/.test(seg)){ qty = Number(seg); seg = ''; }
+      if(qty != null){ exQty().value = qty; done.push('Extra qty ' + qty); talk.push('quantity ' + qty); }
+      if(price != null){ exPrice().value = price.toFixed(3); done.push('Price ' + price.toFixed(3)); talk.push('price ' + price); }
+      if(!seg) return '';
       const p = LBVoice.parse(seg, labels);
-      const qty = p.qty && p.qty > 0 ? p.qty : 1;
-      let desc = '', each = price;
-      if(p.name && p.nameScore >= .75){
+      if(p.qty && qty == null){ exQty().value = p.qty; }
+      const ch = (p.choices || []).filter(c => c.s >= .6);
+      const strong = p.name && p.nameScore >= .8 && !(ch[1] && ch[1].s >= p.nameScore - .05 && ch[1].name !== p.name);
+      if(strong){
         const it = list[labels.indexOf(p.name)];
-        LBExtrasPick.choose(document.getElementById('extraDesc'), document.getElementById('extraPrice'), it);
-        desc = document.getElementById('extraDesc').value;
-        if(each == null) each = it.price > 0 ? it.price : null;
-      } else if(p.rest){ desc = p.rest.replace(/\b\w/g, c => c.toUpperCase()); document.getElementById('extraDesc').value = desc; }
-      if(!desc){ oops.push("I didn't get the extra"); return '⚠️ Extra not understood.'; }
-      if(each == null){ document.getElementById('extraQty').value = qty; oops.push(desc + '. What is the price?'); return '⚠️ ' + lbEsc(desc) + ': say or type the price.'; }
-      document.getElementById('extraPrice').value = Number(each).toFixed(3); document.getElementById('extraQty').value = qty;
-      document.getElementById('addExtraBtn').click();
-      done.push('Extra ' + lbEsc(desc) + (qty > 1 ? ' × ' + qty : '') + ' @ ' + Number(each).toFixed(3));
-      talk.push('extra ' + desc + (qty > 1 ? ' times ' + qty : '') + ', ' + money(each * qty));
+        LBExtrasPick.choose(exDesc(), exPrice(), it); if(price != null) exPrice().value = price.toFixed(3);
+        const pr = parseFloat(exPrice().value) || 0;
+        done.push('Extra ' + lbEsc(exDesc().value) + (pr ? ' · ' + pr.toFixed(3) : ''));
+        talk.push(exDesc().value + (pr ? ', ' + money(pr) : ''));
+        oops.push(pr ? 'Say add' : 'Say the price');
+        return '';
+      }
+      // many items fit (all vases / boxes): open the list to pick by hand
+      const word = (p.rest || seg).trim();
+      const hits = list.filter(it => { const h = (it.name + ' ' + (it.size || '')).toLowerCase(); return word.toLowerCase().split(/\s+/).every(w => h.includes(w.replace(/(es|s)$/, ''))); });
+      if(hits.length > 1 || ch.length > 1){
+        exDesc().value = hits.length > 1 ? word.replace(/(es|s)$/, '') : word; exPrice().value = '';
+        setTimeout(() => { exDesc().focus(); exDesc().dispatchEvent(new Event('input')); }, 350);
+        talk.push((hits.length || ch.length) + ' items for ' + word + '. Please pick one from the list');
+        return '📋 ' + (hits.length || ch.length) + ' items for “' + lbEsc(word) + '” — pick one from the list (price fills in).';
+      }
+      if(hits.length === 1){ LBExtrasPick.choose(exDesc(), exPrice(), hits[0]); const pr = parseFloat(exPrice().value) || 0; done.push('Extra ' + lbEsc(exDesc().value)); talk.push(exDesc().value + (pr ? ', ' + money(pr) : '')); oops.push(pr ? 'Say add' : 'Say the price'); return ''; }
+      const desc = word.replace(/\b\w/g, c => c.toUpperCase()); exDesc().value = desc;
+      done.push('Extra ' + lbEsc(desc) + ' (not in Item Inventory)'); talk.push(desc); if(!(parseFloat(exPrice().value) > 0)) oops.push('Not in the list. Say the price');
       return '';
+    }
+    function addExtraNow(talk, oops, done){
+      const d = exDesc().value.trim(), pr = parseFloat(exPrice().value) || 0, q = parseFloat(exQty().value) || 1;
+      if(!d){ oops.push('Say the extra first'); return; }
+      if(!(pr > 0) && !/free/i.test(d)){ oops.push(d + '. Say the price first'); return; }
+      document.getElementById('addExtraBtn').click();
+      done.push('Added extra ' + lbEsc(d) + (q > 1 ? ' × ' + q : '')); talk.push(d + (q > 1 ? ' times ' + q : '') + ' added. Total ' + money(grand()));
+      mode = 'flower';
     }
     function addNow(talk, oops, done){
       const q = parseFloat(document.getElementById('qtyInput').value) || 0;
@@ -663,10 +691,10 @@
     const undoStack = [];
     async function once(){
       const names = CATALOG.map(c => c.name);
-      const alts = await LBVoice.listen({ hint:'Say one thing: spray rose — 6 — add. Also: quantity 7 · clear quantity · clear last · extra vase · total · remove last' });
+      const alts = await LBVoice.listen({ hint: mode === 'extra' ? 'Extras: say the item (handwork, vase…) — price 2 — quantity 2 — add. Say “flower” to go back.' : 'Say one thing: spray rose — 6 — add. Also: extra · quantity 7 · clear quantity · clear last · total · remove last' });
       if(!alts.length) return;
       const said = alts[0];
-      let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
+      let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/(?<!\d)[.,]+|[.,]+(?!\d)|[?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
       const done = [], talk = [], oops = [], warn = [];
       const out = (html, words) => { show('🎤 “' + lbEsc(said) + '”<br>' + html); say(words); };
       // "clear last" / "undo" = put back how it was before the last voice input
@@ -676,12 +704,14 @@
         cart = cart.slice(0, sn.cart); extras = extras.slice(0, sn.extras);
         if(sn.flower) pickByName(sn.flower); else document.getElementById('searchClear').click();
         document.getElementById('qtyInput').value = sn.qty; document.getElementById('rateInput').value = sn.rate; document.getElementById('customerName').value = sn.customer;
+        mode = sn.mode || 'flower'; exDesc().value = sn.exD || ''; exPrice().value = sn.exP || ''; exQty().value = sn.exQ || 1;
         renderCart(); return out('↩️ Undone: “' + lbEsc(sn.said) + '”', 'Undone. ' + (sn.flower ? nice(sn.flower) + (sn.qty ? ', ' + sn.qty : '') + '.' : ''));
       }
-      if(/^clear (the )?(quantity|qty)$/.test(t)){ document.getElementById('qtyInput').value = ''; return out('Quantity cleared', 'Quantity cleared. Say the quantity.'); }
+      if(/^clear (the )?(quantity|qty)$/.test(t)){ (mode === 'extra' ? exQty() : document.getElementById('qtyInput')).value = mode === 'extra' ? 1 : ''; return out('Quantity cleared', 'Quantity cleared. Say the quantity.'); }
+      if(/^clear (the )?(extras?|item)$/.test(t)){ exDesc().value = ''; exPrice().value = ''; exQty().value = 1; return out('Extra cleared', 'Extra cleared. Say the item.'); }
       if(/^clear (the )?rate$/.test(t)){ document.getElementById('rateInput').value = selected ? Number(selected.rate).toFixed(3) : ''; return out('Rate back to the list rate', 'Rate reset.'); }
       if(/^clear (the )?(flower|search|name)$/.test(t)){ document.getElementById('searchClear').click(); return out('Flower cleared', 'Flower cleared. Say the flower.'); }
-      if(!/^(total|how much|magkano)/.test(t)) undoStack.push({ said, cart: cart.length, extras: extras.length, flower: selected ? selected.name : '', qty: document.getElementById('qtyInput').value, rate: document.getElementById('rateInput').value, customer: document.getElementById('customerName').value });
+      if(!/^(total|how much|magkano)/.test(t)) undoStack.push({ said, cart: cart.length, extras: extras.length, flower: selected ? selected.name : '', qty: document.getElementById('qtyInput').value, rate: document.getElementById('rateInput').value, customer: document.getElementById('customerName').value, mode, exD: exDesc().value, exP: exPrice().value, exQ: exQty().value });
       if(undoStack.length > 30) undoStack.shift();
       if(/\b(clear all|new order|reset|start over|bura lahat|cancel all)\b/.test(t)){
         if(confirm('Clear the whole order?')){ cart = []; extras = []; EDIT_KEY = ''; renderCart(); return out('↺ Order cleared', 'Order cleared.'); }
@@ -701,13 +731,22 @@
       // "add" / "add to list" at the end (or alone) = press Add
       let add = false;
       t = t.replace(/\b(add to (the )?list|add list|add it|add|idagdag|i-add)\s*$/, () => { add = true; return ''; }).trim();
-      if(t){
-        const ex = t.match(/^(extras?|dagdag)\s+(.*)$/);
-        if(ex){ const w = extraSeg(ex[2], done, talk, oops); if(w) warn.push(w); add = false; }
-        else { const n0 = talk.length; const w = flowerSeg(t, names, done, talk, oops); if(w){ warn.push(w); add = false; } else if(add) talk.length = n0; }
+      // "extra" / "add extra" = go to Extras; "flower" = back to flowers
+      if(/^(add )?(extras?|dagdag)$/.test(t) || /^(add )?(extras?|dagdag)$/.test((t + (add ? ' add' : '')).trim())){ goExtras(); return out('🎀 Extras — say the item (e.g. handwork, vase)', 'Extras. Say the item.'); }
+      if(/^(flowers?|bulaklak|back to flowers?)$/.test(t)){ mode = 'flower'; return out('🌸 Flowers', 'Flowers. Say the flower.'); }
+      const ex = t.match(/^(add )?(extras?|dagdag)\s+(.*)$/);
+      if(ex){ goExtras(); t = ex[3].trim(); }
+      let wasExtra = false;
+      if(mode === 'extra'){
+        wasExtra = true;
+        if(t){ const w = extraSeg(t, done, talk, oops); if(w) warn.push(w); }
+        if(add) addExtraNow(talk, oops, done);
+      } else {
+        if(t){ const n0 = talk.length; const w = flowerSeg(t, names, done, talk, oops); if(w){ warn.push(w); add = false; } else if(add) talk.length = n0; }
       }
-      if(add) addNow(talk, oops, done);
-      else if(done.length && selected && !t.match(/^(extras?|dagdag)\b/)){
+      if(wasExtra){ /* extras handled above */ }
+      else if(add) addNow(talk, oops, done);
+      else if(done.length && selected){
         const q = parseFloat(document.getElementById('qtyInput').value) || 0;
         oops.push(q > 0 ? 'Say add' : 'Say the quantity');
       }
