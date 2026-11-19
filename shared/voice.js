@@ -17,6 +17,8 @@
     + '.lbv-x{margin-top:12px;padding:10px 22px;border-radius:999px;border:1px solid #efdfde;background:#fff;font:700 14px inherit;cursor:pointer;color:#2f2024}';
   function addCss() { if (document.getElementById('lbvCss')) return; var s = document.createElement('style'); s.id = 'lbvCss'; s.textContent = css; document.head.appendChild(s); }
 
+  var stopNow = null;
+  function stop() { if (stopNow) { var f = stopNow; stopNow = null; f(); } try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} }
   function listen(opts) {
     opts = opts || {};
     return new Promise(function (resolve) {
@@ -29,6 +31,7 @@
       var live = ov.querySelector('.lbv-live'), done = false, best = [];
       var r = new SR();
       r.lang = opts.lang || 'en-US'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
+      stopNow = function () { finish([], 'cancel'); };
       function finish(list, why) { if (done) return; done = true; try { r.abort(); } catch (e) {} ov.remove(); list = list || []; list.why = why || (list.length ? 'ok' : 'silence'); resolve(list); }
       ov.querySelector('.lbv-x').onclick = function () { finish([], 'cancel'); };
       r.onresult = function (e) {
@@ -259,5 +262,5 @@
     });
   }
 
-  window.LBVoice = { supported: supported, listen: listen, parse: parse, parseBest: parseBest, parseForm: parseForm, pick: pick, speak: speak, parseDate: parseDate, wordsToDigits: wordsToDigits, match: match };
+  window.LBVoice = { supported: supported, listen: listen, parse: parse, parseBest: parseBest, parseForm: parseForm, pick: pick, speak: speak, stop: stop, parseDate: parseDate, wordsToDigits: wordsToDigits, match: match };
 })();

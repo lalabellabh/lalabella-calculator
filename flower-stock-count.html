@@ -65,7 +65,8 @@
   .voice-count-btn{ border:0; border-radius:10px; padding:0 16px; min-height:40px; background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; font-size:18px; cursor:pointer; flex:none; margin:0 0 10px; }
   .lbfs-row .voice-count-btn{ margin:0 0 0 8px; }
   .voice-status{ display:none; margin:0 0 10px; padding:7px 10px; border-radius:10px; background:#fdeef3; color:#8a3a5a; font-weight:700; font-size:12.5px; }
-  .voice-status.on{ display:block; }
+  .voice-status.on{ display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  .voice-status .vs-stop{ flex:none; border:0; border-radius:999px; padding:5px 12px; background:#9e2f4a; color:#fff; font-weight:700; font-size:12px; cursor:pointer; }
   .voice-note{ display:none; margin:-4px 0 10px; padding:8px 10px; border-radius:10px; background:#fff7fa; border:1px dashed #e5b8c8; font-size:12.5px; color:#5a4048; line-height:1.45; }
   .voice-note.show{ display:block; }
   .voice-note .vn-ch{ display:inline-block; margin:4px 6px 0 0; padding:4px 10px; border-radius:999px; border:1px solid #c98aa0; background:#fff; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:12px; }
@@ -201,7 +202,7 @@
 </nav>
 <script src="shared/nav.js"></script>
 <script src="shared/flower-scan.js?v=2"></script>
-<script src="shared/voice.js?v=6"></script>
+<script src="shared/voice.js?v=7"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
@@ -490,7 +491,18 @@
     function unitWord(b, n){ return b.unit === 'bunch' ? (n == 1 ? 'bunch' : 'bunches') : (n == 1 ? 'piece' : 'pieces'); }
     function flash(idx, f){ const inp = document.getElementById((f === 'waste' ? 'waste-' : 'count-') + idx); if(!inp) return; inp.scrollIntoView({ block:'center', behavior:'smooth' }); inp.classList.remove('count-flash'); void inp.offsetWidth; inp.classList.add('count-flash'); }
     const stat = document.getElementById('voiceStatus');
-    function paintBtn(){ stat.textContent = cur ? '🎤 On: ' + cur + ' (' + field + ') — say “add 10”, “waste 4”, “done”, or “stop”' : (looping ? '🎤 Listening — say a flower and its count, or “stop”' : ''); stat.classList.toggle('on', !!(cur || looping)); }
+    function paintBtn(){
+      const txt = cur ? '🎤 On: ' + cur + ' (' + field + ') — say “add 10”, “waste 4”, “done”, or “stop”' : (looping ? '🎤 Listening — say a flower and its count, or “stop”' : '');
+      stat.innerHTML = lbEsc(txt) + ' <button type="button" class="vs-stop" title="Stop voice">⏹ Stop</button>';
+      stat.classList.toggle('on', !!(cur || looping));
+    }
+    // ⏹ Stop on the status line (Bench, Nov 19): ends the voice count even if it is not listening right now
+    stat.addEventListener('click', e => {
+      if(!e.target.closest('.vs-stop')) return;
+      const last = cur; looping = false; quiet = 0; cur = null; field = 'count'; pending = null;
+      try{ LBVoice.stop(); }catch(_){}
+      paintBtn(); show('⏹ Stopped' + (last ? ' — ' + lbEsc(summary(last)) : '')); say((last ? summary(last) + ' ' : '') + 'Stopped.');
+    });
     // the 🎤 sits next to the 📷 of the item-code row (that row is made by shared/flower-scan.js)
     (function moveMic(n){ const row = document.querySelector('#countCard .lbfs-row'); if(row){ row.appendChild(btn); return; } if(n < 40) setTimeout(() => moveMic(n + 1), 250); })(0);
     function useFlower(name){
@@ -510,12 +522,15 @@
     function summary(name){ const b = backing[row(name)]; if(!b) return name; return name + ' done. Count ' + (b.physicalCount === '' ? 'none' : b.physicalCount) + (b.wastage ? ', waste ' + b.wastage : '') + '.'; }
     // words -> actions
     function actions(t){
-      const w = t.split(/\s+/), out = []; let nameBuf = [];
+      // numbers the phone often mishears (Bench: "10" came out as "bye") — used only right after add / waste / count
+      const SOUND = { won:1, to:2, too:2, two:2, tree:3, free:3, for:4, fore:4, bye:5, by:5, hive:5, sex:6, sicks:6, ate:8, nein:9, tin:10, then:10, ten:10, tan:10, den:10 };
+      const w0 = t.split(/\s+/), w = w0.map((x, i) => (SOUND[x] != null && /^(add|plus|dagdag|waste|wastage|wasted|waist|count)$/.test(w0[i - 1] || '')) ? String(SOUND[x]) : x);
+      const out = []; let nameBuf = [];
       const flush = () => { if(nameBuf.length){ out.push({ k:'name', v:nameBuf.join(' ') }); nameBuf = []; } };
       for(let i = 0; i < w.length; i++){
         const x = w[i], n = w[i + 1];
         if(/^(done|next|sunod|tapos)$/.test(x)){ flush(); if(!out.length || out[out.length - 1].k !== 'done') out.push({ k:'done' }); continue; }
-        if(/^(waste|wastage|sira|damaged?)$/.test(x)){ flush(); out.push({ k:'field', v:'waste' }); continue; }
+        if(/^(waste|wastes|wasted|wastage|waist|waists|west|sira|damaged?)$/.test(x)){ flush(); out.push({ k:'field', v:'waste' }); continue; }
         if(/^(count|bilang|stock)$/.test(x)){ flush(); out.push({ k:'field', v:'count' }); continue; }
         if(/^(add|plus|dagdag)$/.test(x) && /^\d+(\.\d+)?$/.test(n || '')){ flush(); out.push({ k:'add', v:Number(n) }); i++; continue; }
         if(/^(add|plus|dagdag)$/.test(x)){ continue; }
@@ -577,8 +592,11 @@
         return;
       }
       quiet = 0;
-      const said = alts[0];
-      const t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]/g, ' ').replace(/\s+/g, ' ').trim();
+      // the phone gives up to 3 guesses: take the first one that has a number in it when the first one has none
+      const clean = a => LBVoice.wordsToDigits(a).toLowerCase().replace(/[.,?!;]/g, ' ').replace(/\s+/g, ' ').trim();
+      let said = alts[0];
+      if(!/\d/.test(clean(said))){ const withNum = alts.find(a => /\d/.test(clean(a))); if(withNum && !/^(stop|done|next|how many)/.test(clean(said))) said = withNum; }
+      const t = clean(said);
       if(/^(stop|finish|tapos na|exit|close|cancel|that'?s all)$/.test(t)){
         looping = false; const last = cur; cur = null; field = 'count'; paintBtn();
         show('🎤 “' + lbEsc(said) + '”<br>⏹ Stopped' + (last ? ' — ' + lbEsc(summary(last)) : '')); say((last ? summary(last) + ' ' : '') + 'Stopped. Press Save Count when finished.'); return;
