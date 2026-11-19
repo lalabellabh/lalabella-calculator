@@ -201,7 +201,7 @@
 </nav>
 <script src="shared/nav.js"></script>
 <script src="shared/flower-scan.js?v=2"></script>
-<script src="shared/voice.js?v=5"></script>
+<script src="shared/voice.js?v=6"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
@@ -484,7 +484,7 @@
     const btn = document.getElementById('voiceBtn'), note = document.getElementById('voiceNote');
     if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
     const say = t => LBVoice.speak(t);
-    let cur = null, field = 'count', pending = null, looping = false;
+    let cur = null, field = 'count', pending = null, looping = false, quiet = 0;
     function show(html){ note.innerHTML = '<button type="button" class="vn-x" title="Close">✕</button>' + html; note.classList.add('show'); }
     function row(name){ return backing.findIndex(b => b.flowerName.toLowerCase() === String(name).toLowerCase()); }
     function unitWord(b, n){ return b.unit === 'bunch' ? (n == 1 ? 'bunch' : 'bunches') : (n == 1 ? 'piece' : 'pieces'); }
@@ -569,7 +569,14 @@
       if(isReadOnlyView){ alert('This is a read-only view.'); return; }
       looping = true; paintBtn();
       const alts = await LBVoice.listen({ hint: cur ? 'On ' + cur + ' (' + field + '). Say: add 10 — waste 4 — done — stop' : 'Say: red rose 120 — rose add 10 … add 10 — wastage rose 4 … add 5 — done — stop' });
-      if(!alts.length){ looping = false; paintBtn(); return; }     // cancelled or silence: stop listening
+      if(!alts.length){
+        // Quiet for a while (counting takes time): keep listening. Stop only on Cancel, an error, or about 2 minutes of silence.
+        if(alts.why === 'silence' && ++quiet < 12){ if(looping) return once(); }
+        looping = false; quiet = 0; paintBtn();
+        if(alts.why === 'silence') { show('⏹ Stopped listening (no voice for a while). Tap 🎤 to go on' + (cur ? ' with ' + lbEsc(cur) : '') + '.'); say('Stopped listening. Tap the mic to go on.'); }
+        return;
+      }
+      quiet = 0;
       const said = alts[0];
       const t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]/g, ' ').replace(/\s+/g, ' ').trim();
       if(/^(stop|finish|tapos na|exit|close|cancel|that'?s all)$/.test(t)){

@@ -29,8 +29,8 @@
       var live = ov.querySelector('.lbv-live'), done = false, best = [];
       var r = new SR();
       r.lang = opts.lang || 'en-US'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
-      function finish(list) { if (done) return; done = true; try { r.abort(); } catch (e) {} ov.remove(); resolve(list || []); }
-      ov.querySelector('.lbv-x').onclick = function () { finish([]); };
+      function finish(list, why) { if (done) return; done = true; try { r.abort(); } catch (e) {} ov.remove(); list = list || []; list.why = why || (list.length ? 'ok' : 'silence'); resolve(list); }
+      ov.querySelector('.lbv-x').onclick = function () { finish([], 'cancel'); };
       r.onresult = function (e) {
         var txt = '';
         for (var i = e.resultIndex; i < e.results.length; i++) {
@@ -42,10 +42,10 @@
       r.onerror = function (e) {
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') alert('Microphone is blocked. Please allow the microphone for this site, then try again.');
         else if (e.error === 'network') alert('Voice needs internet. Please check the connection.');
-        finish([]);
+        finish([], e.error === 'no-speech' || e.error === 'aborted' ? 'silence' : 'error');
       };
       r.onend = function () { finish(best); };
-      try { r.start(); } catch (e) { finish([]); }
+      try { r.start(); } catch (e) { finish([], 'error'); }
     });
   }
 
