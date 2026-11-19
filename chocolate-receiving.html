@@ -6,6 +6,7 @@
 <script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/scanner.js"></script>
+<script src="shared/voice.js?v=1"></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
@@ -154,6 +155,10 @@
   .hist-row-actions{ margin-top:6px; }
   .scan-row{ display:flex; gap:8px; }
   .scan-row input{ flex:1; }
+  .voice-note{ display:none; margin-top:6px; padding:8px 10px; border-radius:10px; background:#fff7fa; border:1px dashed #e5b8c8; font-size:12.5px; color:#5a4048; line-height:1.45; }
+  .voice-note.show{ display:block; }
+  .voice-note .vn-ch{ display:inline-block; margin:4px 6px 0 0; padding:4px 10px; border-radius:999px; border:1px solid #c98aa0; background:#fff; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:12px; }
+  .voice-note .vn-x{ float:right; border:none; background:none; color:#8a7078; cursor:pointer; font-size:14px; }
   .scan-btn{
     background:var(--ink); color:var(--paper); border:none; border-radius:3px;
     padding:0 16px; font-size:18px; cursor:pointer; white-space:nowrap;
@@ -502,9 +507,11 @@
     <div class="scan-row">
       <input type="text" id="fSearch" list="itemList" placeholder="Type or pick a chocolate" autocomplete="off" />
       <button class="scan-btn" id="scanBtn" title="Scan barcode">📷</button>
+      <button class="scan-btn voice-btn" id="voiceBtn" type="button" title="Say it: Mia Pink 10 kilo expiry November 11 2027">🎤</button>
     </div>
     <datalist id="itemList"></datalist>
     <div class="item-meta-line" id="itemMetaLine"></div>
+    <div class="voice-note" id="voiceNote"></div>
 
     <div class="grid-2">
       <div>
@@ -1070,6 +1077,49 @@
     document.getElementById('fQty').placeholder = whole ? (v === 'Can' ? 'No. of cans' : 'No. of boxes') : '0';
   }
   document.getElementById('fPackagingType').addEventListener('change', applyPack);
+
+  // Nov 19 2026 (Bench): 🎤 voice — "Mia Pink 10 kilo expiry November 11 2027 (add)". Only fills the form;
+  // the invoice check still shows before anything goes in the list.
+  (function(){
+    const btn = document.getElementById('voiceBtn'), note = document.getElementById('voiceNote');
+    if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
+    function setName(n){
+      const f = document.getElementById('fSearch'); f.value = n; f.dispatchEvent(new Event('input'));
+    }
+    function show(html){ note.innerHTML = '<button type="button" class="vn-x" title="Close">✕</button>' + html; note.classList.add('show'); }
+    note.addEventListener('click', e => {
+      if(e.target.closest('.vn-x')){ note.classList.remove('show'); return; }
+      const c = e.target.closest('.vn-ch'); if(!c) return;
+      setName(c.dataset.n); note.classList.remove('show');
+    });
+    btn.addEventListener('click', async () => {
+      const names = items.map(it => it['Chocolate Name']).filter(Boolean);
+      const alts = await LBVoice.listen({ hint:'Say: Mia Pink, 10 kilo, expiry November 11 2027 — say "add" at the end to add it to the list' });
+      if(!alts.length) return;
+      const v = LBVoice.parseBest(alts, names);
+      const filled = [];
+      let sure = false;
+      if(v.name && v.nameScore >= .8){ setName(v.name); filled.push('<b>' + lbEsc(v.name) + '</b>'); sure = true; }
+      if(v.pack){ document.getElementById('fPackagingType').value = v.pack; applyPack(); }
+      if(v.qty != null){
+        const unitSel = document.getElementById('fUnit'), has = u => [...unitSel.options].find(o => o.value.toLowerCase() === u.toLowerCase());
+        let q = v.qty, u = v.unit;
+        if(u === 'g'){ q = Math.round(q) / 1000; u = 'Kg'; }
+        if(u === 'Box' || u === 'Can') u = 'Piece';
+        document.getElementById('fQty').value = q;
+        if(u && has(u) && !unitSel.disabled) unitSel.value = has(u).value;
+        filled.push(q + ' ' + (u || unitSel.value));
+      }
+      if(v.expiry){ document.getElementById('fExpiryDate').value = v.expiry; filled.push('exp ' + v.expiry); }
+      let html = '🎤 Heard: “' + lbEsc(alts[0]) + '”';
+      if(filled.length) html += '<br>✅ Filled: ' + filled.join(' · ');
+      if(!sure && v.choices.length && v.choices[0].s >= .45){
+        html += '<br>Which one? ' + v.choices.filter(c => c.s >= .4).slice(0, 3).map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join('');
+      } else if(!sure && v.rest) html += '<br>⚠️ Chocolate not found — please pick it.';
+      show(html);
+      if(v.add && sure && v.qty != null) document.getElementById('addLineBtn').click();
+    });
+  })();
 
   // Nov 19 2026 (Bench): loose chocolates (Mia, Cylinder…) come in cartons, e.g. "2 box (10kgs)".
   // Boxes × kg each fills Qty in Kg; the box count is kept in the remarks of that line.
