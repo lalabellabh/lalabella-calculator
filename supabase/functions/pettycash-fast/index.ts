@@ -9,6 +9,7 @@
 // v14 (Nov 2026): a cash count can have a photo (photo_url on cash_daily_counts, same private bucket). addCashCount takes `photo` (POST); getCashCounts returns photoUrl (signed, 1h).
 // v13 (Nov 2026): the target (allowance) now keeps when / who set it (updated_at, updated_by); getPettyCash returns targetSetAt, targetSetBy and targetHistory — for the Statement export.
 // v12 (Nov 2026): getPettyCash also returns createdAt (when the entry was really saved) and dateChanges (date edits from the audit log) — for Excel export + back-date flags.
+// v28 (Nov 19 2026): optional receipt_date (the day a late receipt was handed in, e.g. driver) — add/edit, returned as receiptDate.
 // v11 (Nov 2026): an Admin can now also delete a cash count that was already sent to Qalali (client asks for a stronger confirm).
 // v10 (Oct 2026): bucket petty-cash-photos is PRIVATE. getPettyCash / addPettyCashEntry return short-lived (1h) signed URLs in photoUrl.
 // v9 (Oct 2026): receipt photo per entry (photo_url, bucket petty-cash-photos). addPettyCashEntry takes `photo` (base64 data URL, POST) —
@@ -176,7 +177,7 @@ async function handleGetPettyCash(p: any) {
   try { dateChanges = (await sbRpc('petty_date_changes')) || {}; } catch (e) { console.error('petty_date_changes', e); }
   return {
     balance, targetAmount, targetSetAt, targetSetBy, targetHistory,
-    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '', createdAt: r.created_at || null, dateChanges: dateChanges[String(r.id)] || [] })),
+    transactions: (rows || []).map((r: any) => ({ id: r.id, branch: r.branch, date: r.entry_date, purpose: r.purpose, amount: Number(r.amount), type: r.entry_type, enteredBy: r.entered_by, carPlate: r.car_plate || '', driver: r.driver || '', receiptDate: r.receipt_date || '', photoUrl: r.photo_url ? (signed[r.photo_url] || '') : '', createdAt: r.created_at || null, dateChanges: dateChanges[String(r.id)] || [] })),
   };
 }
 async function handleSetPettyCashTarget(p: any, user: any) {
@@ -197,8 +198,10 @@ async function handleAddPettyCashEntry(p: any) {
   const enteredBy = p.enteredBy || '';
   const carPlate = String(p.carPlate || '').trim().slice(0, 30).toUpperCase();
   const driver = String(p.driver || '').trim().slice(0, 60);
+  const receiptDate = String(p.receiptDate || '').trim();   // v28: optional day the receipt was handed in (late receipts)
   if (!branch) return { error: 'Branch is required.' };
   if (!validDate(entryDate)) return { error: 'Invalid date.' };
+  if (receiptDate && !validDate(receiptDate)) return { error: 'Invalid receipt date.' };
   if (!purpose) return { error: 'Purpose is required.' };
   if (amount <= 0) return { error: 'Amount must be greater than zero.' };
   let photoUrl = '';
@@ -206,7 +209,7 @@ async function handleAddPettyCashEntry(p: any) {
     photoUrl = await savePettyPhoto(String(p.photo));
     if (!photoUrl) return { error: 'The photo could not be saved (too big or not a picture). Nothing was saved — please try again.' };
   }
-  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver, photo_url: photoUrl || null }]);
+  await sbPost('petty_cash_transactions', [{ branch, entry_date: entryDate, purpose, amount, entry_type: entryType, entered_by: enteredBy, car_plate: carPlate, driver, receipt_date: receiptDate || null, photo_url: photoUrl || null }]);
   return { success: true, photoUrl: photoUrl ? ((await signPettyPhotos([{ photo_url: photoUrl }]))[photoUrl] || '') : '' };
 }
 // Admin only: fix the date (back-date), purpose, amount or type of a saved entry.
@@ -233,6 +236,7 @@ async function handleEditPettyCashEntry(p: any, user: any) {
   }
   if (p.carPlate !== undefined) fields.car_plate = String(p.carPlate).trim().slice(0, 30).toUpperCase();
   if (p.driver !== undefined) fields.driver = String(p.driver).trim().slice(0, 60);
+  if (p.receiptDate !== undefined) { const rd = String(p.receiptDate).trim(); if (rd && !validDate(rd)) return { error: 'Invalid receipt date.' }; fields.receipt_date = rd || null; }
   if (p.type !== undefined && p.type !== '') fields.entry_type = p.type === 'topup' ? 'topup' : 'expense';
   if (p.photo) {
     const url = await savePettyPhoto(String(p.photo));

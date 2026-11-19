@@ -353,6 +353,8 @@
       <input type="file" id="pcPhotoFile" accept="image/*" style="display:none;">
       <div class="rc-paste" id="pcPhotoPaste" tabindex="0">📋 Click here, then Ctrl+V to paste a snip</div>
       <div class="rc-prev" id="pcPhotoPrev"><img alt="Receipt"><button type="button" id="pcPhotoClear" aria-label="Remove photo">✕</button></div>
+      <label>Receipt handed in on <span style="text-transform:none;">(optional — only if the receipt came late, e.g. driver)</span></label>
+      <input type="date" id="pcReceiptDate">
       <button class="save-btn" id="pcSaveBtn">Save Entry</button>
       <div class="msg" id="pcMsg"></div>
     </div>
@@ -512,6 +514,7 @@
     <label>Car plate number</label><input type="text" id="peCarPlate" maxlength="30">
     <label>Driver</label><input type="text" id="peDriver" maxlength="60">
   </div>
+  <label>Receipt handed in on <span style="text-transform:none;">(optional)</span></label><input type="date" id="peReceiptDate">
   <label>Amount (BD)</label><input type="number" step="0.001" min="0.001" id="peAmount">
   <label>Receipt / photo</label>
   <div class="rc-btns">
@@ -771,7 +774,7 @@ document.getElementById('pcPrintBtn').addEventListener('click',()=>{
   const extra=[ty?(ty==='topup'?'Top-up only':'Expense only'):'',q?`Search: "${esc(q)}"`:''].filter(Boolean).join(' · ');
   const tt=pcTotals(list);
   const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}${carText(t)?'<br><small>'+esc(carText(t))+'</small>':''}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td><td style="text-align:center;">${t.photoUrl?'<img src="'+esc(t.photoUrl)+'" style="max-height:46px;max-width:70px;border:1px solid #bbb;">':''}</td></tr>`).join('');
+  const rows=asc.map(t=>`<tr><td>${fmtDate(t.date)}</td><td>${esc(t.branch)}</td><td>${esc(t.purpose)}${carText(t)?'<br><small>'+esc(carText(t))+'</small>':''}${receiptText(t)?'<br><small>'+esc(receiptText(t))+'</small>':''}</td><td>${t.type==='topup'?'Top-up':'Expense'}</td><td>${esc(t.enteredBy)||'—'}</td><td style="text-align:right;">${t.type==='topup'?'+':'−'}${fmtBD(t.amount)}</td><td style="text-align:center;">${t.photoUrl?'<img src="'+esc(t.photoUrl)+'" style="max-height:46px;max-width:70px;border:1px solid #bbb;">':''}</td></tr>`).join('');
   document.getElementById('printArea').innerHTML=`
     <h2 style="font-family:'Fraunces',serif;">Lalabella — Petty Cash</h2>
     <p>${esc(branch)} · ${range}${extra?' · '+extra:''}</p>
@@ -861,7 +864,7 @@ document.getElementById('pcExcelBtn').addEventListener('click',()=>{
   const branch=document.getElementById('branchSelect').value;
   const from=document.getElementById('pcFrom').value, to=document.getElementById('pcTo').value;
   const asc=list.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)) || (a.id-b.id));
-  const head=['Entry date','Saved on (Bahrain time)','Back-dated?','Days back','Date changed later','Branch','Type','Purpose','Car plate','Driver','Entered by','Top-up (BD)','Expense (BD)','Running balance of this list (BD)','Receipt photo','Entry #'];
+  const head=['Entry date','Saved on (Bahrain time)','Back-dated?','Days back','Date changed later','Branch','Type','Purpose','Car plate','Driver','Receipt handed in','Entered by','Top-up (BD)','Expense (BD)','Running balance of this list (BD)','Receipt photo','Entry #'];
   let run=0, nBack=0, nChanged=0, nFuture=0;
   const rows=asc.map(t=>{
     const b=pcBackInfo(t), amt=Number(t.amount)||0;
@@ -869,7 +872,7 @@ document.getElementById('pcExcelBtn').addEventListener('click',()=>{
     if(b.back) nBack++; if(b.changed) nChanged++; if(b.future) nFuture++;
     return [String(t.date||'').slice(0,10), pcBhTime(t.createdAt), b.back?'YES':(b.future?'FUTURE DATE':'no'), b.back?b.late:(b.future?b.late:0),
       b.changes.map(c=>pcBhTime(c.at).slice(0,10)+': '+(c.from||'?')+' → '+(c.to||'?')).join(' | '),
-      t.branch||'', t.type==='topup'?'Top-up':'Expense', t.purpose||'', t.carPlate||'', t.driver||'', t.enteredBy||'',
+      t.branch||'', t.type==='topup'?'Top-up':'Expense', t.purpose||'', t.carPlate||'', t.driver||'', String(t.receiptDate||'').slice(0,10), t.enteredBy||'',
       t.type==='topup'?amt:'', t.type==='topup'?'':amt, Math.round(run*1000)/1000, t.photoUrl?'yes':'no', t.id];
   });
   const tt=pcTotals(list);
@@ -879,7 +882,7 @@ document.getElementById('pcExcelBtn').addEventListener('click',()=>{
     ['Exported',pcBhTime(new Date().toISOString())+' (Bahrain)'],['Note','"Saved on" is the real time the entry was put in the system — it cannot be changed by staff.']];
   const btn=document.getElementById('pcExcelBtn'); btn.disabled=true; btn.textContent='⏳ Excel…';
   const BD='#,##0.000';
-  lbExcel.save('Petty Cash ' + branch, [{ name:'Statement', rows:pcStatement(list), headerRow:7, fmt:{1:BD,4:BD,5:BD,6:BD} }, { name:'Entries (check)', rows:[head].concat(rows), fmt:{11:BD,12:BD,13:BD} }, { name:'Summary', rows:summary, freeze:false }])
+  lbExcel.save('Petty Cash ' + branch, [{ name:'Statement', rows:pcStatement(list), headerRow:7, fmt:{1:BD,4:BD,5:BD,6:BD} }, { name:'Entries (check)', rows:[head].concat(rows), fmt:{12:BD,13:BD,14:BD} }, { name:'Summary', rows:summary, freeze:false }])
     .catch(e=>alert(e && e.message || 'Could not make the Excel file.'))
     .finally(()=>{ btn.disabled=false; btn.textContent='📊 Excel'; });
 });
@@ -950,7 +953,7 @@ function openPcEdit(id){
   pcEditId=t.id;
   document.getElementById('peDate').value=String(t.date).slice(0,10);
   document.getElementById('peType').value=t.type;
-  document.getElementById('peCarPlate').value=t.carPlate||''; document.getElementById('peDriver').value=t.driver||'';
+  document.getElementById('peCarPlate').value=t.carPlate||''; document.getElementById('peDriver').value=t.driver||''; document.getElementById('peReceiptDate').value=String(t.receiptDate||'').slice(0,10);
   fillPurposeUI('pe', t.purpose, t.type);
   document.getElementById('peAmount').value=t.amount;
   rcReset('pe',t.photoUrl||'');
@@ -996,7 +999,14 @@ function fillPurposeUI(pre, purpose, type){
   syncPurposeUI(pre);
 }
 function carText(t){ return (t && (t.carPlate || t.driver)) ? ('Car: ' + (t.carPlate||'—') + ' · Driver: ' + (t.driver||'—')) : ''; }
-function carLine(t){ const x = carText(t); return x ? '<div class="txn-date">🚗 ' + esc(x) + '</div>' : ''; }
+function carLine(t){ const x = carText(t), r = receiptText(t); return (x ? '<div class="txn-date">🚗 ' + esc(x) + '</div>' : '') + (r ? '<div class="txn-date">🧾 ' + esc(r) + '</div>' : ''); }
+// Nov 19 2026: receipt handed in later than the entry date (drivers)
+function receiptText(t){
+  if(!t || !t.receiptDate) return '';
+  const d = String(t.receiptDate).slice(0,10), e = String(t.date||'').slice(0,10);
+  const late = e ? Math.round((new Date(d + 'T00:00') - new Date(e + 'T00:00')) / 86400000) : 0;
+  return 'Receipt handed in ' + fmtDate(d) + (late > 0 ? ' (' + late + ' day' + (late > 1 ? 's' : '') + ' late)' : '');
+}
 ['pc','pe'].forEach(pre=>{
   const sel=document.getElementById(pre+'Cat');
   sel.innerHTML = '<option value="">— Select purpose —</option>' + PC_CATS.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
@@ -1021,7 +1031,7 @@ document.getElementById('peSave').addEventListener('click',async()=>{
   if(petrolE && (!carPlate||!driver)){ m.className='msg error'; m.textContent='Petrol: please enter the car plate number and the driver.'; return; }
   btn.disabled=true; btn.textContent='Saving…';
   try{
-    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:petrolE?carPlate:'',driver:petrolE?driver:'',token:getToken()});
+    const params=new URLSearchParams({action:'editPettyCashEntry',id:pcEditId,date,purpose,amount,type,carPlate:petrolE?carPlate:'',driver:petrolE?driver:'',receiptDate:document.getElementById('peReceiptDate').value,token:getToken()});
     if(rcState.pe.data) params.set('photo',rcState.pe.data); else if(rcState.pe.remove) params.set('removePhoto','1');
     const res=await fetch(PETTYCASH_API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
     const data=await res.json();
@@ -1128,7 +1138,8 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('pcSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
-    const params = new URLSearchParams({ action: 'addPettyCashEntry', branch, date, purpose, amount, type: pcType, enteredBy, carPlate, driver, token: getToken() });
+    const receiptDate = document.getElementById('pcReceiptDate').value;
+    const params = new URLSearchParams({ action: 'addPettyCashEntry', branch, date, purpose, amount, type: pcType, enteredBy, carPlate, driver, receiptDate, token: getToken() });
     let res;
     if(rcState.pc.data){ params.set('photo', rcState.pc.data); res = await fetch(PETTYCASH_API_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: params.toString() }); }
     else res = await fetch(PETTYCASH_API_URL + '?' + params.toString());
@@ -1136,7 +1147,7 @@ document.getElementById('pcSaveBtn').addEventListener('click', async ()=>{
     if(!data.success){ msg.textContent = data.error || 'Failed.'; msg.className = 'msg error'; btn.disabled=false; btn.textContent='Save Entry'; return; }
     msg.textContent = 'Saved!'; msg.className = 'msg success';
     document.getElementById('pcRemarks').value = '';
-    document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; syncPurposeUI('pc');
+    document.getElementById('pcCarPlate').value = ''; document.getElementById('pcDriver').value = ''; document.getElementById('pcReceiptDate').value = ''; syncPurposeUI('pc');
     document.getElementById('pcAmount').value = '';
     rcReset('pc','');
     loadPettyCash();
