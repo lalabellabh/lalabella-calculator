@@ -198,7 +198,7 @@
 </nav>
 <script src="shared/nav.js"></script>
 <script src="shared/flower-scan.js?v=2"></script>
-<script src="shared/voice.js?v=3"></script>
+<script src="shared/voice.js?v=4"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
 
@@ -468,83 +468,124 @@
     return out;
   }
   // ---------- 🎤 Voice count (Nov 19 2026, Bench) ----------
-  // "red rose 120" = count is 120 · "red rose plus 20" = add 20 · "red rose waste 5" · several at once with "and" / commas
-  // "how many red rose" says the count now. Fills the boxes only — Save Count is still a button.
+  // Hands-free: tap 🎤 once, it keeps listening until you say "stop".
+  //   "red rose 120"              count = 120
+  //   "rose add 10" … "add 10"    adds to the SAME flower (it remembers the flower you are on)
+  //   "add 10 add 10 add 10"      +30
+  //   "wastage rose 4" … "add 5"  waste = 9 ("waste" switches to the waste box, "count" back)
+  //   "done" / "next"             finishes this flower (says its count + waste), ready for the next one
+  //   "how many red rose" · "stop"
+  // Fills the boxes only — Save Count is still a button.
   (function(){
     const btn = document.getElementById('voiceBtn'), note = document.getElementById('voiceNote');
     if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
     const say = t => LBVoice.speak(t);
-    let pendingQ = null;   // {count, plus, waste} waiting for "Which one?"
+    let cur = null, field = 'count', pending = null, looping = false;
     function show(html){ note.innerHTML = '<button type="button" class="vn-x" title="Close">✕</button>' + html; note.classList.add('show'); }
+    function row(name){ return backing.findIndex(b => b.flowerName.toLowerCase() === String(name).toLowerCase()); }
     function unitWord(b, n){ return b.unit === 'bunch' ? (n == 1 ? 'bunch' : 'bunches') : (n == 1 ? 'piece' : 'pieces'); }
-    function flash(idx, field){ const inp = document.getElementById((field === 'wastage' ? 'waste-' : 'count-') + idx); if(!inp) return; inp.scrollIntoView({ block:'center', behavior:'smooth' }); inp.classList.remove('count-flash'); void inp.offsetWidth; inp.classList.add('count-flash'); }
-    // apply {count, plus, waste} to a flower name; returns what to say
-    function apply(name, v){
-      let idx = backing.findIndex(b => b.flowerName.toLowerCase() === name.toLowerCase());
-      if(idx < 0){ const m = addableFlowers().find(x => x.flowerName.toLowerCase() === name.toLowerCase()); if(!m) return null; addFlowerRow(m); idx = backing.length - 1; }
-      const b = backing[idx], out = [];
-      if(v.count != null){ const was = b.physicalCount; b.physicalCount = String(v.count); out.push('count ' + v.count + ' ' + unitWord(b, v.count) + (was !== '' && Number(was) !== v.count ? ' (was ' + was + ')' : '')); }
-      if(v.plus != null){ const n = Math.round(((parseFloat(b.physicalCount) || 0) + v.plus) * 1000) / 1000; b.physicalCount = String(n); out.push('plus ' + v.plus + ', now ' + n); }
-      if(v.waste != null){ b.wastage = String(v.waste); out.push('waste ' + v.waste); }
-      hasBeenEdited = true;
-      document.getElementById('searchFlower').value = ''; renderFlowerList(); renderSummary();
-      flash(idx, v.waste != null && v.count == null && v.plus == null ? 'wastage' : 'count');
-      return b.flowerName + ', ' + out.join(', ');
+    function flash(idx, f){ const inp = document.getElementById((f === 'waste' ? 'waste-' : 'count-') + idx); if(!inp) return; inp.scrollIntoView({ block:'center', behavior:'smooth' }); inp.classList.remove('count-flash'); void inp.offsetWidth; inp.classList.add('count-flash'); }
+    function paintBtn(){ btn.textContent = cur ? '🎤 On: ' + cur + ' (' + field + ') — say add 10 / done / stop' : '🎤 Say the count — e.g. “red rose 120, waste 5”'; }
+    function useFlower(name){
+      let idx = row(name);
+      if(idx < 0){ const m = addableFlowers().find(x => x.flowerName.toLowerCase() === name.toLowerCase()); if(!m) return false; addFlowerRow(m); idx = backing.length - 1; }
+      cur = backing[idx].flowerName; paintBtn(); return true;
+    }
+    function setVal(f, n, add){
+      const idx = row(cur); if(idx < 0) return '';
+      const b = backing[idx], key = f === 'waste' ? 'wastage' : 'physicalCount', was = b[key];
+      const v = add ? Math.round(((parseFloat(was) || 0) + n) * 1000) / 1000 : n;
+      b[key] = String(v); hasBeenEdited = true;
+      document.getElementById('searchFlower').value = ''; renderFlowerList(); renderSummary(); flash(idx, f);
+      if(add) return (f === 'waste' ? 'waste plus ' : 'plus ') + n + ', now ' + v;
+      return (f === 'waste' ? 'waste ' : 'count ') + v + (was !== '' && Number(was) !== v ? ' (was ' + was + ')' : '');
+    }
+    function summary(name){ const b = backing[row(name)]; if(!b) return name; return name + ' done. Count ' + (b.physicalCount === '' ? 'none' : b.physicalCount) + (b.wastage ? ', waste ' + b.wastage : '') + '.'; }
+    // words -> actions
+    function actions(t){
+      const w = t.split(/\s+/), out = []; let nameBuf = [];
+      const flush = () => { if(nameBuf.length){ out.push({ k:'name', v:nameBuf.join(' ') }); nameBuf = []; } };
+      for(let i = 0; i < w.length; i++){
+        const x = w[i], n = w[i + 1];
+        if(/^(done|next|sunod|tapos)$/.test(x)){ flush(); if(!out.length || out[out.length - 1].k !== 'done') out.push({ k:'done' }); continue; }
+        if(/^(waste|wastage|sira|damaged?)$/.test(x)){ flush(); out.push({ k:'field', v:'waste' }); continue; }
+        if(/^(count|bilang|stock)$/.test(x)){ flush(); out.push({ k:'field', v:'count' }); continue; }
+        if(/^(add|plus|dagdag)$/.test(x) && /^\d+(\.\d+)?$/.test(n || '')){ flush(); out.push({ k:'add', v:Number(n) }); i++; continue; }
+        if(/^(add|plus|dagdag)$/.test(x)){ continue; }
+        if(/^\d+(\.\d+)?$/.test(x)){ flush(); out.push({ k:'set', v:Number(x) }); continue; }
+        if(/^(pieces?|pcs|stems?|bunch(es)?|piraso|the|of|ng|na|ang|ung|yung)$/.test(x)) continue;
+        nameBuf.push(x);
+      }
+      flush(); return out;
+    }
+    // run actions; returns {talk:[], warn:[], stop:bool}
+    function run(list, res){
+      let fieldSetHere = null;
+      for(let i = 0; i < list.length; i++){
+        const a = list[i];
+        if(a.k === 'field'){ field = a.v; fieldSetHere = a.v; paintBtn(); if(cur && !list[i + 1]) res.talk.push(cur + ', ' + a.v); continue; }
+        if(a.k === 'done'){ if(cur){ res.talk.push(summary(cur)); res.done.push(lbEsc(summary(cur))); } cur = null; field = 'count'; paintBtn(); continue; }
+        if(a.k === 'name'){
+          const all = backing.map(b => b.flowerName).concat(addableFlowers().map(m => m.flowerName));
+          const ch = LBVoice.match(a.v, all);
+          if(ch[0] && ch[0].s >= .8 && (!ch[1] || ch[0].s - ch[1].s > .08 || ch[0].s === 1)){
+            useFlower(ch[0].name); field = fieldSetHere || 'count'; paintBtn();
+            if(!(list[i + 1] && /set|add/.test(list[i + 1].k))) res.talk.push(cur + (field === 'waste' ? ', waste' : '') + '. Say the number.');
+            continue;
+          }
+          const good = ch.filter(c => c.s >= .4).slice(0, 3);
+          if(good.length){ pending = { rest: list.slice(i + 1), field: fieldSetHere };
+            res.warn.push('Which one? ' + good.map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join(''));
+            res.talk.push('Which one? ' + good.map(c => c.name).join(', or ')); return; }
+          res.warn.push('⚠️ Flower “' + lbEsc(a.v) + '” not found.'); res.talk.push("Sorry, I didn't get the flower " + a.v); return;
+        }
+        if(a.k === 'set' || a.k === 'add'){
+          if(!cur){ res.warn.push('⚠️ Say the flower first.'); res.talk.push('Which flower?'); return; }
+          // "add 10 add 10 add 10" → one line
+          let n = a.v, add = a.k === 'add';
+          if(add){ while(list[i + 1] && list[i + 1].k === 'add'){ n += list[i + 1].v; i++; } }
+          const tx = setVal(field, n, add); res.done.push(lbEsc(cur + ': ' + tx)); res.talk.push(cur + ', ' + tx);
+        }
+      }
     }
     note.addEventListener('click', e => {
       if(e.target.closest('.vn-x')){ note.classList.remove('show'); return; }
       const c = e.target.closest('.vn-ch'); if(!c) return;
-      const v = pendingQ || {}; pendingQ = null; note.classList.remove('show');
-      if(v.count == null && v.plus == null && v.waste == null){ document.getElementById('searchFlower').value = c.dataset.n; renderFlowerList(); say(c.dataset.n + '. Say or type the count.'); return; }
-      const t = apply(c.dataset.n, v); if(t) say(t + '.');
+      const pd = pending || { rest:[] }; pending = null; note.classList.remove('show');
+      useFlower(c.dataset.n); field = pd.field || 'count'; paintBtn();
+      const res = { talk:[], warn:[], done:[] }; run(pd.rest, res);
+      if(!pd.rest.length) res.talk.push(cur + '. Say the number.');
+      if(res.done.length || res.warn.length) show(res.done.map(x => '✅ ' + x).concat(res.warn).join('<br>'));
+      say((res.talk.join('. ') + '.').replace(/\.\.+/g, '.')).then(() => { if(looping) once(); });
     });
-    function names(){ return backing.map(b => b.flowerName).concat(addableFlowers().map(m => m.flowerName)); }
-    btn.addEventListener('click', async () => {
+    async function once(){
       if(isReadOnlyView){ alert('This is a read-only view.'); return; }
-      const alts = await LBVoice.listen({ hint:'Say: red rose 120 — red rose plus 20 — white lily waste 3. Several at once: red rose 120 and white lily 40. Ask: how many red rose?' });
-      if(!alts.length) return;
-      const said = alts[0], all = names();
-      let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.?!]+$/, '').trim();
+      looping = true;
+      const alts = await LBVoice.listen({ hint: cur ? 'On ' + cur + ' (' + field + '). Say: add 10 — waste 4 — done — stop' : 'Say: red rose 120 — rose add 10 … add 10 — wastage rose 4 … add 5 — done — stop' });
+      if(!alts.length){ looping = false; paintBtn(); return; }     // cancelled or silence: stop listening
+      const said = alts[0];
+      const t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.,?!;]/g, ' ').replace(/\s+/g, ' ').trim();
+      if(/^(stop|finish|tapos na|exit|close|cancel|that'?s all)$/.test(t)){
+        looping = false; const last = cur; cur = null; field = 'count'; paintBtn();
+        show('🎤 “' + lbEsc(said) + '”<br>⏹ Stopped' + (last ? ' — ' + lbEsc(summary(last)) : '')); say((last ? summary(last) + ' ' : '') + 'Stopped. Press Save Count when finished.'); return;
+      }
       const ask = t.match(/^(how many|ilan( ang| ung| yung)?|check)\s+(.*)$/);
       if(ask){
         const m = LBVoice.match(ask[3], backing.map(b => b.flowerName))[0];
         if(m && m.s >= .7){ const b = backing.find(x => x.flowerName === m.name); const c = b.physicalCount === '' ? 'not counted yet' : b.physicalCount + ' ' + unitWord(b, b.physicalCount) + (b.wastage ? ', waste ' + b.wastage : '');
-          show('🎤 “' + lbEsc(said) + '”<br>' + lbEsc(m.name) + ': ' + lbEsc(c)); say(m.name + ', ' + c + '.'); }
-        else { show('🎤 “' + lbEsc(said) + '”<br>⚠️ Flower not found'); say("Sorry, I didn't find that flower."); }
-        return;
+          show('🎤 “' + lbEsc(said) + '”<br>' + lbEsc(m.name) + ': ' + lbEsc(c)); await say(m.name + ', ' + c + '.'); }
+        else { show('🎤 “' + lbEsc(said) + '”<br>⚠️ Flower not found'); await say("Sorry, I didn't find that flower."); }
+        if(looping) once(); return;
       }
-      const segs = t.split(/\s*(?:,|;|\band\b|\btapos\b|\bthen\b|\bsaka\b)\s*/).map(x => x.trim()).filter(Boolean);
-      const done = [], talk = [], oops = [], warn = [];
-      // "waste 3" right after a flower belongs to that flower
-      const merged = []; segs.forEach(sg => { if(/^(waste|wastage|sira|plus|add)\b/.test(sg) && merged.length) merged[merged.length - 1] += ' ' + sg; else merged.push(sg); });
-      merged.forEach(sg => {
-        const v = {};
-        sg = sg.replace(/\b(waste|wastage|sira|damaged?)\s+(\d+(?:\.\d+)?)/, (m, k, n) => { v.waste = Number(n); return ' '; });
-        sg = sg.replace(/\b(plus|add|dagdag)\s+(\d+(?:\.\d+)?)/, (m, k, n) => { v.plus = Number(n); return ' '; });
-        sg = sg.replace(/\b(bunch(es)?|pieces?|pcs|stems?)\b/g, ' ').replace(/\s+/g, ' ').trim();
-        const p = LBVoice.parse(sg, all);
-        if(p.qty != null && v.plus == null) v.count = p.qty;
-        if(p.name && p.nameScore >= .8){
-          if(v.count == null && v.plus == null && v.waste == null){ document.getElementById('searchFlower').value = p.name; renderFlowerList(); done.push('Found ' + lbEsc(p.name)); oops.push(p.name + '. What is the count?'); return; }
-          const tx = apply(p.name, v); if(tx){ done.push(lbEsc(tx)); talk.push(tx); }
-          return;
-        }
-        if(p.choices.length && p.choices[0].s >= .45){
-          const ch = p.choices.filter(c => c.s >= .4).slice(0, 3); pendingQ = v;
-          warn.push('Which one? ' + ch.map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join(''));
-          oops.push('Which one? ' + ch.map(c => c.name).join(', or '));
-          return;
-        }
-        if(p.rest){ warn.push('⚠️ Flower “' + lbEsc(p.rest) + '” not found.'); oops.push("Sorry, I didn't get the flower " + p.rest); }
-      });
-      let html = '🎤 Heard: “' + lbEsc(said) + '”';
-      if(done.length) html += '<br>✅ ' + done.join('<br>✅ ');
-      if(warn.length) html += '<br>' + warn.join('<br>');
-      if(!done.length && !warn.length){ html += '<br>⚠️ Did not catch anything — please try again.'; oops.push("Sorry, I didn't get that. Please try again"); }
-      show(html);
-      const words = (talk.length ? talk.join('. ') + '. ' : '') + (oops.length ? oops.join('. ') + '.' : '');
-      if(words.trim()) say(words.trim());
-    });
+      const res = { talk:[], warn:[], done:[] };
+      const list = actions(t);
+      if(!list.length){ res.warn.push('⚠️ Did not catch anything — please try again.'); res.talk.push("Sorry, I didn't get that. Please say it again"); }
+      else run(list, res);
+      show('🎤 Heard: “' + lbEsc(said) + '”' + (res.done.length ? '<br>✅ ' + res.done.join('<br>✅ ') : '') + (res.warn.length ? '<br>' + res.warn.join('<br>') : ''));
+      await say((res.talk.join('. ') + '.').replace(/\.\.+/g, '.'));
+      if(looping && !pending) once(); else if(pending) looping = true;   // wait for the "Which one?" tap, then go on
+    }
+    btn.addEventListener('click', () => { if(!looping) once(); });
   })();
 
   function addFlowerRow(m){

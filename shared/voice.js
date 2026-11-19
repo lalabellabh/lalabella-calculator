@@ -233,7 +233,18 @@
   }
   function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   // Talk back (free, built into the browser)
-  function speak(text) { try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch (e) {} }
+  // Returns a promise that ends when the talking is done (or after a safe time), so hands-free pages can listen again after.
+  function speak(text) {
+    return new Promise(function (resolve) {
+      var t = setTimeout(resolve, Math.min(15000, 900 + String(text || '').length * 75));
+      try {
+        if (!window.speechSynthesis || !text) { clearTimeout(t); resolve(); return; }
+        speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 1;
+        u.onend = u.onerror = function () { clearTimeout(t); setTimeout(resolve, 150); };
+        speechSynthesis.speak(u);
+      } catch (e) { clearTimeout(t); resolve(); }
+    });
+  }
 
   window.LBVoice = { supported: supported, listen: listen, parse: parse, parseBest: parseBest, parseForm: parseForm, pick: pick, speak: speak, parseDate: parseDate, wordsToDigits: wordsToDigits, match: match };
 })();
