@@ -1120,7 +1120,8 @@
   }
   function clearItemFields(){
     $('cartonOut').textContent = '';
-    ['fSearch','fBatchNo','fExpiryDate','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks','fCartons'].forEach(id => { $(id).value = ''; });
+    // Expiry date stays for the next chocolate (same delivery = usually same expiry); category pill stays too.
+    ['fSearch','fBatchNo','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks','fCartons'].forEach(id => { $(id).value = ''; });
     $('itemMetaLine').classList.remove('show');
     selectedItem = null;
     $('fPackagingType').value = 'Piece'; applyPack();
@@ -1170,6 +1171,8 @@
   });
   $('addLineBtn').addEventListener('click', () => {
     const l = readLine(); if(!l) return;
+    const exp = l.expiryDate ? new Date(l.expiryDate + 'T00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : 'no expiry';
+    if(!confirm(`Check with the invoice 🧾\n\n${l.chocolateName}\nQty: ${l.qty} ${l.unit || ''}\nExpiry: ${exp}\n\nAre the qty and expiry date the same as the invoice?`)) return;
     if(editIdx >= 0 && editIdx < lines.length) lines[editIdx] = l; else lines.push(l);
     editIdx = -1; $('addLineBtn').textContent = '➕ Add to list (next chocolate)';
     clearItemFields(); renderLines();
@@ -1229,7 +1232,7 @@
     // Keep only what failed, so it can be tried again.
     lines = failed; editIdx = -1; $('addLineBtn').textContent = '➕ Add to list (next chocolate)';
     clearItemFields();
-    if(!failed.length){ $('fDeliveryNo').value = ''; $('fSupplier').value = ''; }
+    if(!failed.length){ $('fDeliveryNo').value = ''; $('fSupplier').value = ''; $('fExpiryDate').value = ''; }
     else $('fDeliveryNo').value = deliveryNo;
     logBtn.disabled = false;
     renderLines();
