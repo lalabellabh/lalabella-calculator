@@ -207,6 +207,12 @@
   .line-list .ll-r{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-top:1px solid #f6e4ea; font-size:13px; color:#3a2a30; }
   .line-list .ll-r b{ flex:1; }
   .line-list .ll-r small{ color:#8a7078; }
+  .line-list .ll-sum{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; font-weight:600; }
+  .line-list .ll-sum span{ background:#fff; border:1px solid #f0d7e0; border-radius:999px; padding:2px 10px; font-size:12px; }
+  .line-list .ll-body{ max-height:320px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .line-list .ll-g{ padding:6px 12px; background:#fff7fa; border-top:1px solid #f6e4ea; font-size:12px; font-weight:700; color:#8a3a5a; position:sticky; top:0; z-index:1; }
+  .line-list .ll-r.editing{ background:#fff4d6; }
+  .line-list .ll-e{ border:none; background:#eef3ff; border-radius:8px; width:28px; height:28px; cursor:pointer; }
   .line-list .ll-x{ border:none; background:#fde3e3; color:#b3261e; border-radius:8px; width:28px; height:28px; cursor:pointer; font-weight:700; }
   .submit-btn:disabled{ background:var(--line); cursor:not-allowed; }
 
@@ -1119,20 +1125,54 @@
     selectedItem = null;
     $('fPackagingType').value = 'Piece'; applyPack();
   }
+  // Nov 19 2026: lines grouped per variety (Mia 8, Cylinder 3), ✏️ edit puts a line back in the form.
+  let editIdx = -1;
+  function lineGroup(l){
+    const c = String(l.category || '').trim();
+    return c && !/^uncategori[sz]ed$/i.test(c) ? c : (String(l.chocolateName).trim().split(/\s+/)[0] || 'Other');
+  }
+  function fmtQty(n){ return String(Math.round(n * 1000) / 1000); }
   function renderLines(){
     const box = $('lineList');
     if(!lines.length){ box.innerHTML = ''; $('logBtn').textContent = 'Log Receiving'; return; }
-    box.innerHTML = `<div class="ll-h">🧾 In this delivery: ${lines.length} chocolate${lines.length > 1 ? 's' : ''}</div>` +
-      lines.map((l, i) => `<div class="ll-r"><b>${lbEsc(l.chocolateName)}</b><small>${lbEsc(String(l.qty))} ${lbEsc(l.unit || '')}${l.expiryDate ? ' · exp ' + lbEsc(l.expiryDate) : ''}</small><button type="button" class="ll-x" data-i="${i}" title="Remove">✕</button></div>`).join('');
+    const groups = {}; const order = [];
+    lines.forEach((l, i) => { const g = lineGroup(l); if(!groups[g]){ groups[g] = []; order.push(g); } groups[g].push(i); });
+    const sum = idx => { const t = {}; idx.forEach(i => { const u = lines[i].unit || ''; t[u] = (t[u] || 0) + Number(lines[i].qty || 0); }); return Object.keys(t).map(u => fmtQty(t[u]) + ' ' + u).join(' + '); };
+    box.innerHTML = `<div class="ll-h">🧾 In this delivery: ${lines.length} chocolate${lines.length > 1 ? 's' : ''}` +
+      `<div class="ll-sum">${order.map(g => `<span>${lbEsc(g)} <b>${groups[g].length}</b></span>`).join('')}</div></div>` +
+      `<div class="ll-body">` + order.map(g => `<div class="ll-g">${lbEsc(g)} · ${groups[g].length} · ${lbEsc(sum(groups[g]))}</div>` +
+        groups[g].map(i => { const l = lines[i]; return `<div class="ll-r${i === editIdx ? ' editing' : ''}"><b>${lbEsc(l.chocolateName)}</b><small>${lbEsc(fmtQty(Number(l.qty)))} ${lbEsc(l.unit || '')}${l.expiryDate ? ' · exp ' + lbEsc(l.expiryDate) : ''}</small><button type="button" class="ll-e" data-i="${i}" title="Edit">✏️</button><button type="button" class="ll-x" data-i="${i}" title="Remove">✕</button></div>`; }).join('')).join('') + `</div>`;
     $('logBtn').textContent = `Log Receiving (${lines.length})`;
   }
+  function editLine(i){
+    const l = lines[i]; if(!l) return;
+    if(editIdx !== -1 && editIdx !== i && ($('fSearch').value.trim() || $('fQty').value) && !confirm('Leave the chocolate you are editing now?')) return;
+    editIdx = i;
+    $('fSearch').value = l.chocolateName; $('fSearch').dispatchEvent(new Event('input'));
+    $('fPackagingType').value = l.packagingType || 'Piece'; applyPack();
+    $('fBatchNo').value = l.batchNo || ''; $('fExpiryDate').value = l.expiryDate || '';
+    $('fQty').value = l.qty; if(l.unit) $('fUnit').value = l.unit;
+    $('fPrice').value = l.price || ''; $('fWeightPerPiece').value = l.weightPerPiece || '';
+    if(l.storageLocation) $('fStorageLocation').value = l.storageLocation;
+    $('fTrayCode').value = l.trayCode || ''; $('fRemarks').value = l.remarks || ''; $('fCartons').value = ''; $('cartonOut').textContent = '';
+    $('addLineBtn').textContent = '✔️ Update in list';
+    renderLines();
+    $('fSearch').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
   $('lineList').addEventListener('click', e => {
+    const ed = e.target.closest('.ll-e'); if(ed){ editLine(Number(ed.dataset.i)); return; }
     const x = e.target.closest('.ll-x'); if(!x) return;
-    lines.splice(Number(x.dataset.i), 1); renderLines();
+    const i = Number(x.dataset.i);
+    lines.splice(i, 1);
+    if(editIdx === i){ editIdx = -1; clearItemFields(); $('addLineBtn').textContent = '➕ Add to list (next chocolate)'; }
+    else if(editIdx > i) editIdx--;
+    renderLines();
   });
   $('addLineBtn').addEventListener('click', () => {
     const l = readLine(); if(!l) return;
-    lines.push(l); clearItemFields(); renderLines();
+    if(editIdx >= 0 && editIdx < lines.length) lines[editIdx] = l; else lines.push(l);
+    editIdx = -1; $('addLineBtn').textContent = '➕ Add to list (next chocolate)';
+    clearItemFields(); renderLines();
     $('fSearch').focus();
   });
 
@@ -1147,7 +1187,8 @@
     if(!receivedBy){ alert('Please enter your name in "Received By".'); $('fReceivedBy').focus(); return; }
     // A chocolate still typed in the form counts too.
     let todo = lines.slice();
-    if($('fSearch').value.trim() || $('fQty').value){ const l = readLine(); if(!l) return; todo.push(l); }
+    if($('fSearch').value.trim() || $('fQty').value){ const l = readLine(); if(!l) return; if(editIdx >= 0 && editIdx < todo.length) todo[editIdx] = l; else todo.push(l); }
+    else if(editIdx >= 0){ editIdx = -1; }
     if(!todo.length){ alert('Pick a chocolate and enter the quantity first.'); return; }
     if(!deliveryNo) deliveryNo = generateDeliveryNo(currentBranch, receiveDate);
 
@@ -1186,7 +1227,7 @@
       fetch(`${API_URL}?action=addReceivedBy&name=${encodeURIComponent(receivedBy)}`).catch(()=>{});
     }
     // Keep only what failed, so it can be tried again.
-    lines = failed;
+    lines = failed; editIdx = -1; $('addLineBtn').textContent = '➕ Add to list (next chocolate)';
     clearItemFields();
     if(!failed.length){ $('fDeliveryNo').value = ''; $('fSupplier').value = ''; }
     else $('fDeliveryNo').value = deliveryNo;
