@@ -210,6 +210,13 @@
   </div>
 </nav>
 <script src="shared/scanner.js"></script>
+<script src="shared/voice.js?v=3"></script>
+<style>
+  .voice-note{ display:none; margin-top:10px; padding:8px 10px; border-radius:10px; background:#fff7fa; border:1px dashed #e5b8c8; font-size:12.5px; color:#5a4048; line-height:1.45; }
+  .voice-note.show{ display:block; }
+  .voice-note .vn-ch{ display:inline-block; margin:4px 6px 0 0; padding:4px 10px; border-radius:999px; border:1px solid #c98aa0; background:#fff; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:12px; }
+  .voice-note .vn-x{ float:right; border:none; background:none; color:#8a7078; cursor:pointer; font-size:14px; }
+</style>
 <script src="shared/nav.js"></script>
 <audio id="chocoAudioPlayer" loop></audio>
 <div id="chocoYtPlayerWrap" style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;"></div>
@@ -238,6 +245,7 @@
               <button type="button" id="searchClear" title="Clear" aria-label="Clear" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:0;background:#e9d6dc;color:#7a3a4e;font-size:15px;font-weight:700;line-height:1;cursor:pointer;">✕</button>
             </div>
             <button type="button" id="scanBtn" title="Scan barcode" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:#2f2024;color:#fff;">📷</button>
+            <button type="button" id="voiceBtn" title="Say it: red rose 12, white lily 5, extra vase" style="border:0;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;">🎤</button>
           </div>
           <div id="searchResults"></div>
         </div>
@@ -254,6 +262,7 @@
           <button class="btn btn-primary btn-sm" id="addBtn" disabled>Add</button>
         </div>
         <div id="selectedName" style="margin-top:8px; font-size:12.5px; color:var(--ink-dim);"></div>
+        <div class="voice-note" id="voiceNote"></div>
       </div>
 
       <div class="card">
@@ -568,6 +577,115 @@
     renderCart();
   });
 
+  // ---------- 🎤 Voice (Nov 19 2026, Bench) ----------
+  // "red rose 12, white lily 5 rate 1.2, extra vase 2, customer Maria" → goes straight into the Order List and says it back.
+  // "total" says the total · "remove red rose" / "remove last" · "clear all" empties the order (asks first).
+  // Nothing is sold by voice: Sold / Print / WhatsApp stay buttons.
+  (function(){
+    const btn = document.getElementById('voiceBtn'), note = document.getElementById('voiceNote');
+    if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
+    try{ LBExtrasPick.load(); }catch(e){}
+    const say = t => LBVoice.speak(t);
+    const money = n => { const v = Math.round(Number(n || 0) * 1000) / 1000; return v + ' dinar' + (v === 1 ? '' : 's'); };
+    const grand = () => cart.reduce((a, c) => a + c.qty * c.rate, 0) + extras.reduce((a, x) => a + (Number(x.price) || 0), 0);
+    function show(html){ note.innerHTML = '<button type="button" class="vn-x" title="Close">✕</button>' + html; note.classList.add('show'); }
+    note.addEventListener('click', e => {
+      if(e.target.closest('.vn-x')){ note.classList.remove('show'); return; }
+      const c = e.target.closest('.vn-ch'); if(!c) return;
+      const q = parseFloat(document.getElementById('qtyInput').value) || 0;
+      pickByName(c.dataset.n); note.classList.remove('show');
+      if(q > 0){ document.getElementById('qtyInput').value = q; document.getElementById('addBtn').click(); say(q + ' ' + c.dataset.n + ' added. Total ' + money(grand()) + '.'); }
+      else say(c.dataset.n + '. How many?');
+    });
+    function flowerSeg(seg, names, done, talk, oops){
+      let rate = null;
+      seg = seg.replace(/\b(rate|price|presyo|at)\s+(\d+(?:\.\d+)?)\b/, (m, k, n) => { rate = Number(n); return ' '; });
+      const p = LBVoice.parse(seg, names);
+      if(p.name && p.nameScore >= .8){
+        const f = CATALOG.find(c => c.name === p.name);
+        const r = rate != null ? rate : (f ? f.rate : 0);
+        if(p.qty != null && p.qty > 0){
+          cart.push({ name: p.name, qty: p.qty, rate: r });
+          done.push(lbEsc(p.qty + ' × ' + p.name) + ' @ ' + r.toFixed(3));
+          talk.push(p.qty + ' ' + p.name + ' at ' + r);
+        } else {
+          pickByName(p.name); if(rate != null) document.getElementById('rateInput').value = rate.toFixed(3);
+          done.push('Picked ' + lbEsc(p.name)); oops.push(p.name + '. How many?');
+        }
+        return '';
+      }
+      if(p.choices.length && p.choices[0].s >= .45){
+        const ch = p.choices.filter(c => c.s >= .4).slice(0, 3);
+        if(p.qty) document.getElementById('qtyInput').value = p.qty;
+        oops.push('Which one? ' + ch.map(c => c.name).join(', or '));
+        return 'Which one? ' + ch.map(c => '<button type="button" class="vn-ch" data-n="' + lbEsc(c.name) + '">' + lbEsc(c.name) + '</button>').join('');
+      }
+      if(p.rest){ oops.push("Sorry, I didn't get the flower " + p.rest); return '⚠️ Flower “' + lbEsc(p.rest) + '” not found.'; }
+      return '';
+    }
+    function extraSeg(seg, done, talk, oops){
+      const list = (LBExtrasPick.items ? LBExtrasPick.items() : []), labels = list.map(it => it.name);   // match the name (sizes are not spoken)
+      let price = null;
+      seg = seg.replace(/\b(price|presyo|at)\s+(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?)\s*(bd|dinars?)\b/, (m, k, n, n2) => { price = Number(n || n2); return ' '; });
+      const p = LBVoice.parse(seg, labels);
+      const qty = p.qty && p.qty > 0 ? p.qty : 1;
+      let desc = '', each = price;
+      if(p.name && p.nameScore >= .75){
+        const it = list[labels.indexOf(p.name)];
+        LBExtrasPick.choose(document.getElementById('extraDesc'), document.getElementById('extraPrice'), it);
+        desc = document.getElementById('extraDesc').value;
+        if(each == null) each = it.price > 0 ? it.price : null;
+      } else if(p.rest){ desc = p.rest.replace(/\b\w/g, c => c.toUpperCase()); document.getElementById('extraDesc').value = desc; }
+      if(!desc){ oops.push("I didn't get the extra"); return '⚠️ Extra not understood.'; }
+      if(each == null){ document.getElementById('extraQty').value = qty; oops.push(desc + '. What is the price?'); return '⚠️ ' + lbEsc(desc) + ': say or type the price.'; }
+      document.getElementById('extraPrice').value = Number(each).toFixed(3); document.getElementById('extraQty').value = qty;
+      document.getElementById('addExtraBtn').click();
+      done.push('Extra ' + lbEsc(desc) + (qty > 1 ? ' × ' + qty : '') + ' @ ' + Number(each).toFixed(3));
+      talk.push('extra ' + desc + (qty > 1 ? ' times ' + qty : '') + ', ' + money(each * qty));
+      return '';
+    }
+    btn.addEventListener('click', async () => {
+      const names = CATALOG.map(c => c.name);
+      const alts = await LBVoice.listen({ hint:'Say: red rose 12, white lily 5 — extra vase 2 — customer Maria. Say "total", "remove last" or "clear all".' });
+      if(!alts.length) return;
+      const said = alts[0];
+      let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/[.?!]+$/, '').trim();
+      const done = [], talk = [], oops = [], warn = [];
+      if(/\b(clear all|new order|reset|start over|bura lahat|cancel all)\b/.test(t)){
+        if(confirm('Clear the whole order?')){ cart = []; extras = []; EDIT_KEY = ''; renderCart(); show('🎤 “' + lbEsc(said) + '”<br>↺ Order cleared'); say('Order cleared.'); }
+        return;
+      }
+      if(/^(total|how much|magkano( lahat)?|what is the total)\b/.test(t)){ show('🎤 “' + lbEsc(said) + '”<br>Total: ' + fmtBD(grand())); say('Total is ' + money(grand())); return; }
+      const rm = t.match(/^(remove|delete|tanggalin|alisin)\s+(.*)$/);
+      if(rm){
+        const what = rm[2].trim();
+        if(/^(the )?last( one)?$/.test(what) || what === 'huli'){ const c = cart.pop(); renderCart(); show('🎤 “' + lbEsc(said) + '”<br>' + (c ? 'Removed ' + lbEsc(c.name) : 'Nothing to remove')); say(c ? 'Removed ' + c.name : 'Nothing to remove'); return; }
+        const m = LBVoice.match(what, cart.map(c => c.name))[0];
+        if(m && m.s >= .7){ const i = cart.map(c => c.name).lastIndexOf(m.name); cart.splice(i, 1); renderCart(); show('🎤 “' + lbEsc(said) + '”<br>Removed ' + lbEsc(m.name)); say('Removed ' + m.name + '. Total ' + money(grand())); }
+        else { show('🎤 “' + lbEsc(said) + '”<br>⚠️ Not in the order list'); say("I didn't find that in the order"); }
+        return;
+      }
+      const cu = t.match(/\b(customer|para kay|for customer)\s+(.+)$/);
+      if(cu){ const nm = cu[2].trim().replace(/\b\w/g, c => c.toUpperCase()); document.getElementById('customerName').value = nm; done.push('Customer: ' + lbEsc(nm)); talk.push('customer ' + nm); t = t.slice(0, cu.index).trim(); }
+      const segs = t.split(/\s*(?:,|;|\band\b|\btapos\b|\bthen\b|\bplus\b|\bat saka\b|\bsaka\b)\s*/).map(x => x.trim()).filter(Boolean);
+      // "extra vase" may be followed by more words of the same extra; keep segments that start with "extra" as extras
+      segs.forEach(seg => {
+        const ex = seg.match(/^(extras?|add extra|dagdag)\s+(.*)$/);
+        const w = ex ? extraSeg(ex[2], done, talk, oops) : flowerSeg(seg.replace(/^add\s+/, ''), names, done, talk, oops);
+        if(w) warn.push(w);
+      });
+      renderCart();
+      let html = '🎤 Heard: “' + lbEsc(said) + '”';
+      if(done.length) html += '<br>✅ ' + done.join(' · ');
+      if(warn.length) html += '<br>' + warn.join('<br>');
+      if(!done.length && !warn.length){ html += "<br>⚠️ Did not catch anything — please try again."; oops.push("Sorry, I didn't get that. Please try again"); }
+      if(cart.length || extras.length) html += '<br>Total: <b>' + fmtBD(grand()) + '</b>';
+      show(html);
+      const words = (talk.length ? talk.join(', ') + '. ' : '') + (oops.length ? oops.join('. ') + '. ' : '') + (talk.length ? 'Total ' + money(grand()) + '.' : '');
+      if(words.trim()) say(words.trim());
+    });
+  })();
+
   document.addEventListener('click', (e)=>{
     // Nov 2026: ✏️ edit a line already in the Order List (qty / rate, or extra name / price)
     const eb = e.target.closest('.edit-btn');
@@ -841,7 +959,7 @@
 
 <script src="shared/calc-sale.js?v=8"></script>
 <script src="shared/calc-stock.js?v=1"></script>
-<script src="shared/extras-pick.js?v=5"></script>
+<script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)

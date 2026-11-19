@@ -115,5 +115,14 @@
     var t = e.target; if (!t || !t.classList || !t.classList.contains('lbxp-t')) return;
     e.preventDefault(); e.stopPropagation(); openBig(t.getAttribute('data-big'), t.getAttribute('data-name'));
   }, true);
-  window.LBExtrasPick = { attach: attach, noteAdd: noteAdd, thumb: thumb, ready: function (cb) { load().then(function () { cb && cb(); }); } };
+  // Voice (Nov 19 2026): fill the extras box with an Item Inventory item, same as picking it from the list.
+  function choose(inp, priceInp, it) {
+    if (!inp || !it) return; inp.value = label(it);
+    inp.__lbxpPick = it.price > 0 ? { code: it.code, name: inp.value, price: it.price } : null;
+    inp.__lbxpSel = { label: inp.value, photo: it.photo || '' };
+    if (priceInp && (it.price > 0 || /free/i.test(it.name))) priceInp.value = (it.price || 0).toFixed(3);
+    inp.dispatchEvent(new Event('change'));
+  }
+  window.LBExtrasPick = { attach: attach, noteAdd: noteAdd, thumb: thumb, choose: choose, label: label, items: function () { return ITEMS || []; }, load: load,
+    ready: function (cb) { load().then(function () { cb && cb(); }); } };
 })();
