@@ -196,6 +196,15 @@
     font-size:14px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer;
   }
   .submit-btn:hover{ background:#14213a; }
+  /* Nov 19 2026: several chocolates in one delivery */
+  .add-line-btn{ width:100%; margin-top:16px; padding:11px; border-radius:12px; border:2px dashed #c98aa0; background:#fff7fa; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:14px; }
+  .line-list:empty{ display:none; }
+  .line-list{ margin-top:10px; border:1px solid #f0d7e0; border-radius:12px; overflow:hidden; background:#fff; }
+  .line-list .ll-h{ padding:8px 12px; background:#fdeef3; font-weight:700; font-size:13px; color:#8a3a5a; }
+  .line-list .ll-r{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-top:1px solid #f6e4ea; font-size:13px; color:#3a2a30; }
+  .line-list .ll-r b{ flex:1; }
+  .line-list .ll-r small{ color:#8a7078; }
+  .line-list .ll-x{ border:none; background:#fde3e3; color:#b3261e; border-radius:8px; width:28px; height:28px; cursor:pointer; font-weight:700; }
   .submit-btn:disabled{ background:var(--line); cursor:not-allowed; }
 
   .inline-add-row{ display:flex; gap:8px; margin-top:8px; }
@@ -566,6 +575,9 @@
 
     <label>Remarks</label>
     <textarea id="fRemarks" rows="2" placeholder="Optional"></textarea>
+
+    <button type="button" class="add-line-btn" id="addLineBtn">➕ Add to list (next chocolate)</button>
+    <div id="lineList" class="line-list"></div>
 
     <button class="submit-btn" id="logBtn">Log Receiving</button>
   </div>
@@ -1037,106 +1049,122 @@
     }
   });
 
-  document.getElementById('logBtn').addEventListener('click', async ()=>{
-    const chocolateName = document.getElementById('fSearch').value.trim();
-    const receiveDate = document.getElementById('fDate').value;
-    let deliveryNo = document.getElementById('fDeliveryNo').value.trim();
-    const supplierSel = document.getElementById('fSupplier').value;
-    const supplier = (supplierSel === '__add_new__') ? '' : supplierSel;
-    let batchNo = document.getElementById('fBatchNo').value.trim();
-    const expiryDate = document.getElementById('fExpiryDate').value;
-    const qty = parseFloat(document.getElementById('fQty').value);
-    const unit = document.getElementById('fUnit').value;
-    const price = parseFloat(document.getElementById('fPrice').value);
-    const storageLocation = document.getElementById('fStorageLocation').value;
-    const trayCode = document.getElementById('fTrayCode').value.trim();
-    const receivedBy = document.getElementById('fReceivedBy').value.trim();
-    const remarks = document.getElementById('fRemarks').value.trim();
-
-    if(!chocolateName || !receiveDate || !supplier || isNaN(qty) || qty <= 0){
-      alert('Chocolate name, receive date, supplier, and a valid quantity are required.');
-      return;
-    }
-
+  // Nov 19 2026 (Bench): one delivery can have many chocolates. "Add to list" keeps the delivery
+  // details (date, delivery no., supplier, received by) and only clears the chocolate fields.
+  let lines = [];
+  const $ = id => document.getElementById(id);
+  function readLine(){
+    const chocolateName = $('fSearch').value.trim();
+    const qty = parseFloat($('fQty').value);
+    if(!chocolateName || isNaN(qty) || qty <= 0){ alert('Chocolate name and a valid quantity are required.'); return null; }
+    const expiryDate = $('fExpiryDate').value;
+    const receiveDate = $('fDate').value;
     if(expiryDate){
       const yr = Number(expiryDate.slice(0,4));
-      if(yr < 2020 || yr > 2100){ alert('The expiry date looks wrong (year ' + expiryDate.slice(0,4) + '). Please fix the year, e.g. 2027.'); document.getElementById('fExpiryDate').focus(); return; }
-      if(expiryDate < receiveDate && !confirm('The expiry date is before the receive date (already expired). Save anyway?')) return;
-    } else if(!confirm('No expiry date. Save without it?')) return;
-    if(!receivedBy){ alert('Please enter your name in "Received By".'); document.getElementById('fReceivedBy').focus(); return; }
-    if(!deliveryNo) deliveryNo = generateDeliveryNo(currentBranch, receiveDate);
-    if(!batchNo) batchNo = generateBatchNo(currentBranch, receiveDate);
-
-    const logBtn = document.getElementById('logBtn');
-    logBtn.disabled = true; logBtn.textContent = 'Logging...';
-
-    const weightPerPiece = parseFloat(document.getElementById('fWeightPerPiece').value);
-    const pricePerPiece = (!isNaN(price) && !isNaN(weightPerPiece))
-      ? (price * weightPerPiece / 1000).toFixed(3)
-      : '';
-
-    const params = new URLSearchParams({
-      action: 'addEntry',
-      branch: currentBranch,
-      chocolateName,
-      receiveDate,
-      deliveryNo,
-      supplier,
+      if(yr < 2020 || yr > 2100){ alert('The expiry date looks wrong (year ' + expiryDate.slice(0,4) + '). Please fix the year, e.g. 2027.'); $('fExpiryDate').focus(); return null; }
+      if(receiveDate && expiryDate < receiveDate && !confirm('The expiry date of ' + chocolateName + ' is before the receive date (already expired). Save anyway?')) return null;
+    } else if(!confirm('No expiry date for ' + chocolateName + '. Continue without it?')) return null;
+    const price = parseFloat($('fPrice').value), weightPerPiece = parseFloat($('fWeightPerPiece').value);
+    return {
+      chocolateName, qty, expiryDate,
+      batchNo: $('fBatchNo').value.trim(),
+      unit: $('fUnit').value,
+      price: isNaN(price) ? 0 : price,
+      weightPerPiece: isNaN(weightPerPiece) ? '' : weightPerPiece,
+      pricePerPiece: (!isNaN(price) && !isNaN(weightPerPiece)) ? (price * weightPerPiece / 1000).toFixed(3) : '',
+      packagingType: $('fPackagingType').value,
+      storageLocation: $('fStorageLocation').value,
+      trayCode: $('fTrayCode').value.trim(),
+      remarks: $('fRemarks').value.trim(),
       productCode: selectedItem ? (selectedItem['Product Code'] || '') : '',
       brand: selectedItem ? (selectedItem['Brand'] || '') : '',
-      category: selectedItem ? (selectedItem['Category'] || '') : '',
-      batchNo,
-      expiryDate,
-      qty,
-      unit,
-      price: isNaN(price) ? 0 : price,
-      storageLocation,
-      trayCode,
-      receivedBy,
-      remarks,
-      weightPerPiece: isNaN(weightPerPiece) ? '' : weightPerPiece,
-      pricePerPiece,
-      packagingType: document.getElementById('fPackagingType').value
-    });
+      category: selectedItem ? (selectedItem['Category'] || '') : ''
+    };
+  }
+  function clearItemFields(){
+    ['fSearch','fBatchNo','fExpiryDate','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks'].forEach(id => { $(id).value = ''; });
+    $('itemMetaLine').classList.remove('show');
+    selectedItem = null;
+  }
+  function renderLines(){
+    const box = $('lineList');
+    if(!lines.length){ box.innerHTML = ''; $('logBtn').textContent = 'Log Receiving'; return; }
+    box.innerHTML = `<div class="ll-h">🧾 In this delivery: ${lines.length} chocolate${lines.length > 1 ? 's' : ''}</div>` +
+      lines.map((l, i) => `<div class="ll-r"><b>${lbEsc(l.chocolateName)}</b><small>${lbEsc(String(l.qty))} ${lbEsc(l.unit || '')}${l.expiryDate ? ' · exp ' + lbEsc(l.expiryDate) : ''}</small><button type="button" class="ll-x" data-i="${i}" title="Remove">✕</button></div>`).join('');
+    $('logBtn').textContent = `Log Receiving (${lines.length})`;
+  }
+  $('lineList').addEventListener('click', e => {
+    const x = e.target.closest('.ll-x'); if(!x) return;
+    lines.splice(Number(x.dataset.i), 1); renderLines();
+  });
+  $('addLineBtn').addEventListener('click', () => {
+    const l = readLine(); if(!l) return;
+    lines.push(l); clearItemFields(); renderLines();
+    $('fSearch').focus();
+  });
 
-    try{
-      const res = await fetch(`${API_URL}?${params.toString()}`);
-      const data = await res.json();
+  $('logBtn').addEventListener('click', async ()=>{
+    const receiveDate = $('fDate').value;
+    let deliveryNo = $('fDeliveryNo').value.trim();
+    const supplierSel = $('fSupplier').value;
+    const supplier = (supplierSel === '__add_new__') ? '' : supplierSel;
+    const receivedBy = $('fReceivedBy').value.trim();
 
-      entries.push({
-        ID: data.id, 'Receive Date': receiveDate, Supplier: supplier,
-        'Chocolate Name': chocolateName, 'Delivery Note No': deliveryNo, 'Batch No.': batchNo, 'Expiry Date': expiryDate,
-        'Qty Received': qty, Unit: unit, 'Price / Kg': price, Branch: currentBranch,
-        Remarks: remarks, 'Created By': receivedBy, 'Approval Status': data && data.waitingApproval ? 'Pending' : 'Approved'
+    if(!receiveDate || !supplier){ alert('Receive date and supplier are required.'); return; }
+    if(!receivedBy){ alert('Please enter your name in "Received By".'); $('fReceivedBy').focus(); return; }
+    // A chocolate still typed in the form counts too.
+    let todo = lines.slice();
+    if($('fSearch').value.trim() || $('fQty').value){ const l = readLine(); if(!l) return; todo.push(l); }
+    if(!todo.length){ alert('Pick a chocolate and enter the quantity first.'); return; }
+    if(!deliveryNo) deliveryNo = generateDeliveryNo(currentBranch, receiveDate);
+
+    const logBtn = $('logBtn');
+    logBtn.disabled = true;
+    let ok = 0, waiting = false, cancelled = false; const failed = [];
+    for(let i = 0; i < todo.length; i++){
+      const l = todo[i];
+      logBtn.textContent = `Logging ${i + 1} of ${todo.length}...`;
+      const batchNo = l.batchNo || generateBatchNo(currentBranch, receiveDate);
+      const params = new URLSearchParams({
+        action: 'addEntry', branch: currentBranch, chocolateName: l.chocolateName, receiveDate, deliveryNo, supplier,
+        productCode: l.productCode, brand: l.brand, category: l.category, batchNo, expiryDate: l.expiryDate,
+        qty: l.qty, unit: l.unit, price: l.price, storageLocation: l.storageLocation, trayCode: l.trayCode,
+        receivedBy, remarks: l.remarks, weightPerPiece: l.weightPerPiece, pricePerPiece: l.pricePerPiece, packagingType: l.packagingType
       });
-
-      if(receivedBy && !receivedByNames.includes(receivedBy)){
-        receivedByNames.push(receivedBy);
-        populateReceivedByList();
-        fetch(`${API_URL}?action=addReceivedBy&name=${encodeURIComponent(receivedBy)}`).catch(()=>{});
-      }
-
-      document.getElementById('fSearch').value = '';
-      document.getElementById('itemMetaLine').classList.remove('show');
-      selectedItem = null;
-      document.getElementById('fDeliveryNo').value = '';
-      document.getElementById('fSupplier').value = '';
-      document.getElementById('fBatchNo').value = '';
-      document.getElementById('fExpiryDate').value = '';
-      document.getElementById('fQty').value = '';
-      document.getElementById('fPrice').value = '';
-      document.getElementById('fWeightPerPiece').value = '';
-      document.getElementById('fTrayCode').value = '';
-      document.getElementById('fRemarks').value = '';
-
-      renderHistory();
-      updatePulseStats();
-      if(soundEnabled) successChime();
-      if(data && data.waitingApproval) showApprovalNote();
-    }catch(e){
-      alert('Could not log this delivery. Check your connection and try again.');
+      try{
+        const res = await fetch(`${API_URL}?${params.toString()}`);
+        const data = await res.json();
+        if(data && data.cancelled){ cancelled = true; failed.push(...todo.slice(i)); break; }
+        if(!data || data.error || data.success === false) throw new Error((data && data.error) || 'failed');
+        entries.push({
+          ID: data.id, 'Receive Date': receiveDate, Supplier: supplier,
+          'Chocolate Name': l.chocolateName, 'Delivery Note No': deliveryNo, 'Batch No.': batchNo, 'Expiry Date': l.expiryDate,
+          'Qty Received': l.qty, Unit: l.unit, 'Price / Kg': l.price, Branch: currentBranch,
+          Remarks: l.remarks, 'Created By': receivedBy, 'Approval Status': data.waitingApproval ? 'Pending' : 'Approved'
+        });
+        if(data.waitingApproval) waiting = true;
+        ok++;
+      }catch(e){ failed.push(l); }
     }
-    logBtn.disabled = false; logBtn.textContent = 'Log Receiving';
+
+    if(ok && receivedBy && !receivedByNames.includes(receivedBy)){
+      receivedByNames.push(receivedBy);
+      populateReceivedByList();
+      fetch(`${API_URL}?action=addReceivedBy&name=${encodeURIComponent(receivedBy)}`).catch(()=>{});
+    }
+    // Keep only what failed, so it can be tried again.
+    lines = failed;
+    clearItemFields();
+    if(!failed.length){ $('fDeliveryNo').value = ''; $('fSupplier').value = ''; }
+    else $('fDeliveryNo').value = deliveryNo;
+    logBtn.disabled = false;
+    renderLines();
+    renderHistory();
+    updatePulseStats();
+    if(ok && soundEnabled) successChime();
+    if(cancelled && !ok){ /* branch not confirmed: nothing saved, list stays */ }
+    else if(failed.length) alert(`Saved ${ok} of ${todo.length}. ${failed.length} could not be saved (still in the list) — check your connection and press Log Receiving again.`);
+    else if(waiting) showApprovalNote();
   });
 
   // Receiving approval (Nov 2026): tell the staff once per visit that new receiving waits for an Admin.
