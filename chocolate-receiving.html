@@ -197,6 +197,9 @@
   }
   .submit-btn:hover{ background:#14213a; }
   /* Nov 19 2026: several chocolates in one delivery */
+  .carton-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:8px; padding:8px 10px; border-radius:12px; background:rgba(255,255,255,.45); font-size:12.5px; color:#5a4048; }
+  .carton-row input{ width:78px; margin:0; padding:7px 8px; }
+  .carton-row .carton-out{ font-weight:700; color:#8a3a5a; }
   .add-line-btn{ width:100%; margin-top:16px; padding:11px; border-radius:12px; border:2px dashed #c98aa0; background:#fff7fa; color:#8a3a5a; font-weight:700; cursor:pointer; font-size:14px; }
   .line-list:empty{ display:none; }
   .line-list{ margin-top:10px; border:1px solid #f0d7e0; border-radius:12px; overflow:hidden; background:#fff; }
@@ -538,6 +541,13 @@
         <label>Unit</label>
         <select id="fUnit"></select>
       </div>
+    </div>
+    <div class="carton-row" id="cartonRow">
+      <span>📦 Came in boxes?</span>
+      <input type="number" id="fCartons" min="0" step="1" placeholder="boxes" />
+      <span>×</span>
+      <input type="number" id="fKgPerCarton" min="0" step="0.01" placeholder="kg each" />
+      <span id="cartonOut" class="carton-out"></span>
     </div>
 
     <div class="grid-2">
@@ -1047,12 +1057,27 @@
     const v = document.getElementById('fPackagingType').value, whole = v === 'Box' || v === 'Can';
     const unitSelect = document.getElementById('fUnit');
     if(whole){ unitSelect.value = 'Piece'; unitSelect.disabled = true; } else unitSelect.disabled = false;
+    document.getElementById('cartonRow').style.display = whole ? 'none' : '';
     const word = v === 'Can' ? 'Can' : 'Box';
     document.getElementById('lblPrice').textContent = whole ? `Price / ${word} (BD)` : 'Price / Kg (BD)';
     document.getElementById('lblWeight').textContent = whole ? `Weight / ${word} (g, optional)` : 'Weight / Piece (g)';
     document.getElementById('fQty').placeholder = whole ? (v === 'Can' ? 'No. of cans' : 'No. of boxes') : '0';
   }
   document.getElementById('fPackagingType').addEventListener('change', applyPack);
+
+  // Nov 19 2026 (Bench): loose chocolates (Mia, Cylinder…) come in cartons, e.g. "2 box (10kgs)".
+  // Boxes × kg each fills Qty in Kg; the box count is kept in the remarks of that line.
+  function cartonCalc(){
+    const n = parseFloat(document.getElementById('fCartons').value), k = parseFloat(document.getElementById('fKgPerCarton').value);
+    const out = document.getElementById('cartonOut');
+    if(n > 0 && k > 0){
+      const kg = Math.round(n * k * 1000) / 1000;
+      document.getElementById('fQty').value = kg;
+      const u = document.getElementById('fUnit'); const kgOpt = [...u.options].find(o => /^kg$/i.test(o.value)); if(kgOpt) u.value = kgOpt.value;
+      out.textContent = '= ' + kg + ' kg';
+    } else out.textContent = '';
+  }
+  ['fCartons','fKgPerCarton'].forEach(id => document.getElementById(id).addEventListener('input', cartonCalc));
 
   // Nov 19 2026 (Bench): one delivery can have many chocolates. "Add to list" keeps the delivery
   // details (date, delivery no., supplier, received by) and only clears the chocolate fields.
@@ -1081,14 +1106,15 @@
       packagingType: $('fPackagingType').value,
       storageLocation: $('fStorageLocation').value,
       trayCode: $('fTrayCode').value.trim(),
-      remarks: $('fRemarks').value.trim(),
+      remarks: [$('fRemarks').value.trim(), (parseFloat($('fCartons').value) > 0 && parseFloat($('fKgPerCarton').value) > 0) ? `${$('fCartons').value} box × ${$('fKgPerCarton').value} kg` : ''].filter(Boolean).join(' · '),
       productCode: selectedItem ? (selectedItem['Product Code'] || '') : '',
       brand: selectedItem ? (selectedItem['Brand'] || '') : '',
       category: selectedItem ? (selectedItem['Category'] || '') : ''
     };
   }
   function clearItemFields(){
-    ['fSearch','fBatchNo','fExpiryDate','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks'].forEach(id => { $(id).value = ''; });
+    $('cartonOut').textContent = '';
+    ['fSearch','fBatchNo','fExpiryDate','fQty','fPrice','fWeightPerPiece','fTrayCode','fRemarks','fCartons'].forEach(id => { $(id).value = ''; });
     $('itemMetaLine').classList.remove('show');
     selectedItem = null;
     $('fPackagingType').value = 'Piece'; applyPack();
