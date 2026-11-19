@@ -1097,9 +1097,32 @@
     const SUP_ALIAS = { 'Elsa S.A.L Lebanon Beirut':['elsa','lebanon','beirut','lebanese'], 'Chocolate & Co.':['chocolate and co','choco and co','chocolate co'] };
     function optVals(id){ return [...document.getElementById(id).options].map(o => o.value).filter(v => v && v !== '__add_new__'); }
     btn.addEventListener('click', async () => {
-      const names = items.map(it => it['Chocolate Name']).filter(Boolean);
-      const alts = await LBVoice.listen({ hint:'Say: Mia Pink, 10 kilo, expiry November 11 2027, supplier Lebanon, storage chiller, received by Bench — then "add". Say "clear all" to start over.' });
+      const alts = await LBVoice.listen({ hint:'Say: Mia Pink, 10 kilo, expiry November 11 2027, supplier Lebanon, storage chiller, received by Bench — then "add". Say a category (e.g. "Mia collection") to look only there. Say "clear all" to start over.' });
       if(!alts.length) return;
+      // Nov 19 (Bench): saying a category ("Mia collection", "category deluxe", "all") picks that pill; names are then matched in that category only.
+      // A pill picked by hand works the same.
+      {
+        const cats = [...new Set(items.map(it => it['Category']).filter(Boolean))];
+        let t0 = LBVoice.wordsToDigits(alts[0]).toLowerCase().replace(/[.,?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
+        let catSaid = null, rest = t0;
+        if(/^(category )?(all|all categories|lahat)$/.test(t0)){ catSaid = ''; rest = ''; }
+        else {
+          const m = t0.match(/^(?:category\s+)?(.+?\s+collections?)(?:\s+(.*))?$/);
+          if(m){ const c = LBVoice.pick(m[1].replace(/collections$/, 'collection'), cats); if(c){ catSaid = c; rest = (m[2] || '').trim(); } }
+          else if(/^category\s+/.test(t0)){   // "category deluxe gold 3 kilo": try 1 word, then 2 words, as the category
+            const w = t0.replace(/^category\s+/, '').split(' ');
+            for(const n of [1, 2]){ const c = LBVoice.pick(w.slice(0, n).join(' '), cats); if(c){ catSaid = c; rest = w.slice(n).join(' '); break; } }
+          }
+        }
+        if(catSaid !== null){
+          const pill = [...document.querySelectorAll('#categoryPills .cat-pill')].find(b => (b.dataset.cat || '') === catSaid);
+          if(pill) pill.click();
+          if(!rest){ show('🎤 Heard: “' + lbEsc(alts[0]) + '”<br>📂 ' + (catSaid ? lbEsc(catSaid) + ' — say a chocolate from it' : 'All categories')); LBVoice.speak(catSaid ? catSaid + '. Say the chocolate.' : 'All categories.'); return; }
+          alts.length = 0; alts.push(rest);
+        }
+      }
+      const inCat = activeCategory ? items.filter(it => it['Category'] === activeCategory) : items;
+      const names = inCat.map(it => it['Chocolate Name']).filter(Boolean);
       const lists = { names, suppliers: optVals('fSupplier'), supplierAliases: SUP_ALIAS, locations: optVals('fStorageLocation'), people: receivedByNames || [] };
       let v = null;
       alts.forEach(a => { const x = LBVoice.parseForm(a, lists); const sc = (x.item ? x.item.nameScore : 0) + Object.keys(x.fields).length * .05; if(!v || sc > v._sc) { x._sc = sc; x._said = a; v = x; } });
@@ -1108,6 +1131,7 @@
       const spDate = d => { try{ return new Date(d + 'T00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }); }catch(e){ return d; } };
       let sure = false;
       const it = v.item;
+      if(it && !(it.name && it.nameScore >= .8)){ const one = (it.choices || []).filter(c => c.s >= .4); if(one.length === 1 && one[0].s >= .45){ it.name = one[0].name; it.nameScore = .8; } }   // only one chocolate fits
       if(it && it.name && it.nameScore >= .8){ setName(it.name); filled.push('<b>' + lbEsc(it.name) + '</b>'); talk.push(it.name); sure = true; }
       if(it && it.pack){ document.getElementById('fPackagingType').value = it.pack; applyPack(); }
       if(it && it.qty != null){
