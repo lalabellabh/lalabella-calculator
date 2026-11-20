@@ -255,6 +255,27 @@
   <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="xSave">Save</button></div>
 </div></div>
 
+<!-- FOR CHECKING (Nov 20 2026): "already sent back, but not on a delivery list" on one transfer line -->
+<div class="modal" id="mCheck"><div class="box">
+  <h3>🔎 Already sent — for checking</h3>
+  <div class="hint" id="cInfo"></div>
+  <div class="grid3">
+    <div><label>Qty sent</label><input id="cQty" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div><label>Unit</label><select id="cUnit"></select></div>
+    <div><label>Date sent</label><input type="date" id="cDate"></div>
+  </div>
+  <div class="grid2">
+    <div><label>Sent with (who carried it)</label><input id="cWith" placeholder="e.g. Kelvin"></div>
+    <div><label>Going to</label><select id="cBranch"></select></div>
+  </div>
+  <label>📝 Note (needed)</label><textarea id="cNote" placeholder="e.g. Sent with Kelvin last Monday with the other items, wrapped in green wrapping paper."></textarea>
+  <label>📷 Picture (optional)</label>
+  <div class="photo"><input type="file" accept="image/*" capture="environment" id="cPhoto"><img id="cPrev" alt=""></div>
+  <div class="paste" id="cPaste" tabindex="0">📋 …or click here and press <b>Ctrl+V</b> to paste a picture (Snip / screenshot)</div>
+  <div class="msg" id="cMsg"></div>
+  <div class="btns"><button type="button" data-close>Cancel</button><button type="button" class="go" id="cSave">Save for checking</button></div>
+</div></div>
+
 <!-- ADMIN EDIT -->
 <div class="modal" id="mEdit"><div class="box">
   <h3 id="eTitle">Edit (Admin)</h3>
@@ -321,7 +342,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
     inp.onchange = function(){ var f = inp.files && inp.files[0]; if(!f) return; var im = lb.querySelector('img'); im.src = URL.createObjectURL(f); im.style.display = ''; lb.querySelector('span').style.display = 'none'; lb.classList.add('new'); }; }
   function picOf(root){ var lb = root && root.querySelector('.ipic'), inp = lb && lb.querySelector('input'); return shrink(inp && inp.files && inp.files[0]); }
   function preview(inp, im){ inp.onchange = function(){ delete PASTED[inp.id]; var f = inp.files && inp.files[0]; if(!f){ im.style.display = 'none'; return; } im.src = URL.createObjectURL(f); im.style.display = 'block'; }; }
-  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev')); preview($('kPhoto'), $('kPrev')); preview($('vPhoto'), $('vPrev'));
+  preview($('sPhoto'), $('sPrev')); preview($('rPhoto'), $('rPrev')); preview($('pPhoto'), $('pPrev')); preview($('xPhoto'), $('xPrev')); preview($('kPhoto'), $('kPrev')); preview($('vPhoto'), $('vPrev')); preview($('cPhoto'), $('cPrev'));
   function hasPhoto(id){ return !!(($(id).files && $(id).files.length) || PASTED[id]); }
   // Paste a snipped picture (Ctrl+V) — in the paste box, or anywhere in the open Send / Return form
   function takePaste(e, inpId, imId, boxId){
@@ -339,6 +360,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
     else if($('mBack').classList.contains('show')) takePaste(e, 'kPhoto', 'kPrev', 'kPaste');
     else if($('mRecv').classList.contains('show')) takePaste(e, 'vPhoto', 'vPrev', 'vPaste');
     else if($('mExtra').classList.contains('show')) takePaste(e, 'xPhoto', 'xPrev', 'xPaste');
+    else if($('mCheck').classList.contains('show')) takePaste(e, 'cPhoto', 'cPrev', 'cPaste');
     else if($('mEdit').classList.contains('show') && $('fAdd')) takePaste(e, 'fAdd', 'fAddPrev', 'fAddPaste');
   });
   // ＋ on a transfer -> add a picture (paste a snip, choose a file or take a photo)
@@ -385,7 +407,11 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
   }
   var ST = { still:'⏳ In Saudi', back:'✅ Back', kept:'🏷️ Kept in Saudi', unknown:'— No info' };
   function stText0(r){ if(r.status === 'still') return '⏳ ' + (r.left != null ? n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : 'Still in Saudi'); return ST[r.status] || ''; }
-  function stText(r){ return (r.onWay ? '🚚 On the way to Saudi · ' : '') + stText0(r) + (r.backOnWay != null ? ' · 🚚 ' + n3(r.backOnWay) + ' coming back' : ''); }
+  function checksOf(r){ return EXTRAS.filter(function(x){ return x.status === 'checking' && x.lineId === r.id; }); }
+  function stText(r){
+    var ck = checksOf(r).map(function(x){ return '🔎 ' + (x.qty != null ? n3(x.qty) + ' ' + (x.unit || '') + ' ' : '') + 'sent' + (x.sentWith ? ' with ' + x.sentWith : '') + (x.date ? ' ' + fd(x.date) : '') + ' — for checking'; });
+    return (r.onWay ? '🚚 On the way to Saudi · ' : '') + stText0(r) + (r.backOnWay != null ? ' · 🚚 ' + n3(r.backOnWay) + ' coming back' : '') + (ck.length ? ' · ' + ck.join(' · ') : '');
+  }
   function moveHtml(m, q){
     var head = m.kind === 'keep' ? '🏷️ ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'kept in Saudi' : '📥 ' + (m.qty != null ? n3(m.qty) + ' ' : '') + 'back' + (m.date ? ' · ' + fd(m.date) : '') + (m.branch ? ' · ' + esc(m.branch) : '');
     return '<div class="mv">' + head + (m.by && m.source !== 'excel' ? ' · by ' + hl(m.by, q) : '') + (m.photo ? ' <img class="ph" src="' + esc(m.photo) + '" alt="">' : '') +
@@ -530,7 +556,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
   });
 
   // ---------- NOT ON THE LIST ----------
-  var XST = { open:'⏳ Waiting for admin', matched:'✅ Matched to a transfer', saudi:'🏷️ Saudi-owned', done:'✔ Done' };
+  var XST = { open:'⏳ Waiting for admin', checking:'🔎 For checking (sent, not on a list)', matched:'✅ Matched to a transfer', saudi:'🏷️ Saudi-owned', done:'✔ Done' };
   function lineName(id){ var r = ROWS.find(function(x){ return x.id === id; }); return r ? r.batch + ' · ' + fd(r.batchDate) + ' · #' + (r.no == null ? '' : r.no) + ' ' + String(r.reference).split('\n')[0] : ''; }
   function renderExtras(q){
     var f = $('from').value, t = $('to').value, words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -560,6 +586,23 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
     $('mExtra').classList.add('show'); setTimeout(function(){ $('xItem').focus(); }, 50);
   }
   $('bExtra').onclick = function(){ openExtra('return'); };
+  // 🔎 For checking: Saudi says it was already sent back but it is not on any delivery list (Bench, Nov 20)
+  var CHK = null;
+  function openCheck(r){
+    CHK = r; $('cInfo').textContent = r.batch + ' · ' + String(r.reference || '').split('\n')[0] + (r.left != null ? ' · ' + n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : '') + '. Saved as “for checking” — Bahrain checks it, then the admin confirms it as a return.';
+    $('cQty').value = r.left != null ? n3(r.left) : ''; opts($('cUnit'), UNITS, UNITS.indexOf(r.unit) !== -1 ? r.unit : 'pcs'); $('cDate').value = today();
+    opts($('cBranch'), [''].concat(BRANCHES.filter(function(b){ return b !== 'Other'; })), ''); $('cBranch').options[0].textContent = '— not sure —';
+    $('cWith').value = ''; $('cNote').value = ''; $('cPhoto').value = ''; $('cPrev').style.display = 'none'; resetPaste('cPhoto', 'cPaste'); $('cMsg').textContent = '';
+    $('mCheck').classList.add('show'); setTimeout(function(){ $('cWith').focus(); }, 50);
+  }
+  $('cSave').onclick = function(){
+    if(!$('cNote').value.trim()){ $('cMsg').textContent = 'Add a note — how it was sent / how it was wrapped.'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    readPhoto($('cPhoto')).then(function(photo){
+      return api({ action:'flagCheck', lineId:CHK.id, qty:$('cQty').value, unit:$('cUnit').value, date:$('cDate').value, sentWith:$('cWith').value, branch:$('cBranch').value, note:$('cNote').value, photo:photo || '' }, true);
+    }).then(function(d){ if(!d || !d.success){ $('cMsg').textContent = (d && d.error) || 'Not saved.'; return; } $('mCheck').classList.remove('show'); load(); })
+      .catch(function(){ $('cMsg').textContent = 'Connection problem. Please try again.'; }).then(function(){ btn.disabled = false; btn.textContent = 'Save for checking'; });
+  };
   $('rExtra').onclick = function(){ var by = $('rBy').value; $('mRet').classList.remove('show'); openExtra(KIND === 'keep' ? 'receive' : 'return', by); };
   $('xSave').onclick = function(){
     if(!$('xItem').value.trim()){ $('xMsg').textContent = 'Write what the item is.'; return; }
@@ -574,7 +617,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
   function openExtraEdit(x){
     EDIT = { type:'extra', id:x.id }; $('eTitle').textContent = 'Not on the list (Admin)'; $('eMsg').textContent = '';
     var lines = ROWS.slice().sort(function(a, b){ return (a.status === 'still' ? 0 : 1) - (b.status === 'still' ? 0 : 1); });
-    $('eBody').innerHTML = '<label>Status</label><select id="fXs">' + ['open','matched','saudi','done'].map(function(k){ return '<option value="' + k + '"' + (x.status === k ? ' selected' : '') + '>' + XST[k] + '</option>'; }).join('') + '</select>' +
+    $('eBody').innerHTML = '<label>Status</label><select id="fXs">' + ['open','checking','matched','saudi','done'].map(function(k){ return '<option value="' + k + '"' + (x.status === k ? ' selected' : '') + '>' + XST[k] + '</option>'; }).join('') + '</select>' +
       '<label>Belongs to transfer line (for "Matched")</label><select id="fXl"><option value="">— none —</option>' + lines.map(function(r){ return '<option value="' + r.id + '"' + (x.lineId === r.id ? ' selected' : '') + '>' + esc((r.status === 'still' ? '⏳ ' : '') + lineName(r.id)) + '</option>'; }).join('') + '</select>' +
       (x.kind === 'return' ? '<div class="hint" style="margin-top:4px">When matched, it is also saved as a return on that line (only once), so "still in Saudi" goes down.</div>' : '') +
       field('Admin note', 'fXa', x.adminNote, 'area') +
@@ -602,7 +645,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
         return '<tr><td class="no">' + esc(r.no == null ? '' : r.no) + '</td><td>' + hl(r.reference, q) + (pics.length ? '<br>' + pics.map(function(u){ return '<img class="ph" src="' + esc(u) + '" alt=""' + (pinfo[u] ? ' data-pid="' + esc(pinfo[u]) + '"' : '') + '>'; }).join('') : '') + '</td>' +
           '<td class="qty">' + hl(r.quantity, q) + '</td>' + notesCell + '<td class="rt">' + (mv || '') + '</td>' +
           '<td class="st ' + r.status + '">' + esc(stText(r)) + '</td>' +
-          '<td class="act no-print">' + (ADMIN ? '<button title="Edit (Admin)" data-el="' + r.id + '">✏️</button>' : '') + '</td></tr>';
+          '<td class="act no-print">' + (ADMIN ? '<button title="Edit (Admin)" data-el="' + r.id + '">✏️</button>' : '') + (r.status === 'still' ? '<button title="Already sent but not on a delivery list — for checking" data-chk="' + r.id + '">🔎</button>' : '') + '</td></tr>';
       }).join('');
       var who = [f0.from ? 'from ' + f0.from : '', f0.givenTo ? 'given to ' + f0.givenTo : ''].filter(Boolean).join(' · ');
       return '<div class="batch"><div class="bh"><h3>' + esc(b.batch) + '</h3><span class="m">' + fd(b.date) + (who ? ' · ' + esc(who) : '') + ' · ' + b.rows.length + (b.full ? '' : ' of ' + b.all) + ' line(s)</span>' +
@@ -744,6 +787,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
     var im = e.target.closest('img.ph'); if(im){ $('lb').querySelector('img').src = im.src; $('lbCap').textContent = im.getAttribute('data-cap') || '';
       var pd = im.getAttribute('data-pid'); $('lbDel').style.display = pd ? '' : 'none'; if(pd) $('lbDel').setAttribute('data-pid', pd); $('lb').classList.add('show'); return; }
     if(e.target.closest('#lb')){ $('lb').classList.remove('show'); return; }
+    var ck = e.target.closest('[data-chk]'); if(ck){ var rr = ROWS.find(function(x){ return String(x.id) === ck.getAttribute('data-chk'); }); if(rr) openCheck(rr); return; }
     var el = e.target.closest('[data-el]'); if(el){ var r = ROWS.find(function(x){ return String(x.id) === el.getAttribute('data-el'); }); if(r) openLine(r); return; }
     var ex = e.target.closest('[data-ex]'); if(ex){ var xx = EXTRAS.find(function(y){ return String(y.id) === ex.getAttribute('data-ex'); }); if(xx) openExtraEdit(xx); return; }
     var em = e.target.closest('[data-em]'); if(em){ var m = null; ROWS.some(function(x){ m = x.moves.find(function(y){ return String(y.id) === em.getAttribute('data-em'); }); return !!m; }); if(m) openMove(m); return; }

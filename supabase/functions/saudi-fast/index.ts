@@ -9,6 +9,8 @@
 // Actions: list | send | returnItems | editLine (Admin) | editReturn (Admin) | deleteLine (Admin) | deleteReturn (Admin)
 //          Shipments (checklist, Nov 15 2026): send also makes a Bahrain->Saudi shipment | sendBack (Saudi -> Bahrain) | receiveShipment | deleteShipment (Admin, on the way only)
 //          addExtra (anyone: came back / received but NOT on any list, note required) | editExtra (Admin) | deleteExtra (Admin)
+//          flagCheck (anyone, Nov 20 2026): "already sent back but not on a delivery list" on a transfer line -> saudi_extras status 'checking'
+//            (who carried it, date, note). Bahrain checks it; Admin sets it to Matched (counts as a return) or Done.
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -133,7 +135,7 @@ async function list(u: any) {
   });
   const extras = exs.map((x: any) => ({ id: x.id, kind: x.kind, item: x.item, qty: x.qty == null ? null : Number(x.qty), unit: x.unit || '', date: x.item_date || '', branch: x.branch || '',
     by: x.received_by || '', note: x.note || '', photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, lineId: x.line_id, adminNote: x.admin_note || '',
-    resolvedBy: x.resolved_by || '', resolvedAt: x.resolved_at, savedBy: x.created_by || '', at: x.created_at }));
+    resolvedBy: x.resolved_by || '', resolvedAt: x.resolved_at, savedBy: x.created_by || '', at: x.created_at, sentWith: x.sent_with || '' }));
   const shipments = ships.map((x: any) => ({ id: x.id, direction: x.direction, date: x.ship_date, label: x.label || '', from: x.from_place || '', to: x.to_place || '', note: x.note || '',
     photo: x.photo_url ? (signed[x.photo_url] || '') : '', status: x.status, sentBy: x.sent_by || '', at: x.created_at,
     recDate: x.received_date || '', recBy: x.received_by || '', recNote: x.received_note || '', recPhoto: x.received_photo ? (signed[x.received_photo] || '') : '', recSavedBy: x.received_saved_by || '', recAt: x.received_at,
@@ -299,6 +301,21 @@ async function addExtra(p: any, u: any) {
   } catch (e) { console.error('saudi push', e); }
   return { success: true, id: r[0] && r[0].id };
 }
+async function flagCheck(p: any, u: any) {
+  const lineId = Number(p.lineId); if (!(lineId > 0)) return { success: false, error: 'Invalid line.' };
+  const ln = (await sbGet(`saudi_transfers?select=id,reference,unit,batch_label&id=eq.${lineId}&limit=1`))[0]; if (!ln) return { success: false, error: 'Line not found.' };
+  const note = txt(p.note, 500); if (!note) return { success: false, error: 'Add a note (how it was sent, how it was wrapped…).' };
+  const d = String(p.date || ''); if (d && !isDate(d)) return { success: false, error: 'Pick a valid date.' };
+  let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture). Nothing was saved.' }; }
+  const item = String(ln.reference || '').split('\n')[0].slice(0, 300) || 'Item';
+  const r = await sbPost('saudi_extras', [{ kind: 'return', item, qty: num(p.qty), unit: txt(p.unit, 20) || ln.unit || null, item_date: d || null, branch: BR(p.branch) || null,
+    sent_with: txt(p.sentWith, 60) || null, note, photo_url: photo || null, status: 'checking', line_id: lineId, created_by: who(u) }]);
+  try {
+    await saudiPush('🔎 For checking — sent back, not on a list',
+      (num(p.qty) != null ? num(p.qty) + ' ' + (txt(p.unit, 20) || ln.unit || '') + ' ' : '') + item.slice(0, 60) + (p.sentWith ? ' · with ' + txt(p.sentWith, 60) : '') + (d ? ' · ' + d : '') + ' · ' + note.slice(0, 80), ln.batch_label || 'Check', u.id, isSaudi(u) ? 'bahrain' : 'saudi');
+  } catch (e) { console.error('saudi push', e); }
+  return { success: true, id: r[0] && r[0].id };
+}
 async function editExtra(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid.' };
   const x = (await sbGet(`saudi_extras?select=*&id=eq.${id}&limit=1`))[0]; if (!x) return { success: false, error: 'Not found.' };
@@ -311,9 +328,10 @@ async function editExtra(p: any, u: any) {
   if (p.branch !== undefined) f.branch = BR(p.branch);
   if (p.receivedBy !== undefined) f.received_by = txt(p.receivedBy, 60) || null;
   if (p.adminNote !== undefined) f.admin_note = txt(p.adminNote, 400) || null;
-  const st = ['open', 'matched', 'saudi', 'done'].includes(String(p.status)) ? String(p.status) : x.status;
+  if (p.sentWith !== undefined) f.sent_with = txt(p.sentWith, 60) || null;
+  const st = ['open', 'matched', 'saudi', 'done', 'checking'].includes(String(p.status)) ? String(p.status) : x.status;
   f.status = st;
-  if (st !== x.status) { f.resolved_by = st === 'open' ? null : who(u); f.resolved_at = st === 'open' ? null : new Date().toISOString(); }
+  if (st !== x.status) { f.resolved_by = (st === 'open' || st === 'checking') ? null : who(u); f.resolved_at = (st === 'open' || st === 'checking') ? null : new Date().toISOString(); }
   const lineId = Number(p.lineId) > 0 ? Number(p.lineId) : null;
   if (st === 'matched') {
     if (!lineId) return { success: false, error: 'Pick the transfer line it belongs to.' };
@@ -379,6 +397,7 @@ Deno.serve(async (req) => {
     if (a === 'send') { if (isSaudi(u)) return json({ success: false, error: 'Saudi Team: use "Send to Bahrain".' }); return json(await send(p, u)); }
     if (a === 'returnItems') return json(await returnItems(p, u));
     if (a === 'addExtra') return json(await addExtra(p, u));
+    if (a === 'flagCheck') return json(await flagCheck(p, u));
     if (a === 'sendBack') return json(await sendBack(p, u));
     if (a === 'receiveShipment') return json(await receiveShipment(p, u));
     if (a === 'deleteShipment') {
