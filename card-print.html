@@ -2095,13 +2095,12 @@ document.getElementById('printContrast').addEventListener('input', function(){
 // it as a file, then open that same file later on a desktop to
 // print — since printing usually needs to happen from the desktop
 // where the printer is connected. ----------
-function saveCard(){
-  playClick();
+function cardData(){
   const images = [...document.querySelectorAll('.image-item')].map(box => ({
     src: box.querySelector('img').src,
     left: box.style.left, top: box.style.top, width: box.style.width
   }));
-  const data = {
+  return {
     textHtml: textArea.innerHTML,
     textDir: textArea.dir,
     textAlign: textArea.style.textAlign || 'center',
@@ -2115,6 +2114,10 @@ function saveCard(){
     bgOpacity: window.LBCardBg ? LBCardBg.getOpacity() : 100,
     images
   };
+}
+function saveCard(){
+  playClick();
+  const data = cardData();
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2227,6 +2230,47 @@ document.getElementById('saveCard').onclick = saveCard;
   eb.addEventListener('click', () => openTab('emoji'));
 })();
 
+// Puts a saved card (file or the auto-saved draft) back on the card.
+function applyCardData(data){
+
+  // Clear the card first, same as the Clear button.
+  textArea.innerHTML = '';
+  document.querySelectorAll('.image-item').forEach(x => x.remove());
+
+  textArea.innerHTML = data.textHtml || '';
+  textArea.dir = data.textDir || 'ltr';
+  document.querySelectorAll('[data-dir]').forEach(x => x.classList.toggle('active', x.dataset.dir === textArea.dir));
+  textArea.style.textAlign = data.textAlign || 'center';
+  document.querySelectorAll('[data-align]').forEach(x => x.classList.toggle('active', x.dataset.align === data.textAlign));
+
+  size.value = data.size || 'big';
+  card.classList.toggle('small', size.value === 'small');
+  if(data.customW) document.getElementById('customW').value=data.customW;
+  if(data.customH) document.getElementById('customH').value=data.customH;
+  applyCustomSize();
+  cols.value = data.cols || '1';
+  textArea.style.columnCount = cols.value;
+  textArea.style.columnGap = '14px';
+  font.value = data.font || 'bask';
+  textArea.style.fontFamily = emojiSafe(font.value === 'arabic'
+    ? '"Noto Naskh Arabic","Amiri","Traditional Arabic",serif'
+    : '"Baskerville Old Face",Baskerville,Georgia,serif');
+  fontSize.value = data.fontSize || 16;
+  textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
+  if(window.LBCardBg){ LBCardBg.set(data.bg || 'none'); LBCardBg.setOpacity(data.bgOpacity == null ? 100 : data.bgOpacity); }
+  updatePrintSize();
+
+  (data.images || []).forEach(imgData => {
+    const box=document.createElement('div');box.className='image-item';
+    box.style.left=imgData.left||'12px';box.style.top=imgData.top||'12px';box.style.width=imgData.width||'120px';
+    const img=document.createElement('img');img.src=imgData.src;box.appendChild(img);
+    const handle=document.createElement('div');handle.className='resize-handle';box.appendChild(handle);
+    addDeleteHandle(box);
+    card.appendChild(box);enableDrag(box);enableResize(box,handle);
+  });
+  if(!data.textHtml || textArea.textContent.trim() === '') { textArea.innerHTML = 'Type or paste your message here…'; textArea.classList.add('placeholder'); }
+  else textArea.classList.remove('placeholder');
+}
 document.getElementById('loadCard').onclick = ()=> document.getElementById('fileLoad').click();
 document.getElementById('fileLoad').addEventListener('change', (e)=>{
   const file = e.target.files[0];
@@ -2236,42 +2280,7 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
     try{
       const data = JSON.parse(ev.target.result);
       playClick();
-
-      // Clear the card first, same as the Clear button.
-      textArea.innerHTML = '';
-      document.querySelectorAll('.image-item').forEach(x => x.remove());
-
-      textArea.innerHTML = data.textHtml || '';
-      textArea.dir = data.textDir || 'ltr';
-      document.querySelectorAll('[data-dir]').forEach(x => x.classList.toggle('active', x.dataset.dir === textArea.dir));
-      textArea.style.textAlign = data.textAlign || 'center';
-      document.querySelectorAll('[data-align]').forEach(x => x.classList.toggle('active', x.dataset.align === data.textAlign));
-
-      size.value = data.size || 'big';
-      card.classList.toggle('small', size.value === 'small');
-      if(data.customW) document.getElementById('customW').value=data.customW;
-      if(data.customH) document.getElementById('customH').value=data.customH;
-      applyCustomSize();
-      cols.value = data.cols || '1';
-      textArea.style.columnCount = cols.value;
-      textArea.style.columnGap = '14px';
-      font.value = data.font || 'bask';
-      textArea.style.fontFamily = emojiSafe(font.value === 'arabic'
-        ? '"Noto Naskh Arabic","Amiri","Traditional Arabic",serif'
-        : '"Baskerville Old Face",Baskerville,Georgia,serif');
-      fontSize.value = data.fontSize || 16;
-      textArea.style.fontSize = Math.max(8, Math.min(40, +fontSize.value || 16)) + 'px';
-      if(window.LBCardBg){ LBCardBg.set(data.bg || 'none'); LBCardBg.setOpacity(data.bgOpacity == null ? 100 : data.bgOpacity); }
-      updatePrintSize();
-
-      (data.images || []).forEach(imgData => {
-        const box=document.createElement('div');box.className='image-item';
-        box.style.left=imgData.left||'12px';box.style.top=imgData.top||'12px';box.style.width=imgData.width||'120px';
-        const img=document.createElement('img');img.src=imgData.src;box.appendChild(img);
-        const handle=document.createElement('div');handle.className='resize-handle';box.appendChild(handle);
-        addDeleteHandle(box);
-        card.appendChild(box);enableDrag(box);enableResize(box,handle);
-      });
+      applyCardData(data);
     }catch(err){
       alert('Could not load the file. Make sure this is a valid Lalabella card file.');
     }
@@ -2281,6 +2290,34 @@ document.getElementById('fileLoad').addEventListener('change', (e)=>{
 });
 
 updatePrintSize();
+
+// ---------- Auto-save draft (Bench, Nov 20 2026): a refresh no longer loses the message. ----------
+// The card is kept in this browser while you work and comes back after a refresh; Clear empties it.
+(function(){
+  const KEY = 'lbCardDraft';
+  let last = '';
+  function isEmpty(d){ const t = (d.textHtml || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(); return (!t || t === 'Type or paste your message here…') && !(d.images || []).length; }
+  function saveDraft(){
+    let d; try{ d = cardData(); }catch(e){ return; }
+    const j = JSON.stringify(d); if(j === last) return; last = j;
+    try{
+      if(isEmpty(d)) { localStorage.removeItem(KEY); return; }
+      localStorage.setItem(KEY, j);
+    }catch(e){   // too big for the browser (big pictures): keep at least the words
+      try{ d.images = []; localStorage.setItem(KEY, JSON.stringify(d)); }catch(_){}
+    }
+  }
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const d = JSON.parse(raw); if(!isEmpty(d)){ applyCardData(d); last = raw; } }
+  }catch(e){}
+  ['input', 'keyup', 'paste', 'drop'].forEach(ev => textArea.addEventListener(ev, () => setTimeout(saveDraft, 300)));
+  document.addEventListener('mouseup', () => setTimeout(saveDraft, 300));
+  document.addEventListener('change', () => setTimeout(saveDraft, 300));
+  setInterval(saveDraft, 3000);
+  window.addEventListener('beforeunload', saveDraft);
+  window.addEventListener('pagehide', saveDraft);
+})();
 
 // ===== Card Message Envelope =====
 (function(){
