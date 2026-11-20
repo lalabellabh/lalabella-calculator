@@ -37,6 +37,7 @@
 
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
   .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  .new-order-btn{ border:1px solid var(--line, #e5c9d2); background:#fff; color:#8a3a5a; border-radius:999px; padding:5px 12px; font:700 12.5px 'Space Grotesk',system-ui,sans-serif; cursor:pointer; }
   label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:12px; }
   label:first-child{ margin-top:0; }
   input[type=text], input[type=number], input[type=date]{
@@ -314,7 +315,7 @@
 
     <div class="mx-side">
       <div class="card">
-        <div class="card-title">🧾 Order List</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">🧾 Order List <button type="button" class="new-order-btn" id="mxNew" title="Clear the list and start a new order">🆕 New</button></div>
         <div id="mxList"><div class="empty-note">Nothing yet — add flowers, chocolate or extras.</div></div>
         <div style="margin-top:10px">
           <div class="mx-tot"><span>🌸 Flowers</span><b id="tF">0.000 BD</b></div>
@@ -542,9 +543,18 @@
       $('mxRes').innerHTML = '<div class="ok">✓ ' + e(src) + (ref !== src ? ' · sold to ' + e(ref) : '') + ' — taken out of ' + e(d.branch || b) + ' stock · ' + e(d.saleNo) + (d.releaseNo ? ' · ' + e(d.releaseNo) : '') + '</div>' +
         (d.chocError ? '<div class="warn">⚠ Chocolate was NOT saved: ' + e(d.chocError) + '</div>' : '') + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
       $('mxRef').value = ''; $('mxSrc').value = ''; loadStock();
+      $('mxRes').innerHTML += '<button type="button" data-new style="width:100%;margin-top:8px;border:1px solid #2f7a4f;border-radius:11px;padding:9px;font:inherit;font-weight:800;background:#fff;color:#1f5a38;cursor:pointer">🆕 New order — clear the list</button>';
     }).catch(function(){ $('mxRes').innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
       .then(function(){ busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; });
   };
+  // 🆕 New order (Bench, Nov 20): clears the list; asks first only when it was not sold yet
+  function newOrder(sold){
+    if(!LIST.length && !$('mxCustomer').value) return;
+    if(!sold && !(!!lastSig && sig() === lastSig) && !confirm('Start a new order? The list is not sold yet and will be cleared.')) return;
+    LIST = []; $('mxCustomer').value = ''; $('mxRes').innerHTML = ''; render();
+  }
+  $('mxNew').onclick = function(){ newOrder(false); };
+  $('mxRes').addEventListener('click', function(ev){ if(ev.target.closest('[data-new]')) newOrder(true); });
   setInterval(function(){ if(busy) return; var done = !!lastSig && sig() === lastSig; $('mxSold').textContent = done ? '✓ Already sold · ' + lastSale : '✓ Sold'; $('mxSold').style.background = done ? '#9aa79f' : ''; }, 800);
   render();
 })();

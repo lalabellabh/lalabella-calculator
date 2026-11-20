@@ -1193,7 +1193,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     <div id="listSection">
       <div class="list-header">
         <h2>List</h2>
-        <button class="list-clear" id="clearListBtn">Clear All</button>
+        <button class="list-clear" id="clearListBtn">🆕 New order</button>
       </div>
       <div id="listItems"></div>
 
@@ -1821,12 +1821,16 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     searchEl.focus();
   });
 
-  clearListBtn.addEventListener('click', ()=>{
+  clearListBtn.addEventListener('click', ()=> window.lbNewOrder());
+  // 🆕 New order (Bench, Nov 20): clears the list; asks first only when it was not sold yet
+  window.lbNewOrder = function(sold){
+    if(!cart.length && !extras.length) return;
+    if(!sold && !(window.LBCalcSale && LBCalcSale.isSold()) && !confirm('Start a new order? The list is not sold yet and will be cleared.')) return;
     window.LB_CALC_DISP = '';
     cart = [];
     extras = [];
-    renderCart();
-  });
+    renderCart(); if(window.LBCalcSale) LBCalcSale.clearMsg();
+  };
 
   // ---------- 🎤 Voice (Nov 20 2026, Bench) ----------
   // One tap = one thing. Say just the NAME → it finds it and tells you what to say next (a prompt):
@@ -2714,14 +2718,14 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 </script>
 
 <script src="joyboy-bubble.js"></script>
-<script src="shared/calc-sale.js?v=8"></script>
+<script src="shared/calc-sale.js?v=9"></script>
 <script src="shared/calc-stock.js?v=1"></script>
 <script src="shared/disp-guard.js?v=2"></script>
 <script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDescription"), document.getElementById("extraAmount")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
-  try{ LBCalcSale.mount({ kind:'chocolate', anchor: document.getElementById('shareBtn'), branchSelect: document.getElementById('listBranch'),
+  try{ LBCalcSale.mount({ kind:'chocolate', anchor: document.getElementById('shareBtn'), branchSelect: document.getElementById('listBranch'), onNew: function(sold){ window.lbNewOrder(sold); },
     get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.description + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.amount }; }) }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 </body>

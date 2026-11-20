@@ -37,6 +37,7 @@
 
   .card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 4px 16px rgba(158,47,74,0.05); }
   .card-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px; }
+  .new-order-btn{ border:1px solid var(--line, #e5c9d2); background:#fff; color:#8a3a5a; border-radius:999px; padding:5px 12px; font:700 12.5px 'Space Grotesk',system-ui,sans-serif; cursor:pointer; }
   label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-dim); margin-bottom:5px; margin-top:12px; }
   label:first-child{ margin-top:0; }
   input[type=text], input[type=number], input[type=date]{
@@ -288,7 +289,7 @@
 
     <div class="col-side">
       <div class="card">
-        <div class="card-title">🧾 Order List</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">🧾 Order List <button type="button" class="new-order-btn" onclick="window.lbNewOrder && lbNewOrder()" title="Clear the list and start a new order">🆕 New</button></div>
         <!-- Nov 2026: scroll box so long orders don't push the totals down -->
         <div id="cartScroll" style="max-height:min(380px,50vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;margin-right:-4px;">
           <div id="cartList"><div class="empty-note">Nothing added yet.</div></div>
@@ -1034,13 +1035,23 @@
 </script>
 
 
-<script src="shared/calc-sale.js?v=8"></script>
+<script src="shared/calc-sale.js?v=9"></script>
 <script src="shared/calc-stock.js?v=1"></script>
 <script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
-  try{ LBCalcSale.mount({ kind:'flower', anchor: document.getElementById('shareBtn'),
+  // 🆕 New order (Bench, Nov 20): clears the list; asks first only when it was not sold yet
+  window.lbNewOrder = function(sold){
+    if(!cart.length && !extras.length && !document.getElementById('customerName').value) return;
+    if(!sold && !(window.LBCalcSale && LBCalcSale.isSold()) && !confirm('Start a new order? The list is not sold yet and will be cleared.')) return;
+    cart = []; extras = []; EDIT_KEY = ''; window.LB_CALC_DISP = '';
+    document.getElementById('customerName').value = '';
+    try{ document.getElementById('searchClear').click(); }catch(e){}
+    document.getElementById('qtyInput').value = '';
+    renderCart(); if(window.LBCalcSale) LBCalcSale.clearMsg();
+  };
+  try{ LBCalcSale.mount({ kind:'flower', anchor: document.getElementById('shareBtn'), onNew: function(sold){ lbNewOrder(sold); },
     get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.desc + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.price }; }), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 <script src="joyboy-bubble.js"></script>

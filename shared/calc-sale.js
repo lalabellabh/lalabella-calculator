@@ -75,6 +75,8 @@
         var sh = (d.short || []).map(function (s) { return '<div class="warn">⚠ ' + esc(s.name) + ': needed ' + esc(s.need) + ', the system has only ' + esc(s.have) + '</div>'; }).join('');
         res.innerHTML = '<div class="ok">✓ ' + esc(src) + (refVal !== src ? ' · sold to ' + esc(refVal) : '') + ' — taken out of ' + esc(d.branch) + ' stock · ' + esc(d.saleNo) + (d.releaseNo ? ' · ' + esc(d.releaseNo) : '') + '</div>' + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
         box.querySelector('[data-ref]').value = ''; srcSel.value = '';
+        // Nov 20 (Bench): after a sale, one tap starts a new order (Print still works until then)
+        if (o.onNew) res.innerHTML += '<button type="button" data-new style="width:100%;margin-top:8px;border:1px solid #2f7a4f;border-radius:11px;padding:9px;font:inherit;font-weight:800;background:#fff;color:#1f5a38;cursor:pointer">🆕 New order — clear the list</button>';
       }).catch(function () { res.innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
         .then(function () { busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; paintSold(); });
     });
@@ -82,8 +84,12 @@
     function paintSold() { var g = o.get() || {}, sig = JSON.stringify([brSel.value, g.items || []]); var done = !!lastSig && sig === lastSig;
       btn.textContent = done ? '✓ Already sold · ' + lastNo : '✓ Sold'; btn.style.background = done ? '#9aa79f' : ''; }
     setInterval(function () { if (!busy) paintSold(); }, 800);
+    res.addEventListener('click', function (e) { if (e.target.closest('[data-new]')) { res.innerHTML = ''; if (o.onNew) o.onNew(true); } });
+    // true when the list on screen is exactly the one just sold
+    api.isSold = function () { var g = o.get() || {}; return !!lastSig && JSON.stringify([brSel.value, g.items || []]) === lastSig; };
+    api.clearMsg = function () { res.innerHTML = ''; };
   }
-  var api = { mount: mount, info: function () { return null; },
+  var api = { mount: mount, info: function () { return null; }, isSold: function () { return false; }, clearMsg: function () {},
     // one line for the receipt, e.g. "ModaMall · Walk-in · INV 123 · CS-000012" ('' when nothing is filled)
     printText: function (noBranch) { var i = api.info(); if (!i) return ''; var p = [];
       if (i.branch && !noBranch) p.push(i.branch); if (i.source) p.push(i.source); if (i.ref) p.push(i.ref); if (i.saleNo) p.push(i.saleNo);
