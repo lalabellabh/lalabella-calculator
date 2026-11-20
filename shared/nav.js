@@ -1208,7 +1208,7 @@
   // Floating unassigned-orders bell (draggable). On pages that have their own #lalaBellBtn it only adds the new-order pop-up. See shared/order-bell.js.
   if (!window.LBOrderBell && !document.querySelector('script[src^="shared/order-bell.js"]')) {
     const ob = document.createElement('script');
-    ob.src = 'shared/order-bell.js?v=2';
+    ob.src = 'shared/order-bell.js?v=3';
     document.body.appendChild(ob);
   }
 

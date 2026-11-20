@@ -321,12 +321,27 @@
   function onum(v) { return String(v || '').replace(/\D+/g, ''); }
   function shopDone() { try { var a = JSON.parse(localStorage.getItem(SHOP_DONE) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function shopMarkDone(nos) { var a = shopDone().concat(nos); try { localStorage.setItem(SHOP_DONE, JSON.stringify(a.filter(function (v, i) { return v && a.indexOf(v) === i; }).slice(-200))); } catch (e) {} }
+  // Orders already given to a branch (from Live Orders, via the bell's newAssigned) — kept per browser so the
+  // "not in a branch yet" reminder stops even when the Tampermonkey is off (Bench, Nov 20 2026).
+  var PLACED = 'lbobPlaced';
+  function placedNos() { try { var a = JSON.parse(localStorage.getItem(PLACED) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function notePlaced(rows) {
+    var nos = (rows || []).map(function (o) { return onum(o.orderNo); }).filter(Boolean); if (!nos.length) return;
+    var a = placedNos(), add = nos.filter(function (n) { return a.indexOf(n) === -1; }); if (!add.length) return;
+    try { localStorage.setItem(PLACED, JSON.stringify(a.concat(add).slice(-300))); } catch (e) {}
+    // the reminder on screen is for an order that is now placed -> stop it right away
+    if (shopShown.length && shopShown.some(function (n) { return add.indexOf(n) !== -1; })) {
+      shopShown = shopShown.filter(function (n) { return add.indexOf(n) === -1; });
+      if (!shopShown.length) { stopRing(); hideToast(); }
+    }
+  }
   function shopPending(orders) {
     var done = shopDone(), now = Date.now();
     return (orders || []).filter(function (o) {
       if (o.source === 'bleems') return false;
       var no = onum(o.order_no), at = new Date(o.received_at).getTime();
       if (!no || !at || now - at > 6 * 3600000 || done.indexOf(no) !== -1) return false;
+      if (placedNos().indexOf(no) !== -1) return false;   // Nov 20: already given to a branch (Live Orders) -> stop ringing
       var reportedAfter = monk.at > at + 60000;
       if (reportedAfter && monk.list.indexOf(no) === -1) return false;   // the dashboard shows it is no longer unassigned
       return true;
@@ -418,7 +433,7 @@
         var n = Number(d.count) || 0, rows = Array.isArray(d.ordersDetail) ? d.ordersDetail : [];
         monk.at = d.lastUpdated ? new Date(d.lastUpdated).getTime() || 0 : 0;
         monk.list = rows.map(function (o) { return onum(o.orderNo); });
-        try { if (Array.isArray(d.newAssigned)) handleGifts(d.newAssigned); } catch (e) {}
+        try { if (Array.isArray(d.newAssigned)) { notePlaced(d.newAssigned); handleGifts(d.newAssigned); } } catch (e) {}
         var apRows = Array.isArray(d.approvalsDetail) ? d.approvalsDetail : [], ap = Number(d.pendingApprovals) || 0;
         var shown = n + ap;
         if (shown > 0) { badge.textContent = String(shown); badge.classList.add('show'); } else badge.classList.remove('show');
