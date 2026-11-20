@@ -345,6 +345,19 @@
 
   // Hide emoji this device cannot draw (they would show as an empty box). Draws each one on a hidden canvas and
   // compares it with how a missing character looks; sequences that split into several pictures count as missing too.
+  // The newest emoji come from the Noto Color Emoji web font. Until it has downloaded they look "missing",
+  // so a "no" is not remembered before the font is ready (Bench, Nov 20: new emoji showed only after 3 refreshes).
+  let emojiFontReady = false;
+  const emojiFontLoaded = new Promise(function(resolve){
+    function go(){
+      try {
+        if (!document.fonts || !document.fonts.load) { emojiFontReady = true; return resolve(); }
+        Promise.race([document.fonts.load("32px 'Noto Color Emoji'", '\u{1FAE8}\u{1F979}\u{1FAB7}'), new Promise(function(r){ setTimeout(r, 8000); })])
+          .then(function(){ emojiFontReady = true; resolve(); }, function(){ emojiFontReady = true; resolve(); });
+      } catch (e) { emojiFontReady = true; resolve(); }
+    }
+    window.__lbEmojiFontGo = go;
+  });
   const canShow = (function(){
     let ctx = null, refs = null, cache = {};
     const SZ = 32;
@@ -362,6 +375,7 @@
         let ok = true;
         if (/\u200D/.test(e) && w > SZ * 1.7) ok = false;           // joined emoji that fell apart into pieces
         else if (refs.indexOf(px(e)) !== -1) ok = false;               // looks exactly like a missing character
+        if (!ok && !emojiFontReady) return false;                      // maybe the emoji font is still downloading: check again later
         return (cache[e] = ok);
       } catch (err) { return (cache[e] = true); }                      // cannot test: show it
     };
@@ -373,8 +387,10 @@
     addStyle();
     if (!document.getElementById('lbcm-emoji-font')) {      // fallback font so the newest emoji show on older devices
       const lk = document.createElement('link'); lk.id = 'lbcm-emoji-font'; lk.rel = 'stylesheet';
-      lk.href = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap'; document.head.appendChild(lk);
-    }
+      lk.href = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap';
+      lk.onload = function(){ if (window.__lbEmojiFontGo) window.__lbEmojiFontGo(); }; lk.onerror = function(){ emojiFontReady = true; };
+      document.head.appendChild(lk);
+    } else if (window.__lbEmojiFontGo) window.__lbEmojiFontGo();
     const root = el('div', 'lbcm-picker'); root.setAttribute('data-lb-theme-skip', '');
     const tabs = el('div', 'lbcm-tabs'), head = el('div', 'lbcm-head'), body = el('div', 'lbcm-body'), attr = el('div', 'lbcm-attr');
     root.append(tabs, head, body, attr);
@@ -382,6 +398,7 @@
     opts.host.appendChild(root);
 
     let tab = 'emoji', emojiTab = Object.keys(EMOJI_SETS)[0];
+    emojiFontLoaded.then(function(){ if (root.classList.contains('show') && tab === 'emoji') draw(); });   // show the new emoji as soon as the font is in
     const gifState = { gif: null, sticker: null };       // {q, page, items, hasMore, provider, error, notConfigured, loading}
     let searchTimer = null;
 
