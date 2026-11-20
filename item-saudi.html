@@ -591,7 +591,7 @@ document.querySelectorAll('.modal > .box').forEach(function(b){ var x = document
   function openCheck(r){
     CHK = r; $('cInfo').textContent = r.batch + ' · ' + String(r.reference || '').split('\n')[0] + (r.left != null ? ' · ' + n3(r.left) + ' ' + (r.unit || '') + ' still in Saudi' : '') + '. Saved as “for checking” — Bahrain checks it, then the admin confirms it as a return.';
     $('cQty').value = r.left != null ? n3(r.left) : ''; opts($('cUnit'), UNITS, UNITS.indexOf(r.unit) !== -1 ? r.unit : 'pcs'); $('cDate').value = today();
-    opts($('cBranch'), [''].concat(BRANCHES.filter(function(b){ return b !== 'Other'; })), ''); $('cBranch').options[0].textContent = '— not sure —';
+    opts($('cBranch'), [''].concat(BRANCHES.filter(function(b){ return b !== 'Other'; })), ''); $('cBranch').options[0].textContent = '— not sure —'; $('cBranch').options[0].value = '';
     $('cWith').value = ''; $('cNote').value = ''; $('cPhoto').value = ''; $('cPrev').style.display = 'none'; resetPaste('cPhoto', 'cPaste'); $('cMsg').textContent = '';
     $('mCheck').classList.add('show'); setTimeout(function(){ $('cWith').focus(); }, 50);
   }
