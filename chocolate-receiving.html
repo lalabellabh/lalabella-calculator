@@ -1175,7 +1175,15 @@
         else if(it.rest){ html += '<br>⚠️ Chocolate not found — please pick it.'; oops.push("Sorry, I didn't get the chocolate name. Please pick it"); }
       }
       if(!filled.length && !oops.length && !(it && it.choices.length)){ html += '<br>⚠️ Did not catch anything to fill — please try again.'; oops.push("Sorry, I didn't get that. Please try again"); }
+      // Nov 20 (Bench): after each voice input, say / show what to do next
+      const nextR = !$('fSearch').value.trim() ? 'say the chocolate name'
+        : !$('fQty').value ? 'say the quantity, like “10 kilo”'
+        : !$('fExpiryDate').value ? 'say the expiry, like “expiry November 11 2027”'
+        : !$('fSupplier').value ? 'say the supplier, like “supplier Lebanon”'
+        : 'say “add” (it checks with you first)';
+      if(!v.add) html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #f3dbe3;color:#8a3a5a;font-weight:700;">👉 Next: ' + lbEsc(nextR) + '</div>';
       show(html);
+      if(!v.add && !oops.length) talk.push('Next, ' + nextR.replace(/[“”]/g, '').replace(/\(.*?\)/g, ''));
       // Say back what was filled, and what was not understood (Bench, Nov 19).
       const words = (talk.length ? talk.join(', ') + '.' : '') + (oops.length ? ' ' + oops.join('. ') + '.' : '');
       if(!v.add && words.trim()) LBVoice.speak(words.trim());
