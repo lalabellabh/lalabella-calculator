@@ -38,6 +38,13 @@
   .empty{ color:var(--dim); text-align:center; padding:18px 0; font-size:13px; }
   .pbtn{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; color:var(--ink); }
   #rp{ display:none; }
+  #sumCard h3{ margin:0 0 8px; font-family:'Fraunces',serif; font-size:17px; }
+  #sumCard .sg{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  #sumCard table, #rp table.st{ width:100%; border-collapse:collapse; font-size:13px; }
+  #sumCard th, #rp table.st th{ text-align:left; border-bottom:2px solid #2f2024; padding:4px 2px; }
+  #sumCard td, #rp table.st td{ padding:3px 2px; border-bottom:1px solid rgba(0,0,0,.06); }
+  #sumCard td.n, #sumCard th.n, #rp table.st .n{ text-align:right; white-space:nowrap; }
+  #sumCard tr.t td, #rp table.st tr.t td{ font-weight:800; border-top:2px solid #2f2024; border-bottom:0; }
   @media print{
     html, body{ margin:0 !important; padding:0 !important; height:0 !important; min-height:0 !important; overflow:hidden !important; background:#fff !important; }
     body *{ visibility:hidden !important; }
@@ -84,6 +91,7 @@
   </div>
   <div id="sum" style="font-size:12.5px;color:var(--dim);margin:0 0 8px"></div>
   <div class="card" id="list"><div class="empty">Loading…</div></div>
+  <div class="card" id="sumCard" style="margin-top:14px;display:none"></div>
 </div>
 <div id="rp"></div>
 <script>
@@ -130,6 +138,51 @@
       var mm = Math.max(50, Math.ceil(r.getBoundingClientRect().height * 25.4 / 96) + 8); r.removeAttribute('style'); st.textContent = '@page{ size:76mm ' + mm + 'mm; margin:2mm; }'; }
     window.print();
   }
+  // ---------- 📊 Summary like the POS report (Bench, Nov 21): chocolates per collection in kg, flowers per flower ----------
+  var CAT = null;   // chocolate name / code -> collection
+  function loadCats(){
+    if(CAT) return Promise.resolve(CAT);
+    var u = (window.LB_CONFIG && LB_CONFIG.CHOCOLATE_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chocolate-fast';
+    return fetch(u + '?action=getItems&token=' + encodeURIComponent(token())).then(function(r){ return r.json(); }).then(function(list){
+      CAT = {}; (Array.isArray(list) ? list : (list && list.items) || []).forEach(function(it){ var c = it['Category'] || it.category || ''; if(it['Chocolate Name']) CAT['n:' + String(it['Chocolate Name']).toLowerCase()] = c; if(it['Product Code']) CAT['c:' + it['Product Code']] = c; });
+      return CAT; }).catch(function(){ CAT = {}; return CAT; });
+  }
+  function chocKg(it){ var kg = Number(it.kg) || 0; if(kg > 0) return kg; var a = Number(it.amount) || 0;
+    return it.mode === 'grams' ? a / 1000 : it.mode === 'kg' ? a : (it.gpp ? a * Number(it.gpp) / 1000 : 0); }
+  var SUMHTML = '';
+  function drawSummary(act){
+    loadCats().then(function(cat){
+      var cg = {}, fl = {}, ck = 0, cb = 0, fs = 0, fb = 0, ex = 0, nC = 0, nF = 0;
+      act.forEach(function(s){
+        ex += extrasOf(s).reduce(function(a, x){ return a + (Number(x.price) || 0); }, 0);
+        (s.items || []).forEach(function(it){
+          if(s.kind === 'flower'){ var q = Number(it.qty) || 0, b = q * (Number(it.rate) || 0), k = it.name; fl[k] = fl[k] || { q:0, b:0 }; fl[k].q += q; fl[k].b += b; fs += q; fb += b; nF++; }
+          else { var g = cat['c:' + it.code] || cat['n:' + String(it.name).toLowerCase()] || 'Other'; var kg = chocKg(it), bd = Number(it.total) || 0;
+            cg[g] = cg[g] || { kg:0, b:0, pcs:0 }; cg[g].kg += kg; cg[g].b += bd; if(it.mode === 'pieces') cg[g].pcs += Number(it.amount) || 0; ck += kg; cb += bd; nC++; }
+        });
+      });
+      if(!nC && !nF){ $('sumCard').style.display = 'none'; SUMHTML = ''; return; }
+      var row = function(a, b, c){ return '<tr><td>' + a + '</td><td class="n">' + b + '</td><td class="n">' + c + '</td></tr>'; };
+      var chocT = nC ? '<div><h3>🍫 Chocolate per collection</h3><table><tr><th>Collection</th><th class="n">Weight</th><th class="n">Amount</th></tr>' +
+        Object.keys(cg).sort().map(function(k){ return row(esc(k) + (cg[k].pcs ? ' <span style="color:#8a7078;font-size:11.5px">(' + cg[k].pcs + ' pcs)</span>' : ''), cg[k].kg.toFixed(3) + ' kg', f3(cg[k].b) + ' BD'); }).join('') +
+        '<tr class="t"><td>TOTAL chocolate</td><td class="n">' + ck.toFixed(3) + ' kg</td><td class="n">' + f3(cb) + ' BD</td></tr></table></div>' : '';
+      var flT = nF ? '<div><h3>🌸 Flowers</h3><table><tr><th>Flower</th><th class="n">Stems</th><th class="n">Amount</th></tr>' +
+        Object.keys(fl).sort().map(function(k){ return row(esc(k), String(Math.round(fl[k].q * 1000) / 1000), f3(fl[k].b) + ' BD'); }).join('') +
+        '<tr class="t"><td>TOTAL flowers</td><td class="n">' + (Math.round(fs * 1000) / 1000) + '</td><td class="n">' + f3(fb) + ' BD</td></tr></table></div>' : '';
+      var exT = ex > 0 ? '<div style="margin-top:8px;font-size:13px">🎀 Extras: <b>' + f3(ex) + ' BD</b> · Grand total: <b>' + f3(cb + fb + ex) + ' BD</b></div>' : '';
+      var info = act.length + ' sale(s), not cancelled' + ($('br').value ? ' · ' + esc($('br').value) : ' · all branches') + (($('from').value || $('to').value) ? ' · ' + esc($('from').value || '…') + ' to ' + esc($('to').value || 'today') : ' · latest');
+      SUMHTML = '<div class="sg">' + chocT + flT + '</div>' + exT;
+      $('sumCard').innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="font-size:15px">📊 Summary</b><span style="font-size:12px;color:var(--dim)">' + info + '</span><button class="pbtn" id="sumPrint" style="margin-left:auto">🖨️ Print summary</button></div>' + SUMHTML;
+      $('sumCard').style.display = '';
+      $('sumPrint').onclick = function(){
+        var tbl = SUMHTML.replace(/<table>/g, '<table class="st">');
+        $('rp').className = 'a4';
+        $('rp').innerHTML = '<h2 style="margin:0 0 4px">Lalabella — Sales summary</h2><div style="font-size:12px;margin-bottom:12px">' + info + '</div>' + tbl.replace('class="sg"', 'style="display:block"') + '<div style="margin-top:14px;font-size:11px;color:#666">Printed ' + new Date().toLocaleString('en-GB') + '</div>';
+        var st = $('rpPage'); if(!st){ st = document.createElement('style'); st.id = 'rpPage'; document.head.appendChild(st); }
+        st.textContent = '@page{ size:A4; margin:14mm; }'; window.print();
+      };
+    });
+  }
   function load(){
     var q = new URLSearchParams({ action:'listSales', token:token(), branch:$('br').value, kind:$('kind').value, from:$('from').value, to:$('to').value, limit:($('from').value || $('to').value) ? '1000' : '200' });
     fetch(API + '?' + q).then(function(r){ return r.json(); }).then(function(d){
@@ -150,6 +203,7 @@
           '<div class="items">' + itemText(s) + '</div>' +
           (s.short && s.short.length ? '<div class="short">⚠ Not enough in the system: ' + s.short.map(function(x){ return esc(x.name) + ' (needed ' + esc(x.need) + ', had ' + esc(x.have) + ')'; }).join(' · ') + '</div>' : '') + '</div>';
       }).join('') : '<div class="empty">No calc sales yet.</div>';
+      drawSummary(act);
     }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
   }
   document.addEventListener('click', function(e){
