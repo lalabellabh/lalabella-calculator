@@ -481,12 +481,14 @@
     const modKey = moduleOf(page);
     const mod = moduleAllowed(modKey) ? MODULES[modKey] : null;
     const hub = HUB.filter(h => moduleAllowed(h[3]));
+    // Nov 21 2026 (Bench): hubs + calculators use the SAME columns, so every box is the same size and nothing is cut off
+    const gridCols = 'grid-template-columns:repeat(' + Math.max(3, Math.min(hub.length, 4)) + ',minmax(0,1fr)) !important';
     let html = weatherHtml() + profileHeaderHtml() +
-      (hub.length ? '<div class="' + esc(hubClass) + '"' + (hub.length > 3 ? ' style="grid-template-columns:repeat(' + Math.min(hub.length, 4) + ',1fr)"' : '') + '>' : '') +
+      (hub.length ? '<div class="' + esc(hubClass) + ' lbnav-grid" style="' + gridCols + '">' : '') +
       hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
     const calcs = CALCS.filter(h => moduleAllowed(h[3]) && (h[0] !== 'mixed-calc.html' || moduleAllowed('chocolate')));
-    if (calcs.length) html += '<div class="' + esc(hubClass) + ' lbnav-calcs">' + calcs.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
+    if (calcs.length) html += '<div class="' + esc(hubClass) + ' lbnav-calcs lbnav-grid" style="' + gridCols + '">' + calcs.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + '</div>';
 
     // Home keeps id="chocoHomeLink" — some pages' own scripts look it up.
@@ -543,7 +545,8 @@
       '.lb-menu-profile-text{display:flex;flex-direction:column;min-width:0;}' +
       '.lb-menu-profile-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.lb-menu-profile-sub{font-size:11.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-      '.choco-drawer,.item-drawer,.flower-drawer{width:min(340px,86vw)!important;max-width:86vw!important;}' +
+      '.choco-drawer,.item-drawer,.flower-drawer{width:min(370px,90vw)!important;max-width:90vw!important;}' +
+      '.lbnav-grid{gap:7px!important;}.lbnav-grid>a{min-width:0!important;width:auto!important;box-sizing:border-box!important;height:88px!important;min-height:88px!important;padding:8px 3px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;font-size:12px!important;overflow:hidden;white-space:normal!important;overflow-wrap:anywhere;text-align:center;line-height:1.2!important;}' +
       '.lbw-row{flex-wrap:wrap;row-gap:6px;}.lbw-det{min-width:0;}.lbw-temp{white-space:nowrap;}.lbw-feels{white-space:normal;}' +
       '.lbw2-place{overflow:hidden;text-overflow:ellipsis;max-width:190px;}.lbw2-r{flex:0 0 auto;}' +
       '.lb-menu-weather{display:block;padding:4px 8px 10px;margin:0 0 8px;color:#3a2a2e;font-family:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;}' +
@@ -588,7 +591,7 @@
       '.lbnav-btn:hover{background:#9e2f4a;color:#fff}',
       '.lbnav-backdrop{position:fixed;inset:0;z-index:99991;background:rgba(40,20,28,.35);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s}',
       '.lbnav-backdrop.show{opacity:1;pointer-events:auto}',
-      '.lbnav-drawer{position:fixed;top:0;bottom:0;left:0;width:min(310px,82vw);z-index:99992;background:#fdfbf9;border-right:1px solid #eee2e0;box-shadow:12px 0 40px rgba(60,30,40,.18);transform:translateX(-102%);transition:transform .25s ease;padding:18px 14px 24px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;font-family:"Space Grotesk",system-ui,sans-serif;text-align:left}',
+      '.lbnav-drawer{position:fixed;top:0;bottom:0;left:0;width:min(370px,90vw);z-index:99992;background:#fdfbf9;border-right:1px solid #eee2e0;box-shadow:12px 0 40px rgba(60,30,40,.18);transform:translateX(-102%);transition:transform .25s ease;padding:18px 14px 24px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;font-family:"Space Grotesk",system-ui,sans-serif;text-align:left}',
       '.lbnav-drawer.show{transform:none}',
       '.lbnav-close{align-self:flex-end;background:none;border:0;font-size:22px;color:#9a8a8e;cursor:pointer;padding:2px 8px;margin-bottom:4px}',
       '.lbnav-drawer .lbnav-hub{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px}',
