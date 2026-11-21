@@ -96,7 +96,8 @@
       '.lbte-back{position:fixed;inset:0;z-index:2147483000;background:rgba(30,15,22,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;font-family:"Space Grotesk",system-ui,sans-serif}',
       '.lbte{--s-bg:#fdfbf9;--s-card:#fff;--s-ink:#3a2530;--s-dim:#8a7078;--s-line:#eee2e0;--s-acc:#9e2f4a;background:var(--s-bg);color:var(--s-ink);width:min(420px,100%);max-height:88vh;overflow-y:auto;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.3);padding:18px 16px 16px;text-align:left}',
       'html[data-lb-theme="dark"] .lbte{--s-bg:#1d1719;--s-card:#272023;--s-ink:#f1e6e8;--s-dim:#b3a0a6;--s-line:#3a3034;--s-acc:#e0879c}',
-      '.lbte-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.lbte-head b{font-size:17px}',
+      '.lbte-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:sticky;top:-18px;background:var(--s-bg);padding:6px 0;z-index:2}.lbte-head b{font-size:17px}',
+      '.lbte-x{width:32px;height:32px;flex:0 0 auto;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);border-radius:50%;cursor:pointer;font-size:15px;line-height:1;padding:0}.lbte-x:hover{color:var(--s-acc)}',
       '.lbte-list{border:1px solid var(--s-line);border-radius:12px;background:var(--s-card);overflow:hidden}',
       '.lbte-row{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 10px;border-bottom:1px solid var(--s-line);font-size:13.5px}',
       '.lbte-row:last-child{border-bottom:0}.lbte-row.off .lbte-lbl{opacity:.45;text-decoration:line-through}',
@@ -199,7 +200,7 @@
     back.className = 'lbte-back';
     back.setAttribute('data-lb-theme-skip', '');
     back.innerHTML = '<div class="lbte" role="dialog" aria-modal="true" aria-label="Edit tools">' +
-      '<div class="lbte-head"><b>✏️ Edit ' + esc(opts.title || 'Tools') + '</b></div><div id="lbteBody"></div>' +
+      '<div class="lbte-head"><b>✏️ Edit ' + esc(opts.title || 'Tools') + '</b><button type="button" class="lbte-x" aria-label="Close" title="Close">✕</button></div><div id="lbteBody"></div>' +
       '<div class="lbte-foot"><button type="button" class="lbte-reset">↺ Reset to default</button>' +
       '<button type="button" class="lbte-done">Done</button></div></div>';
     document.body.appendChild(back);
@@ -263,7 +264,7 @@
       back.querySelectorAll('.lbte-pick').forEach(l => { l.style.display = !q || l.dataset.q.indexOf(q) > -1 ? '' : 'none'; });
     });
     back.addEventListener('click', e => {
-      if (e.target === back || e.target.closest('.lbte-done')) { close(); return; }
+      if (e.target === back || e.target.closest('.lbte-done') || e.target.closest('.lbte-x')) { close(); return; }
       if (e.target.closest('.lbte-reset')) {
         if (!confirm('Show all tools in the default order? (Pages you added will be removed too.)')) return;
         try { localStorage.removeItem(opts.storageKey); } catch (_) {}
