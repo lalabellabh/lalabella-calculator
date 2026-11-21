@@ -102,7 +102,7 @@ async function list(p: any, u: any) {
   const o: Record<string, any> = {}; old.forEach((r: any) => { o[r.item_id] = r; });
   return { success: true, admin: isAdmin(u), me: who(u), month, prev,
     months: [...new Set(months.map((m: any) => String(m.month).slice(0, 7)))],
-    items: items.map((i: any) => ({ id: i.id, name: i.name, category: i.category || '', unit: i.unit || 'pcs', sort: i.sort_order,
+    items: items.map((i: any) => ({ id: i.id, name: i.name, category: i.category || '', unit: i.unit || 'pcs', sort: i.sort_order, code: i.item_code || '',
       photo: i.photo_url ? (signed[i.photo_url] || '') : '',
       qty: c[i.id] ? (c[i.id].qty == null ? null : Number(c[i.id].qty)) : null, expiry: c[i.id] ? c[i.id].expiry || '' : '', note: c[i.id] ? c[i.id].note || '' : '',
       by: c[i.id] ? c[i.id].counted_by || '' : '', at: c[i.id] ? c[i.id].updated_at : null,
@@ -134,6 +134,7 @@ async function editItem(p: any, u: any) {
   const f: any = { updated_by: who(u), updated_at: new Date().toISOString() };
   if (p.name !== undefined) { const n = txt(p.name, 120); if (!n) return { success: false, error: 'Type the item name.' }; f.name = n; }
   if (p.category !== undefined) f.category = txt(p.category, 60) || null;
+  if (p.code !== undefined) f.item_code = txt(p.code, 40) || null;
   if (p.unit !== undefined && UNITS.indexOf(String(p.unit)) !== -1) f.unit = String(p.unit);
   if (p.sort !== undefined && num(p.sort) != null) f.sort_order = Math.round(num(p.sort)!);
   await sbPatch('cafe_items', `id=eq.${id}`, f);
