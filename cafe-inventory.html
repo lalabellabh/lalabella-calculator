@@ -47,7 +47,7 @@
   .ic .nm{ font-weight:700; font-size:13px; line-height:1.25; }
   .ic .ct{ font-size:11px; color:var(--dim); }
   .ic .cd{ font-size:11px; color:#6b4226; font-weight:700; font-family:monospace; }
-  .ic svg.bc{ display:block; height:24px; max-width:100%; }
+  .ic svg.bc{ display:block; width:100%; height:58px; margin-top:4px; background:#fff; border-radius:6px; padding:4px 6px; box-sizing:border-box; cursor:zoom-in; }
   .ic .sk{ font-size:12px; font-weight:700; } .ic .sk small{ font-weight:400; color:var(--dim); }
   .ic .b{ padding:8px 10px; border:none; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(135deg,#6b4226,#4a2c18); color:#fff; font-family:inherit; }
   .ic .b.alt{ background:#fff; color:#4a2c18; border:1px solid var(--line); }
@@ -94,11 +94,11 @@
     $('cnt').textContent = D.items.filter(function(i){ return i.photo; }).length + ' of ' + D.items.length + ' with picture · ' + L.length + ' shown';
     $('list').innerHTML = L.length ? L.map(function(i){
       return '<div class="ic" data-id="' + i.id + '"><div class="ph">' + (i.photo ? '<img src="' + esc(i.photo) + '" alt="" data-a="zoom">' + (A ? '<button class="xrm" data-a="rm" title="Remove picture">✕</button>' : '') : '☕') + '</div>' +
-        '<div><div class="nm">' + esc(i.name) + '</div><div class="ct">' + esc(i.category || 'Other') + ' · ' + esc(i.unit) + '</div>' + (i.code ? '<div class="cd">' + esc(i.code) + '</div><svg class="bc" data-code="' + esc(i.code) + '"></svg>' : '') +
+        '<div><div class="nm">' + esc(i.name) + '</div><div class="ct">' + esc(i.category || 'Other') + ' · ' + esc(i.unit) + '</div>' + (i.code ? '<div class="cd">' + esc(i.code) + '</div><svg class="bc" data-a="bc" title="Tap to make bigger" data-code="' + esc(i.code) + '"></svg>' : '') +
         '<div class="sk"' + (i.stock > 0 ? '' : ' style="color:var(--bad)"') + '>Stock ' + C.n3(i.stock) + ' ' + esc(i.unit) + ' <small>' + (i.countDate ? '· counted ' + C.fd(i.countDate) : '· not counted yet') + (i.nextExpiry ? ' · exp ' + C.fd(i.nextExpiry) : '') + '</small></div></div>' +
         (A ? '<button class="b" data-a="cam">📷 Camera</button><button class="b alt" data-a="gal">🖼️ ' + (i.photo ? 'Change' : 'Gallery') + '</button><button class="b alt" data-a="edit">✏️ Edit</button><div class="paste" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div>' : '') + '</div>';
     }).join('') : '<div class="empty" style="grid-column:1/-1">No items' + ($('q').value || $('grp').value ? ' for this search' : ' yet') + '.</div>';
-    if(window.JsBarcode) document.querySelectorAll('#list svg.bc').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:1, height:24, margin:0, displayValue:false }); sv.setAttribute('preserveAspectRatio', 'xMinYMid meet'); }catch(e){} });
+    if(window.JsBarcode) document.querySelectorAll('#list svg.bc').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:2, height:44, margin:0, displayValue:false }); sv.setAttribute('preserveAspectRatio', 'xMidYMid meet'); }catch(e){} });
   }
   function item(el){ var c = el.closest('[data-id]'); return c && D.items.find(function(x){ return String(x.id) === c.getAttribute('data-id'); }); }
   function setPhoto(it, file){ if(!file || !it) return; var card = document.querySelector('.ic[data-id="' + it.id + '"] .ph'); if(card) card.style.opacity = '.4';
@@ -107,9 +107,15 @@
       .then(function(r){ if(r && !r.success) alert(r.error || 'Not saved.'); load(); }).catch(function(){ alert('Connection problem.'); load(); }); }
   $('fCam').onchange = function(){ setPhoto(target, this.files[0]); this.value = ''; };
   $('fGal').onchange = function(){ setPhoto(target, this.files[0]); this.value = ''; };
+  function bigCode(it){ var bg = document.createElement('div'); bg.className = 'cf-bg';
+    bg.innerHTML = '<div class="cf-ed" style="text-align:center;max-width:520px"><h3>' + C.esc(it.name) + '</h3><svg id="bigBc" style="width:100%;height:auto;background:#fff"></svg><div class="cf-row"><button class="cf-btn" data-x>Close</button></div></div>';
+    document.body.appendChild(bg);
+    try{ JsBarcode(bg.querySelector('#bigBc'), it.code, { format:'CODE128', width:3, height:110, margin:12, displayValue:true, fontSize:22 }); }catch(e){}
+    bg.addEventListener('click', function(e){ if(e.target === bg || e.target.closest('[data-x]')) bg.remove(); }); }
   $('list').addEventListener('click', function(e){
     var b = e.target.closest('[data-a]'); if(!b) return; var it = item(b), a = b.getAttribute('data-a'); if(!it) return;
     if(a === 'zoom') C.zoom(it.photo);
+    if(a === 'bc') bigCode(it);
     if(a === 'cam'){ target = it; $('fCam').click(); }
     if(a === 'gal'){ target = it; $('fGal').click(); }
     if(a === 'edit') C.itemForm(it, groups(), load);
@@ -122,7 +128,7 @@
   $('print').onclick = function(){ if(!D) return; var n = Number($('per').value) || 3;
     $('pr').style.gridTemplateColumns = 'repeat(' + n + ',1fr)';
     $('pr').innerHTML = shown().map(function(i){ return '<div class="pc">' + (i.photo ? '<img src="' + esc(i.photo) + '">' : '') + '<div class="n">' + esc(i.name) + '</div>' + (i.code ? '<svg data-code="' + esc(i.code) + '"></svg><div class="c">' + esc(i.code) + '</div>' : '') + '</div>'; }).join('');
-    if(window.JsBarcode) $('pr').querySelectorAll('svg').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:1.4, height:34, margin:0, displayValue:false }); }catch(e){} });
+    if(window.JsBarcode) $('pr').querySelectorAll('svg').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:2, height:50, margin:4, displayValue:true, fontSize:14 }); }catch(e){} });
     var imgs = [].slice.call($('pr').querySelectorAll('img')); Promise.all(imgs.map(function(im){ return im.complete ? 1 : new Promise(function(r){ im.onload = im.onerror = r; }); })).then(function(){ window.print(); }); };
   load();
 })();
