@@ -272,13 +272,13 @@
 <body>
 <div class="app" data-lb-text-skip>
   <div class="head"><h1>🏢 LALABELLA HQ</h1><span class="tag" data-tl="Mga worker ng system mo — libreng scheduled jobs na nagbabasa ng sarili mong data. Pindutin ang kahit sino para sa detalye.">Your system's workers — free scheduled jobs that read your own data. Tap anyone for details.</span><div class="sp"></div><span class="upd" id="upd"></span>
-    <button class="pill hi" id="v3dBtn">🧊 3D</button><button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill" id="ref" data-tl="↻ I-refresh">↻ Refresh</button><a class="pill" href="audit-log.html" data-tl="🕘 History">🕘 Activity History</a></div>
+    <button class="pill hi" id="v3dBtn">🧊 3D</button><button class="pill hi" id="landBtn">🌆 Landscape</button><button class="pill hi" data-su data-tl="🎥 Stand-up">🎥 Stand-up</button><button class="pill" id="ref" data-tl="↻ I-refresh">↻ Refresh</button><a class="pill" href="audit-log.html" data-tl="🕘 History">🕘 Activity History</a></div>
   <div class="denied" id="denied"><b>No access</b><p>Lalabella HQ is only for Admin accounts.</p></div>
   <div class="main" id="mainBox">
     <section id="o3d">
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div><form class="o3-ask" id="o3Ask" autocomplete="off"><input id="o3AskIn" maxlength="160" placeholder="💬 Ask the team… e.g. last stock count Moda"><button type="button" id="o3Mic" title="Talk">🎤</button><button type="submit">Ask</button><button type="button" id="o3AskTog" title="Hide the ask box">✕</button></form>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
-        <div class="o3-tr"><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="loc">📍 Place</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
+        <div class="o3-tr"><button data-su title="Daily Stand-up (meeting of the team)">🎥</button><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="loc">📍 Place</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
         <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
       <button class="o3-sidebtn" id="o3SideBtn" title="Hide the side panel">❯</button>
       <div class="o3-side">Loading…</div>
@@ -344,9 +344,9 @@
   }
   var LOOK = { dispatcher:{h:'#2a1b12',b:'#1fb5a5',p:'#27405a'}, scribe:{h:'#7a3fd1',b:'#a77bf0',p:'#3a2a62'}, auditor:{h:'#3b2412',b:'#e0a03a',p:'#4a3320',tie:'#7a3f12'},
     watcher:{h:'#1a1a2e',b:'#e0467e',p:'#3a1c35'}, doctor:{h:'#d9d9e8',b:'#f4f4fa',p:'#5a6a8a',s:'#c99a74'}, boss:{h:'#e8761c',b:'#ff9a2e',p:'#3a2a1a',crown:1,tie:'#9e2f4a'},
-    archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
+    archivist:{h:'#4a2c14',b:'#4f8ee0',p:'#1f3358',s:'#b98560'}, barista:{h:'#3a2416',b:'#6b4226',p:'#2b211b',cap:'#f4efe6',s:'#e8b48c'}, keeper:{h:'#2b1a10',b:'#5f8b97',p:'#2a3a40',s:'#c99a74'}, odoo:{h:'#1a1a2e',b:'#714b67',p:'#2e2230'}, janitor:{h:'#5a5a2a',b:'#58b84f',p:'#2f4a2c',cap:'#2f6a2c'},
     hr:{h:'#2b1a10',b:'#f06292',p:'#4a2a3a',s:'#e8b48c'}, delivery:{h:'#3a2210',b:'#26a69a',p:'#203a3a'}, shopify:{h:'#2a1b12',b:'#95bf47',p:'#2f3d1f'}, bleems:{h:'#5a1f3a',b:'#c2185b',p:'#3a1a2a',s:'#e8b48c'}, abandoned:{h:'#3b2412',b:'#ff8f00',p:'#4a3320',s:'#c99a74'}, driver:{h:'#111',b:'#e53935',p:'#263238',cap:'#e53935',s:'#c99a74'}, timekeeper:{h:'#101010',b:'#ffb74d',p:'#3d2b1a',cap:'#1b1535'}, saudi:{h:'#f4f4f4',b:'#1b7a3e',p:'#2a3a2a',s:'#c99a74',cap:'#f4f4f4'}, secretary:{h:'#3a2210',b:'#8e44ad',p:'#2a1f3a',s:'#e8b48c'} };
-  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','scribe','auditor','archivist','janitor','saudi','secretary'];
+  var KEYS = ['boss','dispatcher','shopify','bleems','abandoned','hr','timekeeper','delivery','driver','watcher','doctor','odoo','scribe','auditor','archivist','keeper','janitor','barista','saudi','secretary'];
   var ORDK = ['shopify','bleems','abandoned'];
 
   // ---------- helpers ----------
@@ -405,6 +405,26 @@
       now:'Watches Saudi Transfers: what was sent to Saudi, what came back to a branch, what Saudi keeps, and what is still there.',
       out:'Still in Saudi: ' + saQ + ' pcs on ' + saL + ' lines' + ((SA.still_names || []).length ? ' (' + SA.still_names.map(function(n){ return String(n).split('\n')[0]; }).join(', ') + ')' : '') + ' · No qty written: ' + saU + ' lines · Kept by Saudi: ' + (SA.kept_qty || 0) + ' · Last send ' + saD(SA.last_send) + ' · Last return ' + saD(SA.last_return) + ' · This week: ' + (SA.sends_7d || 0) + ' sent, ' + (SA.returns_7d || 0) + ' returns · All lines: ' + (SA.lines || 0),
       tools:['Saudi Transfers page','saudi_transfers / saudi_returns'], never:NEVER_ALL.concat(['Sends, returns or edits a transfer by itself','Changes stock']) };
+    // Nov 21 2026 (Bench): 3 new workers — Café barista, Stock keeper (approvals), Odoo
+    var CF = S.cafe || {}, cfOut = Number(CF.out) || 0, cfExp = Number(CF.exp30) || 0, cfOld = Number(CF.expired) || 0;
+    EMP.barista = { name:'Latte', role:L('Café Barista', 'Café Barista'), st: cfOld || cfOut ? 'alert' : cfExp ? 'warn' : (age(CF.last_receive) < 3600 ? 'working' : 'ok'),
+      say: !CF.last_count ? L('No café count yet — do the first count', 'Wala pang café count — gawin ang unang bilang') : cfOut ? L(cfOut + ' café item' + (cfOut > 1 ? 's' : '') + ' out of stock', cfOut + ' café item ang ubos na') : cfExp ? L(cfExp + ' café item' + (cfExp > 1 ? 's' : '') + ' expiring in 30 days', cfExp + ' café item ang mag-e-expire sa 30 araw') : L('Café stock all good ☕', 'Ayos ang café stock ☕'),
+      now:'Watches the café stock: items out of stock, items expiring in 30 days, and when it was last counted and received.',
+      out:'Items: ' + (CF.items || 0) + ' · Counted: ' + (CF.counted || 0) + ' · Out of stock: ' + cfOut + ((CF.out_names || []).length ? ' (' + CF.out_names.slice(0, 6).join(', ') + ')' : '') + ' · Expiring ≤30 days: ' + cfExp + ((CF.exp_names || []).length ? ' (' + CF.exp_names.slice(0, 6).join(', ') + ')' : '') + ' · Expired: ' + cfOld + ' · Last count: ' + (CF.last_count || '-') + ' · Last receiving: ' + (CF.last_receive || '-'),
+      tools:['Café Stock Room','cafe_stock_count / cafe_receiving'], never:NEVER_ALL.concat(['Counts or receives stock by itself']) };
+    var SK = S.stock || {}, skC = Number(SK.choc_recv) || 0, skF = Number(SK.flower_recv) || 0, skN = Number(SK.choc_count) || 0, skR = Number(SK.rate) || 0, skT = skC + skF + skN + skR;
+    EMP.keeper = { name:'Stella', role:L('Stock Keeper · Approvals', 'Stock Keeper · Approvals'), st: skT >= 10 ? 'alert' : skT ? 'warn' : 'ok',
+      say: skT ? L(skT + ' waiting for approval', skT + ' ang naghihintay ng approval') : L('No approvals waiting 👍', 'Walang naghihintay ng approval 👍'),
+      now:'Watches what is waiting for your approval before it counts in stock: chocolate and flower receiving, chocolate stock counts and flower rate changes.',
+      out:'Chocolate receiving: ' + skC + ' · Flower receiving: ' + skF + ' · Chocolate stock count: ' + skN + ' · Flower rate: ' + skR,
+      tools:['Stock Approval','Receiving Approval','Rate approval'], never:NEVER_ALL.concat(['Approves or rejects anything by itself']) };
+    var OD = S.odoo || {}, odJ = jobState(job('odoo-auto-deduct'), 300), odP = {}; try{ odP = typeof OD.last_push === 'string' ? JSON.parse(OD.last_push) : (OD.last_push || {}); }catch(e){ odP = {}; }
+    var odBad = Number(OD.bad24) || 0, odOff = OD.auto && OD.auto !== 'on';
+    EMP.odoo = { name:'Otto', role:L('Odoo Link', 'Odoo Link'), st: odJ[0] === 'alert' ? 'alert' : (odBad || odOff || odJ[0] === 'warn') ? 'warn' : odJ[0],
+      say: odOff ? L('Odoo auto-deduct is OFF', 'Naka-OFF ang Odoo auto-deduct') : odBad ? L(odBad + ' Odoo line' + (odBad > 1 ? 's' : '') + ' need checking', odBad + ' Odoo line ang kailangang tingnan') : L('Odoo synced · ', 'Synced ang Odoo · ') + ago(odP.at || (job('odoo-auto-deduct') || {}).last_start),
+      now:'Every 5 minutes: takes POS sales from Odoo off our stock, and pushes our stock back to Odoo.',
+      out:'Auto-deduct: ' + (OD.auto || '?') + ' · Push stock: ' + (OD.push || '?') + ' · Job: ' + odJ[1] + ' · Last push ' + ago(odP.at) + (odP.count != null ? ' (' + odP.count + ' changed)' : '') + ' · Lines in 24 h: ' + (OD.lines24 || 0) + ' · Need checking: ' + odBad,
+      tools:['odoo-auto-deduct job','odoo_sync_lines','Odoo settings'], never:NEVER_ALL.concat(['Edits Odoo products or prices']) };
     // Nov 2026: Cali the Secretary — your own calendar notes; at the time she reads the note out loud (+ phone alarm)
     var nowMs = Date.now(), open = (NOTES || []).filter(function(n){ return n.isRem && !n.done; }), due = open.filter(function(n){ return new Date(n.at).getTime() <= nowMs; }),
         soon = open.filter(function(n){ var t = new Date(n.at).getTime(); return t > nowMs && t - nowMs < 3600000; }), nxt = open.filter(function(n){ return new Date(n.at).getTime() > nowMs; })[0];
@@ -523,7 +543,7 @@
   }
 
   // ---------- office floor plan (x,y in % of the map; y = where the feet are) ----------
-  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[91,41], secretary:[92,53.5], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82] };
+  var DESK = { dispatcher:[6,44], shopify:[16,44], bleems:[26,44], abandoned:[36,44], hr:[53,44], timekeeper:[66,44], boss:[91,41], secretary:[92,53.5], saudi:[80,44], watcher:[7,82], doctor:[17,82], scribe:[30,82], auditor:[40,82], archivist:[50.5,82], delivery:[64,82], barista:[85,82] };
   var SPOT = { boss:[88,52], coffee:[80,73], cooler:[88,73], sofa:[91,88], closet:[79,91], driverHome:[71,91], door:[66,101], aisle:58 };
   var ZONES = [['orders','ORDERS · DISPATCH · SHOPIFY · BLEEMS · CARTS',2,25,44,33],['hr','HR · ATTENDANCE',47,25,26,33],['saudi','🚚 SAUDI OFFICE',75,25,11,33],['boss','BOSS',87,25,11,33],
     ['qa','QA DESK',2,63,22,34],['records','RECORDS',25,63,20,34],['vault','VAULT',46,63,12,34],['deliv','DELIVERY',59,63,15,34],['kitchen','PANTRY',75,63,23,34]];
@@ -556,7 +576,7 @@
   }
 
   // ---------- sounds (made by the browser, no audio files, free) ----------
-  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160, saudi:260, secretary:330 };
+  var VOICE = { shopify:310, bleems:370, abandoned:280, delivery:330, driver:180, boss:120, dispatcher:270, scribe:340, auditor:215, hr:390, timekeeper:300, watcher:360, doctor:190, archivist:240, janitor:160, saudi:260, secretary:330, barista:350, keeper:230, odoo:200 };
   var SND = { vol:50, mode:'words', sfx:true, alarm:true, lang:'en', on:false };
   try{ var sv = JSON.parse(localStorage.getItem('lbOfficeSound') || 'null'); if(sv) Object.assign(SND, sv, { on:false }); }catch(e){}
   window.__lbLang = SND.lang;
@@ -600,6 +620,9 @@
   function whoMe(){ var u = {}; try{ u = window.LALABELLA_USER || JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
     if(u.canManageUsers === true) return { pres:true, name:'Mr. President', sir:L('Mr. President', 'Mr. President') };
     var n = String(u.fullName || u.username || 'Admin').trim().split(/\s+/)[0] || 'Admin'; return { pres:false, name:n, sir:n }; }
+  // Nov 21 2026 (Bench): Daily Stand-up (shared/standup.js) reads the same live team status
+  window.LBStandupData = function(){ if(!S) return null; var ME = whoMe(); return { EMP:EMP, KEYS:KEYS, tl:TL(), greet:greet(), me:ME }; };
+  document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('[data-su]'); if(!b) return; e.preventDefault(); e.stopPropagation(); if(window.LBStandup) window.LBStandup.start(); else alert('Stand-up file missing (shared/standup.js).'); }, true);
   window.LBOfficeReport = function(k){
     var e = EMP[k]; if(!e) return null;
     var ME = whoMe(), G = greet() + ', ' + ME.name + '!';
@@ -699,6 +722,7 @@
     var route = [[/saudi|ksa/i, 'saudi'], [/late|absent|attendance|pasok|clock|time.?in|break|leave|hr\b/i, 'hr'], [/remind|calendar|schedule|note|alarm|paalala/i, 'secretary'],
       [/bleems/i, 'bleems'], [/cart|abandon/i, 'abandoned'], [/shopify|website|online order/i, 'shopify'], [/order|assign|unassign/i, 'dispatcher'], [/driver|on the way|papunta/i, 'driver'], [/deliver/i, 'delivery'],
       [/backup/i, 'archivist'], [/error|bug|sira/i, 'watcher'], [/database|server|db\b|speed|bagal/i, 'doctor'], [/brain|log|changelog/i, 'scribe'], [/delete|bura|audit|change/i, 'auditor'], [/clean|janitor|linis/i, 'janitor'],
+      [/caf[eé]|coffee|kape|barista|cups?\b|syrup/i, 'barista'], [/odoo|pos\b|auto.?deduct/i, 'odoo'], [/pending|approval|approve|i-?approve|naghihintay/i, 'keeper'],
       [/approv|team|summary|everything|lahat|report/i, 'boss']];
     for(var i = 0; i < route.length; i++) if(route[i][0].test(q)){ var k = route[i][1]; var base = window.LBOfficeReport(k); if(!base) break; base.text = L('You asked: ', 'Tanong mo: ') + '"' + q + '"\n\n' + base.text; return { k:k, r:base }; }
     return mk('boss', [L("I'm not sure who handles that yet, ", 'Hindi ko pa alam kung sino ang sasagot diyan, ') + G + '.', '',
@@ -938,7 +962,10 @@
     watcher:'Nakikinig sa bawat page para sa JavaScript errors at pumalyang server calls.',
     doctor:'Tinitingnan ang laki ng database, connections, at kung naka-on at gumagana ang bawat scheduled job.',
     archivist:'Nagse-save ng buong kopya ng database gabi-gabi ng 2:00 AM at itinatabi ang pinakabagong 14.',
-    janitor:'Inililipat ang lumang duty-schedule rows sa archive gabi-gabi para mabilis ang live schedule.'
+    janitor:'Inililipat ang lumang duty-schedule rows sa archive gabi-gabi para mabilis ang live schedule.',
+    barista:'Binabantayan ang café stock: ubos na, mag-e-expire sa 30 araw, at kailan huling nabilang at na-receive.',
+    keeper:'Binabantayan ang naghihintay ng approval: chocolate at flower receiving, chocolate stock count, at flower rate.',
+    odoo:'Binabantayan ang Odoo auto-deduct (kada 5 minuto) at ang pag-push ng stock papunta sa Odoo.'
   };
   function open(k){
     var e = EMP[k]; if(!e) return;
@@ -1021,7 +1048,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=21'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=22'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);
@@ -1031,5 +1058,6 @@
 })();
 </script>
 <script src="shared/calc-today.js?v=4"></script>
+<script src="shared/standup.js?v=3"></script>
 </body>
 </html>

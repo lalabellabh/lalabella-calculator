@@ -17,10 +17,10 @@
     { id:'orders',  en:'Orders & Dispatch', tl:'Orders at Dispatch', x:0,  z:0,  w:12, d:9, floor:['#e08a52','#d1773f'], rug:'#f2b880', agents:['dispatcher','shopify','bleems','abandoned'] },
     { id:'hr',      en:'HR & Attendance',   tl:'HR at Attendance',   x:13, z:0,  w:8,  d:9, floor:['#e3a06a','#d48b55'], rug:'#f5a3c0', agents:['hr','timekeeper'] },
     { id:'boss',    en:"Boss's Office",     tl:'Opisina ni Boss',    x:22, z:0,  w:7,  d:9, floor:['#c97a4a','#b8693c'], rug:'#9fd3f5', agents:['boss','secretary'] },
-    { id:'tech',    en:'Tech & Health',     tl:'Tech at Health',     x:0,  z:12, w:8,  d:8, floor:['#d9925c','#c97f4a'], rug:'#a8e6a1', agents:['watcher','doctor'] },
-    { id:'records', en:'Records & Brain',   tl:'Records at Brain',   x:9,  z:12, w:10, d:8, floor:['#e09862','#cf854f'], rug:'#d4b8ff', agents:['scribe','auditor','archivist'] },
+    { id:'tech',    en:'Tech & Health',     tl:'Tech at Health',     x:0,  z:12, w:8,  d:8, floor:['#d9925c','#c97f4a'], rug:'#a8e6a1', agents:['watcher','doctor','odoo'] },
+    { id:'records', en:'Records & Brain',   tl:'Records at Brain',   x:9,  z:12, w:10, d:8, floor:['#e09862','#cf854f'], rug:'#d4b8ff', agents:['scribe','auditor','archivist','keeper'] },
     { id:'deliv',   en:'Delivery',          tl:'Delivery',           x:20, z:12, w:6,  d:8, floor:['#e3a06a','#d48b55'], rug:'#8fe3d0', agents:['delivery','driver'] },
-    { id:'cafe',    en:'Café & Break',      tl:'Café at Pahinga',    x:27, z:12, w:7,  d:8, floor:['#c98656','#b87545'], rug:'#ffd68a', agents:['janitor'] },
+    { id:'cafe',    en:'Café & Break',      tl:'Café at Pahinga',    x:27, z:12, w:7,  d:8, floor:['#c98656','#b87545'], rug:'#ffd68a', agents:['barista','janitor'] },
     { id:'saudi',   en:'Saudi Office',      tl:'Saudi Office',       x:30, z:0,  w:4.5, d:9, floor:['#d9a066','#c98f55'], rug:'#8fe3a8', agents:['saudi'] }
   ];
   var LOOKS = {
@@ -33,7 +33,8 @@
     auditor:{ a:'owl', fur:'#c9a26b', shirt:'#e0a03a' },          archivist:{ a:'bear', fur:'#7a5233', shirt:'#4f8ee0' },
     janitor:{ a:'raccoon', fur:'#6f6f7a', shirt:'#58b84f', cap:'#2f6a2c' },
     saudi:{ a:'fox', fur:'#d9a066', shirt:'#1b7a3e', cap:'#f4f4f4' },
-    secretary:{ a:'cat', fur:'#f2c9a0', shirt:'#8e44ad' }
+    secretary:{ a:'cat', fur:'#f2c9a0', shirt:'#8e44ad' },
+    barista:{ a:'bunny', fur:'#f0d9bc', shirt:'#6b4226', cap:'#4a2c1d' }, keeper:{ a:'mouse', fur:'#c9b8a8', shirt:'#5f8b97' }, odoo:{ a:'owl', fur:'#7a6a8a', shirt:'#714b67' }
   };
   var ST_COL = { working:'#4fb3ff', ok:'#5be29a', warn:'#ffc24f', alert:'#ff6b6b' };
 
@@ -77,7 +78,7 @@
     var n = R.agents.length, cols = n >= 3 ? 2 : n, rows = Math.ceil(n / cols);
     R.agents.forEach(function(k, i){ var c = i % cols, r = Math.floor(i / cols);
       var x = R.x + (c + .5) * R.w / cols, z = R.z + 1.2 + (r + .5) * (R.d - 1.6) / rows;
-      if(R.id === 'cafe'){ x = R.x + 1.6; z = R.z + R.d - 1.8; }
+      if(R.id === 'cafe'){ x = R.x + 1.6 + i * 2.4; z = R.z + R.d - 1.8; }
       R.slots.push([x, z]); });
     return g;
   }
@@ -820,7 +821,25 @@
       paintTags(); apply(); renderSide();
     },
     say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
-    select:select, answer:function(k, r){ if(AG[k]) select(k, r); }, whole:wholeOffice, full:function(on){ if(T) goFull(on); }
+    select:select, answer:function(k, r){ if(AG[k]) select(k, r); }, whole:wholeOffice, full:function(on){ if(T) goFull(on); },
+    // Nov 21 2026 (Bench): head-and-shoulders "webcam" pictures of each worker for the Daily Stand-up
+    portraits:function(keys, size){
+      if(!T || !scene) return null;
+      size = size || 320; var out = {}, r;
+      try{ r = new T.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true }); }catch(e){ return null; }
+      r.setPixelRatio(1); r.setSize(size, size, false); if('outputEncoding' in r) r.outputEncoding = T.sRGBEncoding;
+      var sc = new T.Scene(); sc.add(new T.HemisphereLight('#fff4e0', '#6a5a7a', .95));
+      var key = new T.DirectionalLight('#ffe9cc', .85); key.position.set(-1.5, 3, -3); sc.add(key);
+      var rim = new T.DirectionalLight('#cfe3ff', .45); rim.position.set(2, 2, 2); sc.add(rim);
+      var cam = new T.PerspectiveCamera(26, 1, .1, 30); cam.position.set(.55, 1.2, -2.6); cam.lookAt(0, .98, 0);
+      keys.forEach(function(k){
+        try{ var a = buildAgent(k); scene.remove(a.g); a.g.position.set(0, 0, 0); a.g.rotation.y = 0; a.hit.visible = false; sc.add(a.g);
+          a.hR.position.y = .72; r.render(sc, cam); out[k] = r.domElement.toDataURL('image/png'); sc.remove(a.g);
+          a.g.traverse(function(o){ if(o.geometry) o.geometry.dispose(); }); }catch(e){}
+      });
+      try{ r.dispose(); if(r.forceContextLoss) r.forceContextLoss(); }catch(e){}
+      return out;
+    }
   };
   function paintTags(){
       var d = DATA; if(!d) return;
