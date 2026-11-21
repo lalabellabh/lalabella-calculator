@@ -173,7 +173,8 @@
     bg.innerHTML = '<div class="ed"><h3>✏️ Edit ' + esc(s.saleNo) + '</h3><div class="sub">' + (fl ? '🌸 Flower' : '🍫 Chocolate') + ' · ' + when(s.at) + ' · ' + esc(s.by) + '</div>' +
       '<label>Source</label><select data-f="source">' + SRC.map(function(x){ return '<option' + (x === s.source ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
       '<label>Sold to (invoice no. / name / phone)</label><input data-f="ref" maxlength="60" value="' + esc(s.ref || '') + '">' +
-      (fl ? '<label>Branch (stock is taken from here)</label><select data-f="branch">' + BRS.map(function(x){ return '<option' + (x === s.branch ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
+      '<label>Branch (stock is taken from here)</label><select data-f="branch">' + BRS.map(function(x){ return '<option' + (x === s.branch ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' +
+      (fl ? 
         '<label>Flowers (qty in stems)</label><div data-items></div><div class="note">Tap a flower name to change it (e.g. Rose → S-Rose). Changing a flower or qty puts the old back into stock and takes the new out. The sale keeps its number and time.</div>'
         : '<label>Chocolates</label><div style="font-size:13px;line-height:1.5">' + itemText({ kind:'chocolate', items:s.items }) + '</div><div class="note">For chocolate the chocolates themselves cannot be changed here. Wrong chocolate or qty: Cancel the sale (it goes back to stock) and sell again from the Chocolate Calc.</div>') +
       '<label>🎀 Extras (vase, box, hand work…)</label><div data-extras></div>' +
@@ -214,7 +215,9 @@
       keep.forEach(function(it){ var k = known.indexOf(it.name.toLowerCase()); if(k >= 0) it.name = dlist.options[k].value; });
       if(fl && !keep.length){ alert('At least one flower must stay. To remove everything, use Cancel.'); return; }
       var body = { action:'editSale', id:s.id, token:token(), source:bg.querySelector('[data-f=source]').value, ref:bg.querySelector('[data-f=ref]').value.trim(), customer:s.customer || '' };
-      if(fl){ body.branch = bg.querySelector('[data-f=branch]').value; body.items = JSON.stringify(keep); }
+      body.branch = bg.querySelector('[data-f=branch]').value;
+      if(fl){ body.items = JSON.stringify(keep); }
+      else if(body.branch !== s.branch && !confirm('Move ' + s.saleNo + ' from ' + s.branch + ' to ' + body.branch + '?\nThe chocolates go back to ' + s.branch + ' stock and are taken from ' + body.branch + ' stock.')) return;
       var okX = function(x){ return x.desc && (x.price > 0 || (x.price === 0 && /free/i.test(x.desc))); };
       var exKeep = exs.filter(okX);
       if(exs.some(function(x){ return (x.desc && !okX(x)) || (!x.desc && x.price > 0); })){ alert('Each extra needs a name and a price (or remove it with ✕).'); return; }

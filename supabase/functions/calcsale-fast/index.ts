@@ -127,16 +127,8 @@ async function saveFlowerSale(p: any, u: any) {
 // ---------------- CHOCOLATE ----------------
 const isKg = (u: any) => /^(kg|kgs|kilo|kilogram)/i.test(String(u || '').trim());
 const isG = (u: any) => /^(g|gr|gram|grams)$/i.test(String(u || '').trim());
-async function saveChocolateSale(p: any, u: any) {
-  const branch = txt(p.branch, 30);
-  if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch first.' };
-  let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
-  items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
-    .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
-  if (!items.length) return { success: false, error: 'The list is empty.' };
-  const exList = parseExtras(p.extrasList);
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
-  const saleNo = await nextSaleNo(head.id);
+// Takes the listed chocolates out of one branch (FIFO by expiry), with one Release; shared by Sold and by moving a sale to another branch.
+async function takeChoc(branch: string, items: any[], saleNo: string, p: any, u: any) {
   let releaseNo = '';
   const deducted: any[] = [], short: any[] = [], moves: any[] = [];
   const day = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
@@ -170,6 +162,19 @@ async function saveChocolateSale(p: any, u: any) {
     else if (leftG != null && leftG > 0.5) short.push({ name: c.name, need: r3(grams || 0) + ' g', have: r3((grams || 0) - leftG) + ' g' });
     else if (leftG == null && leftP != null && leftP > 0.01) short.push({ name: c.name, need: r3(pcs || 0) + ' pcs', have: r3((pcs || 0) - leftP) + ' pcs' });
   }
+  return { releaseNo, deducted, short, moves };
+}
+async function saveChocolateSale(p: any, u: any) {
+  const branch = txt(p.branch, 30);
+  if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch first.' };
+  let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
+  items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
+    .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
+  if (!items.length) return { success: false, error: 'The list is empty.' };
+  const exList = parseExtras(p.extrasList);
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const saleNo = await nextSaleNo(head.id);
+  const { releaseNo, deducted, short, moves } = await takeChoc(branch, items, saleNo, p, u);
   await sbPatch('calc_sales', `id=eq.${head.id}`, { sale_no: saleNo, release_no: releaseNo || null, deducted, short });
   await logMoves(moves.map((m) => ({ ...m, ref: saleNo })));
   return { success: true, saleNo, releaseNo, branch, lines: deducted.length, short };
@@ -244,7 +249,8 @@ async function cancelSale(p: any, u: any) {
 
 // Nov 2026: Admin can fix a sale (wrong source / name / branch / qty) without cancelling it.
 // Flower: the stock taken out is re-done for the new list (old lines put back, new lines taken out, same sale no. and date).
-// Chocolate: only the details (source, sold to, customer) — for wrong chocolates, Cancel and sell again.
+// Chocolate: the details (source, sold to, customer) and the branch (Nov 21: stock is put back and taken from the new branch) —
+// for wrong chocolates, Cancel and sell again.
 const SRC_OK = ['Walk-in', 'Pick-up', 'Website order', 'WhatsApp', 'Corporate', 'Others'];
 async function editSale(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid sale.' };
@@ -258,6 +264,22 @@ async function editSale(p: any, u: any) {
   const oldExtras = r3(Math.max(0, (Number(s.total) || 0) - itemsTotal(s.kind, s.items)));
   const exTotal = exNew ? extrasSum(exNew) : oldExtras;
   if (exNew) { fields.extras = exNew; fields.total = r3(itemsTotal(s.kind, s.items) + exTotal); }
+  // Nov 21 2026 (Bench): a chocolate sale saved under the wrong branch can be moved: what was taken is put back, then taken from the new branch
+  const newBr = txt(p.branch, 30);
+  if (s.kind === 'chocolate' && newBr && newBr !== s.branch) {
+    if (BRANCHES.indexOf(newBr) === -1) return { success: false, error: 'Pick the branch.' };
+    const mvBack: any[] = [], back: Record<string, number> = {};
+    (s.deducted || []).forEach((d: any) => { const k = String(d.name) + '|' + unitLabel(d.unit); back[k] = r3((back[k] || 0) + (Number(d.qty) || 0)); });
+    for (const k of Object.keys(back)) { const [nm, un] = k.split('|'); const bf = (await chocBranchStock(s.branch, nm))[un] || 0; mvBack.push({ kind: 'chocolate', branch: s.branch, item: nm, unit: un, before: bf, change: back[k], after: r3(bf + back[k]), ref: s.sale_no, action: 'Moved to ' + newBr + ' (put back)', by: who(u) }); }
+    for (const d of (s.deducted || [])) {
+      const b = (await sbGet(`chocolate_database?select=id,current_stock,qty_used&id=eq.${Number(d.id)}`))[0];
+      if (b) await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) + Number(d.qty)), qty_used: r3(Math.max(0, Number(b.qty_used || 0) - Number(d.qty))) });
+    }
+    if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=eq.${encodeURIComponent('Sale (Calc)')}`);
+    const t = await takeChoc(newBr, s.items || [], s.sale_no, { customer: s.customer, source: fields.source, ref: fields.ref }, u);
+    await logMoves(mvBack.concat(t.moves.map((m: any) => ({ ...m, ref: s.sale_no, action: 'Sold (moved from ' + s.branch + ')' }))));
+    fields.branch = newBr; fields.release_no = t.releaseNo || null; fields.deducted = t.deducted; fields.short = t.short;
+  }
   if (s.kind === 'flower' && p.items != null) {
     let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
     const branch = txt(p.branch, 30) || s.branch; if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch.' };
@@ -291,7 +313,7 @@ async function editSale(p: any, u: any) {
   log.push({ at: new Date().toISOString(), by: who(u), before });
   fields.edited_by = who(u); fields.edited_at = new Date().toISOString(); fields.edit_log = log;
   await sbPatch('calc_sales', `id=eq.${id}`, fields);
-  return { success: true, saleNo: s.sale_no, total: fields.total ?? s.total };
+  return { success: true, saleNo: s.sale_no, total: fields.total ?? s.total, short: fields.short };
 }
 
 async function readParams(req: Request): Promise<Record<string, any>> {
