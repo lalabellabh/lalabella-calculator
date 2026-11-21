@@ -167,7 +167,7 @@
       <div class="pf">
         <div class="sum" id="sum"></div>
         <div class="fr"><input class="in" id="cBy" maxlength="60" placeholder="Counted by…" style="max-width:200px"><button class="btn pri" id="saveC" style="flex:1">💾 Save count</button></div>
-        <div class="btns" style="margin-top:6px"><button class="btn" id="print">🖨️ Print</button><button class="btn" id="excel">📊 Excel</button><button class="btn" id="wa">📤 WhatsApp</button></div>
+        <div class="btns" style="margin-top:6px"><button class="btn" id="print">🖨️ Print</button><button class="btn" id="ckBtn">🧾 Checklist</button><button class="btn" id="excel">📊 Excel</button><button class="btn" id="wa">📤 WhatsApp</button></div>
         <div class="msg" id="cMsg"></div>
       </div>
     </section>
@@ -363,6 +363,7 @@
     $('pr').innerHTML = '<h2 style="margin:0 0 8px">Café stock count — ' + C.fd($('cDate').value) + '</h2><div style="font-size:12px;margin-bottom:8px">Counted by: ' + esc($('cBy').value) + '</div><table><thead><tr><th>#</th><th>Item</th><th>Code</th><th>Unit</th><th>System</th><th>Count</th><th>Expiry</th></tr></thead><tbody>' +
       lines2().map(function(l){ no++; return '<tr><td>' + no + '</td><td>' + esc(l.name) + '</td><td>' + esc(l.code) + '</td><td>' + esc(l.unit) + '</td><td>' + C.n3(l.system) + '</td><td>' + esc(C.n3(l.count)) + '</td><td>' + esc(C.fd(l.expiry)) + '</td></tr>'; }).join('') + '</tbody></table>';
     window.print(); };
+  $('ckBtn').onclick = function(){ var L = (D && D.items) || ITEMS || []; LBChecklist.open({ title:'Café', branch:'Café', extra:'Expiry', rows:L.map(function(i){ var sy = S && S[i.id] ? S[i.id].system : i.stock; return { name:i.name, code:i.code, group:i.category || 'Other', unit:i.unit, system:sy, photo:i.photo || '' }; }) }); };
   $('excel').onclick = function(){ if(!D){ alert('Press Load items first.'); return; }
     var q = function(v){ v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     var csv = ['Group,Item,Code,Unit,System,Count,Expiry'].concat(lines2().map(function(l){ return [l.group, l.name, l.code, l.unit, C.n3(l.system), C.n3(l.count), l.expiry].map(q).join(','); })).join('\n');
@@ -411,5 +412,6 @@
 })();
 </script>
 <script src="shared/alert-badges.js?v=1"></script>
+<script src="shared/print-checklist.js?v=1"></script>
 </body>
 </html>

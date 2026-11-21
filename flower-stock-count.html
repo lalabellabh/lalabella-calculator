@@ -270,6 +270,7 @@
         </div>
         <button class="btn btn-primary" id="saveBtn">💾 Save Count</button>
         <button class="btn btn-leaf" id="printBtn">🖨️ Print Sheet</button>
+        <button class="btn btn-outline" id="ckBtn">🧾 Print checklist</button>
         <button class="btn btn-outline" id="shareBtn" style="display:none;">📤 Send to WhatsApp</button>
       </div>
 
@@ -1128,5 +1129,7 @@
     }, 250);
   })();
 </script>
+<script src="shared/print-checklist.js?v=1"></script>
+<script>document.getElementById('ckBtn').addEventListener('click', function(){ var src = (backing && backing.length ? backing : stockList) || []; LBChecklist.open({ title:'Flower', branch:currentBranch, extra:'Wastage', hint:'press Load Items first', rows:src.map(function(b){ return { name:b.flowerName, group:'Flowers', unit:'pcs' }; }) }); });</script>
 </body>
 </html>

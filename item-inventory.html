@@ -1187,6 +1187,7 @@ body>.wrap{position:relative;z-index:1}
       <input type="text" id="cntBy" list="staffNameList" placeholder="Your name" autocomplete="off">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
         <button class="btn" id="cntSave" style="flex:1;margin:0;">💾 Save Count</button>
+        <button class="btn btn-outline" id="cntCk" type="button" style="flex:0 0 auto;width:auto;margin:0;padding:10px 14px;">🧾 Print checklist</button>
         <button class="btn btn-outline" id="cntPrint" style="flex:0 0 auto;width:auto;margin:0;padding:10px 16px;">🖨️ Count Sheet</button>
         <button class="btn btn-outline" id="cntClear" style="flex:0 0 auto;width:auto;margin:0;padding:10px 16px;">Clear</button>
       </div>
@@ -3221,5 +3222,7 @@ header{animation:invFloat 5.5s ease-in-out infinite;}
 </script>
 
 <script src="joyboy-bubble.js"></script>
+<script src="shared/print-checklist.js?v=1"></script>
+<script>document.getElementById('cntCk').addEventListener('click', function(){ var seen = {}; LBChecklist.open({ title:'Item Inventory', branch:(typeof currentBranch !== 'undefined' ? currentBranch : ''), extra:'Notes', rows:(window.ITEMS || []).filter(function(it){ var n = it['Item Name']; if(!n || seen[n]) return false; seen[n] = 1; return true; }).map(function(it){ return { name:it['Item Name'], code:it['Item Code'], group:it['Item Type'] || 'Other', unit:it['Unit'], system:it['Qty'], photo:it['Photo Link (Drive)'] || '' }; }) }); });</script>
 </body>
 </html>

@@ -387,6 +387,7 @@
     <div id="itemsList" class="items-scroll"></div>
     <button class="submit-btn" id="saveBtn">Save Count Session</button>
     <button class="print-btn" id="printBtn">🖨️ Print Count Sheet</button>
+    <button class="print-btn" id="ckBtn">🧾 Print checklist</button>
     <button class="print-btn" id="shareBtn" style="display:none;">📤 Send to WhatsApp</button>
   </div>
 
@@ -1144,5 +1145,7 @@
 
 
 <script src="joyboy-bubble.js"></script>
+<script src="shared/print-checklist.js?v=1"></script>
+<script>document.getElementById('ckBtn').addEventListener('click', function(){ LBChecklist.open({ title:'Chocolate', branch:currentBranch, extra:'Expiry', hint:'pick the branch first', rows:(stockItems || []).map(function(it){ return { name:it.ChocolateName, code:(typeof SC_CODES !== 'undefined' && SC_CODES[String(it.ChocolateName || '').trim().toLowerCase()]) || '', group:it.Category || 'Other', unit:it.Unit, system:it.SystemStock }; }) }); });</script>
 </body>
 </html>
