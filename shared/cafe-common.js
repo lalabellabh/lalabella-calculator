@@ -12,7 +12,7 @@
   var UNITS = ['pcs', 'kg', 'g', 'liters', 'ml', 'boxes', 'packs', 'bottles', 'sets'];
   // tabs on top of every café page
   function tabs(active) {
-    var T = [['cafe-inventory.html', '☕', 'Café Items & Stock'], ['cafe-receiving.html', '🛒', 'Receive'], ['cafe-stock-count.html', '📋', 'Stock Count']];
+    var T = [['cafe-inventory.html', '☕', 'Café Items'], ['cafe-receiving.html', '🛒', 'Receiving'], ['cafe-stock-count.html', '📋', 'Stock Count'], ['cafe-dashboard.html', '📊', 'Dashboard']];
     return '<div class="cf-tabs">' + T.map(function (t) { return '<a href="' + t[0] + '"' + (t[0] === active ? ' class="on"' : '') + '>' + t[1] + ' ' + t[2] + '</a>'; }).join('') + '</div>';
   }
   function shrink(file) { return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { var im = new Image(); im.onload = function () {

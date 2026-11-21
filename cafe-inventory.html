@@ -8,7 +8,7 @@
 <script src="auth-guard.js"></script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Café Items &amp; Stock</title>
+<title>Café Items</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="lb-theme-keep" content=".wrap, .card">
@@ -39,50 +39,91 @@
   .zero{ color:var(--bad); } .soon{ color:#a8560b; }
   .empty{ color:var(--dim); text-align:center; padding:18px 0; font-size:13px; }
   .msg{ font-size:12.5px; color:var(--dim); }
+  .cards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+  .ic{ display:flex; flex-direction:column; gap:7px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:10px; }
+  .ic .ph{ position:relative; width:100%; aspect-ratio:1/1; border-radius:10px; background:#f6efe6; border:1px dashed #e3d3c8; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:30px; overflow:hidden; }
+  .ic .ph img{ width:100%; height:100%; object-fit:cover; cursor:zoom-in; }
+  .ic .xrm{ position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; border:0; background:rgba(255,255,255,.92); color:var(--bad); font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .ic .nm{ font-weight:700; font-size:13px; line-height:1.25; }
+  .ic .ct{ font-size:11px; color:var(--dim); }
+  .ic .cd{ font-size:11px; color:#6b4226; font-weight:700; font-family:monospace; }
+  .ic svg.bc{ display:block; height:24px; max-width:100%; }
+  .ic .sk{ font-size:12px; font-weight:700; } .ic .sk small{ font-weight:400; color:var(--dim); }
+  .ic .b{ padding:8px 10px; border:none; border-radius:9px; font-weight:700; font-size:12px; cursor:pointer; background:linear-gradient(135deg,#6b4226,#4a2c18); color:#fff; font-family:inherit; }
+  .ic .b.alt{ background:#fff; color:#4a2c18; border:1px solid var(--line); }
+  .ic .paste{ display:none; border:1.5px dashed var(--line); border-radius:9px; padding:7px 6px; text-align:center; font-size:11px; color:var(--dim); cursor:pointer; outline:none; }
+  .ic .paste:focus{ border-color:#c9506b; color:#9e2f4a; background:#fdf1f0; }
+  @media (hover:hover) and (pointer:fine){ .ic .paste{ display:block; } }
+  #pr{ display:none; }
+  @media print{ body *{ visibility:hidden !important; } #pr, #pr *{ visibility:visible !important; } #pr{ display:grid !important; position:absolute; top:0; left:0; width:100%; gap:8px; } #pr .pc{ border:1px solid #999; border-radius:8px; padding:6px; text-align:center; break-inside:avoid; font-family:Arial,sans-serif; } #pr img{ width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:6px; } #pr .n{ font-weight:700; font-size:12px; margin-top:4px; } #pr .c{ font-size:10px; font-family:monospace; } #pr svg{ width:100%; height:34px; } @page{ size:A4; margin:10mm; } }
 </style>
 </head>
 <body>
 <script src="shared/nav.js" data-standalone></script>
 <script src="shared/cafe-common.js"></script>
 <div class="wrap">
-  <header><h1>☕ Café Items &amp; Stock</h1><div class="sub">The café list (cups, coffee, syrups…) with pictures. Stock = last count + what was received after it.</div></header>
+  <header><h1>☕ Café Items</h1><div class="sub">The café list with pictures and barcodes — stock = last count + received after it.</div></header>
   <div id="tabs"></div>
   <div class="bar">
-    <input id="q" placeholder="Search…" style="flex:1;min-width:160px">
+    <input id="q" placeholder="Search name, group or code…" style="flex:1;min-width:160px">
     <select id="grp"><option value="">All groups</option></select>
+    <select id="per"><option value="3">Print: 3 per row</option><option value="4">Print: 4 per row</option><option value="5">Print: 5 per row</option></select>
+    <button id="print" class="btn">🖨️ Print</button>
     <button id="add" class="btn go" style="display:none">＋ Add item</button>
+    <span class="msg" id="cnt"></span>
   </div>
-  <div class="card" id="list"><div class="empty">Loading…</div></div>
+  <div class="cards" id="list"><div class="empty" style="grid-column:1/-1">Loading…</div></div>
 </div>
+<input type="file" id="fCam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fGal" accept="image/*" style="display:none">
+<div id="pr"></div>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
 (function(){
-  var C = window.LBCafe, esc = C.esc, $ = function(id){ return document.getElementById(id); }, D = null;
+  var C = window.LBCafe, esc = C.esc, $ = function(id){ return document.getElementById(id); }, D = null, target = null;
   $('tabs').innerHTML = C.tabs('cafe-inventory.html');
   function groups(){ var g = []; (D ? D.items : []).forEach(function(i){ if(i.category && g.indexOf(i.category) === -1) g.push(i.category); }); return g; }
   function load(){ C.api({ action:'items' }).then(function(d){
-    if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+    if(!d || !d.success){ $('list').innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
     D = d; $('add').style.display = d.admin ? '' : 'none';
     var cur = $('grp').value; $('grp').innerHTML = '<option value="">All groups</option>' + groups().map(function(g){ return '<option' + (g === cur ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('');
-    draw(); }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; }); }
+    draw(); }).catch(function(){ $('list').innerHTML = '<div class="empty" style="grid-column:1/-1">Connection problem.</div>'; }); }
+  function shown(){ var t = $('q').value.trim().toLowerCase(), g = $('grp').value; return D.items.filter(function(i){ return (!g || i.category === g) && (!t || (i.name + ' ' + i.category + ' ' + i.code).toLowerCase().indexOf(t) !== -1); }); }
   function draw(){
-    var t = $('q').value.trim().toLowerCase(), g = $('grp').value, last = null;
-    var L = D.items.filter(function(i){ return (!g || i.category === g) && (!t || (i.name + ' ' + i.category + ' ' + i.code).toLowerCase().indexOf(t) !== -1); });
+    var L = shown(), A = D.admin;
+    $('cnt').textContent = D.items.filter(function(i){ return i.photo; }).length + ' of ' + D.items.length + ' with picture · ' + L.length + ' shown';
     $('list').innerHTML = L.length ? L.map(function(i){
-      var head = i.category !== last ? '<div class="grp">' + esc(i.category || 'Other') + '</div>' : ''; last = i.category;
-      var pic = '<div class="pic' + (i.photo ? ' has' : '') + (D.admin ? ' can' : '') + '" data-pic="' + i.id + '"' + (i.photo ? ' style="background-image:url(\'' + esc(i.photo) + '\')"' : '') + ' title="' + (i.photo ? 'Tap to see' : (D.admin ? 'Add a picture' : 'No picture yet')) + '">' + (i.photo ? '' : (D.admin ? '＋' : '☕')) + '</div>';
-      var exp = i.nextExpiry ? ' · exp ' + C.fd(i.nextExpiry) : '';
-      return head + '<div class="row">' + pic + '<div class="nm">' + esc(i.name) + '<small>' + esc(i.unit) + (i.code ? ' · 📦 ' + esc(i.code) : '') + (i.countDate ? ' · counted ' + C.fd(i.countDate) : ' · not counted yet') + (i.received ? ' · +' + C.n3(i.received) + ' received after' : '') + exp + '</small></div>' +
-        '<div style="text-align:right;font-weight:800;font-size:15px;min-width:90px"' + (i.stock > 0 ? '' : ' class="zero"') + '>' + C.n3(i.stock) + ' <span style="font-size:11.5px;font-weight:600;color:var(--dim)">' + esc(i.unit) + '</span></div>' +
-        (D.admin ? '<button class="btn" data-ed="' + i.id + '" title="Edit item" style="padding:6px 9px">✏️</button>' : '') + '</div>';
-    }).join('') : '<div class="empty">No items' + (t || g ? ' for this search' : ' yet') + '.</div>';
+      return '<div class="ic" data-id="' + i.id + '"><div class="ph">' + (i.photo ? '<img src="' + esc(i.photo) + '" alt="" data-a="zoom">' + (A ? '<button class="xrm" data-a="rm" title="Remove picture">✕</button>' : '') : '☕') + '</div>' +
+        '<div><div class="nm">' + esc(i.name) + '</div><div class="ct">' + esc(i.category || 'Other') + ' · ' + esc(i.unit) + '</div>' + (i.code ? '<div class="cd">' + esc(i.code) + '</div><svg class="bc" data-code="' + esc(i.code) + '"></svg>' : '') +
+        '<div class="sk"' + (i.stock > 0 ? '' : ' style="color:var(--bad)"') + '>Stock ' + C.n3(i.stock) + ' ' + esc(i.unit) + ' <small>' + (i.countDate ? '· counted ' + C.fd(i.countDate) : '· not counted yet') + (i.nextExpiry ? ' · exp ' + C.fd(i.nextExpiry) : '') + '</small></div></div>' +
+        (A ? '<button class="b" data-a="cam">📷 Camera</button><button class="b alt" data-a="gal">🖼️ ' + (i.photo ? 'Change' : 'Gallery') + '</button><button class="b alt" data-a="edit">✏️ Edit</button><div class="paste" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div>' : '') + '</div>';
+    }).join('') : '<div class="empty" style="grid-column:1/-1">No items' + ($('q').value || $('grp').value ? ' for this search' : ' yet') + '.</div>';
+    if(window.JsBarcode) document.querySelectorAll('#list svg.bc').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:1, height:24, margin:0, displayValue:false }); sv.setAttribute('preserveAspectRatio', 'xMinYMid meet'); }catch(e){} });
   }
+  function item(el){ var c = el.closest('[data-id]'); return c && D.items.find(function(x){ return String(x.id) === c.getAttribute('data-id'); }); }
+  function setPhoto(it, file){ if(!file || !it) return; var card = document.querySelector('.ic[data-id="' + it.id + '"] .ph'); if(card) card.style.opacity = '.4';
+    (function(f){ return new Promise(function(res){ var fr = new FileReader(); fr.onload = function(){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1000 / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL('image/jpeg', .82)); }; im.onerror = function(){ res(''); }; im.src = fr.result; }; fr.readAsDataURL(f); }); })(file)
+      .then(function(d){ if(!d){ alert('That is not a picture.'); return null; } return C.api({ action:'setPhoto', id:it.id, photo:d }); })
+      .then(function(r){ if(r && !r.success) alert(r.error || 'Not saved.'); load(); }).catch(function(){ alert('Connection problem.'); load(); }); }
+  $('fCam').onchange = function(){ setPhoto(target, this.files[0]); this.value = ''; };
+  $('fGal').onchange = function(){ setPhoto(target, this.files[0]); this.value = ''; };
+  $('list').addEventListener('click', function(e){
+    var b = e.target.closest('[data-a]'); if(!b) return; var it = item(b), a = b.getAttribute('data-a'); if(!it) return;
+    if(a === 'zoom') C.zoom(it.photo);
+    if(a === 'cam'){ target = it; $('fCam').click(); }
+    if(a === 'gal'){ target = it; $('fGal').click(); }
+    if(a === 'edit') C.itemForm(it, groups(), load);
+    if(a === 'rm'){ if(!confirm('Remove the picture of ' + it.name + '?')) return; C.api({ action:'setPhoto', id:it.id, photo:'' }).then(function(){ load(); }); }
+  });
+  document.addEventListener('paste', function(e){ var box = document.activeElement && document.activeElement.closest && document.activeElement.closest('.paste'); if(!box) return;
+    var f = [].slice.call((e.clipboardData || {}).items || []).map(function(x){ return x.kind === 'file' ? x.getAsFile() : null; }).filter(Boolean)[0]; if(f){ e.preventDefault(); setPhoto(item(box), f); } });
   $('q').oninput = function(){ if(D) draw(); }; $('grp').onchange = function(){ if(D) draw(); };
   $('add').onclick = function(){ C.itemForm(null, groups(), load); };
-  $('list').addEventListener('click', function(e){
-    var ed = e.target.closest('[data-ed]'); if(ed){ C.itemForm(D.items.find(function(x){ return String(x.id) === ed.getAttribute('data-ed'); }), groups(), load); return; }
-    var pc = e.target.closest('[data-pic]'); if(!pc) return; var it = D.items.find(function(x){ return String(x.id) === pc.getAttribute('data-pic'); });
-    if(it.photo) C.zoom(it.photo); else if(D.admin) C.itemForm(it, groups(), load);
-  });
+  $('print').onclick = function(){ if(!D) return; var n = Number($('per').value) || 3;
+    $('pr').style.gridTemplateColumns = 'repeat(' + n + ',1fr)';
+    $('pr').innerHTML = shown().map(function(i){ return '<div class="pc">' + (i.photo ? '<img src="' + esc(i.photo) + '">' : '') + '<div class="n">' + esc(i.name) + '</div>' + (i.code ? '<svg data-code="' + esc(i.code) + '"></svg><div class="c">' + esc(i.code) + '</div>' : '') + '</div>'; }).join('');
+    if(window.JsBarcode) $('pr').querySelectorAll('svg').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:1.4, height:34, margin:0, displayValue:false }); }catch(e){} });
+    var imgs = [].slice.call($('pr').querySelectorAll('img')); Promise.all(imgs.map(function(im){ return im.complete ? 1 : new Promise(function(r){ im.onload = im.onerror = r; }); })).then(function(){ window.print(); }); };
   load();
 })();
 </script>

@@ -192,14 +192,51 @@ async function countDates() {
   return { success: true, dates: Object.values(m) };
 }
 
+// Dashboard (Bench, Nov 21): what moves fast / slow — usage between two counts = earlier count + received in between − later count.
+async function dashboard(p: any) {
+  const days = Math.min(365, Math.max(14, Number(p.days) || 90));
+  const since = new Date(Date.now() + 3 * 3600000 - days * 86400000).toISOString().slice(0, 10);
+  const [its, counts, recs, st] = await Promise.all([
+    sbGetAll('cafe_items?select=id,name,category,unit,item_code,photo_url&active=eq.true&order=sort_order.asc,id.asc'),
+    sbGetAll('cafe_stock_count?select=item_id,count_date,qty,expiry&order=count_date.asc'),
+    sbGetAll('cafe_receiving?select=item_id,receive_date,qty,expiry,supplier&order=receive_date.asc'),
+    stockNow(),
+  ]);
+  const byItem: Record<string, any> = {};
+  its.forEach((i: any) => { byItem[i.id] = { id: i.id, name: i.name, category: i.category || '', unit: i.unit, code: i.item_code || '', used: 0, usedDays: 0, received: 0, stock: (st[i.id] || {}).qty || 0, countDate: (st[i.id] || {}).countDate || '', expiries: [] as string[] }; });
+  const cBy: Record<string, any[]> = {}; counts.forEach((c: any) => { (cBy[c.item_id] = cBy[c.item_id] || []).push(c); if (c.expiry && byItem[c.item_id]) byItem[c.item_id].expiries.push(c.expiry); });
+  const rBy: Record<string, any[]> = {}; recs.forEach((r: any) => { (rBy[r.item_id] = rBy[r.item_id] || []).push(r); if (byItem[r.item_id]) { if (r.receive_date >= since) byItem[r.item_id].received += Number(r.qty); if (r.expiry) byItem[r.item_id].expiries.push(r.expiry); } });
+  Object.keys(cBy).forEach((id) => {
+    const L = cBy[id], it = byItem[id]; if (!it) return;
+    for (let k = 1; k < L.length; k++) {
+      const a = L[k - 1], b = L[k]; if (b.count_date < since) continue;
+      const inb = (rBy[id] || []).filter((r: any) => r.receive_date > a.count_date && r.receive_date <= b.count_date).reduce((s: number, r: any) => s + Number(r.qty), 0);
+      const used = Number(a.qty) + inb - Number(b.qty);
+      it.used += Math.max(0, used);
+      it.usedDays += Math.max(1, Math.round((new Date(b.count_date).getTime() - new Date(a.count_date).getTime()) / 86400000));
+    }
+  });
+  const t = today();
+  const rows = Object.values(byItem).map((it: any) => {
+    const perDay = it.usedDays ? it.used / it.usedDays : null;
+    const future = it.expiries.filter((e: string) => e >= t).sort();
+    return { ...it, expiries: undefined, used: Math.round(it.used * 1000) / 1000, received: Math.round(it.received * 1000) / 1000, perMonth: perDay == null ? null : Math.round(perDay * 30 * 100) / 100,
+      daysLeft: perDay && perDay > 0 ? Math.floor(it.stock / perDay) : null, nextExpiry: future[0] || '', expired: it.expiries.some((e: string) => e < t) && !future.length };
+  });
+  const months: Record<string, number> = {}; recs.forEach((r: any) => { const m = String(r.receive_date).slice(0, 7); months[m] = (months[m] || 0) + 1; });
+  return { success: true, days, since, today: t, rows, counts: [...new Set(counts.map((c: any) => String(c.count_date)))].length, receiveLines: recs.length, receivingByMonth: months };
+}
+
 const UNITS = ['pcs', 'kg', 'g', 'liters', 'ml', 'boxes', 'packs', 'bottles', 'sets'];
 async function addItem(p: any, u: any) {
   const name = txt(p.name, 120); if (!name) return { success: false, error: 'Type the item name.' };
   const unit = UNITS.indexOf(String(p.unit)) !== -1 ? String(p.unit) : 'pcs';
   const last = (await sbGet('cafe_items?select=sort_order&order=sort_order.desc&limit=1'))[0];
   let photo = ''; if (p.photo) { photo = await savePhoto(String(p.photo)); if (!photo) return { success: false, error: 'The picture could not be saved (too big or not a picture).' }; }
-  const r = await sbPost('cafe_items', [{ name, category: txt(p.category, 60) || null, unit, photo_url: photo || null, sort_order: (last ? Number(last.sort_order) : 0) + 1, created_by: who(u) }]);
-  return { success: true, id: r[0] && r[0].id };
+  const r = await sbPost('cafe_items', [{ name, category: txt(p.category, 60) || null, unit, photo_url: photo || null, sort_order: (last ? Number(last.sort_order) : 0) + 1, item_code: txt(p.code, 40) || null, created_by: who(u) }]);
+  const id = r[0] && r[0].id;
+  if (id && !txt(p.code, 40)) await sbPatch('cafe_items', `id=eq.${id}`, { item_code: 'CAF-' + String(id).padStart(4, '0') });   // every item gets a barcode
+  return { success: true, id };
 }
 async function editItem(p: any, u: any) {
   const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid item.' };
@@ -242,6 +279,7 @@ Deno.serve(async (req) => {
     if (a === 'countSheet') return json(await countSheet(p));
     if (a === 'saveCount') return json(await saveCount(p, u));
     if (a === 'countDates') return json(await countDates());
+    if (a === 'dashboard') return json(await dashboard(p));
     if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can change the item list.' });
     if (a === 'addItem') return json(await addItem(p, u));
     if (a === 'editItem') return json(await editItem(p, u));
