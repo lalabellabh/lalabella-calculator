@@ -28,6 +28,7 @@
   /* ---------- frame ---------- */
   .app{ margin-left:clamp(150px, 13vw, 260px); height:100vh; height:100dvh; display:flex; flex-direction:column; padding:18px 22px 18px 6px; gap:14px; position:relative; z-index:2; }
   .top{ display:flex; align-items:flex-end; gap:16px; flex:none; padding-left:4px; }
+  .brand{ padding:10px 18px 11px; border-radius:16px; }
   .brand .eye{ font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--acc); }
   .brand h1{ font-family:'Fraunces',serif; font-weight:600; font-size:30px; margin:2px 0 0; color:var(--esp); letter-spacing:-.015em; line-height:1.05; }
   .brand .sub{ font-size:12.5px; color:var(--dim); margin-top:4px; }
@@ -47,7 +48,7 @@
   .pb{ flex:1; min-height:0; overflow-y:auto; padding:6px 20px 12px; scrollbar-width:thin; scrollbar-color:#ddd5ca transparent; }
   .pf{ flex:none; padding:12px 20px 16px; border-top:1px solid var(--line); }
   label{ display:block; font-size:10.5px; font-weight:600; color:var(--dim); text-transform:uppercase; letter-spacing:.1em; margin:12px 0 5px; }
-  .in{ width:100%; font-size:14px; border:1px solid transparent; border-radius:11px; padding:10px 12px; background:var(--soft); outline:none; transition:border-color .15s, background .15s; }
+  .in{ width:100%; font-size:14px; border:1px solid transparent; border-radius:11px; padding:10px 12px; background:rgba(246,243,238,.8); outline:none; transition:border-color .15s, background .15s; }
   .in:hover{ border-color:var(--line); }
   .in:focus{ border-color:var(--acc); background:#fff; box-shadow:0 0 0 3px rgba(95,139,151,.14); }
   .in::placeholder{ color:#b3aaa0; }
@@ -71,7 +72,7 @@
   .nm{ flex:1; min-width:0; font-weight:600; font-size:13.5px; } .nm small{ display:block; font-weight:400; color:var(--dim); font-size:11.5px; margin-top:2px; }
   .q{ font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:var(--esp); white-space:nowrap; }
   .x{ border:0; background:transparent; color:#b3aaa0; cursor:pointer; font-size:14px; padding:5px 7px; border-radius:8px; } .x:hover{ background:var(--soft); color:var(--bad); }
-  .grp{ font-size:10.5px; font-weight:700; color:var(--acc); text-transform:uppercase; letter-spacing:.16em; padding:14px 0 6px; position:sticky; top:-6px; background:#fff; z-index:1; border-bottom:1px solid var(--line); }
+  .grp{ font-size:10.5px; font-weight:700; color:var(--acc); text-transform:uppercase; letter-spacing:.16em; padding:14px 0 6px; border-bottom:1px solid var(--line); }
   .ln{ padding:9px 8px; margin:0 -8px; border-radius:12px; } .ln + .ln{ border-top:1px solid var(--line); }
   .ln.chg{ background:#fbf6ea; } .ln.hit{ box-shadow:0 0 0 2px var(--acc) inset; }
   .ln .nm small{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -107,7 +108,7 @@
     .pane{ display:none; height:100%; border-radius:22px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
     .pane.on{ display:flex; }
     .pb{ flex:none; overflow:visible; padding:4px 14px 10px; } .ph{ padding:16px 14px 10px; }
-    .pf{ position:sticky; bottom:0; z-index:3; padding:10px 14px 12px; background:rgba(255,255,255,.97); }
+    .pf{ position:sticky; bottom:0; z-index:3; padding:10px 14px 12px; background:rgba(255,255,255,.9); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
     .pf .sum{ flex-wrap:nowrap; overflow-x:auto; margin-bottom:8px; scrollbar-width:none; } .pf .sum span{ white-space:nowrap; }
     .pf .btns .btn{ padding:8px; font-size:12px; }
     .grp{ top:0; }
@@ -124,20 +125,20 @@
 <script src="shared/nav.js" data-standalone></script>
 <script src="shared/cafe-common.js"></script>
 
-<div class="app" data-lb-look-skip data-lb-text-skip>
+<div class="app" data-lb-look-skip>
   <div class="appHero">
     <div><div class="eye">Lalabella Café</div><h1>Stock Room</h1></div>
     <a href="cafe-inventory.html">☕ Café Items</a>
   </div>
   <div class="top">
-    <div class="brand"><div class="eye">Lalabella Café</div><h1>Café Stock Room</h1><div class="sub">Receive what came in, count the shelf, see what moves — all on one page.</div></div>
-    <div class="kpis" id="kpis"></div>
-    <a class="link" href="cafe-inventory.html">☕ Café Items</a>
+    <div class="brand cf-glass"><div class="eye">Lalabella Café</div><h1>Café Stock Room</h1><div class="sub">Receive what came in, count the shelf, see what moves — all on one page.</div></div>
+    <div class="kpis cf-glass" id="kpis"></div>
+    <a class="link cf-glass" href="cafe-inventory.html">☕ Café Items</a>
   </div>
 
   <div class="cols">
     <!-- RECEIVING -->
-    <section class="pane" id="p-rec">
+    <section class="pane cf-glass" id="p-rec">
       <div class="ph"><h2>Receiving <small id="recCount"></small></h2>
         <div class="seg" id="recSeg"><button class="on" data-v="new">New delivery</button><button data-v="hist">History</button></div></div>
       <div class="pb" id="recNew">
@@ -156,7 +157,7 @@
     </section>
 
     <!-- STOCK COUNT -->
-    <section class="pane" id="p-cnt">
+    <section class="pane cf-glass" id="p-cnt">
       <div class="ph"><h2>Stock Count <small id="nCount"></small></h2>
         <div class="fr" style="margin-top:10px"><input class="in" type="date" id="cDate" style="max-width:160px"><button class="btn pri" id="loadBtn">Load items</button><button class="btn" id="recallBtn">↺ Recall</button><button class="btn" id="histBtn" title="Search history (read-only)">🔍</button></div>
         <div class="fr" style="margin-top:8px"><input class="in" id="cq" placeholder="Search name, group or code…"><button class="ib dark" id="cScan" title="Scan barcode">📷</button><button class="ib" id="cMic" title="Say the item name">🎤</button></div>
@@ -172,7 +173,7 @@
     </section>
 
     <!-- DASHBOARD -->
-    <section class="pane" id="p-dash">
+    <section class="pane cf-glass" id="p-dash">
       <div class="ph"><h2>Dashboard <small><select class="in" id="days" style="padding:4px 8px;font-size:12px;width:auto"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="180">6 months</option><option value="365">12 months</option></select></small></h2>
         <div class="seg" id="dSeg"><button class="on" data-v="fast">🚀 Fast</button><button data-v="slow">🐢 Slow</button><button data-v="low">⚠️ Low</button><button data-v="exp">⏰ Expiry</button><button data-v="mon">🛒 Monthly</button></div></div>
       <div class="pb" id="dash"><div class="empty">Loading…</div></div>
@@ -180,7 +181,7 @@
     </section>
   </div>
 
-  <nav class="tabbar" id="tabbar"><button data-p="p-dash"><i>📊</i>Dashboard</button><button data-p="p-rec"><i>🛒</i>Receive</button><button data-p="p-cnt"><i>📋</i>Count</button></nav>
+  <nav class="tabbar cf-glass" id="tabbar"><button data-p="p-dash"><i>📊</i>Dashboard</button><button data-p="p-rec"><i>🛒</i>Receive</button><button data-p="p-cnt"><i>📋</i>Count</button></nav>
 </div>
 
 <div class="scan" id="scanBox"><video id="scanVid" playsinline muted></video><p>Point the camera at the barcode</p><button class="btn" id="scanX">Close</button></div>

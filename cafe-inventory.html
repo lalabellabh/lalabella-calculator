@@ -61,6 +61,7 @@
   body{ background:transparent; }
   .wrap{ max-width:1180px; padding:22px 22px 90px; position:relative; z-index:2; }
   @media(min-width:1100px){ .wrap{ margin-left:max(clamp(150px, 13vw, 260px), calc((100vw - 1180px) / 2)); } }
+  header{ display:inline-block; padding:10px 18px 11px; border-radius:16px; margin-left:46px; }
   header .eye{ font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--acc); }
   h1{ font-weight:600; font-size:30px; color:var(--esp); letter-spacing:-.015em; margin-top:2px; }
   .sub{ margin-top:4px; }
@@ -84,16 +85,16 @@
   .ic .b:hover{ filter:brightness(1.08); } .ic .b.alt:hover{ border-color:var(--acc); }
   .ic .paste{ border:1px dashed var(--line); border-radius:10px; }
   .ic .paste:focus{ border-color:var(--acc); color:#3d6773; background:#eaf2f4; }
-  .cf-tabs a{ background:rgba(255,255,255,.93); border-color:var(--line); color:var(--esp); font-weight:600; }
+  .cf-tabs a{ background:rgba(255,255,255,.8); border-color:var(--line); color:var(--esp); font-weight:600; }
 </style>
 </head>
 <body>
 <script src="shared/nav.js" data-standalone></script>
 <script src="shared/cafe-common.js"></script>
-<div class="wrap" data-lb-look-skip data-lb-text-skip>
-  <header><div class="eye">Lalabella Café</div><h1>Café Items</h1><div class="sub">The café list with pictures and barcodes — stock = last count + received after it.</div></header>
+<div class="wrap" data-lb-look-skip>
+  <header class="cf-glass"><div class="eye">Lalabella Café</div><h1>Café Items</h1><div class="sub">The café list with pictures and barcodes — stock = last count + received after it.</div></header>
   <div id="tabs"></div>
-  <div class="bar">
+  <div class="bar cf-glass">
     <input id="q" placeholder="Search name, group or code…" style="flex:1;min-width:160px">
     <select id="grp"><option value="">All groups</option></select>
     <select id="per"><option value="3">Print: 3 per row</option><option value="4">Print: 4 per row</option><option value="5">Print: 5 per row</option></select>
@@ -122,7 +123,7 @@
     var L = shown(), A = D.admin;
     $('cnt').textContent = D.items.filter(function(i){ return i.photo; }).length + ' of ' + D.items.length + ' with picture · ' + L.length + ' shown';
     $('list').innerHTML = L.length ? L.map(function(i){
-      return '<div class="ic" data-id="' + i.id + '"><div class="ph">' + (i.photo ? '<img src="' + esc(i.photo) + '" alt="" data-a="zoom">' + (A ? '<button class="xrm" data-a="rm" title="Remove picture">✕</button>' : '') : '☕') + '</div>' +
+      return '<div class="ic cf-glass" data-id="' + i.id + '"><div class="ph">' + (i.photo ? '<img src="' + esc(i.photo) + '" alt="" data-a="zoom">' + (A ? '<button class="xrm" data-a="rm" title="Remove picture">✕</button>' : '') : '☕') + '</div>' +
         '<div><div class="nm">' + esc(i.name) + '</div><div class="ct">' + esc(i.category || 'Other') + ' · ' + esc(i.unit) + '</div>' + (i.code ? '<div class="cd">' + esc(i.code) + '</div><svg class="bc" data-a="bc" title="Tap to make bigger" data-code="' + esc(i.code) + '"></svg>' : '') +
         '<div class="sk"' + (i.stock > 0 ? '' : ' style="color:var(--bad)"') + '>Stock ' + C.n3(i.stock) + ' ' + esc(i.unit) + ' <small>' + (i.countDate ? '· counted ' + C.fd(i.countDate) : '· not counted yet') + (i.nextExpiry ? ' · exp ' + C.fd(i.nextExpiry) : '') + '</small></div></div>' +
         (A ? '<div class="acts"><button class="b" data-a="cam">📷 Camera</button><button class="b alt" data-a="gal">🖼️ ' + (i.photo ? 'Change' : 'Gallery') + '</button><button class="b alt" data-a="edit">✏️ Edit</button></div><div class="paste" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div>' : '') + '</div>';
