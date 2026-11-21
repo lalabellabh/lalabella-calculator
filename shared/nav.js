@@ -152,7 +152,8 @@
   const HUB = [
     ['index.html', '🍫', 'Chocolate', 'chocolate'],
     ['flower-tools.html', '🌸', 'Flower', 'flower'],
-    ['item-inventory.html', '📦', 'Item Inv.', 'item']
+    ['item-inventory.html', '📦', 'Item Inv.', 'item'],
+    ['cafe-inventory.html', '☕', 'Café', 'item']   // Nov 21 2026 (Bench)
   ];
   // Nov 17 2026 (Bench): the three calculators, right under the three hubs
   const CALCS = [
@@ -482,7 +483,7 @@
     const mod = moduleAllowed(modKey) ? MODULES[modKey] : null;
     const hub = HUB.filter(h => moduleAllowed(h[3]));
     let html = weatherHtml() + profileHeaderHtml() +
-      (hub.length ? '<div class="' + esc(hubClass) + '">' : '') +
+      (hub.length ? '<div class="' + esc(hubClass) + '"' + (hub.length > 3 ? ' style="grid-template-columns:repeat(' + Math.min(hub.length, 4) + ',1fr)"' : '') + '>' : '') +
       hub.map(h => '<a href="' + h[0] + '"' + (h[0] === page ? ' class="lb-menu-active"' : '') +
         '><span class="hub-icon">' + h[1] + '</span>' + esc(h[2]) + '</a>').join('') + (hub.length ? '</div>' : '');
     const calcs = CALCS.filter(h => moduleAllowed(h[3]) && (h[0] !== 'mixed-calc.html' || moduleAllowed('chocolate')));
