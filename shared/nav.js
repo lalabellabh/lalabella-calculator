@@ -77,6 +77,7 @@
       ['item-inventory.html', '📦', 'Item Inventory'],
       ['item-dashboard.html', '📊', 'Item Dashboard'],
       ['item-saudi.html', '🚚', 'Saudi Transfers'],
+      ['cafe-inventory.html', '☕', 'Café Inventory'],
       ['item-admin.html', '🔐', 'Item Admin', 'admin'],
       ['item-photos.html', '🖼️', 'Item Photos', 'admin'],
       ['item-odoo-import.html', '📥', 'Odoo Price Import', 'admin']

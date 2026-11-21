@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Café Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="lb-theme-keep" content=".wrap, .card">
+<!-- Café monthly inventory (Nov 21 2026, Bench): the café item list with pictures (like flower / chocolate),
+     and the month-end count: what is in stock + expiry. Backend: supabase/functions/cafe-fast -->
+<style>
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; --brand:#9e2f4a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#f6efe6,#eef6f0); min-height:100vh; }
+  .wrap{ max-width:1050px; margin:0 auto; padding:16px 16px 70px; }
+  header{ padding-left:56px; margin:6px 0 12px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
+  .sub{ color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+  .bar input,.bar select,.bar button,.btn{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:10px; padding:8px 12px; background:#fff; color:var(--ink); cursor:pointer; }
+  .btn.go{ background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; border:0; font-weight:700; }
+  .btn.ok{ background:var(--ok); color:#fff; border:0; font-weight:700; }
+  .card{ background:rgba(255,255,255,.93); border:1px solid var(--line); border-radius:14px; padding:6px 12px; overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+  th{ text-align:left; font-size:11.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; padding:8px 6px; border-bottom:2px solid var(--line); white-space:nowrap; }
+  td{ padding:6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr.cat td{ background:#faf5ef; font-weight:800; font-size:12px; color:#7a5a20; padding:6px 8px; }
+  .pic{ width:46px; height:46px; border-radius:10px; background:#f3ece6 center/cover no-repeat; border:1px dashed #d9c7bd; display:flex; align-items:center; justify-content:center; font-size:18px; color:#b9a49a; cursor:default; }
+  .pic.has{ border-style:solid; border-color:#eadbd4; cursor:zoom-in; }
+  .pic.can{ cursor:pointer; }
+  .nm{ font-weight:700; } .nm small{ display:block; font-weight:400; color:var(--dim); font-size:11.5px; }
+  .q{ display:flex; gap:6px; align-items:center; } .q input{ width:96px; }
+  td input{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:9px; padding:7px 8px; background:#fff; color:var(--ink); }
+  td input.note{ width:100%; min-width:140px; }
+  .u{ font-size:12px; color:var(--dim); min-width:40px; }
+  .prev{ font-size:11.5px; color:var(--dim); white-space:nowrap; }
+  .zero{ color:var(--bad); font-weight:700; }
+  .soon{ color:#a8560b; font-weight:700; }
+  .chg{ background:#fff7e0 !important; }
+  .acts{ white-space:nowrap; } .acts button{ border:0; background:#f1e7ea; border-radius:8px; padding:5px 8px; cursor:pointer; font-size:13px; }
+  .savebar{ position:sticky; bottom:10px; margin-top:12px; display:flex; gap:10px; align-items:center; justify-content:flex-end; background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:14px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .savebar .msg{ margin-right:auto; font-size:12.5px; color:var(--dim); }
+  .empty{ color:var(--dim); text-align:center; padding:20px 0; font-size:13px; }
+  .ed-bg{ position:fixed; inset:0; z-index:2147483000; background:rgba(40,20,30,.45); display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; }
+  .ed{ background:#fff; border-radius:16px; width:min(460px,100%); padding:18px; box-shadow:0 20px 50px rgba(0,0,0,.25); }
+  .ed h3{ margin:0 0 8px; font-size:17px; }
+  .ed label{ display:block; font-size:12px; font-weight:700; color:var(--dim); margin:10px 0 4px; }
+  .ed input,.ed select{ width:100%; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+  .ed .row{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .ed .prev-img{ display:none; max-width:100%; max-height:220px; border-radius:12px; margin-top:8px; }
+  .ed .paste{ margin-top:6px; padding:9px; border:1px dashed #d9c7bd; border-radius:10px; font-size:12px; color:var(--dim); text-align:center; }
+  .zoom{ position:fixed; inset:0; z-index:2147483001; background:rgba(0,0,0,.8); display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+  .zoom img{ max-width:92vw; max-height:88vh; border-radius:12px; }
+  #pr{ display:none; }
+  @media print{
+    body{ background:#fff !important; } body *{ visibility:hidden !important; }
+    #pr, #pr *{ visibility:visible !important; }
+    #pr{ display:block !important; position:absolute; top:0; left:0; width:100%; font-family:Calibri,Arial,sans-serif; color:#000; }
+    #pr h2{ margin:0 0 8px; font-size:20px; background:#fde6dc; padding:6px 8px; }
+    #pr table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:0; }
+    #pr th,#pr td{ border:1px solid #000; padding:4px 6px; }
+    #pr th{ background:#dfeaf7; color:#000; font-size:12px; text-transform:none; letter-spacing:0; }
+    #pr td.c{ text-align:center; }
+    @page{ size:A4; margin:12mm; }
+  }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<div class="wrap">
+  <header>
+    <h1>☕ Café Inventory</h1>
+    <div class="sub">Month-end stock of the café — cups, coffee, syrups… with expiry. Pictures like the flower and chocolate lists.</div>
+  </header>
+  <div class="bar">
+    <label style="font-size:12.5px">Month <input type="month" id="month"></label>
+    <select id="cat"><option value="">All items</option></select>
+    <input id="q" placeholder="Search…" style="min-width:160px">
+    <button id="copyPrev" class="btn" title="Fill the empty boxes with last month's numbers">⤵ Copy last month</button>
+    <button id="print" class="btn">🖨️ Print</button>
+    <button id="add" class="btn go" style="display:none">＋ Add item</button>
+  </div>
+  <div class="card"><table>
+    <thead><tr><th>#</th><th>📷</th><th>Item</th><th>In stock</th><th>Expiry</th><th>Last month</th><th>Note</th><th></th></tr></thead>
+    <tbody id="rows"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+  </table></div>
+  <div class="savebar"><span class="msg" id="msg"></span><button id="save" class="btn ok">💾 Save count</button></div>
+</div>
+<div id="pr"></div>
+<script>
+(function(){
+  var API = (window.LB_CONFIG && LB_CONFIG.CAFE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/cafe-fast';
+  var esc = window.lbEsc, $ = function(id){ return document.getElementById(id); };
+  function token(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
+  var UNITS = ['pcs','kg','g','liters','ml','boxes','packs','bottles','sets'];
+  var D = null, dirty = {};
+  function api(body){ body.token = token(); return fetch(API, { method:'POST', body:new URLSearchParams(body) }).then(function(r){ return r.json(); }); }
+  function today(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
+  function n3(v){ return v == null || v === '' ? '' : String(Math.round(Number(v) * 1000) / 1000); }
+  function fd(d){ if(!d) return ''; var p = String(d).slice(0, 10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function monthName(m){ var d = new Date(m + 'T00:00:00'); return d.toLocaleString('en-GB', { month:'long', year:'numeric' }).toUpperCase(); }
+  // default month = last month until the 10th (counting at month end), else this month
+  (function(){ var d = new Date(Date.now() + 3 * 3600000); if(d.getUTCDate() <= 10) d.setUTCMonth(d.getUTCMonth() - 1); $('month').value = d.toISOString().slice(0, 7); })();
+
+  function load(){
+    dirty = {}; $('msg').textContent = '';
+    api({ action:'list', month:$('month').value }).then(function(d){
+      if(!d || !d.success){ $('rows').innerHTML = '<tr><td colspan="8" class="empty">' + esc((d && d.error) || 'Could not load.') + '</td></tr>'; return; }
+      D = d; $('add').style.display = d.admin ? '' : 'none';
+      var cats = []; d.items.forEach(function(i){ if(i.category && cats.indexOf(i.category) === -1) cats.push(i.category); });
+      var cur = $('cat').value; $('cat').innerHTML = '<option value="">All items</option>' + cats.map(function(c){ return '<option' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('');
+      draw();
+    }).catch(function(){ $('rows').innerHTML = '<tr><td colspan="8" class="empty">Connection problem.</td></tr>'; });
+  }
+  function expClass(e){ if(!e) return ''; var days = (new Date(e + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 86400000; return days < 0 ? 'zero' : days <= 60 ? 'soon' : ''; }
+  function draw(){
+    if(!D) return;
+    var term = $('q').value.trim().toLowerCase(), cf = $('cat').value, last = null, no = 0;
+    var list = D.items.filter(function(i){ return (!cf || i.category === cf) && (!term || (i.name + ' ' + i.category).toLowerCase().indexOf(term) !== -1); });
+    $('rows').innerHTML = list.length ? list.map(function(i){
+      no++;
+      var head = i.category !== last ? '<tr class="cat"><td colspan="8">' + esc(i.category || 'Other') + '</td></tr>' : ''; last = i.category;
+      var v = dirty[i.id] || i;
+      var pic = '<div class="pic' + (i.photo ? ' has' : '') + (D.admin ? ' can' : '') + '" data-pic="' + i.id + '" title="' + (i.photo ? 'Tap to see' + (D.admin ? ' · Admin: hold Shift / long-press to change' : '') : (D.admin ? 'Add a picture' : 'No picture yet')) + '"' + (i.photo ? ' style="background-image:url(\'' + esc(i.photo) + '\')"' : '') + '>' + (i.photo ? '' : (D.admin ? '＋' : '☕')) + '</div>';
+      return head + '<tr data-id="' + i.id + '"' + (dirty[i.id] ? ' class="chg"' : '') + '><td>' + no + '</td><td>' + pic + '</td>' +
+        '<td class="nm">' + esc(i.name) + '</td>' +
+        '<td><div class="q"><input type="number" min="0" step="any" inputmode="decimal" data-f="qty" value="' + esc(n3(v.qty)) + '"' + (v.qty === 0 ? ' class="zero"' : '') + '><span class="u">' + esc(i.unit) + '</span></div></td>' +
+        '<td><input type="date" data-f="expiry" value="' + esc(String(v.expiry || '').slice(0, 10)) + '" class="' + expClass(v.expiry) + '"></td>' +
+        '<td class="prev">' + (i.prevQty != null ? esc(n3(i.prevQty) + ' ' + i.unit) + (i.prevExpiry ? '<br>exp ' + esc(fd(i.prevExpiry)) : '') : '—') + '</td>' +
+        '<td><input class="note" data-f="note" maxlength="200" value="' + esc(v.note || '') + '" placeholder="optional"></td>' +
+        '<td class="acts">' + (D.admin ? '<button data-ed="' + i.id + '" title="Edit item">✏️</button>' : '') + '</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty">No items' + (term || cf ? ' for this search' : ' yet') + '.</td></tr>';
+    var counted = D.items.filter(function(i){ return i.qty != null; }).length;
+    $('msg').textContent = monthName(D.month) + ' · ' + counted + ' of ' + D.items.length + ' counted' + (Object.keys(dirty).length ? ' · ' + Object.keys(dirty).length + ' changed — not saved yet' : '');
+  }
+  $('rows').addEventListener('input', function(e){
+    var f = e.target.getAttribute('data-f'); if(!f) return;
+    var tr = e.target.closest('tr'), id = Number(tr.getAttribute('data-id')), it = D.items.find(function(x){ return x.id === id; });
+    var d = dirty[id] || (dirty[id] = { id:id, qty:it.qty, expiry:it.expiry, note:it.note });
+    d[f] = f === 'qty' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value;
+    tr.classList.add('chg');
+    $('msg').textContent = monthName(D.month) + ' · ' + Object.keys(dirty).length + ' changed — not saved yet';
+  });
+  $('save').onclick = function(){
+    var rows = Object.keys(dirty).map(function(k){ return dirty[k]; });
+    if(!rows.length){ $('msg').textContent = 'Nothing changed.'; return; }
+    var b = this; b.disabled = true; b.textContent = 'Saving…';
+    api({ action:'saveCounts', month:$('month').value, rows:JSON.stringify(rows) }).then(function(d){
+      if(!d || !d.success){ alert((d && d.error) || 'Not saved.'); return; }
+      load(); setTimeout(function(){ $('msg').textContent = '✓ Saved ' + d.saved + ' item(s) for ' + monthName(D.month); }, 600);
+    }).catch(function(){ alert('Connection problem. Please try again.'); }).then(function(){ b.disabled = false; b.textContent = '💾 Save count'; });
+  };
+  $('copyPrev').onclick = function(){
+    if(!D) return; var n = 0;
+    D.items.forEach(function(i){ if(i.qty == null && !dirty[i.id] && i.prevQty != null){ dirty[i.id] = { id:i.id, qty:i.prevQty, expiry:i.prevExpiry, note:i.note }; n++; } });
+    draw(); $('msg').textContent = n ? n + ' box(es) filled from last month — check them, then Save.' : 'Nothing to copy (all counted, or last month is empty).';
+  };
+  window.addEventListener('beforeunload', function(e){ if(Object.keys(dirty).length){ e.preventDefault(); e.returnValue = ''; } });
+  $('month').onchange = function(){ if(Object.keys(dirty).length && !confirm('You have changes not saved. Change the month anyway?')) return; load(); };
+  $('q').oninput = draw; $('cat').onchange = draw;
+
+  // ---------- pictures ----------
+  function shrink(file){ return new Promise(function(res){ var fr = new FileReader(); fr.onload = function(){ var im = new Image(); im.onload = function(){
+    var m = 1000, w = im.width, h = im.height, k = Math.min(1, m / Math.max(w, h)); var c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', .82)); }; im.onerror = function(){ res(''); }; im.src = fr.result; }; fr.onerror = function(){ res(''); }; fr.readAsDataURL(file); }); }
+  function zoom(src){ var z = document.createElement('div'); z.className = 'zoom'; z.innerHTML = '<img src="' + esc(src) + '" alt="">'; z.onclick = function(){ z.remove(); }; document.body.appendChild(z); }
+  function openForm(item){
+    var it = item || { name:'', category:'', unit:'pcs', photo:'' }, newPic = null;
+    var bg = document.createElement('div'); bg.className = 'ed-bg';
+    var cats = []; (D ? D.items : []).forEach(function(i){ if(i.category && cats.indexOf(i.category) === -1) cats.push(i.category); });
+    bg.innerHTML = '<div class="ed"><h3>' + (item ? '✏️ Edit item' : '＋ New café item') + '</h3>' +
+      '<label>Name</label><input data-k="name" maxlength="120" value="' + esc(it.name) + '" placeholder="e.g. Monin Caramel Syrup">' +
+      '<label>Group</label><input data-k="category" list="cafeCats" maxlength="60" value="' + esc(it.category) + '" placeholder="e.g. Syrups"><datalist id="cafeCats">' + cats.map(function(c){ return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
+      '<label>Unit</label><select data-k="unit">' + UNITS.map(function(u){ return '<option' + (u === it.unit ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select>' +
+      '<label>📷 Picture</label><input type="file" accept="image/*" capture="environment" data-k="file"><div class="paste" tabindex="0" data-k="paste">📋 …or click here and press <b>Ctrl+V</b> to paste a picture</div>' +
+      '<img class="prev-img" data-k="img"' + (it.photo ? ' src="' + esc(it.photo) + '" style="display:block"' : '') + '>' +
+      (item && it.photo ? '<label style="font-weight:400"><input type="checkbox" data-k="nopic" style="width:auto"> Remove the picture</label>' : '') +
+      '<div class="row">' + (item ? '<button class="btn" data-k="del" style="margin-right:auto;color:var(--bad)">🗑️ Remove item</button>' : '') + '<button class="btn" data-k="x">Cancel</button><button class="btn ok" data-k="sv">Save</button></div></div>';
+    document.body.appendChild(bg);
+    var q = function(k){ return bg.querySelector('[data-k="' + k + '"]'); };
+    var setPic = function(f){ if(!f) return; shrink(f).then(function(d){ if(!d){ alert('That is not a picture.'); return; } newPic = d; q('img').src = d; q('img').style.display = 'block'; }); };
+    q('file').onchange = function(){ setPic(this.files[0]); };
+    bg.addEventListener('paste', function(e){ var f = [].slice.call((e.clipboardData || {}).items || []).map(function(x){ return x.kind === 'file' ? x.getAsFile() : null; }).filter(Boolean)[0]; if(f){ e.preventDefault(); setPic(f); } });
+    bg.addEventListener('click', function(e){ if(e.target === bg || e.target === q('x')) bg.remove(); });
+    if(q('del')) q('del').onclick = function(){ if(!confirm('Remove "' + it.name + '" from the café list?\nIts old counts are kept.')) return; api({ action:'deleteItem', id:it.id }).then(function(d){ if(!d.success){ alert(d.error || 'Not removed.'); return; } bg.remove(); load(); }); };
+    q('sv').onclick = function(){
+      var name = q('name').value.trim(); if(!name){ alert('Type the item name.'); return; }
+      var b = this; b.disabled = true; b.textContent = 'Saving…';
+      var done = function(d){ if(!d || !d.success){ alert((d && d.error) || 'Not saved.'); b.disabled = false; b.textContent = 'Save'; return; } bg.remove(); load(); };
+      if(!item) return api({ action:'addItem', name:name, category:q('category').value.trim(), unit:q('unit').value, photo:newPic || '' }).then(done).catch(function(){ done(null); });
+      api({ action:'editItem', id:it.id, name:name, category:q('category').value.trim(), unit:q('unit').value }).then(function(d){
+        if(!d || !d.success) return done(d);
+        if(newPic) return api({ action:'setPhoto', id:it.id, photo:newPic }).then(done);
+        if(q('nopic') && q('nopic').checked) return api({ action:'setPhoto', id:it.id, photo:'' }).then(done);
+        done(d);
+      }).catch(function(){ done(null); });
+    };
+    setTimeout(function(){ q('name').focus(); }, 50);
+  }
+  $('add').onclick = function(){ openForm(null); };
+  $('rows').addEventListener('click', function(e){
+    var ed = e.target.closest('[data-ed]'); if(ed){ openForm(D.items.find(function(x){ return String(x.id) === ed.getAttribute('data-ed'); })); return; }
+    var pc = e.target.closest('[data-pic]'); if(!pc) return;
+    var it = D.items.find(function(x){ return String(x.id) === pc.getAttribute('data-pic'); }); if(!it) return;
+    if(it.photo && !(D.admin && e.shiftKey)) { zoom(it.photo); return; }
+    if(D.admin) openForm(it);
+  });
+  // long-press a picture (Admin, phone) = change it
+  var lp = null; $('rows').addEventListener('pointerdown', function(e){ var pc = e.target.closest('[data-pic]'); if(!pc || !D || !D.admin) return; lp = setTimeout(function(){ lp = 'done'; openForm(D.items.find(function(x){ return String(x.id) === pc.getAttribute('data-pic'); })); }, 600); });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ $('rows').addEventListener(ev, function(){ if(lp && lp !== 'done') clearTimeout(lp); }); });
+  $('rows').addEventListener('click', function(e){ if(lp === 'done'){ lp = null; e.stopImmediatePropagation(); } }, true);
+
+  // ---------- print (like the paper sheet) ----------
+  $('print').onclick = function(){
+    if(!D) return;
+    var no = 0;
+    $('pr').innerHTML = '<h2>CAFÉ MONTHLY INVENTORY for: ' + esc(monthName(D.month)) + '</h2><table><thead><tr><th>S.NO</th><th>ITEMS/DESCRIPTION</th><th>IN STOCK</th><th>EXPIRATION DATE</th><th>NOTE</th></tr></thead><tbody>' +
+      D.items.map(function(i){ var v = dirty[i.id] || i; no++; return '<tr><td class="c">' + no + '</td><td><b>' + esc(i.name) + '</b></td><td class="c">' + (v.qty == null ? '' : esc(n3(v.qty)) + ' ' + esc(i.unit.toUpperCase())) + '</td><td class="c">' + esc(fd(v.expiry)) + '</td><td>' + esc(v.note || '') + '</td></tr>'; }).join('') +
+      '</tbody></table><div style="margin-top:10px;font-size:11px">Printed ' + new Date().toLocaleString('en-GB') + (Object.keys(dirty).length ? ' · includes changes not saved yet' : '') + '</div>';
+    window.print();
+  };
+  load();
+})();
+</script>
+</body>
+</html>

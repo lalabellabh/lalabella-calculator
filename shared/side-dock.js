@@ -26,7 +26,7 @@
 
   var KEY = 'lbDock', MAX_CUSTOM = 6;
   var PAGES = [
-    ['index.html', '🍫', 'Chocolate Home'], ['flower-tools.html', '🌸', 'Flower Tools'], ['item-inventory.html', '📦', 'Item Inventory'],
+    ['index.html', '🍫', 'Chocolate Home'], ['flower-tools.html', '🌸', 'Flower Tools'], ['item-inventory.html', '📦', 'Item Inventory'], ['cafe-inventory.html', '☕', 'Café Inventory'],
     ['dashboard.html', '📊', 'Dashboard'], ['chocolate-calc.html', '🍫', 'Chocolate Calculator'], ['chocolate-receiving.html', '📥', 'Chocolate Receiving'],
     ['chocolate-release.html', '📤', 'Chocolate Release'], ['chocolate-barcode.html', '🏷️', 'Chocolate Barcode'], ['stock-count.html', '📋', 'Stock Count'],
     ['flower-calc.html', '🧮', 'Flower Calculator'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['flower-receiving.html', '🛒', 'Flower Receiving'], ['flower-purchase.html', '🧾', 'Flower Purchase'],
