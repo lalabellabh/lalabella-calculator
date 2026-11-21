@@ -87,6 +87,16 @@
   .ic .paste{ border:1px dashed var(--line); border-radius:10px; }
   .ic .paste:focus{ border-color:var(--acc); color:#3d6773; background:#eaf2f4; }
   .cf-tabs a{ background:rgba(255,255,255,.8); border-color:var(--line); color:var(--esp); font-weight:600; }
+  /* barcode label sheet picker */
+  .lb-ed{ width:min(620px,100%) !important; }
+  .lb-list{ max-height:42vh; overflow-y:auto; border:1px solid #ece7df; border-radius:12px; margin-top:8px; }
+  .lb-row{ display:flex; align-items:center; gap:10px; padding:7px 10px; border-top:1px solid #f1ece4; font-size:13px; }
+  .lb-row:first-child{ border-top:0; } .lb-row.on{ background:#f3f8f9; }
+  .lb-row input[type=checkbox]{ width:18px !important; height:18px; flex:none; accent-color:#2b211b; }
+  .lb-row .n{ flex:1; min-width:0; } .lb-row .n small{ display:block; color:#8c8279; font-size:11px; }
+  .lb-row input[type=number]{ width:64px !important; text-align:center; padding:6px !important; }
+  .lb-tot{ margin-top:10px; font-size:12.5px; color:#5f8b97; font-weight:600; }
+  .lb-mini{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; } .lb-mini .cf-btn{ padding:6px 10px; font-size:12px; }
 </style>
 </head>
 <body>
@@ -100,6 +110,7 @@
     <select id="grp"><option value="">All groups</option></select>
     <select id="per"><option value="3">Print: 3 per row</option><option value="4">Print: 4 per row</option><option value="5">Print: 5 per row</option></select>
     <button id="print" class="btn">🖨️ Print</button>
+    <button id="labels" class="btn">🏷️ Barcode labels</button>
     <button id="add" class="btn go" style="display:none">＋ Add item</button>
     <span class="msg" id="cnt"></span>
   </div>
@@ -161,6 +172,85 @@
     $('pr').innerHTML = shown().map(function(i){ return '<div class="pc">' + (i.photo ? '<img src="' + esc(i.photo) + '">' : '') + '<div class="n">' + esc(i.name) + '</div>' + (i.code ? '<svg data-code="' + esc(i.code) + '"></svg><div class="c">' + esc(i.code) + '</div>' : '') + '</div>'; }).join('');
     if(window.JsBarcode) $('pr').querySelectorAll('svg').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:2, height:50, margin:4, displayValue:true, fontSize:14 }); }catch(e){} });
     var imgs = [].slice.call($('pr').querySelectorAll('img')); Promise.all(imgs.map(function(im){ return im.complete ? 1 : new Promise(function(r){ im.onload = im.onerror = r; }); })).then(function(){ window.print(); }); };
+
+  /* ---------- Barcode labels: pick the items + how many labels on one sheet (Nov 21 2026, Bench) ---------- */
+  var SHEETS = {
+    a21: { t:'A4 · 21 labels (3 × 7) · 70 × 42 mm', cols:3, rows:7, w:70, h:42.3, gx:0, gy:0 },
+    a24: { t:'A4 · 24 labels (3 × 8) · 70 × 37 mm', cols:3, rows:8, w:70, h:37, gx:0, gy:0 },
+    a40: { t:'A4 · 40 labels (4 × 10) · 48.5 × 25.4 mm', cols:4, rows:10, w:48.5, h:25.4, gx:0, gy:0 },
+    a65: { t:'A4 · 65 labels (5 × 13) · 38 × 21 mm', cols:5, rows:13, w:38.1, h:21.2, gx:2.5, gy:0 },
+    a12: { t:'A4 · 12 big labels (2 × 6) · 99 × 46 mm', cols:2, rows:6, w:99.1, h:46.6, gx:2.5, gy:0 },
+    t50: { t:'Label printer · 50 × 30 mm (1 per label)', cols:1, rows:1, w:50, h:30, gx:0, gy:0, roll:true },
+    t40: { t:'Label printer · 40 × 25 mm (1 per label)', cols:1, rows:1, w:40, h:25, gx:0, gy:0, roll:true }
+  };
+  function lsGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(e){ return d; } }
+  function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+  $('labels').onclick = function(){
+    if(!D) return;
+    var pick = {};   // id -> copies
+    var bg = document.createElement('div'); bg.className = 'cf-bg';
+    bg.innerHTML = '<div class="cf-ed lb-ed"><h3>🏷️ Print barcode labels</h3>' +
+      '<label>Label sheet</label><select data-k="sheet">' + Object.keys(SHEETS).map(function(k){ return '<option value="' + k + '">' + SHEETS[k].t + '</option>'; }).join('') + '</select>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Start at label no. <span style="font-weight:400">(used sheet)</span></label><input type="number" data-k="start" min="1" value="1"></div>' +
+      '<div><label>Show on label</label><select data-k="show"><option value="nc">Name + barcode + code</option><option value="c">Barcode + code only</option></select></div></div>' +
+      '<label>Items <span style="font-weight:400">— tick the items, type how many labels each</span></label><input data-k="q" placeholder="Search item or code…">' +
+      '<div class="lb-mini"><button class="cf-btn" data-k="all">✓ Tick all shown</button><button class="cf-btn" data-k="none">✕ Clear</button><button class="cf-btn" data-k="fill">Fill 1 sheet with each ticked item</button></div>' +
+      '<div class="lb-list" data-k="list"></div><div class="lb-tot" data-k="tot"></div>' +
+      '<div class="cf-row"><button class="cf-btn" data-k="x">Cancel</button><button class="cf-btn ok" data-k="go">🖨️ Print labels</button></div></div>';
+    document.body.appendChild(bg);
+    var q = function(k){ return bg.querySelector('[data-k="' + k + '"]'); };
+    q('sheet').value = SHEETS[lsGet('cafeLabelSheet', 'a21')] ? lsGet('cafeLabelSheet', 'a21') : 'a21';
+    function list(){ var t = q('q').value.trim().toLowerCase(); return D.items.filter(function(i){ return i.code && (!t || (i.name + ' ' + i.code + ' ' + i.category).toLowerCase().indexOf(t) !== -1); }); }
+    function paint(){
+      q('list').innerHTML = list().map(function(i){ var on = pick[i.id] > 0;
+        return '<div class="lb-row' + (on ? ' on' : '') + '" data-id="' + i.id + '"><input type="checkbox"' + (on ? ' checked' : '') + '><div class="n">' + esc(i.name) + '<small>' + esc(i.code) + ' · ' + esc(i.category || '') + '</small></div><input type="number" min="0" max="999" value="' + (pick[i.id] || '') + '" placeholder="0"></div>'; }).join('') || '<div class="empty">No items with a code.</div>';
+      tot();
+    }
+    function tot(){ var S = SHEETS[q('sheet').value], per = S.cols * S.rows, n = 0; Object.keys(pick).forEach(function(k){ n += pick[k] || 0; });
+      var start = Math.max(1, Math.min(per, Number(q('start').value) || 1)); var all = n + (S.roll ? 0 : start - 1);
+      q('tot').textContent = n ? n + ' label(s) · ' + (S.roll ? n + ' on the label printer' : Math.ceil(all / per) + ' sheet(s) of ' + per) : 'Tick at least one item.'; }
+    q('list').addEventListener('change', function(e){ var r = e.target.closest('[data-id]'); if(!r) return; var id = r.getAttribute('data-id'), num = r.querySelector('input[type=number]');
+      if(e.target.type === 'checkbox'){ pick[id] = e.target.checked ? Math.max(1, Number(num.value) || 1) : 0; num.value = pick[id] || ''; r.classList.toggle('on', e.target.checked); }
+      tot(); });
+    q('list').addEventListener('input', function(e){ if(e.target.type !== 'number') return; var r = e.target.closest('[data-id]'), id = r.getAttribute('data-id'), v = Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0)));
+      pick[id] = v; r.querySelector('input[type=checkbox]').checked = v > 0; r.classList.toggle('on', v > 0); tot(); });
+    q('q').oninput = paint; q('sheet').onchange = tot; q('start').oninput = tot;
+    q('all').onclick = function(){ list().forEach(function(i){ if(!(pick[i.id] > 0)) pick[i.id] = 1; }); paint(); };
+    q('none').onclick = function(){ pick = {}; paint(); };
+    q('fill').onclick = function(){ var S = SHEETS[q('sheet').value], per = S.cols * S.rows; var ids = Object.keys(pick).filter(function(k){ return pick[k] > 0; });
+      if(!ids.length){ alert('Tick the items first.'); return; } ids.forEach(function(k){ pick[k] = per; }); paint(); };
+    bg.addEventListener('click', function(e){ if(e.target === bg || e.target === q('x')) bg.remove(); });
+    q('go').onclick = function(){
+      var S = SHEETS[q('sheet').value], per = S.cols * S.rows, labels = [];
+      D.items.forEach(function(i){ for(var k = 0; k < (pick[i.id] || 0); k++) labels.push(i); });
+      if(!labels.length){ alert('Tick at least one item.'); return; }
+      if(!window.JsBarcode){ alert('The barcode maker did not load (internet?). Please refresh and try again.'); return; }
+      lsSet('cafeLabelSheet', q('sheet').value);
+      var start = S.roll ? 1 : Math.max(1, Math.min(per, Number(q('start').value) || 1));
+      for(var k = 1; k < start; k++) labels.unshift(null);   // skip labels already used on the sheet
+      printLabels(S, labels, q('show').value === 'nc'); bg.remove();
+    };
+    paint();
+  };
+  function printLabels(S, labels, withName){
+    var per = S.cols * S.rows, pages = [], pw = S.roll ? S.w : 210, ph = S.roll ? S.h : 297;
+    for(var i = 0; i < labels.length; i += per) pages.push(labels.slice(i, i + per));
+    var padL = Math.max(0, (pw - S.cols * S.w - (S.cols - 1) * S.gx) / 2), padT = Math.max(0, (ph - S.rows * S.h - (S.rows - 1) * S.gy) / 2);
+    var fs = Math.max(5.5, Math.min(10, S.h * .2)), bh = withName ? S.h * .42 : S.h * .58;
+    var st = document.getElementById('lbPrintCss') || document.createElement('style'); st.id = 'lbPrintCss';
+    st.textContent = '@media print{ @page{ size:' + pw + 'mm ' + ph + 'mm; margin:0; } #pr{ display:block !important; } #pr .lpg{ width:' + pw + 'mm; height:' + ph + 'mm; box-sizing:border-box; padding:' + padT + 'mm ' + padL + 'mm; display:grid; grid-template-columns:repeat(' + S.cols + ',' + S.w + 'mm); grid-auto-rows:' + S.h + 'mm; column-gap:' + S.gx + 'mm; row-gap:' + S.gy + 'mm; page-break-after:always; break-after:page; overflow:hidden; }' +
+      ' #pr .lb{ box-sizing:border-box; padding:1.2mm 2mm; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; text-align:center; font-family:Arial,sans-serif; color:#000; }' +
+      ' #pr .lb .n{ font-weight:700; font-size:' + fs + 'pt; line-height:1.1; max-height:2.3em; overflow:hidden; width:100%; }' +
+      ' #pr .lb svg{ width:100%; height:' + bh + 'mm; display:block; margin-top:.6mm; }' +
+      ' #pr .lb .c{ font-family:monospace; font-size:' + Math.max(5.5, fs * .85) + 'pt; margin-top:.3mm; } }';
+    document.head.appendChild(st);
+    $('pr').style.gridTemplateColumns = '';
+    $('pr').innerHTML = pages.map(function(pg){ return '<div class="lpg">' + pg.map(function(i){ return i ? '<div class="lb">' + (withName ? '<div class="n">' + esc(i.name) + '</div>' : '') + '<svg data-code="' + esc(i.code) + '" preserveAspectRatio="none"></svg><div class="c">' + esc(i.code) + '</div></div>' : '<div class="lb"></div>'; }).join('') + '</div>'; }).join('');
+    $('pr').querySelectorAll('svg').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:2, height:60, margin:0, displayValue:false }); }catch(e){} });
+    var done = function(){ st.remove(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(function(){ window.print(); }, 100);
+  }
   load();
 })();
 </script>
