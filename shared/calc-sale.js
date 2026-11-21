@@ -62,7 +62,7 @@
       if (!items.length) { alert('The list is empty.'); return; }
       var sig = JSON.stringify([branch, items]);
       if (sig === lastSig && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastNo + ' a moment ago.\n\nPress OK ONLY if this is a NEW customer buying the same thing again. Otherwise press Cancel (printing again does not take anything out of stock).')) return;
-      var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
+      var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' + (Number(it.kg) > 0 ? ' (' + Number(it.kg).toFixed(3) + ' kg)' : '') : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
       if (!confirm('Source: ' + src + (refVal !== src ? '\nSold to: ' + refVal : '') + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
       if (busy) return; busy = true;
       // one key per sale: if the reply is lost and they press again, the server sees the same key and does not save twice

@@ -94,10 +94,16 @@
   var u = {}; try{ u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){}
   var admin = String(u.role || '').toLowerCase() === 'admin';
   function when(t){ var d = new Date(t); return d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }); }
+  // Nov 21 (Bench): chocolate pieces also show the weight, e.g. "51 pcs (0.510 kg)"
+  function chocQty(it){
+    var kg = Number(it.kg) || 0;
+    if(it.mode === 'pieces') return esc(it.amount) + ' pcs' + (kg > 0 ? ' (' + kg.toFixed(3) + ' kg)' : '');
+    return kg.toFixed(3) + ' kg';
+  }
   function itemText(s){
     return (s.items || []).map(function(it){
       if(s.kind === 'flower') return esc(it.name) + ' × ' + esc(it.qty);
-      return esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : (Number(it.kg) || 0).toFixed(3) + ' kg');
+      return esc(it.name) + ' — ' + chocQty(it);
     }).join(' · ') + (extrasOf(s).length ? '<div style="margin-top:3px;color:#7a5a20">🎀 Extras: ' + extrasOf(s).map(function(x){ return esc(x.desc) + ' ' + f3(x.price); }).join(' · ') + '</div>' : '');
   }
   // Nov 15 2026: the extras of a sale (older sales only know the extras total -> one "Extras" line)
@@ -111,7 +117,7 @@
   function reprint(s, mode){
     var rows = (s.items || []).map(function(it){
       if(s.kind === 'flower') return '<div class="r"><span>' + esc(it.name) + ' x' + esc(it.qty) + '</span><span>' + f3((Number(it.qty) || 0) * (Number(it.rate) || 0)) + ' BD</span></div>';
-      return '<div class="r"><span>' + esc(it.name) + ' — ' + (it.mode === 'pieces' ? esc(it.amount) + ' pcs' : f3(it.kg) + ' kg') + '</span><span>' + f3(it.total) + ' BD</span></div>';
+      return '<div class="r"><span>' + esc(it.name) + ' — ' + chocQty(it) + '</span><span>' + f3(it.total) + ' BD</span></div>';
     }).join('') + extrasOf(s).map(function(x){ return '<div class="r"><span>' + esc(x.desc) + '</span><span>' + f3(x.price) + ' BD</span></div>'; }).join('');
     $('rp').className = mode;
     $('rp').innerHTML = '<h2>' + (s.kind === 'flower' ? 'Lalabella Flowers' : 'Lalabella') + '</h2><div class="c">' + esc(s.branch) + ' · ' + when(s.at) + '</div>' +
