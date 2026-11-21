@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Café Stock Count</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="lb-theme-keep" content=".wrap, .card">
+<style>
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#f6efe6,#eef6f0); min-height:100vh; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:16px 16px 80px; }
+  header{ padding-left:56px; margin:6px 0 6px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
+  .sub{ color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+  .bar input,.bar select,.btn{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:10px; padding:8px 12px; background:#fff; color:var(--ink); cursor:pointer; }
+  .btn.go{ background:linear-gradient(135deg,#c9506b,#9e2f4a); color:#fff; border:0; font-weight:700; }
+  .btn.ok{ background:var(--ok); color:#fff; border:0; font-weight:700; }
+  .card{ background:rgba(255,255,255,.93); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:14px; }
+  .card h2{ font-family:'Fraunces',serif; font-size:17px; margin:0 0 10px; }
+  .card label{ display:block; font-size:11.5px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; margin:8px 0 4px; }
+  .card input,.card select{ width:100%; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:10px; padding:9px 10px; background:#fff; color:var(--ink); }
+  .g2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; } .g3{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+  @media(max-width:620px){ .g2,.g3{ grid-template-columns:1fr; } }
+  .pic{ width:44px; height:44px; flex:none; border-radius:10px; background:#f3ece6 center/cover no-repeat; border:1px dashed #d9c7bd; display:flex; align-items:center; justify-content:center; font-size:17px; color:#b9a49a; }
+  .pic.has{ border-style:solid; border-color:#eadbd4; cursor:zoom-in; } .pic.can{ cursor:pointer; }
+  .row{ display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line); }
+  .row:first-child{ border-top:0; }
+  .nm{ flex:1; min-width:0; font-weight:700; font-size:14px; } .nm small{ display:block; font-weight:400; color:var(--dim); font-size:11.5px; }
+  .grp{ font-size:12px; font-weight:800; color:#7a5a20; background:#faf5ef; padding:6px 10px; border-radius:8px; margin:10px 0 2px; }
+  .zero{ color:var(--bad); } .soon{ color:#a8560b; }
+  .empty{ color:var(--dim); text-align:center; padding:18px 0; font-size:13px; }
+  .msg{ font-size:12.5px; color:var(--dim); }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<script src="shared/cafe-common.js"></script>
+<div class="wrap">
+  <header><h1>📋 Café Stock Count</h1><div class="sub">Count what is really on the shelf. The count becomes the new café stock from that day.</div></header>
+  <div id="tabs"></div>
+  <div class="bar">
+    <label style="font-size:12.5px">Count date <input type="date" id="date"></label>
+    <input id="q" placeholder="Search…" style="flex:1;min-width:140px">
+    <select id="past"><option value="">Past counts…</option></select>
+    <button class="btn" id="print">🖨️ Print sheet</button>
+  </div>
+  <div class="card" id="list"><div class="empty">Loading…</div></div>
+  <div class="card" style="position:sticky;bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span class="msg" id="msg" style="flex:1"></span>
+    <label style="margin:0;text-transform:none;font-size:12.5px;display:flex;gap:6px;align-items:center">Counted by <input id="by" maxlength="60" style="width:160px;padding:7px 9px"></label>
+    <button class="btn ok" id="save">💾 Save count</button>
+  </div>
+</div>
+<div id="pr" style="display:none"></div>
+<style>
+  .cnt{ width:96px !important; } .note{ width:150px !important; }
+  .row input{ font:inherit; font-size:13px; border:1px solid var(--line); border-radius:9px; padding:7px 8px; background:#fff; }
+  .row.chg{ background:#fff7e0; }
+  .sys{ font-size:11.5px; color:var(--dim); min-width:86px; text-align:right; }
+  @media(max-width:620px){ .note{ display:none; } }
+  @media print{ body *{ visibility:hidden !important; } #pr,#pr *{ visibility:visible !important; } #pr{ display:block !important; position:absolute; top:0; left:0; width:100%; font-family:Arial,sans-serif; color:#000; }
+    #pr table{ width:100%; border-collapse:collapse; font-size:12px; } #pr th,#pr td{ border:1px solid #000; padding:4px 6px; } #pr th{ background:#eee; } @page{ size:A4; margin:12mm; } }
+</style>
+<script>
+(function(){
+  var C = window.LBCafe, esc = C.esc, $ = function(id){ return document.getElementById(id); }, D = null, S = null, dirty = {};
+  $('tabs').innerHTML = C.tabs('cafe-stock-count.html'); $('date').value = C.today();
+  var u = C.me(); $('by').value = u.fullName || u.full_name || u.username || '';
+  function load(){
+    dirty = {}; $('msg').textContent = '';
+    Promise.all([C.api({ action:'items' }), C.api({ action:'countSheet', date:$('date').value }), C.api({ action:'countDates' })]).then(function(r){
+      if(!r[0] || !r[0].success || !r[1] || !r[1].success){ $('list').innerHTML = '<div class="empty">' + esc((r[0] && r[0].error) || (r[1] && r[1].error) || 'Could not load.') + '</div>'; return; }
+      D = r[0]; S = r[1].rows;
+      $('past').innerHTML = '<option value="">Past counts…</option>' + ((r[2] && r[2].dates) || []).map(function(x){ return '<option value="' + x.date + '">' + C.fd(x.date) + ' · ' + x.items + ' items' + (x.by ? ' · ' + esc(x.by) : '') + '</option>'; }).join('');
+      draw();
+    }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
+  }
+  function val(i){ return dirty[i.id] || { qty: S[i.id] && S[i.id].counted != null ? S[i.id].counted : '', expiry: S[i.id] ? S[i.id].expiry : '', note: S[i.id] ? S[i.id].note : '' }; }
+  function draw(){
+    var t = $('q').value.trim().toLowerCase(), last = null;
+    var L = D.items.filter(function(i){ return !t || (i.name + ' ' + i.category).toLowerCase().indexOf(t) !== -1; });
+    $('list').innerHTML = L.length ? L.map(function(i){
+      var head = i.category !== last ? '<div class="grp">' + esc(i.category || 'Other') + '</div>' : ''; last = i.category;
+      var v = val(i), s = S[i.id] || {};
+      return head + '<div class="row' + (dirty[i.id] ? ' chg' : '') + '" data-id="' + i.id + '"><div class="pic' + (i.photo ? ' has' : '') + '"' + (i.photo ? ' data-z="' + esc(i.photo) + '" style="background-image:url(\'' + esc(i.photo) + '\')"' : '') + '>' + (i.photo ? '' : '☕') + '</div>' +
+        '<div class="nm">' + esc(i.name) + '<small>' + esc(i.unit) + (s.lastCount ? ' · last count ' + C.fd(s.lastCount) : '') + '</small></div>' +
+        '<div class="sys" title="What the system expects now">system ' + C.n3(s.system || 0) + '</div>' +
+        '<input class="cnt" type="number" min="0" step="any" inputmode="decimal" data-f="qty" placeholder="count" value="' + esc(C.n3(v.qty)) + '">' +
+        '<input class="note" data-f="note" maxlength="200" placeholder="note" value="' + esc(v.note || '') + '"></div>';
+    }).join('') : '<div class="empty">No items' + (t ? ' for this search' : ' yet — add them in Café Items & Stock') + '.</div>';
+    var n = D.items.filter(function(i){ var v = val(i); return v.qty !== '' && v.qty != null; }).length;
+    $('msg').textContent = C.fd($('date').value) + ' · ' + n + ' of ' + D.items.length + ' counted' + (Object.keys(dirty).length ? ' · ' + Object.keys(dirty).length + ' changed — not saved yet' : '');
+  }
+  $('list').addEventListener('input', function(e){
+    var f = e.target.getAttribute('data-f'); if(!f) return; var row = e.target.closest('.row'), id = Number(row.getAttribute('data-id')), it = D.items.find(function(x){ return x.id === id; });
+    var v = dirty[id] || (dirty[id] = Object.assign({ id:id }, val(it))); v[f] = e.target.value; row.classList.add('chg');
+    $('msg').textContent = C.fd($('date').value) + ' · ' + Object.keys(dirty).length + ' changed — not saved yet';
+  });
+  $('list').addEventListener('click', function(e){ var z = e.target.closest('[data-z]'); if(z) C.zoom(z.getAttribute('data-z')); });
+  $('save').onclick = function(){
+    var rows = Object.keys(dirty).map(function(k){ var v = dirty[k]; return { id:v.id, qty: v.qty === '' ? '' : Number(v.qty), expiry:v.expiry || '', note:v.note || '' }; });
+    if(!rows.length){ $('msg').textContent = 'Nothing changed.'; return; }
+    if(!$('by').value.trim()){ alert('Type your name in "Counted by".'); $('by').focus(); return; }
+    var b = this; b.disabled = true; b.textContent = 'Saving…';
+    C.api({ action:'saveCount', date:$('date').value, countedBy:$('by').value.trim(), rows:JSON.stringify(rows) }).then(function(d){
+      if(!d || !d.success){ alert((d && d.error) || 'Not saved.'); return; }
+      load(); setTimeout(function(){ $('msg').textContent = '✓ Saved ' + d.saved + ' count(s)' + (d.cleared ? ', ' + d.cleared + ' cleared' : '') + '.'; }, 700);
+    }).catch(function(){ alert('Connection problem. Please try again.'); }).then(function(){ b.disabled = false; b.textContent = '💾 Save count'; });
+  };
+  $('date').onchange = function(){ if(Object.keys(dirty).length && !confirm('You have counts not saved. Change the date anyway?')) return; load(); };
+  $('past').onchange = function(){ if(!this.value) return; $('date').value = this.value; this.value = ''; load(); };
+  $('q').oninput = function(){ if(D) draw(); };
+  $('print').onclick = function(){ if(!D) return; var no = 0;
+    $('pr').innerHTML = '<h2 style="margin:0 0 8px">Café stock count — ' + C.fd($('date').value) + '</h2><table><thead><tr><th>#</th><th>Item</th><th>Unit</th><th>System</th><th>Count</th><th>Note</th></tr></thead><tbody>' +
+      D.items.map(function(i){ var v = val(i), s = S[i.id] || {}; no++; return '<tr><td>' + no + '</td><td>' + esc(i.name) + '</td><td>' + esc(i.unit) + '</td><td>' + C.n3(s.system || 0) + '</td><td>' + esc(C.n3(v.qty)) + '</td><td>' + esc(v.note || '') + '</td></tr>'; }).join('') + '</tbody></table>';
+    window.print(); };
+  window.addEventListener('beforeunload', function(e){ if(Object.keys(dirty).length){ e.preventDefault(); e.returnValue = ''; } });
+  load();
+})();
+</script>
+</body>
+</html>

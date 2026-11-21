@@ -1,6 +1,8 @@
 // LALABELLA — Café monthly inventory (Nov 21 2026, Bench).
-// cafe_items: the list (name, category, unit, picture) · cafe_counts: what is in stock at the end of each month, with expiry.
-// Actions: list (month) · saveCounts (anyone logged in) · addItem / editItem / deleteItem / setPhoto (Admin).
+// Flower style (Bench, Nov 21): cafe_items = the list (name, group, unit, picture) · cafe_receiving = items received ·
+// cafe_stock_count = physical count on a day. Stock now = last count + received after that day (starts at zero).
+// Actions: items · receive · receivings · deleteReceiving (Admin) · countSheet (date) · saveCount · countDates ·
+//          addItem / editItem / deleteItem / setPhoto (Admin). (list / saveCounts = the old month sheet, kept for reference.)
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -120,6 +122,76 @@ async function saveCounts(p: any, u: any) {
   if (!r.ok) throw new Error(`db ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return { success: true, saved: out.length };
 }
+// ---------- flower style ----------
+const today = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+async function stockNow() {   // { item_id: { qty, countDate, countQty, received } }
+  const [counts, recs] = await Promise.all([
+    sbGetAll('cafe_stock_count?select=item_id,count_date,qty&order=count_date.desc'),
+    sbGetAll('cafe_receiving?select=item_id,receive_date,qty,expiry'),
+  ]);
+  const out: Record<string, any> = {};
+  counts.forEach((c: any) => { if (!out[c.item_id]) out[c.item_id] = { countDate: c.count_date, countQty: Number(c.qty), received: 0, qty: Number(c.qty) }; });
+  recs.forEach((r: any) => {
+    const o = out[r.item_id] || (out[r.item_id] = { countDate: '', countQty: 0, received: 0, qty: 0 });
+    if (!o.countDate || String(r.receive_date) > String(o.countDate)) { o.received += Number(r.qty); o.qty += Number(r.qty); }
+    if (r.expiry && (!o.nextExpiry || r.expiry < o.nextExpiry) && r.expiry >= today()) o.nextExpiry = r.expiry;
+  });
+  Object.keys(out).forEach((k) => { out[k].qty = Math.round(out[k].qty * 1000) / 1000; });
+  return out;
+}
+async function items(u: any) {
+  const [rows, st] = await Promise.all([sbGetAll('cafe_items?select=*&active=eq.true&order=sort_order.asc,id.asc'), stockNow()]);
+  const signed = await sign(rows.map((i: any) => i.photo_url || ''));
+  return { success: true, admin: isAdmin(u), me: who(u), today: today(),
+    items: rows.map((i: any) => { const s = st[i.id] || {}; return { id: i.id, name: i.name, category: i.category || '', unit: i.unit || 'pcs', code: i.item_code || '',
+      photo: i.photo_url ? (signed[i.photo_url] || '') : '', stock: s.qty || 0, countDate: s.countDate || '', received: s.received || 0, nextExpiry: s.nextExpiry || '' }; }) };
+}
+async function receive(p: any, u: any) {
+  const d = String(p.date || ''); if (!isDate(d)) return { success: false, error: 'Pick the date.' };
+  let lines: any[] = []; try { lines = JSON.parse(p.lines || '[]'); } catch { lines = []; }
+  const ids = new Set((await sbGetAll('cafe_items?select=id&active=eq.true')).map((i: any) => i.id));
+  const rows = lines.filter((l: any) => ids.has(Number(l.id)) && num(l.qty) && num(l.qty)! > 0).map((l: any) => {
+    const e = String(l.expiry || ''); return { receive_date: d, item_id: Number(l.id), qty: num(l.qty), expiry: isDate(e) ? e : null,
+      supplier: txt(p.supplier, 80) || null, invoice_no: txt(p.invoice, 40) || null, note: txt(l.note, 200) || null, received_by: txt(p.receivedBy, 60) || who(u) }; });
+  if (!rows.length) return { success: false, error: 'Add at least one item with a quantity.' };
+  await sbPost('cafe_receiving', rows);
+  return { success: true, saved: rows.length };
+}
+async function receivings(p: any) {
+  const from = isDate(String(p.from || '')) ? p.from : '', to = isDate(String(p.to || '')) ? p.to : '';
+  let q = 'cafe_receiving?select=*,cafe_items(name,unit)&order=receive_date.desc,id.desc&limit=' + (from || to ? 2000 : 200);
+  if (from) q += `&receive_date=gte.${from}`; if (to) q += `&receive_date=lte.${to}`;
+  const rows = await sbGet(q);
+  return { success: true, rows: rows.map((r: any) => ({ id: r.id, date: r.receive_date, itemId: r.item_id, name: r.cafe_items ? r.cafe_items.name : '?', unit: r.cafe_items ? r.cafe_items.unit : '',
+    qty: Number(r.qty), expiry: r.expiry || '', supplier: r.supplier || '', invoice: r.invoice_no || '', note: r.note || '', by: r.received_by || '', at: r.created_at })) };
+}
+async function countSheet(p: any) {
+  const d = isDate(String(p.date || '')) ? String(p.date) : today();
+  const [rows, st] = await Promise.all([sbGetAll(`cafe_stock_count?select=*&count_date=eq.${d}`), stockNow()]);
+  const c: Record<string, any> = {}; rows.forEach((r: any) => { c[r.item_id] = r; });
+  const its = await sbGetAll('cafe_items?select=id&active=eq.true');
+  const out: Record<string, any> = {};
+  its.forEach((i: any) => { const s = st[i.id] || {}; out[i.id] = { counted: c[i.id] ? Number(c[i.id].qty) : null, expiry: c[i.id] ? c[i.id].expiry || '' : '', note: c[i.id] ? c[i.id].note || '' : '', by: c[i.id] ? c[i.id].counted_by || '' : '', system: s.qty || 0, lastCount: s.countDate || '' }; });
+  return { success: true, date: d, rows: out };
+}
+async function saveCount(p: any, u: any) {
+  const d = String(p.date || ''); if (!isDate(d)) return { success: false, error: 'Pick the date.' };
+  let rows: any[] = []; try { rows = JSON.parse(p.rows || '[]'); } catch { rows = []; }
+  const ids = new Set((await sbGetAll('cafe_items?select=id')).map((i: any) => i.id));
+  const by = txt(p.countedBy, 60) || who(u);
+  const out = rows.filter((r: any) => ids.has(Number(r.id)) && num(r.qty) != null).map((r: any) => { const e = String(r.expiry || ''); return { count_date: d, item_id: Number(r.id), qty: num(r.qty), expiry: isDate(e) ? e : null, note: txt(r.note, 200) || null, counted_by: by, updated_at: new Date().toISOString() }; });
+  const clear = rows.filter((r: any) => ids.has(Number(r.id)) && (r.qty === '' || r.qty === null)).map((r: any) => Number(r.id));
+  if (!out.length && !clear.length) return { success: false, error: 'Nothing to save.' };
+  if (out.length) { const r = await fetch(`${SB_URL}/rest/v1/cafe_stock_count?on_conflict=count_date,item_id`, { method: 'POST', headers: { ...H, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(out) }); if (!r.ok) throw new Error(`db ${r.status}: ${(await r.text()).slice(0, 300)}`); }
+  if (clear.length) await sbDelete('cafe_stock_count', `count_date=eq.${d}&item_id=in.(${clear.join(',')})`);
+  return { success: true, saved: out.length, cleared: clear.length };
+}
+async function countDates() {
+  const r = await sbGetAll('cafe_stock_count?select=count_date,counted_by&order=count_date.desc');
+  const m: Record<string, any> = {}; r.forEach((x: any) => { const k = String(x.count_date); m[k] = m[k] || { date: k, items: 0, by: x.counted_by || '' }; m[k].items++; });
+  return { success: true, dates: Object.values(m) };
+}
+
 const UNITS = ['pcs', 'kg', 'g', 'liters', 'ml', 'boxes', 'packs', 'bottles', 'sets'];
 async function addItem(p: any, u: any) {
   const name = txt(p.name, 120); if (!name) return { success: false, error: 'Type the item name.' };
@@ -164,11 +236,18 @@ Deno.serve(async (req) => {
     const a = String(p.action || '');
     if (a === 'list') return json(await list(p, u));
     if (a === 'saveCounts') return json(await saveCounts(p, u));
+    if (a === 'items') return json(await items(u));
+    if (a === 'receive') return json(await receive(p, u));
+    if (a === 'receivings') return json(await receivings(p));
+    if (a === 'countSheet') return json(await countSheet(p));
+    if (a === 'saveCount') return json(await saveCount(p, u));
+    if (a === 'countDates') return json(await countDates());
     if (!isAdmin(u)) return json({ success: false, error: 'Only an admin can change the item list.' });
     if (a === 'addItem') return json(await addItem(p, u));
     if (a === 'editItem') return json(await editItem(p, u));
     if (a === 'setPhoto') return json(await setPhoto(p, u));
     if (a === 'deleteItem') return json(await deleteItem(p, u));
+    if (a === 'deleteReceiving') { const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return json({ success: false, error: 'Invalid.' }); await sbDelete('cafe_receiving', `id=eq.${id}`); return json({ success: true }); }
     return json({ success: false, error: 'Unknown action.' });
   } catch (e) { console.error(e); return json({ success: false, error: 'Something went wrong. Please try again.' }, 500); }
 });
