@@ -155,7 +155,7 @@
 
   // ---------- chibi animals ----------
   function buildAgent(k){
-    var lk = LOOKS[k] || { a:'bear', fur:'#c98b4f', shirt:'#888' }, g = new T.Group(); scene.add(g);
+    var lk = LOOKS[k] || { a:'bear', fur:'#c98b4f', shirt:'#888' }, g = new T.Group(); if(scene) scene.add(g);
     var body = new T.Group(); g.add(body);
     cyl(.27, .33, .5, lk.shirt, 0, .55, 0, body);
     var legs = new T.Group(); body.add(legs); var l1 = cyl(.09, .09, .35, '#3a3348', -.12, .2, 0, legs, 8), l2 = cyl(.09, .09, .35, '#3a3348', .12, .2, 0, legs, 8);
@@ -180,11 +180,81 @@
     if(a === 'frog'){ ball(.11, furM, -.15, .28, -.1, head); ball(.11, furM, .15, .28, -.1, head); ball(.06, black, -.15, .3, -.2, head); ball(.06, black, .15, .3, -.2, head); }
     if(lk.crown){ var cr = cyl(.2, .2, .12, mat('#ffd24a', { m:.6, r:.3 }), 0, .4, 0, head, 5); }
     if(lk.cap){ ball(.37, mat(lk.cap), 0, .1, 0, head, 1, .55, 1); box(.4, .03, .25, lk.cap, 0, .1, -.32, head); }
+    var eyes = head.children.filter(function(m){ return m.material === black && m.position.y > -.03; });
+    var mouth = ball(.04, mat('#6a2232'), 0, -.165, -.362, head, 1.4, .35, .4); mouth.castShadow = false;
     var hit = new T.Mesh(new T.CylinderGeometry(.55, .55, 1.7, 8), new T.MeshBasicMaterial({ visible:false })); hit.position.y = .85; g.add(hit); hit.userData.k = k;
-    return { k:k, g:g, body:body, head:head, legs:legs, l1:l1, l2:l2, hL:hL, hR:hR, hit:hit, seed:Math.random() * 10,
+    return { k:k, g:g, body:body, head:head, eyes:eyes, mouth:mouth, legs:legs, l1:l1, l2:l2, hL:hL, hR:hR, hit:hit, seed:Math.random() * 10,
       pos:new T.Vector3(), mode:'sit', path:[], wait:0, nextWander:8 + Math.random() * 30, st:'ok', face:0, hidden:false };
   }
 
+
+  // ---------- Daily Stand-up "webcams" (Nov 21 2026, Bench) ----------
+  // Each worker gets a small 3D set (their room's colours, window, shelf, plant, desk, laptop, mug) and is animated live:
+  // breathing, looking around, blinking, mouth + head + hand moving while talking, and a slightly hand-held camera.
+  var MEET = null;
+  function meetRoomOf(k){ return ROOMS.filter(function(R){ return R.agents.indexOf(k) >= 0; })[0] || ROOMS[0]; }
+  function meetBuild(k){
+    var R = meetRoomOf(k), wallC = new T.Color(R.floor[0]).lerp(new T.Color('#fff4e6'), .62), sc = new T.Scene();
+    sc.background = wallC.clone(); sc.fog = new T.Fog(wallC.clone(), 3.4, 7.5);
+    sc.add(new T.HemisphereLight('#fff4e6', '#7a6a5a', .78));
+    var key = new T.DirectionalLight('#ffe7c8', .95); key.position.set(-1.6, 3.2, -3); sc.add(key);
+    var rim = new T.DirectionalLight('#d6e6ff', .6); rim.position.set(1.8, 2.6, 2.4); sc.add(rim);
+    var g = new T.Group(); sc.add(g);
+    box(10, 5, .1, '#' + wallC.getHexString(), 0, 2.2, 2.7, g);
+    box(10, .05, 7, R.floor[1], 0, 0, .6, g);
+    box(10, .14, .06, '#f5ebd8', 0, .07, 2.62, g);
+    // window with a bright sky
+    var wx = -1.25; box(1.7, 1.3, .06, '#f5ebd8', wx, 1.85, 2.6, g); box(1.52, 1.12, .05, mat('#cfe8ff', { e:'#a9d6ff', ei:.75, r:.2 }), wx, 1.85, 2.57, g);
+    box(.05, 1.12, .07, '#f5ebd8', wx, 1.85, 2.55, g); box(1.52, .05, .07, '#f5ebd8', wx, 1.85, 2.55, g);
+    // shelf, plant, wall art, lamp glow
+    shelf(1.55, 2.35, g); plant(.72, 2.15, 1.25, g); plant(-2.35, 2.1, 1.5, g);
+    box(.62, .44, .03, R.rug, .35, 2.15, 2.62, g); box(.5, .32, .02, '#fffaf0', .35, 2.15, 2.6, g);
+    var glow = new T.PointLight('#ffcf8a', .45, 4); glow.position.set(-2.1, 1.6, 1.6); sc.add(glow);
+    // the worker
+    var a = buildAgent(k); if(a.g.parent) a.g.parent.remove(a.g); sc.add(a.g); a.g.position.set(0, 0, 0); a.hit.visible = false;
+    a.hL.position.set(-.27, .86, -.34); a.hR.position.set(.27, .86, -.34);
+    a.eyes.forEach(function(e){ e.userData.sy = e.scale.y || 1; });
+    // desk + laptop + mug in front (the camera looks over them)
+    box(2.4, .08, .8, '#8a5a36', 0, .8, -.78, g); box(2.3, .74, .05, '#74482a', 0, .42, -1.16, g);
+    var lap = new T.Group(); lap.position.set(.86, .84, -.8); lap.rotation.y = -.35; lap.scale.setScalar(.85); g.add(lap);
+    box(.56, .03, .38, '#d4d8df', 0, 0, 0, lap); var lid = box(.56, .36, .02, '#d4d8df', 0, .18, .19, lap); lid.rotation.x = -.18;
+    var logo = ball(.035, mat('#ffffff', { e:'#ffffff', ei:.6 }), 0, .2, .175, lap); logo.scale.set(1, 1, .3);
+    cyl(.07, .06, .15, '#ffffff', -.66, .92, -.7, g); var cof = cyl(.062, .062, .01, '#5a3420', -.66, .99, -.7, g); cof.castShadow = false;
+    var cam = new T.PerspectiveCamera(30, 16 / 11, .1, 30);
+    return { k:k, sc:sc, a:a, cam:cam, t0:Math.random() * 20, base:{ hR:a.hR.position.clone(), hL:a.hL.position.clone() } };
+  }
+  function meetAnim(m, t, talk, big){
+    var a = m.a, tt = t + m.t0, tk = talk ? 1 : 0;
+    a.body.scale.y = 1 + Math.sin(tt * 1.7) * .012;
+    a.body.rotation.y = Math.sin(tt * .35) * .05;
+    a.head.rotation.y = Math.sin(tt * .42) * .1 + tk * Math.sin(tt * 1.3) * .08;
+    a.head.rotation.z = Math.sin(tt * .7) * .035 + tk * Math.sin(tt * 3.2) * .05;
+    a.head.rotation.x = tk ? Math.sin(tt * 4.4) * .045 : Math.sin(tt * .55) * .02;
+    var blink = (tt % 3.9) < .13 || (tt % 11.3) < .1;
+    a.eyes.forEach(function(e){ e.scale.y = (e.userData.sy || 1) * (blink ? .12 : 1); });
+    a.mouth.scale.y = .35 * (talk ? 1 + Math.abs(Math.sin(tt * 11)) * 1.3 + Math.abs(Math.sin(tt * 6.7)) * .6 : 1);
+    a.hR.position.y = m.base.hR.y + (talk ? Math.max(0, Math.sin(tt * 2.1)) * .16 : 0);
+    a.hR.position.z = m.base.hR.z + (talk ? Math.max(0, Math.sin(tt * 2.1)) * -.06 : 0);
+    a.hL.position.y = m.base.hL.y + (talk ? Math.max(0, Math.sin(tt * 1.6 + 2)) * .08 : Math.max(0, Math.sin(tt * .9)) * .02);
+    var cx = Math.sin(tt * .31) * .05 + Math.sin(tt * 1.9) * .006, cy = Math.sin(tt * .47) * .03;
+    if(big){ m.cam.fov = 30; m.cam.position.set(.1 + cx * 1.4, 1.42 + cy, -3.6); m.cam.lookAt(0, 1.1, 0); }
+    else { m.cam.fov = 31; m.cam.position.set(.12 + cx, 1.3 + cy, -2.55); m.cam.lookAt(0, 1.02, 0); }
+  }
+  function meetStart(keys){
+    if(!T && window.THREE) T = window.THREE;
+    if(!T) return false;
+    meetStop();
+    try{
+      var big = new T.WebGLRenderer({ antialias:true }), small = new T.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+      [big, small].forEach(function(r){ if('outputEncoding' in r) r.outputEncoding = T.sRGBEncoding; });
+      big.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6)); small.setPixelRatio(1); small.setSize(256, 176, false);
+      MEET = { big:big, small:small, list:{} };
+      keys.forEach(function(k){ try{ MEET.list[k] = meetBuild(k); }catch(e){ console.warn('meet', k, e); } });
+      return true;
+    }catch(e){ MEET = null; return false; }
+  }
+  function meetStop(){ if(!MEET) return; try{ MEET.big.dispose(); MEET.small.dispose(); if(MEET.big.forceContextLoss) MEET.big.forceContextLoss(); if(MEET.small.forceContextLoss) MEET.small.forceContextLoss(); }catch(e){}
+    Object.keys(MEET.list).forEach(function(k){ MEET.list[k].sc.traverse(function(o){ if(o.geometry) o.geometry.dispose(); }); }); MEET = null; }
   // ---------- scene ----------
   function init(){
     T = window.THREE;
@@ -448,7 +518,7 @@
   var vtmp = null, scrT = 0, lastFrame = 0, perf = [], lowMode = false;
   function loop(){
     requestAnimationFrame(loop);
-    if(document.hidden || !root.offsetWidth || document.documentElement.classList.contains('lbgate-locked')) return;
+    if(document.hidden || !root.offsetWidth || document.documentElement.classList.contains('lbgate-locked') || MEET) return;   // the stand-up has the GPU while it runs
     var nowMs = performance.now(); if(nowMs - lastFrame < 30) return;            // ~30 fps is enough and saves battery
     var spent = nowMs - lastFrame; lastFrame = nowMs;
     if(spent < 1000){ perf.push(spent); if(perf.length > 40) perf.shift(); }
@@ -822,6 +892,16 @@
     },
     say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
     select:select, answer:function(k, r){ if(AG[k]) select(k, r); }, whole:wholeOffice, full:function(on){ if(T) goFull(on); },
+    meet:{
+      start:meetStart, stop:meetStop, ready:function(){ return !!MEET; },
+      bigCanvas:function(){ return MEET && MEET.big.domElement; },
+      // live speaker view: renders straight into the big canvas
+      big:function(k, w, h, t, talk){ var m = MEET && MEET.list[k]; if(!m) return false; var r = MEET.big, c = r.domElement;
+        if(c.__w !== w || c.__h !== h){ r.setSize(w, h, false); c.__w = w; c.__h = h; } m.cam.aspect = w / h; meetAnim(m, t, talk, true); m.cam.updateProjectionMatrix(); r.render(m.sc, m.cam); return true; },
+      // small tiles: render, then copy into the tile's own 2D canvas
+      tile:function(k, ctx, t, talk){ var m = MEET && MEET.list[k]; if(!m) return false; m.cam.aspect = 256 / 176; meetAnim(m, t, talk, false); m.cam.updateProjectionMatrix();
+        MEET.small.render(m.sc, m.cam); ctx.drawImage(MEET.small.domElement, 0, 0, ctx.canvas.width, ctx.canvas.height); return true; }
+    },
     // Nov 21 2026 (Bench): head-and-shoulders "webcam" pictures of each worker for the Daily Stand-up
     portraits:function(keys, size){
       if(!T || !scene) return null;
