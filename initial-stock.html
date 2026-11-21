@@ -6,6 +6,7 @@
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
 <script src="auth-guard.js"></script>
+<script src="shared/fix-mark.js?v=1"></script>
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -527,7 +528,8 @@
     iePriceMode();
     document.getElementById('ieBack').classList.add('show');
     const f = field && document.getElementById(field);
-    if(f) setTimeout(() => { f.focus(); f.style.outline = '3px solid #c0392b'; f.style.outlineOffset = '2px'; f.addEventListener('input', () => { f.style.outline = ''; }, { once:true }); }, 120);
+    if(f && window.LBFix) setTimeout(() => { f.focus(); LBFix.mark(f, new URLSearchParams(location.search).get('why') || 'Fix this field'); }, 350);
+        else if(f) setTimeout(() => { f.focus(); f.style.outline = '3px solid #c0392b'; f.style.outlineOffset = '2px'; f.addEventListener('input', () => { f.style.outline = ''; }, { once:true }); }, 120);
     return true;
   }
   ['iUnit','iPrice'].forEach(id => document.getElementById(id).addEventListener(id === 'iUnit' ? 'change' : 'input', iePriceMode));

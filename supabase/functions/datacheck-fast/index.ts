@@ -83,7 +83,7 @@ async function check(branchSel: string) {
   chocCounts.forEach((r: any) => initBranches.add(r.branch));
   for (const br of chocBranches) {
     const hasInit = choc.some((b: any) => b.branch === br && String(b.delivery_note_no || '') === 'INITIAL STOCK');
-    if (hasInit && String(st['Initial Stock Locked: ' + br] || '') !== 'Yes') add('warn', 'chocolate', br, 'Initial Stock', 'Initial Stock is entered but the branch is not locked yet', 'When complete, press "Lock this branch" on Initial Stock.', 'initial-stock.html');
+    if (hasInit && String(st['Initial Stock Locked: ' + br] || '') !== 'Yes') add('warn', 'chocolate', br, 'Initial Stock', 'Initial Stock is entered but the branch is not locked yet', 'When complete, press "Lock this branch" on Initial Stock.', 'initial-stock.html', '', 'lockBtn');
     if (!initBranches.has(br)) add('bad', 'chocolate', br, 'Initial Stock', 'Chocolate was received but this branch has no Initial Stock / stock count', 'Enter the Initial Stock (or do a stock count) for this branch.', 'initial-stock.html');
   }
 
