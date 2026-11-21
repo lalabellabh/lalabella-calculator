@@ -461,7 +461,7 @@
   var cTotTouched = false;
   function curC(){ var n = Number($('cAmt').value); if(!selC || !(n > 0)) return null;
     var kg = cMode === 'pieces' ? (n * selC.grams) / 1000 : n / 1000;
-    return { type:'choc', name:selC.name, code:selC.code, mode:cMode, amount:n, kg:Math.round(kg * 100000) / 100000, gpp:selC.grams, whole:selC.whole, total:Number(cTotTouched ? $('cTot').value : 0) || 0 }; }
+    return { type:'choc', name:selC.name, code:selC.code, cat:selC.cat || '', mode:cMode, amount:n, kg:Math.round(kg * 100000) / 100000, gpp:selC.grams, whole:selC.whole, total:Number(cTotTouched ? $('cTot').value : 0) || 0 }; }
   function calcC(){
     var n = Number($('cAmt').value);
     if(!selC || !(n > 0)){ if(!cTotTouched) $('cTot').value = ''; $('cEq').textContent = ''; $('cAdd').disabled = true; paintPicked(); return; }
@@ -505,12 +505,19 @@
   var lastSale = null, lastSig = '';
   function sig(){ return JSON.stringify([branch(), LIST]); }
   function lines(){ return LIST.map(function(l){ return (l.type === 'flower' ? '🌸 ' : l.type === 'choc' ? '🍫 ' : '🎀 ') + (l.type === 'extra' ? l.desc : l.name) + ' — ' + qtyTxt(l) + ' = ' + f3(l.total) + ' BD'; }); }
+  // Nov 21 (Bench): total kg of chocolate per collection on the print
+  function catBlock(){
+    var by = {}, all = 0; LIST.filter(function(l){ return l.type === 'choc'; }).forEach(function(l){ var g = l.cat || ((CH.find(function(c){ return c.name === l.name; }) || {}).cat) || 'Other'; by[g] = (by[g] || 0) + (Number(l.kg) || 0); all += Number(l.kg) || 0; });
+    if(!Object.keys(by).length) return '';
+    return '<table style="margin-top:8px;font-size:12px"><tbody>' + Object.keys(by).sort().map(function(g){ return '<tr><td>🍫 ' + e(g) + '</td><td style="text-align:right">' + by[g].toFixed(3) + ' kg</td></tr>'; }).join('') +
+      '<tr><td><b>Total chocolate</b></td><td style="text-align:right"><b>' + all.toFixed(3) + ' kg</b></td></tr></tbody></table>';
+  }
   $('mxPrintBtn').onclick = function(){
     if(!LIST.length){ alert('The list is empty.'); return; }
     var s = sums(), when = new Date().toLocaleString('en-GB', { timeZone:'Asia/Bahrain', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }), sold = lastSale && sig() === lastSig ? lastSale : null;
     $('mxPrint').innerHTML = '<h2 style="margin:0">Lalabella</h2><div style="font-size:12px;margin:2px 0 10px">' + e(branch() || '') + ' · ' + when + (sold ? ' · ' + e(sold) : '') + ($('mxCustomer').value ? '<br>For: ' + e($('mxCustomer').value) : '') + '</div>' +
       '<table><thead><tr><th>Item</th><th>Qty</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + LIST.map(function(l){ return '<tr><td>' + (l.type === 'flower' ? '🌸 ' : l.type === 'choc' ? '🍫 ' : '🎀 ') + e(l.type === 'extra' ? l.desc : l.name) + '</td><td>' + e(qtyTxt(l)) + '</td><td style="text-align:right">' + f3(l.total) + ' BD</td></tr>'; }).join('') + '</tbody></table>' +
-      '<div style="margin-top:8px;font-size:12px">Flowers ' + f3(s.f) + ' · Chocolate ' + f3(s.c) + ' · Extras ' + f3(s.x) + '</div><div style="font-size:18px;font-weight:800;margin-top:6px">TOTAL ' + f3(s.g) + ' BD</div>';
+      catBlock() + '<div style="margin-top:8px;font-size:12px">Flowers ' + f3(s.f) + ' · Chocolate ' + f3(s.c) + ' · Extras ' + f3(s.x) + '</div><div style="font-size:18px;font-weight:800;margin-top:6px">TOTAL ' + f3(s.g) + ' BD</div>';
     document.body.classList.add('mxp'); var done = function(){ document.body.classList.remove('mxp'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done); setTimeout(function(){ window.print(); setTimeout(done, 1500); }, 60);
   };
@@ -534,7 +541,7 @@
     var exList = ex.map(function(x){ return { desc: x.desc + (x.qty > 1 ? ' × ' + x.qty : ''), price: x.total }; });
     var body = new URLSearchParams({ action:'saveMixedSale', token:tk(), reqKey:pendKey, branch:b, source:src, ref:ref, customer:($('mxCustomer').value || '').trim() || (ref === src ? src : ''),
       flowers: JSON.stringify(fl.map(function(l){ return { name:l.name, qty:l.qty, rate:l.rate }; })),
-      chocs: JSON.stringify(ch.map(function(l){ return { name:l.name, code:l.code, amount:l.amount, mode:l.mode, kg:l.kg, gpp:l.gpp, total:l.total }; })),
+      chocs: JSON.stringify(ch.map(function(l){ return { name:l.name, code:l.code, cat:l.cat || '', amount:l.amount, mode:l.mode, kg:l.kg, gpp:l.gpp, total:l.total }; })),
       extras: String(ex.reduce(function(s, x){ return s + x.total; }, 0)), extrasList: JSON.stringify(exList) });
     fetch(SAPI, { method:'POST', body:body }).then(function(r){ return r.json(); }).then(function(d){
       if(!d || !d.success){ $('mxRes').innerHTML = '<span class="warn">⚠ ' + e((d && d.error) || 'Not saved.') + '</span>'; return; }

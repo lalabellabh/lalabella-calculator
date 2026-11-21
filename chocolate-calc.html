@@ -659,7 +659,8 @@
     body.print-a4, html.print-a4{ width:210mm !important; }
     body.print-a4 #receipt h1{ font-size:28px !important; margin-bottom:6px !important; }
     body.print-a4 #receipt .r-sub{ font-size:12px !important; }
-    body.print-a4 #receipt .r-row{ font-size:14px !important; margin-bottom:8px !important; padding-bottom:6px; border-bottom:1px solid #eee; }
+    body.print-a4 #receipt .r-cat{ margin-top:6px; padding-top:4px; border-top:1px dashed #999; font-size:.92em; }
+  .r-row{ font-size:14px !important; margin-bottom:8px !important; padding-bottom:6px; border-bottom:1px solid #eee; }
     body.print-a4 #receipt .r-row .r-meta{ font-size:11.5px !important; }
     body.print-a4 #receipt .r-grand{ font-size:18px !important; }
     body.print-a4 #receipt .r-sum, body.print-a4 #receipt .r-footer, body.print-a4 #receipt .r-code{ font-size:12px !important; }
@@ -1809,6 +1810,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       kg: currentKg,
       gpp: selected.grams,
       whole: !!selected.whole,
+      cat: selected.category || '',
       total: currentTotal
     });
     renderCart();
@@ -2106,7 +2108,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
         const cat = DATA.find(d => String(d.name).trim().toLowerCase() === String(it.name).trim().toLowerCase());
         const qty = Number(it.qty) || 0;
         const kg = mode === 'pieces' ? qty * ((cat && cat.grams) || 0) / 1000 : (mode === 'grams' ? qty / 1000 : qty);
-        cart.push({ name: it.name, code: cat ? cat.code : '', amount: qty, mode, kg, gpp: cat ? cat.grams : 0, whole: cat ? !!cat.whole : false, total: qty * (Number(it.price) || 0) });
+        cart.push({ name: it.name, code: cat ? cat.code : '', amount: qty, mode, kg, gpp: cat ? cat.grams : 0, whole: cat ? !!cat.whole : false, cat: cat ? cat.category || '' : '', total: qty * (Number(it.price) || 0) });
       });
       renderCart();
       searchEl.value = ''; handleSearchTyping('');
@@ -2115,6 +2117,16 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 
   printBtn.addEventListener('click', ()=> doPrint(false));
   document.getElementById('printA4Btn').addEventListener('click', ()=> doPrint(true));
+  // Nov 21 (Bench): total kg per collection on the receipt (print + share picture)
+  function appendCatBlock(){
+    const byCat = {}; let allKg = 0;
+    cart.forEach(c=>{ const g = c.cat || ((DATA.find(d => d.name === c.name) || {}).category) || 'Other'; byCat[g] = (byCat[g] || 0) + (Number(c.kg) || 0); allKg += Number(c.kg) || 0; });
+    if(!Object.keys(byCat).length) return;
+    const box = document.createElement('div'); box.className = 'r-cat';
+    box.innerHTML = Object.keys(byCat).sort().map(g => `<div class="r-row"><div class="r-name">${lbEsc(g)}</div><div>${byCat[g].toFixed(3)} kg</div></div>`).join('') +
+      `<div class="r-row" style="font-weight:800"><div class="r-name">Total chocolate</div><div>${allKg.toFixed(3)} kg</div></div>`;
+    rItemsEl.appendChild(box);
+  }
   async function doPrint(a4){
     if(cart.length === 0 && extras.length === 0) return;
 
@@ -2149,6 +2161,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       rItemsEl.appendChild(row);
     });
 
+    appendCatBlock();
     rGrandTotalEl.textContent = fmtBD(grandTotal);
     document.getElementById('rSummary').textContent = listSummary() + ' vat inclusive';
     printBtn.disabled = true;
@@ -2200,6 +2213,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
       rItemsEl.appendChild(row);
     });
 
+    appendCatBlock();
     rGrandTotalEl.textContent = fmtBD(grandTotal);
     document.getElementById('rSummary').textContent = listSummary() + ' vat inclusive';
 
@@ -2726,7 +2740,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <script>
   // Nov 2026: "✓ Sold" — the calc list is taken out of the branch stock (while Odoo is not live)
   try{ LBCalcSale.mount({ kind:'chocolate', anchor: document.getElementById('shareBtn'), branchSelect: document.getElementById('listBranch'), onNew: function(sold){ window.lbNewOrder(sold); },
-    get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.description + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.amount }; }) }; } }); }catch(e){ console.error('calc sale', e); }
+    get: function(){ return { items: cart.map(function(c){ return { name:c.name, code:c.code, cat:c.cat || '', amount:c.amount, mode:c.mode, kg:c.kg, gpp:c.gpp, total:c.total }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.description + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.amount }; }) }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 </body>
 </html>

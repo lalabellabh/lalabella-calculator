@@ -168,7 +168,7 @@ async function saveChocolateSale(p: any, u: any) {
   const branch = txt(p.branch, 30);
   if (BRANCHES.indexOf(branch) === -1) return { success: false, error: 'Pick the branch first.' };
   let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
-  items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
+  items = items.map((c: any) => ({ name: txt(c && c.name, 120), code: txt(c && c.code, 40), cat: txt(c && c.cat, 60) || undefined, mode: String(c && c.mode || ''), amount: Number(c && c.amount) || 0, kg: Number(c && c.kg) || 0, gpp: Number(c && c.gpp) || 0, total: Number(c && c.total) || 0 }))
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
   const exList = parseExtras(p.extrasList);

@@ -127,6 +127,12 @@
       if(s.kind === 'flower') return '<div class="r"><span>' + esc(it.name) + ' x' + esc(it.qty) + '</span><span>' + f3((Number(it.qty) || 0) * (Number(it.rate) || 0)) + ' BD</span></div>';
       return '<div class="r"><span>' + esc(it.name) + ' — ' + chocQty(it) + '</span><span>' + f3(it.total) + ' BD</span></div>';
     }).join('') + extrasOf(s).map(function(x){ return '<div class="r"><span>' + esc(x.desc) + '</span><span>' + f3(x.price) + ' BD</span></div>'; }).join('');
+    // Nov 21 (Bench): total kg per collection on the receipt
+    if(s.kind !== 'flower' && CAT){
+      var by = {}, all = 0; (s.items || []).forEach(function(it){ var g = it.cat || CAT['c:' + it.code] || CAT['n:' + String(it.name).toLowerCase()] || 'Other'; var k = chocKg(it); by[g] = (by[g] || 0) + k; all += k; });
+      if(Object.keys(by).length) rows += '<div class="l"></div>' + Object.keys(by).sort().map(function(g){ return '<div class="r"><span>' + esc(g) + '</span><span>' + by[g].toFixed(3) + ' kg</span></div>'; }).join('') +
+        '<div class="r" style="font-weight:800"><span>Total chocolate</span><span>' + all.toFixed(3) + ' kg</span></div>';
+    }
     $('rp').className = mode;
     $('rp').innerHTML = '<h2>' + (s.kind === 'flower' ? 'Lalabella Flowers' : 'Lalabella') + '</h2><div class="c">' + esc(s.branch) + ' · ' + when(s.at) + '</div>' +
       '<div class="c">' + esc(s.saleNo) + (s.releaseNo ? ' · ' + esc(s.releaseNo) : '') + '</div>' +
@@ -158,7 +164,7 @@
         (s.items || []).forEach(function(it){
           if(s.kind === 'flower'){ var q = Number(it.qty) || 0, b = q * (Number(it.rate) || 0), k = it.name; fl[k] = fl[k] || { q:0, b:0 }; fl[k].q += q; fl[k].b += b; fs += q; fb += b; nF++; }
           else { var g = cat['c:' + it.code] || cat['n:' + String(it.name).toLowerCase()] || 'Other'; var kg = chocKg(it), bd = Number(it.total) || 0;
-            cg[g] = cg[g] || { kg:0, b:0, pcs:0 }; cg[g].kg += kg; cg[g].b += bd; if(it.mode === 'pieces') cg[g].pcs += Number(it.amount) || 0; ck += kg; cb += bd; nC++; }
+            g = it.cat || g; cg[g] = cg[g] || { kg:0, b:0, pcs:0 }; cg[g].kg += kg; cg[g].b += bd; if(it.mode === 'pieces') cg[g].pcs += Number(it.amount) || 0; ck += kg; cb += bd; nC++; }
         });
       });
       if(!nC && !nF){ $('sumCard').style.display = 'none'; SUMHTML = ''; return; }
