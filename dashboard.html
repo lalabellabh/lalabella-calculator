@@ -264,11 +264,11 @@
     <section class="panel glass p-al">
       <div class="ph"><h2>🚨 Alerts</h2>
         <div class="tabs" id="alTabs">
-          <button data-t="low" class="on">Low<span class="b" id="alLowN">0</span></button>
-          <button data-t="near">Near expiry<span class="b" id="alNearN">0</span></button>
-          <button data-t="exp">Expired<span class="b" id="alExpN">0</span></button>
-          <button data-t="apr">Approvals<span class="b" id="alAprN">0</span></button>
-          <button data-t="chk" title="Missing or wrong data (expiry, price, names, starting stock)">⚠ Check<span class="b" id="alChkN">0</span></button>
+          <button data-t="low" class="on">Low<span class="b" data-hot id="alLowN">0</span></button>
+          <button data-t="near">Near expiry<span class="b" data-hot id="alNearN">0</span></button>
+          <button data-t="exp">Expired<span class="b" data-hot id="alExpN">0</span></button>
+          <button data-t="apr">Approvals<span class="b" data-hot id="alAprN">0</span></button>
+          <button data-t="chk" title="Missing or wrong data (expiry, price, names, starting stock)">⚠ Check<span class="b" data-hot id="alChkN">0</span></button>
         </div>
       </div>
       <div class="scroll" id="alScroll"></div>
@@ -685,5 +685,6 @@
 <script src="joyboy-bubble.js"></script>
 <script src="shared/live-orders-mini.js?v=4"></script>
 <script src="shared/calc-today.js?v=4"></script>
+<script src="shared/alert-badges.js?v=1"></script>
 </body>
 </html>

@@ -121,9 +121,9 @@
     <section class="panel glass p-al">
       <div class="ph"><h2>🚨 Alerts</h2>
         <div class="tabs" id="alTabs">
-          <button data-t="low" class="on">Low stock<span class="b" id="alLowN">0</span></button>
-          <button data-t="apr">Rate approvals<span class="b" id="alAprN">0</span></button>
-          <button data-t="chk" title="Missing or wrong data (stock count, received by, rate)">⚠ Check<span class="b" id="alChkN">0</span></button>
+          <button data-t="low" class="on">Low stock<span class="b" data-hot id="alLowN">0</span></button>
+          <button data-t="apr">Rate approvals<span class="b" data-hot id="alAprN">0</span></button>
+          <button data-t="chk" title="Missing or wrong data (stock count, received by, rate)">⚠ Check<span class="b" data-hot id="alChkN">0</span></button>
         </div>
       </div>
       <div class="scroll" id="alScroll"></div>
@@ -556,5 +556,6 @@
 <script src="joyboy-bubble.js"></script>
 <script src="shared/live-orders-mini.js?v=4"></script>
 <script src="shared/calc-today.js?v=4"></script>
+<script src="shared/alert-badges.js?v=1"></script>
 </body>
 </html>

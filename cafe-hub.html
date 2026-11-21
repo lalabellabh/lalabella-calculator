@@ -175,7 +175,7 @@
     <!-- DASHBOARD -->
     <section class="pane cf-glass" id="p-dash">
       <div class="ph"><h2>Dashboard <small><select class="in" id="days" style="padding:4px 8px;font-size:12px;width:auto"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="180">6 months</option><option value="365">12 months</option></select></small></h2>
-        <div class="seg" id="dSeg"><button class="on" data-v="fast">🚀 Fast</button><button data-v="slow">🐢 Slow</button><button data-v="low">⚠️ Low</button><button data-v="exp">⏰ Expiry</button><button data-v="mon">🛒 Monthly</button></div></div>
+        <div class="seg" id="dSeg"><button class="on" data-v="fast">🚀 Fast</button><button data-v="slow">🐢 Slow</button><button data-v="low">⚠️ Low<span class="b" data-hot id="dLowN"></span></button><button data-v="exp">⏰ Expiry<span class="b" data-hot id="dExpN"></span></button><button data-v="mon">🛒 Monthly</button></div></div>
       <div class="pb" id="dash"><div class="empty">Loading…</div></div>
       <div class="pf" style="font-size:11.5px;color:var(--dim)" id="dInfo"></div>
     </section>
@@ -396,6 +396,7 @@
       var mov = R.filter(function(r){ return r.perMonth > 0; }).length, low = R.filter(function(r){ return (r.countDate && r.stock <= 0) || (r.daysLeft != null && r.daysLeft <= 30); }).length,
           ex = R.filter(function(r){ return r.expired || (r.nextExpiry && days(r.nextExpiry) <= 60); }).length;
       var K = [[R.length, 'Items', ''], [mov, 'Moving', ''], [low, 'Low / out', low ? 'bad' : ''], [ex, 'Expiry ≤60d', ex ? 'warn' : ''], [d.counts, 'Counts', '']];
+      $('dLowN').textContent = low ? low : ''; $('dExpN').textContent = ex ? ex : '';
       $('kpis').innerHTML = K.map(function(k){ return '<div class="kpi ' + k[2] + '"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
       $('dInfo').textContent = d.counts + ' count(s) saved · ' + d.receiveLines + ' receiving line(s) · since ' + C.fd(d.since);
       drawDash();
@@ -409,5 +410,6 @@
   loadItems().then(loadHist); loadDash(); paintLines(); summary();
 })();
 </script>
+<script src="shared/alert-badges.js?v=1"></script>
 </body>
 </html>
