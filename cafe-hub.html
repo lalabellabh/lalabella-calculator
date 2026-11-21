@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<script src="shared/scanner.js"></script>
+<script src="shared/voice.js?v=7"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#2e1a10">
+<title>Café Stock Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="lb-theme-keep" content=".app, .pane">
+<!-- Café Stock Room (Nov 21 2026, Bench): Receiving + Stock Count + Dashboard on ONE page.
+     Desktop (>=1100px): 3 columns, one screen, each box scrolls by itself. Phone/app: one panel at a time with a bottom tab bar.
+     Receiving + Count: camera barcode scan + type a code + 🎤 say the item name (jumps to the item). Backend: cafe-fast. -->
+<style>
+  :root{ --esp:#2e1a10; --moc:#5b3a28; --lat:#c9a27e; --crm:#fbf6ee; --crm2:#f4ebdd; --gold:#b8893b; --rose:#b5475f;
+    --ink:#2b1c14; --dim:#8a7464; --line:#eadfce; --ok:#3f7a4f; --bad:#c0463a; --warn:#a8650b; --card:#fffdf9; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); min-height:100vh;
+    background:radial-gradient(1200px 600px at 100% -10%, #f3e3cf 0, transparent 60%), radial-gradient(900px 500px at -10% 110%, #efe0d0 0, transparent 60%), var(--crm); }
+  button,input,select{ font:inherit; color:inherit; }
+  /* ---------- side café rail (desktop) ---------- */
+  .rail{ position:fixed; left:0; top:0; bottom:0; width:96px; background:linear-gradient(180deg,#3a2216,#22130b); display:flex; flex-direction:column; align-items:center; padding:74px 0 18px; gap:14px; overflow:hidden; z-index:1; }
+  .rail::after{ content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 30%, rgba(201,162,126,.18), transparent 60%); pointer-events:none; }
+  .rail svg{ width:62px; height:62px; flex:none; filter:drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+  .rail .dot{ width:4px; height:4px; border-radius:50%; background:var(--gold); opacity:.7; flex:none; }
+  .rail .word{ margin-top:auto; writing-mode:vertical-rl; transform:rotate(180deg); font-family:'Fraunces',serif; font-weight:600; letter-spacing:.32em; color:#e6cfae; font-size:13px; text-transform:uppercase; }
+  .steam path{ animation:steam 3.2s ease-in-out infinite; opacity:.7; } .steam path:nth-child(2){ animation-delay:1.1s; }
+  @keyframes steam{ 0%{ transform:translateY(4px); opacity:0; } 40%{ opacity:.75; } 100%{ transform:translateY(-6px); opacity:0; } }
+  @media (prefers-reduced-motion:reduce){ .steam path{ animation:none; } }
+  /* ---------- app frame ---------- */
+  .app{ margin-left:96px; height:100vh; height:100dvh; display:flex; flex-direction:column; padding:14px 18px 16px; gap:12px; position:relative; z-index:2; }
+  .top{ display:flex; align-items:center; gap:14px; flex:none; }
+  .brand{ display:flex; flex-direction:column; }
+  .brand h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; color:var(--esp); letter-spacing:-.01em; }
+  .brand .sub{ font-size:12px; color:var(--dim); margin-top:1px; }
+  .kpis{ margin-left:auto; display:flex; gap:8px; }
+  .kpi{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:7px 14px; min-width:96px; box-shadow:0 4px 14px rgba(46,26,16,.05); }
+  .kpi b{ display:block; font-family:'Fraunces',serif; font-size:20px; color:var(--esp); line-height:1.1; } .kpi span{ font-size:10.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
+  .kpi.bad b{ color:var(--bad); } .kpi.warn b{ color:var(--warn); }
+  .link{ font-size:12.5px; font-weight:700; color:var(--moc); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:7px 12px; background:var(--card); white-space:nowrap; }
+  .cols{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) minmax(0,1fr); gap:14px; }
+  .pane{ background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:0 14px 34px rgba(46,26,16,.08); display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .ph{ flex:none; padding:14px 16px 10px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fffaf2,#fffdf9); }
+  .ph h2{ font-family:'Fraunces',serif; font-weight:900; font-size:18px; margin:0; color:var(--esp); display:flex; align-items:center; gap:8px; }
+  .ph h2 small{ font-family:'Space Grotesk'; font-weight:500; font-size:12px; color:var(--dim); margin-left:auto; }
+  .pb{ flex:1; min-height:0; overflow-y:auto; padding:10px 16px; scrollbar-width:thin; scrollbar-color:#d8c4ac transparent; }
+  .pf{ flex:none; padding:10px 16px 14px; border-top:1px solid var(--line); background:#fffaf2; }
+  label{ display:block; font-size:10.5px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; margin:8px 0 4px; }
+  .in{ width:100%; font-size:14px; border:1px solid var(--line); border-radius:12px; padding:9px 11px; background:#fff; outline:none; }
+  .in:focus{ border-color:var(--lat); box-shadow:0 0 0 3px rgba(201,162,126,.25); }
+  .g2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; } .g3{ display:grid; grid-template-columns:1.6fr 1fr; gap:8px; }
+  .fr{ display:flex; gap:6px; align-items:center; } .fr .in{ flex:1; min-width:0; }
+  .ib{ flex:none; width:40px; height:40px; border-radius:12px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center; }
+  .ib:hover{ border-color:var(--lat); } .ib.dark{ background:var(--esp); color:#f3e3cf; border-color:var(--esp); }
+  .btn{ border:1px solid var(--line); border-radius:12px; padding:10px 14px; background:#fff; cursor:pointer; font-weight:700; font-size:13px; color:var(--moc); }
+  .btn.pri{ background:linear-gradient(135deg,#4a2c1d,#2e1a10); color:#f6e7d2; border:0; box-shadow:0 6px 16px rgba(46,26,16,.25); }
+  .btn.gold{ background:linear-gradient(135deg,#d0a45a,#a87a2f); color:#fff; border:0; }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .btns{ display:flex; gap:6px; flex-wrap:wrap; } .btns .btn{ flex:1; }
+  .seg{ display:flex; gap:4px; background:var(--crm2); border-radius:12px; padding:4px; margin-top:10px; overflow-x:auto; }
+  .seg button{ flex:1; border:0; background:transparent; border-radius:9px; padding:7px 8px; font-size:12px; font-weight:700; color:var(--moc); cursor:pointer; white-space:nowrap; }
+  .seg button.on{ background:#fff; color:var(--esp); box-shadow:0 2px 6px rgba(46,26,16,.12); }
+  .row{ display:flex; gap:10px; align-items:center; padding:9px 0; border-top:1px dashed var(--line); }
+  .row:first-child{ border-top:0; }
+  .pic{ width:38px; height:38px; flex:none; border-radius:11px; background:#f3e9dc center/cover no-repeat; display:flex; align-items:center; justify-content:center; font-size:16px; border:1px solid var(--line); }
+  .pic.has{ cursor:zoom-in; }
+  .nm{ flex:1; min-width:0; font-weight:700; font-size:13.5px; } .nm small{ display:block; font-weight:400; color:var(--dim); font-size:11.5px; margin-top:1px; }
+  .q{ font-family:'Fraunces',serif; font-weight:900; color:var(--esp); white-space:nowrap; }
+  .x{ border:0; background:transparent; color:var(--dim); cursor:pointer; font-size:15px; padding:4px 6px; border-radius:8px; } .x:hover{ background:var(--crm2); color:var(--bad); }
+  .grp{ font-size:11px; font-weight:800; color:var(--moc); text-transform:uppercase; letter-spacing:.06em; padding:10px 0 4px; position:sticky; top:-10px; background:var(--card); z-index:1; }
+  .ln.chg{ background:#fff6e3; border-radius:12px; } .ln.hit{ box-shadow:0 0 0 2px var(--gold) inset; border-radius:12px; }
+  .ln{ padding:7px 6px; }
+  .ln .sys{ font-size:11px; color:var(--dim); min-width:52px; text-align:right; }
+  .ln .cnt{ width:72px; text-align:center; padding:8px 6px; } .ln .exp{ width:132px; padding:7px 6px; font-size:12.5px; }
+  .ln .pl{ width:30px; height:30px; border-radius:50%; border:1px solid var(--lat); background:#fff8ee; color:var(--moc); font-weight:800; cursor:pointer; flex:none; }
+  .zero{ color:var(--bad) !important; } .soon{ color:var(--warn) !important; }
+  .exp.zero{ border-color:#e7b3ab; } .exp.soon{ border-color:#e9cf9c; }
+  .chip{ display:inline-block; font-size:10.5px; font-weight:800; color:var(--ok); background:#e6f1e8; border-radius:999px; padding:3px 10px; text-transform:uppercase; letter-spacing:.04em; }
+  .chip.ro{ color:var(--warn); background:#fbefd6; }
+  .sum{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; } .sum span{ font-size:11.5px; background:var(--crm2); border-radius:999px; padding:4px 10px; color:var(--moc); } .sum b{ color:var(--esp); }
+  .empty{ color:var(--dim); text-align:center; padding:22px 6px; font-size:13px; }
+  .msg{ font-size:12px; color:var(--ok); min-height:16px; margin-top:6px; }
+  .bar{ height:6px; border-radius:3px; background:linear-gradient(90deg,var(--lat),var(--gold)); margin-top:4px; }
+  .bars{ display:flex; align-items:flex-end; gap:6px; height:150px; padding-top:12px; } .bars div{ flex:1; text-align:center; font-size:10.5px; color:var(--dim); } .bars i{ display:block; background:linear-gradient(180deg,var(--lat),var(--moc)); border-radius:6px 6px 0 0; margin:0 auto 4px; width:70%; }
+  /* scanner */
+  .scan{ position:fixed; inset:0; z-index:2147483000; background:rgba(20,10,5,.82); display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:16px; }
+  .scan.show{ display:flex; } .scan video{ width:min(480px,100%); border-radius:18px; background:#000; border:3px solid var(--gold); }
+  .scan p{ color:#f3e3cf; margin:0; font-size:13px; }
+  /* mobile tab bar (hidden on desktop) */
+  .tabbar{ display:none; }
+  .appHero{ display:none; }
+  #pr{ display:none; }
+  @media print{ body *{ visibility:hidden !important; } #pr,#pr *{ visibility:visible !important; } #pr{ display:block !important; position:absolute; top:0; left:0; width:100%; font-family:Arial,sans-serif; color:#000; }
+    #pr table{ width:100%; border-collapse:collapse; font-size:12px; } #pr th,#pr td{ border:1px solid #000; padding:4px 6px; } #pr th{ background:#eee; } @page{ size:A4; margin:12mm; } }
+  /* ---------- APP / phone layout ---------- */
+  @media (max-width:1099px){
+    .rail{ display:none; }
+    .app{ margin-left:0; padding:0; gap:0; height:100dvh; }
+    .top{ display:none; }
+    .appHero{ display:flex; flex:none; align-items:center; gap:10px; padding:calc(12px + env(safe-area-inset-top)) 16px 14px 66px; background:linear-gradient(135deg,#3a2216,#22130b); color:#f6e7d2; border-radius:0 0 26px 26px; box-shadow:0 10px 24px rgba(46,26,16,.25); position:relative; overflow:hidden; }
+    .appHero h1{ font-family:'Fraunces',serif; font-weight:900; font-size:21px; margin:0; } .appHero .sub{ font-size:11.5px; color:#d9c1a2; }
+    .appHero svg{ width:54px; height:54px; margin-left:auto; flex:none; } .appHero svg + svg{ margin-left:0; }
+    .appHero a{ position:absolute; right:14px; bottom:8px; font-size:11px; color:#e6cfae; } .appHero .kp{ display:flex; gap:6px; margin-top:6px; }
+    .appHero .kp span{ font-size:10.5px; background:rgba(255,255,255,.1); border-radius:999px; padding:3px 8px; } .appHero .kp b{ color:#fff; }
+    .cols{ display:block; padding:12px 12px calc(84px + env(safe-area-inset-bottom)); overflow:hidden; }
+    .pane{ display:none; height:100%; border-radius:22px; }
+    .pane.on{ display:flex; }
+    .tabbar{ display:flex; position:fixed; left:12px; right:12px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:50; background:rgba(46,26,16,.96); border-radius:22px; padding:6px; box-shadow:0 12px 30px rgba(46,26,16,.35); backdrop-filter:blur(8px); }
+    .tabbar button{ flex:1; border:0; background:transparent; color:#d9c1a2; font-size:11px; font-weight:700; padding:7px 4px; border-radius:16px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .tabbar button i{ font-style:normal; font-size:19px; } .tabbar button.on{ background:linear-gradient(135deg,#d0a45a,#a87a2f); color:#fff; }
+    .ln{ flex-wrap:wrap; } .ln .nm{ flex-basis:calc(100% - 50px); } .ln .sys{ text-align:left; min-width:0; margin-right:auto; }
+    .ln .exp{ width:auto; flex:1; min-width:120px; }
+    /* phone: the whole panel scrolls like an app screen; save bar stays at the bottom */
+    .appHero{ padding-top:calc(10px + env(safe-area-inset-top)); padding-bottom:12px; } .appHero h1{ font-size:19px; } .appHero svg{ width:40px; height:40px; } .appHero .kp{ display:none; }
+    .appHero a{ position:static; align-self:flex-end; margin-left:4px; white-space:nowrap; }
+    .cols{ padding-top:10px; }
+    .pane{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .pb{ flex:none; overflow:visible; }
+    .pf{ position:sticky; bottom:0; z-index:3; padding:8px 12px 10px; box-shadow:0 -8px 18px rgba(46,26,16,.06); }
+    .pf .sum{ flex-wrap:nowrap; overflow-x:auto; margin-bottom:6px; } .pf .sum span{ white-space:nowrap; }
+    .pf .btns .btn{ padding:7px 8px; font-size:12px; } .pf .btn.pri{ padding:10px; }
+    .grp{ top:0; }
+    .ph{ padding:12px 12px 8px; } .pb{ padding:8px 12px; }
+  }
+  @media (max-width:420px){ .g3{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<script src="shared/cafe-common.js"></script>
+
+<!-- original café drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-cake" viewBox="0 0 80 80">
+      <ellipse cx="40" cy="68" rx="32" ry="6" fill="#f8f1e6" stroke="#d9c3a3"/>
+      <path d="M12 40 L40 26 L68 40 Z" fill="#fff6ea"/>
+      <rect x="12" y="40" width="56" height="25" rx="3" fill="#7a4a30"/>
+      <rect x="12" y="47" width="56" height="4" fill="#fff3e0"/><rect x="12" y="56" width="56" height="4" fill="#fff3e0"/>
+      <path d="M12 40 h56 v4 c-4 0-4 5-8 5s-4-5-8-5-4 6-8 6-4-6-8-6-4 4-8 4-4-4-8-4-4 3-8 3z" fill="#fff6ea"/>
+      <path d="M40 26 c-3-7 3-11 6-8 c3 3-1 9-6 8z" fill="#c9364f"/><path d="M42 19 l3-4 m-3 4 l-3-3" stroke="#4f8a3c" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-cup" viewBox="0 0 80 80">
+      <g class="steam" fill="none" stroke="#e6cfae" stroke-width="2.4" stroke-linecap="round"><path d="M32 22 c-4-5 4-8 0-13"/><path d="M44 22 c-4-5 4-8 0-13"/></g>
+      <ellipse cx="40" cy="66" rx="30" ry="6" fill="#f8f1e6" stroke="#d9c3a3"/>
+      <path d="M18 30 h44 v8 c0 15-9 24-22 24 s-22-9-22-24z" fill="#fffaf2" stroke="#d9c3a3"/>
+      <path d="M62 36 c9 0 9 13-2 13" fill="none" stroke="#d9c3a3" stroke-width="4"/>
+      <ellipse cx="40" cy="30" rx="22" ry="4.5" fill="#6b3f26"/><path d="M34 30 c3-3 9-3 12 0 c-3 2-9 2-12 0z" fill="#e6cfae"/>
+    </symbol>
+    <symbol id="i-cupcake" viewBox="0 0 80 80">
+      <path d="M22 44 h36 l-5 26 h-26z" fill="#c9a27e"/><path d="M28 44 l2 26 M36 44 l1 26 M44 44 l-1 26 M52 44 l-2 26" stroke="#a9805b" stroke-width="2"/>
+      <path d="M18 46 c-4-10 6-14 10-12 c0-10 24-10 24 0 c4-2 14 2 10 12z" fill="#f5c8d2"/><path d="M26 34 c4-10 24-10 28 0" fill="#f9dbe2"/>
+      <circle cx="40" cy="20" r="5" fill="#c9364f"/><path d="M40 15 c1-4 4-6 7-6" stroke="#4f8a3c" stroke-width="2" fill="none"/>
+    </symbol>
+    <symbol id="i-croissant" viewBox="0 0 80 80">
+      <path d="M8 50 c6-22 58-22 64 0 c-6-4-12-5-16-3 c-4-8-28-8-32 0 c-4-2-10-1-16 3z" fill="#d79a4e"/>
+      <path d="M24 47 c4-12 28-12 32 0" fill="#e8b36a"/><path d="M30 34 l3 12 M40 31 v14 M50 34 l-3 12" stroke="#b2783a" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-macaron" viewBox="0 0 80 80">
+      <ellipse cx="40" cy="34" rx="22" ry="11" fill="#c7e3cf"/><rect x="20" y="36" width="40" height="7" rx="3.5" fill="#fff6ea"/><ellipse cx="40" cy="47" rx="22" ry="10" fill="#b6d8c0"/>
+      <ellipse cx="44" cy="58" rx="16" ry="8" fill="#f5c8d2"/><rect x="29" y="58" width="30" height="5" rx="2.5" fill="#fff6ea"/><ellipse cx="44" cy="66" rx="16" ry="7" fill="#efb6c3"/>
+    </symbol>
+  </defs>
+</svg>
+
+<aside class="rail" aria-hidden="true">
+  <svg><use href="#i-cake"/></svg><span class="dot"></span>
+  <svg><use href="#i-cup"/></svg><span class="dot"></span>
+  <svg><use href="#i-croissant"/></svg><span class="dot"></span>
+  <svg><use href="#i-cupcake"/></svg><span class="dot"></span>
+  <svg><use href="#i-macaron"/></svg>
+  <span class="word">Lalabella Café</span>
+</aside>
+
+<div class="app">
+  <div class="appHero">
+    <div><h1>Café Stock Room</h1><div class="sub">Receive · Count · Dashboard</div><div class="kp" id="kpM"></div></div>
+    <svg aria-hidden="true"><use href="#i-cup"/></svg><svg aria-hidden="true"><use href="#i-cake"/></svg>
+    <a href="cafe-inventory.html">☕ Café Items ›</a>
+  </div>
+  <div class="top">
+    <div class="brand"><h1>☕ Café Stock Room</h1><div class="sub">Receive what came in, count the shelf, see what moves — all on one page.</div></div>
+    <div class="kpis" id="kpis"></div>
+    <a class="link" href="cafe-inventory.html">☕ Café Items</a>
+  </div>
+
+  <div class="cols">
+    <!-- RECEIVING -->
+    <section class="pane" id="p-rec">
+      <div class="ph"><h2>🛒 Receiving <small id="recCount"></small></h2>
+        <div class="seg" id="recSeg"><button class="on" data-v="new">New delivery</button><button data-v="hist">History</button></div></div>
+      <div class="pb" id="recNew">
+        <div class="g3"><div><label>Supplier</label><input class="in" id="sup" list="supList" maxlength="80" placeholder="e.g. White Elephant"><datalist id="supList"></datalist></div><div><label>Date</label><input class="in" type="date" id="rDate"></div></div>
+        <div class="g2"><div><label>Invoice no.</label><input class="in" id="inv" maxlength="40" placeholder="optional"></div><div><label>Received by</label><input class="in" id="rBy" maxlength="60"></div></div>
+        <label>Item — type, scan or say it</label>
+        <div class="fr"><input class="in" id="item" list="itemList" placeholder="Café item name or code"><datalist id="itemList"></datalist>
+          <button class="ib dark" id="rScan" title="Scan barcode">📷</button><button class="ib" id="rMic" title="Say the item name">🎤</button></div>
+        <div class="g3"><div><label>Qty <span id="unit" style="text-transform:none"></span></label><input class="in" id="qty" type="number" min="0" step="any" inputmode="decimal"></div><div><label>Expiry</label><input class="in" type="date" id="exp"></div></div>
+        <label>Note</label><input class="in" id="note" maxlength="200" placeholder="optional">
+        <button class="btn gold" id="addLine" style="width:100%;margin-top:10px">➕ Add to list</button>
+        <div id="lines" style="margin-top:8px"></div>
+      </div>
+      <div class="pb" id="recHist" style="display:none"><div class="empty">Loading…</div></div>
+      <div class="pf" id="recFoot"><div class="btns"><button class="btn" id="clr">↺ Clear</button><button class="btn pri" id="save">💾 Save receiving</button></div><div class="msg" id="rMsg"></div></div>
+    </section>
+
+    <!-- STOCK COUNT -->
+    <section class="pane" id="p-cnt">
+      <div class="ph"><h2>📋 Stock Count <small id="nCount"></small></h2>
+        <div class="fr" style="margin-top:10px"><input class="in" type="date" id="cDate" style="max-width:160px"><button class="btn pri" id="loadBtn">Load items</button><button class="btn" id="recallBtn">↺ Recall</button><button class="btn" id="histBtn" title="Search history (read-only)">🔍</button></div>
+        <div class="fr" style="margin-top:8px"><input class="in" id="cq" placeholder="Search name, group or code…"><button class="ib dark" id="cScan" title="Scan barcode">📷</button><button class="ib" id="cMic" title="Say the item name">🎤</button></div>
+        <div style="margin-top:8px"><span class="chip" id="chip" style="display:none"></span></div>
+      </div>
+      <div class="pb" id="rows"><div class="empty">Pick the date and press <b>Load items</b>.<br>The first count is the starting stock.</div></div>
+      <div class="pf">
+        <div class="sum" id="sum"></div>
+        <div class="fr"><input class="in" id="cBy" maxlength="60" placeholder="Counted by…" style="max-width:200px"><button class="btn pri" id="saveC" style="flex:1">💾 Save count</button></div>
+        <div class="btns" style="margin-top:6px"><button class="btn" id="print">🖨️ Print</button><button class="btn" id="excel">📊 Excel</button><button class="btn" id="wa">📤 WhatsApp</button></div>
+        <div class="msg" id="cMsg"></div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="pane" id="p-dash">
+      <div class="ph"><h2>📊 Dashboard <small><select class="in" id="days" style="padding:4px 8px;font-size:12px;width:auto"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="180">6 months</option><option value="365">12 months</option></select></small></h2>
+        <div class="seg" id="dSeg"><button class="on" data-v="fast">🚀 Fast</button><button data-v="slow">🐢 Slow</button><button data-v="low">⚠️ Low</button><button data-v="exp">⏰ Expiry</button><button data-v="mon">🛒 Monthly</button></div></div>
+      <div class="pb" id="dash"><div class="empty">Loading…</div></div>
+      <div class="pf" style="font-size:11.5px;color:var(--dim)" id="dInfo"></div>
+    </section>
+  </div>
+
+  <nav class="tabbar" id="tabbar"><button data-p="p-dash"><i>📊</i>Dashboard</button><button data-p="p-rec"><i>🛒</i>Receive</button><button data-p="p-cnt"><i>📋</i>Count</button></nav>
+</div>
+
+<div class="scan" id="scanBox"><video id="scanVid" playsinline muted></video><p>Point the camera at the barcode</p><button class="btn" id="scanX">Close</button></div>
+<div id="pr"></div>
+
+<script>
+(function(){
+  var C = window.LBCafe, esc = C.esc, $ = function(id){ return document.getElementById(id); };
+  var ITEMS = [], ADMIN = false, lines = [], D = null, S = null, dirty = {}, RO = false, DASH = null, dView = 'fast';
+  var u = C.me(), myName = u.fullName || u.full_name || u.username || '';
+  $('rDate').value = C.today(); $('cDate').value = C.today(); $('rBy').value = myName; $('cBy').value = myName;
+
+  /* ---------- phone tabs ---------- */
+  function showPane(id){ ['p-rec', 'p-cnt', 'p-dash'].forEach(function(p){ $(p).classList.toggle('on', p === id); });
+    [].forEach.call(document.querySelectorAll('#tabbar button'), function(b){ b.classList.toggle('on', b.getAttribute('data-p') === id); });
+    try{ history.replaceState(null, '', '#' + id.slice(2)); }catch(e){} }
+  $('tabbar').addEventListener('click', function(e){ var b = e.target.closest('[data-p]'); if(b) showPane(b.getAttribute('data-p')); });
+  var h = (location.hash || '').replace('#', ''); showPane(h === 'rec' || h === 'receive' ? 'p-rec' : h === 'cnt' || h === 'count' ? 'p-cnt' : h === 'dash' ? 'p-dash' : 'p-cnt');
+
+  /* ---------- shared: find an item by code / spoken name ---------- */
+  function byCode(c){ c = String(c || '').trim().toUpperCase(); return c ? ITEMS.find(function(i){ return String(i.code || '').toUpperCase() === c; }) : null; }
+  function byName(v){ v = String(v || '').trim().toLowerCase(); return ITEMS.find(function(i){ return i.name.toLowerCase() === v; }); }
+  function sayItem(){
+    if(!window.LBVoice || !LBVoice.supported()){ alert('Voice is not available on this browser. Please use Chrome, Edge or Safari.'); return Promise.resolve(null); }
+    if(!ITEMS.length){ alert('Items are still loading — try again.'); return Promise.resolve(null); }
+    var names = ITEMS.map(function(i){ return i.name; });
+    return LBVoice.listen({ hint:'Say the café item name' }).then(function(alts){
+      if(!alts.length) return null;
+      var best = null; alts.forEach(function(a){ var m = LBVoice.match(a, names)[0]; if(m && (!best || m.s > best.s)) best = m; });
+      if(!best || best.s < 0.5){ LBVoice.speak('Sorry, I did not get the item. Please say it again.'); alert('Not sure which item: "' + alts[0] + '". Try again or type it.'); return null; }
+      var it = byName(best.name); if(it) LBVoice.speak(it.name); return it;
+    });
+  }
+  var scanStop = null, scanFor = null;
+  function scan(target){
+    if(typeof LBScan === 'undefined'){ alert('Scanner file missing (shared/scanner.js).'); return; }
+    scanFor = target; $('scanBox').classList.add('show');
+    LBScan.start($('scanVid'), function(code){ scanStop = null; stopScan(); gotCode(code); }, function(e){ alert(LBScan.message(e)); stopScan(); })
+      .then(function(s){ scanStop = s; }).catch(function(e){ alert(LBScan.message(e)); stopScan(); });
+  }
+  function stopScan(){ if(scanStop){ try{ scanStop(); }catch(e){} scanStop = null; } $('scanBox').classList.remove('show'); }
+  $('scanX').onclick = stopScan;
+  function gotCode(code){ var it = byCode(code); if(!it){ alert('No café item has the code ' + code + '.'); return; } if(scanFor === 'rec') pickRec(it); else jump(it); }
+
+  /* ---------- RECEIVING ---------- */
+  function pickRec(it){ $('item').value = it.name; $('unit').textContent = '(' + it.unit + ')'; showPane('p-rec'); $('qty').focus(); }
+  function recItem(){ var v = $('item').value; return byName(v) || byCode(v); }
+  $('item').oninput = function(){ var it = recItem(); $('unit').textContent = it ? '(' + it.unit + ')' : ''; };
+  $('item').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ var it = recItem(); if(it){ e.preventDefault(); pickRec(it); } } });
+  $('rScan').onclick = function(){ scan('rec'); };
+  $('rMic').onclick = function(){ sayItem().then(function(it){ if(it) pickRec(it); }); };
+  $('recSeg').addEventListener('click', function(e){ var b = e.target.closest('[data-v]'); if(!b) return; [].forEach.call(this.children, function(x){ x.classList.toggle('on', x === b); });
+    var n = b.getAttribute('data-v') === 'new'; $('recNew').style.display = n ? '' : 'none'; $('recFoot').style.display = n ? '' : 'none'; $('recHist').style.display = n ? 'none' : ''; });
+  function paintLines(){
+    $('lines').innerHTML = lines.length ? '<div class="grp" style="top:-10px">In this delivery · ' + lines.length + '</div>' + lines.map(function(l, k){
+      return '<div class="row"><div class="nm">' + esc(l.name) + '<small>' + (l.expiry ? 'exp ' + C.fd(l.expiry) : 'no expiry') + (l.note ? ' · ' + esc(l.note) : '') + '</small></div><span class="q">' + C.n3(l.qty) + ' <small style="font-family:Space Grotesk;font-weight:400;font-size:11px">' + esc(l.unit) + '</small></span><button class="x" data-rm="' + k + '" title="Remove">✕</button></div>'; }).join('') : '';
+    $('save').textContent = lines.length ? '💾 Save receiving (' + lines.length + ')' : '💾 Save receiving';
+    $('recCount').textContent = lines.length ? lines.length + ' in list' : '';
+  }
+  $('addLine').onclick = function(){
+    var it = recItem(), q = Number($('qty').value);
+    if(!it){ alert('Pick the item from the list (or scan / say it).' + (ADMIN ? '\nNew item? Add it first in Café Items.' : '')); $('item').focus(); return; }
+    if(!(q > 0)){ alert('Type the quantity.'); $('qty').focus(); return; }
+    lines.push({ id:it.id, name:it.name, unit:it.unit, qty:q, expiry:$('exp').value, note:$('note').value.trim() });
+    $('item').value = ''; $('qty').value = ''; $('note').value = ''; $('unit').textContent = '';
+    paintLines(); var pb = $('recNew'); pb.scrollTop = pb.scrollHeight; $('item').focus();
+  };
+  $('qty').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); $('addLine').click(); } });
+  $('lines').addEventListener('click', function(e){ var b = e.target.closest('[data-rm]'); if(b){ lines.splice(Number(b.getAttribute('data-rm')), 1); paintLines(); } });
+  $('clr').onclick = function(){ if(lines.length && !confirm('Clear this delivery?')) return; lines = []; ['sup', 'inv', 'item', 'qty', 'exp', 'note'].forEach(function(id){ $(id).value = ''; }); $('unit').textContent = ''; paintLines(); };
+  $('save').onclick = function(){
+    if(!lines.length && recItem() && Number($('qty').value) > 0) $('addLine').click();
+    if(!lines.length){ alert('Add at least one item.'); return; }
+    if(!$('rDate').value){ alert('Pick the date.'); return; }
+    if(!confirm('Save ' + lines.length + ' item(s) received on ' + C.fd($('rDate').value) + ($('sup').value ? ' from ' + $('sup').value : '') + '?\n\n' + lines.map(function(l){ return '• ' + l.name + ' — ' + C.n3(l.qty) + ' ' + l.unit; }).join('\n'))) return;
+    var b = this; b.disabled = true; b.textContent = 'Saving…';
+    C.api({ action:'receive', date:$('rDate').value, supplier:$('sup').value.trim(), invoice:$('inv').value.trim(), receivedBy:$('rBy').value.trim(), lines:JSON.stringify(lines) }).then(function(d){
+      if(!d || !d.success){ alert((d && d.error) || 'Not saved.'); return; }
+      lines = []; ['inv', 'exp'].forEach(function(id){ $(id).value = ''; }); $('rMsg').textContent = '✓ Saved ' + d.saved + ' item(s).'; loadHist(); loadItems(); loadDash();
+    }).catch(function(){ alert('Connection problem. Please try again.'); }).then(function(){ b.disabled = false; paintLines(); });
+  };
+  function loadHist(){
+    C.api({ action:'receivings' }).then(function(d){
+      if(!d || !d.success){ $('recHist').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+      var sups = []; d.rows.forEach(function(r){ if(r.supplier && sups.indexOf(r.supplier) === -1) sups.push(r.supplier); });
+      $('supList').innerHTML = sups.map(function(s){ return '<option value="' + esc(s) + '">'; }).join('');
+      var last = null;
+      $('recHist').innerHTML = d.rows.length ? d.rows.map(function(r){
+        var g = r.date !== last ? '<div class="grp">' + C.fd(r.date) + '</div>' : ''; last = r.date;
+        return g + '<div class="row"><div class="nm">' + esc(r.name) + '<small>' + (r.supplier ? esc(r.supplier) : 'no supplier') + (r.invoice ? ' · inv ' + esc(r.invoice) : '') + (r.expiry ? ' · exp ' + C.fd(r.expiry) : '') + (r.by ? ' · ' + esc(r.by) : '') + (r.note ? ' · ' + esc(r.note) : '') + '</small></div><span class="q">+' + C.n3(r.qty) + '</span>' +
+          (ADMIN ? '<button class="x" data-del="' + r.id + '" data-n="' + esc(r.name) + '" title="Delete (Admin)">🗑️</button>' : '') + '</div>'; }).join('') : '<div class="empty">Nothing received yet.</div>';
+    }).catch(function(){ $('recHist').innerHTML = '<div class="empty">Connection problem.</div>'; });
+  }
+  $('recHist').addEventListener('click', function(e){ var b = e.target.closest('[data-del]'); if(!b) return;
+    if(!confirm('Delete this receiving of ' + b.getAttribute('data-n') + '?\nIt comes off the café stock.')) return;
+    C.api({ action:'deleteReceiving', id:b.getAttribute('data-del') }).then(function(d){ if(!d.success){ alert(d.error || 'Not deleted.'); return; } loadHist(); loadDash(); }); });
+
+  /* ---------- STOCK COUNT ---------- */
+  function chip(t, ro){ $('chip').textContent = t; $('chip').className = 'chip' + (ro ? ' ro' : ''); $('chip').style.display = ''; }
+  function openCount(date, ro, label){
+    if(Object.keys(dirty).length && !confirm('You have counts not saved. Load another anyway?')) return Promise.resolve(false);
+    dirty = {}; RO = !!ro; $('cDate').value = date;
+    $('rows').innerHTML = '<div class="empty">Loading…</div>';
+    return Promise.all([C.api({ action:'items' }), C.api({ action:'countSheet', date:date })]).then(function(r){
+      if(!r[0] || !r[0].success || !r[1] || !r[1].success){ alert((r[0] && r[0].error) || (r[1] && r[1].error) || 'Could not load.'); return false; }
+      D = r[0]; S = r[1].rows; ITEMS = D.items;
+      var n = D.items.filter(function(i){ return S[i.id] && S[i.id].counted != null; }).length;
+      chip(label || (n ? 'Saved count · ' + n + ' items (you can change it)' : 'Fresh load · ' + D.items.length + ' items'), RO);
+      $('saveC').disabled = RO; draw(); return true;
+    }).catch(function(){ alert('Connection problem.'); return false; });
+  }
+  function val(i){ var s = S[i.id] || {}; return dirty[i.id] || { qty: s.counted != null ? s.counted : '', expiry: s.expiry || '', note: s.note || '' }; }
+  function days(e){ return Math.round((new Date(String(e).slice(0, 10) + 'T00:00:00') - new Date(C.today() + 'T00:00:00')) / 86400000); }
+  function expCls(e){ if(!e) return ''; var d = days(e); return d < 0 ? 'zero' : d <= 60 ? 'soon' : ''; }
+  function draw(){
+    if(!D) return;
+    var t = $('cq').value.trim().toLowerCase(), last = null;
+    var L = D.items.filter(function(i){ return !t || (i.name + ' ' + i.category + ' ' + i.code).toLowerCase().indexOf(t) !== -1; });
+    $('rows').innerHTML = L.map(function(i){
+      var head = i.category !== last ? '<div class="grp">' + esc(i.category || 'Other') + '</div>' : ''; last = i.category;
+      var v = val(i), s = S[i.id] || {};
+      return head + '<div class="row ln' + (dirty[i.id] ? ' chg' : '') + '" data-id="' + i.id + '"><div class="pic' + (i.photo ? ' has' : '') + '"' + (i.photo ? ' data-z="' + esc(i.photo) + '" style="background-image:url(\'' + esc(i.photo) + '\')"' : '') + '>' + (i.photo ? '' : '☕') + '</div>' +
+        '<div class="nm">' + esc(i.name) + '<small>' + esc(i.unit) + (i.code ? ' · ' + esc(i.code) : '') + '</small></div>' +
+        '<div class="sys" title="What the system expects">sys ' + C.n3(s.system || 0) + '</div>' +
+        '<input class="in cnt" type="number" min="0" step="any" inputmode="decimal" data-f="qty" placeholder="Count" value="' + esc(C.n3(v.qty)) + '"' + (RO ? ' disabled' : '') + '>' +
+        '<button class="pl" data-plus title="Add to the count"' + (RO ? ' disabled' : '') + '>+</button>' +
+        '<input class="in exp ' + expCls(v.expiry) + '" type="date" data-f="expiry" title="Expiry" value="' + esc(String(v.expiry || '').slice(0, 10)) + '"' + (RO ? ' disabled' : '') + '></div>';
+    }).join('') || '<div class="empty">No items' + (t ? ' for this search' : '') + '.</div>';
+    summary();
+  }
+  function summary(){
+    if(!D){ $('sum').innerHTML = ''; return; }
+    var n = 0, soon = 0, gone = 0, zero = 0;
+    D.items.forEach(function(i){ var v = val(i); if(v.qty !== '' && v.qty != null){ n++; if(Number(v.qty) === 0) zero++; } var c = expCls(v.expiry); if(c === 'soon') soon++; if(c === 'zero') gone++; });
+    var ch = Object.keys(dirty).length;
+    $('nCount').textContent = n + ' / ' + D.items.length + ' counted';
+    $('sum').innerHTML = '<span>Counted <b>' + n + '/' + D.items.length + '</b></span><span>Zero <b' + (zero ? ' class="zero"' : '') + '>' + zero + '</b></span><span>Expiring ≤60d <b' + (soon ? ' class="soon"' : '') + '>' + soon + '</b></span><span>Expired <b' + (gone ? ' class="zero"' : '') + '>' + gone + '</b></span>' + (ch ? '<span style="background:#fbefd6">Not saved <b class="soon">' + ch + '</b></span>' : '');
+  }
+  function touch(id){ var it = D.items.find(function(x){ return x.id === id; }); return dirty[id] || (dirty[id] = Object.assign({ id:id }, val(it))); }
+  $('rows').addEventListener('input', function(e){ var f = e.target.getAttribute('data-f'); if(!f) return; var ln = e.target.closest('.ln'), id = Number(ln.getAttribute('data-id')); touch(id)[f] = e.target.value; ln.classList.add('chg'); if(f === 'expiry') e.target.className = 'in exp ' + expCls(e.target.value); summary(); });
+  $('rows').addEventListener('click', function(e){
+    var z = e.target.closest('[data-z]'); if(z){ C.zoom(z.getAttribute('data-z')); return; }
+    var p = e.target.closest('[data-plus]'); if(!p) return; var ln = p.closest('.ln'), id = Number(ln.getAttribute('data-id'));
+    var add = prompt('Add how many to the count?'); if(add == null) return; var n = Number(add); if(!(n > 0)){ alert('Type a number.'); return; }
+    var v = touch(id); v.qty = Math.round(((Number(v.qty) || 0) + n) * 1000) / 1000; ln.querySelector('.cnt').value = v.qty; ln.classList.add('chg'); summary();
+  });
+  function jump(it){
+    showPane('p-cnt');
+    var go = function(){ $('cq').value = ''; draw(); var ln = document.querySelector('.ln[data-id="' + it.id + '"]'); if(!ln) return;
+      ln.scrollIntoView({ block:'center', behavior:'smooth' }); ln.classList.add('hit'); setTimeout(function(){ ln.classList.remove('hit'); }, 2200); var c = ln.querySelector('.cnt'); if(c && !c.disabled) c.focus({ preventScroll:true }); };
+    if(D) go(); else openCount($('cDate').value || C.today(), false).then(function(ok){ if(ok) go(); });
+  }
+  $('cq').oninput = draw;
+  $('cq').addEventListener('keydown', function(e){ if(e.key !== 'Enter') return; var it = byCode(this.value); if(it){ e.preventDefault(); jump(it); } });
+  $('cScan').onclick = function(){ scan('cnt'); };
+  $('cMic').onclick = function(){ sayItem().then(function(it){ if(it) jump(it); }); };
+  $('loadBtn').onclick = function(){ openCount($('cDate').value || C.today(), false); };
+  $('cDate').onchange = function(){ if(D) openCount(this.value, false); };
+  function pickDate(ro){ C.api({ action:'countDates' }).then(function(d){ var L = (d && d.dates) || []; if(!L.length){ alert('No saved counts yet.'); return; }
+    var bg = document.createElement('div'); bg.className = 'cf-bg';
+    bg.innerHTML = '<div class="cf-ed"><h3>' + (ro ? '🔍 Count history (read-only)' : '↺ Recall a count') + '</h3><div style="max-height:60vh;overflow-y:auto">' + L.map(function(x){ return '<button class="cf-btn" data-d="' + x.date + '" style="display:block;width:100%;text-align:left;margin-top:6px">' + C.fd(x.date) + ' · ' + x.items + ' items' + (x.by ? ' · ' + esc(x.by) : '') + '</button>'; }).join('') + '</div><div class="cf-row"><button class="cf-btn" data-x>Close</button></div></div>';
+    document.body.appendChild(bg);
+    bg.addEventListener('click', function(e){ var b = e.target.closest('[data-d]'); if(b){ bg.remove(); openCount(b.getAttribute('data-d'), ro, ro ? 'History ' + C.fd(b.getAttribute('data-d')) + ' · read-only' : null); return; } if(e.target === bg || e.target.closest('[data-x]')) bg.remove(); }); }); }
+  $('recallBtn').onclick = function(){ pickDate(false); };
+  $('histBtn').onclick = function(){ pickDate(true); };
+  $('saveC').onclick = function(){
+    if(!D){ alert('Press Load items first.'); return; }
+    var rows = Object.keys(dirty).map(function(k){ var v = dirty[k]; return { id:v.id, qty: v.qty === '' ? '' : Number(v.qty), expiry:v.expiry || '', note:v.note || '' }; });
+    if(!rows.length){ $('cMsg').textContent = 'Nothing changed.'; return; }
+    if(!$('cBy').value.trim()){ alert('Type your name in "Counted by".'); $('cBy').focus(); return; }
+    var b = this; b.disabled = true; b.textContent = 'Saving…';
+    C.api({ action:'saveCount', date:$('cDate').value, countedBy:$('cBy').value.trim(), rows:JSON.stringify(rows) }).then(function(d){
+      if(!d || !d.success){ alert((d && d.error) || 'Not saved.'); return; }
+      dirty = {}; $('cMsg').textContent = '✓ Saved ' + d.saved + ' count(s) for ' + C.fd($('cDate').value) + '.'; openCount($('cDate').value, false); loadDash();
+    }).catch(function(){ alert('Connection problem. Please try again.'); }).then(function(){ b.disabled = false; b.textContent = '💾 Save count'; });
+  };
+  function lines2(){ return D.items.map(function(i){ var v = val(i), s = S[i.id] || {}; return { name:i.name, group:i.category, code:i.code, unit:i.unit, system:s.system || 0, count:v.qty, expiry:v.expiry }; }); }
+  $('print').onclick = function(){ if(!D){ alert('Press Load items first.'); return; } var no = 0;
+    $('pr').innerHTML = '<h2 style="margin:0 0 8px">Café stock count — ' + C.fd($('cDate').value) + '</h2><div style="font-size:12px;margin-bottom:8px">Counted by: ' + esc($('cBy').value) + '</div><table><thead><tr><th>#</th><th>Item</th><th>Code</th><th>Unit</th><th>System</th><th>Count</th><th>Expiry</th></tr></thead><tbody>' +
+      lines2().map(function(l){ no++; return '<tr><td>' + no + '</td><td>' + esc(l.name) + '</td><td>' + esc(l.code) + '</td><td>' + esc(l.unit) + '</td><td>' + C.n3(l.system) + '</td><td>' + esc(C.n3(l.count)) + '</td><td>' + esc(C.fd(l.expiry)) + '</td></tr>'; }).join('') + '</tbody></table>';
+    window.print(); };
+  $('excel').onclick = function(){ if(!D){ alert('Press Load items first.'); return; }
+    var q = function(v){ v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var csv = ['Group,Item,Code,Unit,System,Count,Expiry'].concat(lines2().map(function(l){ return [l.group, l.name, l.code, l.unit, C.n3(l.system), C.n3(l.count), l.expiry].map(q).join(','); })).join('\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type:'text/csv' })); a.download = 'cafe-count-' + $('cDate').value + '.csv'; a.click(); };
+  $('wa').onclick = function(){ if(!D){ alert('Press Load items first.'); return; }
+    var L = lines2().filter(function(l){ return l.count !== '' && l.count != null; });
+    var txt = '☕ *Café stock count* — ' + C.fd($('cDate').value) + '\nCounted by: ' + $('cBy').value + '\n\n' + L.map(function(l){ return '• ' + l.name + ': ' + C.n3(l.count) + ' ' + l.unit + (l.expiry ? ' (exp ' + C.fd(l.expiry) + ')' : ''); }).join('\n');
+    window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); };
+
+  /* ---------- DASHBOARD ---------- */
+  function nm(r){ return '<div class="nm">' + esc(r.name) + '<small>' + esc(r.category || '') + (r.code ? ' · ' + esc(r.code) : '') + '</small></div>'; }
+  function drawDash(){
+    var d = DASH; if(!d) return; var R = d.rows, t = d.today, out = '';
+    var moving = R.filter(function(r){ return r.perMonth > 0; }).sort(function(a, b){ return b.perMonth - a.perMonth; }), max = moving.length ? moving[0].perMonth : 1;
+    var need2 = d.counts < 2 ? '<div class="empty">Needs at least <b>2 stock counts</b> to see what moves.<br>Save this month\'s count, then next month\'s.</div>' : '';
+    if(dView === 'fast') out = moving.length ? moving.map(function(r, k){ return '<div class="row"><span class="q" style="width:22px;color:var(--lat)">' + (k + 1) + '</span>' + nm(r) + '<div style="text-align:right;min-width:110px"><span class="q">' + C.n3(r.perMonth) + '</span> <small>' + esc(r.unit) + '/mo</small><div class="bar" style="width:' + Math.max(8, r.perMonth / max * 100) + '%;margin-left:auto"></div></div></div>'; }).join('') : need2 || '<div class="empty">Nothing used in this period.</div>';
+    if(dView === 'slow'){ var sl = R.filter(function(r){ return !(r.perMonth > 0); }); out = sl.length ? sl.map(function(r){ return '<div class="row">' + nm(r) + '<div style="text-align:right"><span class="q">' + C.n3(r.stock) + '</span> <small>' + esc(r.unit) + '</small><br><small class="' + (r.countDate ? '' : 'soon') + '">' + (r.countDate ? 'counted ' + C.fd(r.countDate) : 'not counted yet') + '</small></div></div>'; }).join('') : '<div class="empty">All items are moving 👍</div>'; }
+    if(dView === 'low'){ var o = R.filter(function(r){ return r.countDate && r.stock <= 0; }), lo = R.filter(function(r){ return r.daysLeft != null && r.daysLeft <= 30 && r.stock > 0; }).sort(function(a, b){ return a.daysLeft - b.daysLeft; });
+      out = o.concat(lo).length ? o.map(function(r){ return '<div class="row">' + nm(r) + '<span class="q zero">OUT</span></div>'; }).join('') + lo.map(function(r){ return '<div class="row">' + nm(r) + '<div style="text-align:right"><span class="q ' + (r.daysLeft <= 7 ? 'zero' : 'soon') + '">' + r.daysLeft + ' days</span><br><small>' + C.n3(r.stock) + ' ' + esc(r.unit) + ' left</small></div></div>'; }).join('') : need2 || '<div class="empty">No low stock 👍</div>'; }
+    if(dView === 'exp'){ var ex = R.filter(function(r){ return r.expired || (r.nextExpiry && days(r.nextExpiry) <= 60); }).sort(function(a, b){ return (a.nextExpiry || '0') < (b.nextExpiry || '0') ? -1 : 1; });
+      out = ex.length ? ex.map(function(r){ return '<div class="row">' + nm(r) + '<div style="text-align:right"><span class="q ' + (r.expired ? 'zero' : 'soon') + '">' + (r.expired ? 'EXPIRED' : days(r.nextExpiry) + ' days') + '</span><br><small>' + (r.nextExpiry ? C.fd(r.nextExpiry) : '') + ' · ' + C.n3(r.stock) + ' ' + esc(r.unit) + '</small></div></div>'; }).join('') : '<div class="empty">Nothing expiring in 60 days 👍</div>'; }
+    if(dView === 'mon'){ var M = Object.keys(d.receivingByMonth || {}).sort().slice(-12), mx = Math.max.apply(null, M.map(function(m){ return d.receivingByMonth[m]; }).concat([1]));
+      out = M.length ? '<div style="font-size:12px;color:var(--dim)">Receiving lines per month</div><div class="bars">' + M.map(function(m){ var v = d.receivingByMonth[m]; return '<div><b style="color:var(--esp)">' + v + '</b><i style="height:' + Math.max(4, v / mx * 110) + 'px"></i>' + m.slice(5) + '/' + m.slice(2, 4) + '</div>'; }).join('') + '</div>' : '<div class="empty">No receiving yet.</div>'; }
+    $('dash').innerHTML = out;
+  }
+  $('dSeg').addEventListener('click', function(e){ var b = e.target.closest('[data-v]'); if(!b) return; [].forEach.call(this.children, function(x){ x.classList.toggle('on', x === b); }); dView = b.getAttribute('data-v'); drawDash(); });
+  function loadDash(){
+    C.api({ action:'dashboard', days:$('days').value }).then(function(d){
+      if(!d || !d.success){ $('dash').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+      DASH = d; var R = d.rows, t = d.today;
+      var mov = R.filter(function(r){ return r.perMonth > 0; }).length, low = R.filter(function(r){ return (r.countDate && r.stock <= 0) || (r.daysLeft != null && r.daysLeft <= 30); }).length,
+          ex = R.filter(function(r){ return r.expired || (r.nextExpiry && days(r.nextExpiry) <= 60); }).length;
+      var K = [[R.length, 'Items', ''], [mov, 'Moving', ''], [low, 'Low / out', low ? 'bad' : ''], [ex, 'Expiry ≤60d', ex ? 'warn' : ''], [d.counts, 'Counts', '']];
+      $('kpis').innerHTML = K.map(function(k){ return '<div class="kpi ' + k[2] + '"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
+      $('kpM').innerHTML = K.slice(1, 4).map(function(k){ return '<span>' + k[1] + ' <b>' + k[0] + '</b></span>'; }).join('');
+      $('dInfo').textContent = d.counts + ' count(s) saved · ' + d.receiveLines + ' receiving line(s) · since ' + C.fd(d.since);
+      drawDash();
+    }).catch(function(){ $('dash').innerHTML = '<div class="empty">Connection problem.</div>'; });
+  }
+  $('days').onchange = loadDash;
+
+  function loadItems(){ return C.api({ action:'items' }).then(function(d){ if(!d || !d.success) return; ITEMS = d.items; ADMIN = d.admin;
+    $('itemList').innerHTML = d.items.map(function(i){ return '<option value="' + esc(i.name) + '">' + esc(i.code || '') + '</option>'; }).join(''); }); }
+  window.addEventListener('beforeunload', function(e){ if(lines.length || Object.keys(dirty).length){ e.preventDefault(); e.returnValue = ''; } });
+  loadItems().then(loadHist); loadDash(); paintLines(); summary();
+})();
+</script>
+</body>
+</html>

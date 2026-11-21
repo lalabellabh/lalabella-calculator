@@ -1,5 +1,5 @@
 /* LALABELLA — Café pages common bits (Nov 21 2026): API, token, small helpers, item picture form, tabs.
-   Used by cafe-inventory.html (items + stock), cafe-receiving.html, cafe-stock-count.html. Backend: cafe-fast. */
+   Used by cafe-inventory.html (items) and cafe-hub.html (Receiving + Stock Count + Dashboard). Backend: cafe-fast. */
 (function () {
   var API = (window.LB_CONFIG && LB_CONFIG.CAFE_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/cafe-fast';
   var esc = window.lbEsc || function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -12,7 +12,7 @@
   var UNITS = ['pcs', 'kg', 'g', 'liters', 'ml', 'boxes', 'packs', 'bottles', 'sets'];
   // tabs on top of every café page
   function tabs(active) {
-    var T = [['cafe-inventory.html', '☕', 'Café Items'], ['cafe-receiving.html', '🛒', 'Receiving'], ['cafe-stock-count.html', '📋', 'Stock Count'], ['cafe-dashboard.html', '📊', 'Dashboard']];
+    var T = [['cafe-inventory.html', '☕', 'Café Items'], ['cafe-hub.html#rec', '🛒', 'Receiving'], ['cafe-hub.html#cnt', '📋', 'Stock Count'], ['cafe-hub.html#dash', '📊', 'Dashboard']];
     return '<div class="cf-tabs">' + T.map(function (t) { return '<a href="' + t[0] + '"' + (t[0] === active ? ' class="on"' : '') + '>' + t[1] + ' ' + t[2] + '</a>'; }).join('') + '</div>';
   }
   function shrink(file) { return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { var im = new Image(); im.onload = function () {
