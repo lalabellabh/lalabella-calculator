@@ -79,7 +79,8 @@
   .ic .cd{ color:var(--acc); font-weight:600; letter-spacing:.04em; }
   .ic svg.bc{ background:#fff; border:1px solid var(--line); border-radius:10px; height:54px; }
   .ic .sk{ font-weight:600; }
-  .ic .acts{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:4px; }
+  .ic .acts{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px; gap:5px; margin-top:4px; }
+  .ic .acts .b{ min-width:0; overflow:hidden; text-overflow:ellipsis; padding:8px 2px; font-size:11px; }
   .ic .b{ background:var(--esp); border-radius:10px; font-weight:600; font-size:11.5px; padding:8px 4px; white-space:nowrap; }
   .ic .b.alt{ background:#fff; color:var(--esp); border:1px solid var(--line); }
   .ic .b:hover{ filter:brightness(1.08); } .ic .b.alt:hover{ border-color:var(--acc); }
@@ -126,7 +127,7 @@
       return '<div class="ic cf-glass" data-id="' + i.id + '"><div class="ph">' + (i.photo ? '<img src="' + esc(i.photo) + '" alt="" data-a="zoom">' + (A ? '<button class="xrm" data-a="rm" title="Remove picture">✕</button>' : '') : '☕') + '</div>' +
         '<div><div class="nm">' + esc(i.name) + '</div><div class="ct">' + esc(i.category || 'Other') + ' · ' + esc(i.unit) + '</div>' + (i.code ? '<div class="cd">' + esc(i.code) + '</div><svg class="bc" data-a="bc" title="Tap to make bigger" data-code="' + esc(i.code) + '"></svg>' : '') +
         '<div class="sk"' + (i.stock > 0 ? '' : ' style="color:var(--bad)"') + '>Stock ' + C.n3(i.stock) + ' ' + esc(i.unit) + ' <small>' + (i.countDate ? '· counted ' + C.fd(i.countDate) : '· not counted yet') + (i.nextExpiry ? ' · exp ' + C.fd(i.nextExpiry) : '') + '</small></div></div>' +
-        (A ? '<div class="acts"><button class="b" data-a="cam">📷 Camera</button><button class="b alt" data-a="gal">🖼️ ' + (i.photo ? 'Change' : 'Gallery') + '</button><button class="b alt" data-a="edit">✏️ Edit</button></div><div class="paste" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div>' : '') + '</div>';
+        (A ? '<div class="acts"><button class="b" data-a="cam">📷 Camera</button><button class="b alt" data-a="gal">🖼️ ' + (i.photo ? 'Change' : 'Gallery') + '</button><button class="b alt" data-a="edit" title="Edit item" aria-label="Edit item">✏️</button></div><div class="paste" tabindex="0" data-a="paste">📋 Click here, then Ctrl+V (snip paste)</div>' : '') + '</div>';
     }).join('') : '<div class="empty" style="grid-column:1/-1">No items' + ($('q').value || $('grp').value ? ' for this search' : ' yet') + '.</div>';
     if(window.JsBarcode) document.querySelectorAll('#list svg.bc').forEach(function(sv){ try{ JsBarcode(sv, sv.getAttribute('data-code'), { format:'CODE128', width:2, height:44, margin:0, displayValue:false }); sv.setAttribute('preserveAspectRatio', 'xMidYMid meet'); }catch(e){} });
   }
