@@ -1055,5 +1055,6 @@
     get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.desc + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.price }; }), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 <script src="joyboy-bubble.js"></script>
+<script src="shared/calc-log.js?v=1" data-kind="flower"></script>
 </body>
 </html>
