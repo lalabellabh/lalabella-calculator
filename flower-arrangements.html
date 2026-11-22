@@ -528,18 +528,18 @@ async function lookupByCode(code){
   try{
     const data=await api({ action:'getFlowerArrangementByCode', code });
     if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
-    showResult(data);
+    showResult(data, true);
   }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
 }
-function showResult(data){
+function showResult(data, scanned){
   const card=document.getElementById('scanResultCard'), body=document.getElementById('scanResultBody');
   card.style.display='block';
   {
     body.innerHTML = cardHtml(data,false)
       + '<button type="button" class="ghost-btn" id="scanPrintBtn" style="width:100%;margin-top:10px;">🖨️ Print Receipt</button>'
-      + fulfillSectionHtml(data);
+      + (scanned ? '<div style="margin-top:12px;background:#eef7f0;border:1px solid #cfe6d6;color:#2f6b45;border-radius:10px;padding:8px 11px;font-size:12px">✓ Scanned = already made — already out of stock. Scanning never takes anything out again. To make a NEW one, use “📦 Make one” on the arrangement below.</div>' : fulfillSectionHtml(data));
     document.getElementById('scanPrintBtn').addEventListener('click', ()=>printArrangement(data));
-    wireFulfillSection(data);
+    if(!scanned) wireFulfillSection(data);
     card.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }

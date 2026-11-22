@@ -183,7 +183,7 @@
 
   <div class="scan-hero">
     <h2>📷 Scan Arrangement or Display Barcode</h2>
-    <p>ARR- (catalog) or DISP- (made in Build a Display) — see what's inside, save it to the catalog, or make another one.</p>
+    <p>A barcode means it is already made and already out of stock — scanning only shows what's inside (and lets you save a display to the catalog).</p>
     <div class="scan-row">
       <button class="scan-btn-big" id="scanBtn">Scan Now</button>
       <input type="text" id="codeInput" placeholder="or type ARR-00001 / DISP-00023" autocomplete="off">
@@ -571,27 +571,28 @@ async function lookupByCode(code){
   try{
     const data=await (await fetch(CHOCOLATE_API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token()))).json();
     if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
-    showResult(data);
+    showResult(data, true);
   }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
 }
 let resultArr=null;
-function showResult(a){
+function showResult(a, scanned){
   resultArr=a;
   const card=$('scanResultCard'), body=$('scanResultBody'); card.style.display='block';
   const saved = a.isDisplay ? allArrangements.find(x=>x.fromDisplay===a.arrangementCode) : null;
   body.innerHTML = cardHtml(a,false)
-    + (a.isDisplay ? `<div class="disp-note">✓ Made in Build a Display — this one is already out of stock.${saved ? ' Saved in the catalog as <b>' + esc(saved.arrangementCode) + '</b>.' : ''}</div>` : '')
+    + (scanned ? `<div class="disp-note">✓ Scanned = already made — this one is already out of stock. Scanning never takes anything out again.${saved ? ' Saved in the catalog as <b>' + esc(saved.arrangementCode) + '</b>.' : ''}</div>` : '')
     + `<div class="btn-row" style="margin-top:8px">${a.isDisplay ? `<button type="button" class="save-btn" id="rsSave">⭐ ${saved ? 'Save again' : 'Save to catalog'} (online arrangement)</button>` : ''}<button type="button" class="ghost-btn" id="rsPrint">🖨️ Print receipt</button></div>`
-    + `<div class="make-box" style="margin-top:14px">
+    + (scanned ? '' : `<div class="make-box" style="margin-top:14px">
         <label style="margin-bottom:6px">${a.isDisplay ? '📦 Make another one like this' : '📦 Make one'} — take out of stock</label>
         <select id="rsBranch" style="margin:0 0 10px"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
         <button type="button" class="scan-btn-big" id="rsMake" style="width:100%">📦 Made it — take out of stock</button>
         <div id="rsMsg" class="msg"></div>
-      </div>`;
-  try{ const b=localStorage.getItem('lbArrBranch') || currentUser().branch || ''; if(b) $('rsBranch').value=b; }catch(e){}
-  $('rsBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('rsBranch').value); }catch(e){} });
+      </div>`);
   $('rsPrint').onclick=()=>printArrangement(a);
   if($('rsSave')) $('rsSave').onclick=()=>startFromDisplay(a);
+  if(scanned){ card.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+  try{ const b=localStorage.getItem('lbArrBranch') || currentUser().branch || ''; if(b) $('rsBranch').value=b; }catch(e){}
+  $('rsBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('rsBranch').value); }catch(e){} });
   $('rsMake').onclick=async ()=>{
     const br=$('rsBranch').value, m=$('rsMsg');
     if(!br){ m.className='msg error'; m.textContent='Pick the branch first.'; return; }
