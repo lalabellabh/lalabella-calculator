@@ -596,6 +596,9 @@
       <div style="display:flex;align-items:center;gap:8px;"><input type="month" id="displayBestBefore" style="flex:1;" /><button type="button" id="displayBBClr" aria-label="Auto" title="Back to automatic" style="border:0;background:none;color:#999;cursor:pointer;font-size:16px;">✕</button></div>
       <div id="displayBBNote" style="font-size:11px;color:var(--ink-dim);margin-top:4px;"></div>
 
+      <label style="margin-top:16px;">Branch <span style="font-weight:400;color:var(--ink-dim);">— the chocolates are taken out of this branch's stock when you save</span></label>
+      <select id="displayBranch"><option value="">— pick the branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
 
@@ -1474,6 +1477,9 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   if(!displayName){ alert('Enter a Display Name.'); return; }
   if(!doneBy){ alert('Enter who made this display (Done by).'); return; }
   if(!displayCart.some(c => !c.extra)){ alert('Add at least one chocolate.'); return; }
+  const dBranch = document.getElementById('displayBranch').value;
+  if(!dBranch){ alert('Pick the branch — the chocolates are taken out of its stock.'); document.getElementById('displayBranch').focus(); return; }
+  if(!confirm('Save "' + displayName + '" and take these chocolates out of ' + dBranch + ' stock?\n\n' + displayItemsText(displayCart).split(' · ').join('\n'))) return;
 
   const btn = document.getElementById('saveDisplayBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -1491,6 +1497,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       alert(data.error);
     } else {
       lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary(), made: new Date(), items: displayItemsText(displayCart), n: displayCart.length };
+      const taken = await takeDisplayStock(data.displayCode, displayName, dBranch, displayCart);
       const bbVal = document.getElementById('displayBestBefore').value || '';
       if(bbVal){ try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code:data.displayCode, value:bbVal }).toString()); }catch(e){ console.error('[Lalabella] best before not saved'); } }
       document.getElementById('dpName').textContent = displayName;
@@ -1504,7 +1511,8 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       document.getElementById('displayPreview').style.display = 'block';
       document.getElementById('printDisplayBtn').style.display = 'block';
       try{ localStorage.setItem('lbDisplayDoneBy', doneBy); }catch(e){}
-      alert('Saved! Display Code: ' + data.displayCode);
+      alert('Saved! Display Code: ' + data.displayCode + '\n\n' + taken);
+      try{ localStorage.setItem('lbDisplayBranch', dBranch); }catch(e){}
 
       displayCart = []; dispBBManual = false; document.getElementById('displayBestBefore').value = ''; document.getElementById('displayBBNote').textContent = '';
       document.getElementById('displayName').value = '';
@@ -1516,6 +1524,29 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   }
   btn.disabled = false; btn.textContent = '💾 Save & Generate Barcode';
 });
+
+// Nov 22 2026 (Bench): a display uses the chocolates right away, so saving it takes them out of the branch stock
+// (same engine as a ✓ Sold in the Chocolate Calc: FIFO by expiry, one REL- release, stock moves, cancel in Calc Sales puts them back).
+// The DISP code is on that record, so a later Release / Calc sale / Odoo line with this DISP code is not taken out twice.
+async function takeDisplayStock(code, name, branch, cart){
+  const tok = (()=>{ try{ return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } })();
+  const chocs = cart.filter(c => !c.extra).map(c => {
+    const it = (items || []).find(x => String(x['Chocolate Name']||'').trim().toLowerCase() === String(c.name).trim().toLowerCase()) || {};
+    const gpp = Number(it['Grams']) || 0, u = c.unit || 'piece', qty = Number(c.qty) || 0;
+    const kg = u === 'kg' ? qty : u === 'g' ? qty / 1000 : (gpp ? qty * gpp / 1000 : 0);
+    return { name: c.name, code: it['Product Code'] || '', cat: it['Category'] || '', mode: u === 'kg' ? 'kg' : u === 'g' ? 'grams' : 'pieces', amount: qty, kg: Math.round(kg * 1000) / 1000, gpp: gpp, total: Math.round(qty * (Number(c.price) || 0) * 1000) / 1000 };
+  });
+  const ex = cart.filter(c => c.extra).map(c => ({ desc: c.name, price: Number(c.price) || 0 }));
+  try{
+    const body = new URLSearchParams({ action:'saveChocolateSale', token: tok, reqKey: 'disp' + code.replace(/[^A-Za-z0-9]/g, ''), disp: code, branch: branch, source: 'Display', ref: name.slice(0, 60), customer: 'Display ' + code,
+      extras: String(ex.reduce((a, x) => a + x.price, 0)), extrasList: JSON.stringify(ex), items: JSON.stringify(chocs) });
+    const d = await (await fetch(LB_CONFIG.CALC_SALE_API, { method:'POST', body })).json();
+    if(!d || !d.success) return '⚠️ NOT taken out of stock: ' + ((d && d.error) || 'no reply') + '\nUse Chocolate Release → scan ' + code + ' to take it out.';
+    const sh = (d.short || []).map(x => '• ' + x.name + ': needed ' + x.need + ', had ' + x.have).join('\n');
+    return '✅ Taken out of ' + branch + ' stock (' + (d.releaseNo || d.saleNo) + ').' + (sh ? '\n\n⚠️ Not enough in stock:\n' + sh : '');
+  }catch(e){ return '⚠️ NOT taken out of stock (connection). Use Chocolate Release → scan ' + code + '.'; }
+}
+(function(){ try{ const b = localStorage.getItem('lbDisplayBranch') || (JSON.parse(sessionStorage.getItem('lalabellaUser') || '{}').branch || ''); const el = document.getElementById('displayBranch'); if(b && [...el.options].some(o => o.value === b)) el.value = b; }catch(e){} })();
 
 // The display sticker (same for a new display and a reprint from Look Up): name, price, chocolates used, pcs/kg + best before, barcode, code, made date
 function printDisplayLabel(D){
