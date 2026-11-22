@@ -198,7 +198,12 @@
     body.lbl-on #labelPrintArea.printing{ position:static !important; }
     #labelPrintArea.one{ padding:0 !important; }
     #labelPrintArea.one .label-grid{ display:block; }
-    #labelPrintArea.one .label-cell{ border:0; border-radius:0; padding:1.5mm 2mm; page-break-after:avoid; break-after:avoid; }
+    #labelPrintArea.one .label-cell{ border:0; border-radius:0; padding:1.5mm 2mm; page-break-after:avoid; break-after:avoid; width:56mm; max-width:100%; margin:0 auto; box-sizing:border-box; overflow:hidden; }
+    /* sticker-sized: a long list wraps onto the next lines (small) instead of running past the sticker */
+    #labelPrintArea.one .label-cell .l-name{ overflow-wrap:anywhere; }
+    #labelPrintArea.one .label-cell .l-items{ font-size:5.5pt; line-height:1.2; overflow-wrap:anywhere; white-space:normal; }
+    #labelPrintArea.one .label-cell .l-items.sm{ font-size:4.8pt; }
+    #labelPrintArea.one .label-cell svg{ max-width:100%; height:auto; }
     body.lp-on > *:not(#lookupPrintArea){ display:none !important; }
     #lookupPrintArea.printing, #lookupPrintArea.printing *{ visibility:visible; }
     #lookupPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:80mm; padding:4mm; box-sizing:border-box; color:#000; background:#fff; font-family:Arial,Helvetica,sans-serif; }
@@ -1615,7 +1620,7 @@ function printDisplayLabel(D){
     <div class="label-cell">
       <div class="l-name">${lbEsc(lastSavedDisplay.name)}</div>
       <div class="l-price">${fmtBD(lastSavedDisplay.total)}</div>
-      ${lastSavedDisplay.items ? `<div class="l-items${lastSavedDisplay.n > 6 ? ' sm' : ''}">${lbEsc(lastSavedDisplay.items)}</div>` : ''}
+      ${lastSavedDisplay.items ? `<div class="l-items${lastSavedDisplay.n > 6 || String(lastSavedDisplay.items).length > 110 ? ' sm' : ''}">${lbEsc(lastSavedDisplay.items)}</div>` : ''}
       ${lastSavedDisplay.sum ? `<div class="l-price">${lastSavedDisplay.sum}</div>` : ''}
       <svg id="printDpBarcode"></svg>
       <div class="l-code">${lastSavedDisplay.code}</div>
@@ -1623,7 +1628,7 @@ function printDisplayLabel(D){
     </div>
   `;
   try{
-    fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, lastSavedDisplay.items ? (lastSavedDisplay.n > 6 ? 26 : 32) : 42);   // shorter bars when the item list is on the label, so it all fits
+    fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, lastSavedDisplay.items ? (lastSavedDisplay.n > 6 || String(lastSavedDisplay.items).length > 110 ? 24 : 30) : 40);   // shorter bars when the item list is on the label, so it all fits
   }catch(e){}
   lblPrint(true);
 }
