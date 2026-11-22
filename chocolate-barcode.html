@@ -1484,7 +1484,13 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   if(!displayCart.some(c => !c.extra)){ alert('Add at least one chocolate.'); return; }
   const dBranch = document.getElementById('displayBranch').value;
   if(!dBranch){ alert('Pick the branch — the chocolates are taken out of its stock.'); document.getElementById('displayBranch').focus(); return; }
-  if(!confirm('Save "' + displayName + '" and take these chocolates out of ' + dBranch + ' stock?\n\n' + displayItemsText(displayCart).split(' · ').join('\n'))) return;
+  let alreadyOut = null;   // the same chocolates were already taken out (Calc ✓ Sold / another display) → label only
+  if(window.LBDup){
+    const m = await LBDup.check(dBranch, displayCart.filter(c => !c.extra).map(c => ({ name: c.name, amount: Number(c.qty) || 0, mode: c.unit === 'kg' ? 'kg' : c.unit === 'g' ? 'grams' : 'pieces' })), 'display');
+    if(m && confirm(LBDup.msg(m, 'display'))) alreadyOut = m;
+  }
+  if(!confirm(alreadyOut ? 'Save "' + displayName + '" and print its label only?\nNothing is taken out of stock again (already out by ' + alreadyOut.saleNo + ').'
+                         : 'Save "' + displayName + '" and take these chocolates out of ' + dBranch + ' stock?\n\n' + displayItemsText(displayCart).split(' · ').join('\n'))) return;
 
   const btn = document.getElementById('saveDisplayBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -1502,7 +1508,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       alert(data.error);
     } else {
       lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary(), made: new Date(), items: displayItemsText(displayCart), n: displayCart.length };
-      const taken = await takeDisplayStock(data.displayCode, displayName, dBranch, displayCart);
+      const taken = alreadyOut ? 'ℹ️ Not taken out again — already out of stock by ' + alreadyOut.saleNo + '.' : await takeDisplayStock(data.displayCode, displayName, dBranch, displayCart);
       const bbVal = document.getElementById('displayBestBefore').value || '';
       if(bbVal){ try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code:data.displayCode, value:bbVal }).toString()); }catch(e){ console.error('[Lalabella] best before not saved'); } }
       document.getElementById('dpName').textContent = displayName;
@@ -1822,6 +1828,7 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
 <script src="shared/voice.js?v=7"></script>
 <script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("displayExtraDesc"), document.getElementById("displayExtraAmt")); }catch(e){}</script>
+<script src="shared/dup-check.js?v=2"></script>
 <script src="joyboy-bubble.js"></script>
 </body>
 </html>

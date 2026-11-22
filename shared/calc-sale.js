@@ -62,6 +62,13 @@
       if (!items.length) { alert('The list is empty.'); return; }
       var sig = JSON.stringify([branch, items]);
       if (sig === lastSig && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastNo + ' a moment ago.\n\nPress OK ONLY if this is a NEW customer buying the same thing again. Otherwise press Cancel (printing again does not take anything out of stock).')) return;
+      // Nov 22 2026: same chocolates already taken out by a Build Display? ask first
+      if (o.kind === 'chocolate' && window.LBDup && !btn.__dupOk) {
+        btn.disabled = true;
+        LBDup.check(branch, items, 'calc').then(function (m) { btn.disabled = false; if (m && !confirm(LBDup.msg(m, 'calc'))) return; btn.__dupOk = true; btn.click(); });
+        return;
+      }
+      btn.__dupOk = false;
       var lines = items.map(function (it) { return '• ' + it.name + ' — ' + (o.kind === 'flower' ? it.qty + ' stem(s)' : (it.mode === 'pieces' ? it.amount + ' pcs' + (Number(it.kg) > 0 ? ' (' + Number(it.kg).toFixed(3) + ' kg)' : '') : (Number(it.kg) || 0).toFixed(3) + ' kg')); }).join('\n');
       if (!confirm('Source: ' + src + (refVal !== src ? '\nSold to: ' + refVal : '') + '\nTake this out of ' + branch + ' stock?\n\n' + lines)) return;
       if (busy) return; busy = true;
