@@ -1033,7 +1033,8 @@
         const gpp = cat ? Number(cat['Grams']) || 0 : 0;
         const gTxt = gpp > 0 ? (eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) ? ' · ' + eqUnitText(u === 'pcs' ? 'piece' : u, qty, gpp) : '') : '';
         return [it.extra ? it.name + ' · Extra' : it.name + ' (' + qty + ' ' + u + gTxt + ')', fmtBD(qty * price)]; }),
-      total: fmtBD(total), sum: sum };
+      total: fmtBD(total), sum: sum,
+      label: { name: d['Display Name'] || code, code: code, total: total, sum: sum + ' vat inclusive', items: displayItemsText(d['Items'] || []), n: (d['Items'] || []).length, made: d['Date'] ? new Date(d['Date']) : new Date() } };
     el.innerHTML = `
       <div style="font-size:12px; color:var(--ink-dim); margin-bottom:8px;">
         ${code} · ${d['Display Name'] || ''} · ${fmtDate(d['Date'])}${d['Created By'] ? ' · by ' + d['Created By'] : ''}
@@ -1041,7 +1042,7 @@
       ${rows}
       <div class="lookup-total"><span>Total</span><span>${fmtBD(total)}</span></div>
       <div style="font-size:12px; color:var(--ink-dim); text-align:right; margin-top:4px;">${sum}</div>
-      ${PRINT_BTN}
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="submit-btn" id="lookupLabelBtn" style="margin-top:14px;flex:1;min-width:200px">🏷️ Print label for the display</button><button type="button" class="submit-btn" id="lookupPrintBtn" style="margin-top:14px;flex:1;min-width:200px;background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none">🖨 Print full list (receipt)</button></div>
     `;
   }
 
@@ -1086,6 +1087,7 @@
   let lastLookup = null;
   const PRINT_BTN = '<button type="button" class="submit-btn" id="lookupPrintBtn" style="margin-top:14px">🖨 Print</button>';
   document.getElementById('lookupResult').addEventListener('click', e=>{
+    if(e.target.closest('#lookupLabelBtn') && lastLookup && lastLookup.label){ printDisplayLabel(lastLookup.label); return; }
     if(!e.target.closest('#lookupPrintBtn') || !lastLookup) return;
     const L = lastLookup, esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const area = document.getElementById('lookupPrintArea');
@@ -1416,7 +1418,7 @@ function renderDisplayCart(skipAuto){
 // "92pcs / 1.680kgs best before 07/27 vat inclusive" for the display being built
 // Nov 22 2026 (Bench): what went into the display, printed under the price — "Mia Pink 35pcs · Mia White 34pcs · Cylinder Silver 7pcs"
 function displayItemsText(cart){
-  return (cart || []).map(c => c.extra ? '+ ' + c.name : c.name + ' ' + (Math.round((Number(c.qty) || 0) * 1000) / 1000) + DISPLAY_UNIT_SHORT[c.unit || 'piece']).join(' · ');
+  return (cart || []).filter(c => !c.extra).concat((cart || []).filter(c => c.extra)).map(c => c.extra ? '+ ' + c.name : c.name + ' ' + (Math.round((Number(c.qty) || 0) * 1000) / 1000) + DISPLAY_UNIT_SHORT[c.unit || 'piece']).join(' · ');
 }
 function displaySummary(){
   let pcs = 0, kg = 0;
@@ -1515,11 +1517,13 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   btn.disabled = false; btn.textContent = '💾 Save & Generate Barcode';
 });
 
-document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
-  if(!lastSavedDisplay) return;
+// The display sticker (same for a new display and a reprint from Look Up): name, price, chocolates used, pcs/kg + best before, barcode, code, made date
+function printDisplayLabel(D){
+  if(!D) return;
+  const lastSavedDisplay = D;
   document.getElementById('labelGrid').innerHTML = `
     <div class="label-cell">
-      <div class="l-name">${lastSavedDisplay.name}</div>
+      <div class="l-name">${lbEsc(lastSavedDisplay.name)}</div>
       <div class="l-price">${fmtBD(lastSavedDisplay.total)}</div>
       ${lastSavedDisplay.items ? `<div class="l-items${lastSavedDisplay.n > 6 ? ' sm' : ''}">${lbEsc(lastSavedDisplay.items)}</div>` : ''}
       ${lastSavedDisplay.sum ? `<div class="l-price">${lastSavedDisplay.sum}</div>` : ''}
@@ -1534,7 +1538,8 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
   document.getElementById('labelPrintArea').classList.add('printing');
   window.print();
   setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
-});
+}
+document.getElementById('printDisplayBtn').addEventListener('click', ()=>{ printDisplayLabel(lastSavedDisplay); });
 
 
 // ==================== Manual barcode ====================
