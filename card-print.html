@@ -620,8 +620,8 @@ body::before{
     <select id="printerSel" title="Each printer remembers its own card placement and nudge"></select>
     <button id="printerAdd" title="Add another printer">＋</button>
     <button id="printerRen" title="Rename this printer">✏️</button>
-    <span class="label" style="margin-left:6px;">CARD SITS</span>
-    <select id="printerFeed" title="Where you put the card in this printer's tray">
+    <span class="label" style="margin-left:6px;display:none">CARD SITS</span>
+    <select id="printerFeed" style="display:none" title="Where you put the card in this printer's tray">
       <option value="center">In the middle (printer centers it)</option>
       <option value="left">At the LEFT edge / guide</option>
       <option value="right">At the RIGHT edge / guide</option>
@@ -1949,7 +1949,7 @@ let PRINTERS = (()=>{ try{ const v = JSON.parse(localStorage.getItem('lbCardPrin
   return [{ name:'This printer', feed:'center', x: parseFloat(localStorage.getItem('lalabellaPrintOffsetX') || '0') || 0, y: parseFloat(localStorage.getItem('lalabellaPrintOffsetY') || '0') || 0 }]; })();
 let PRN = Math.min(PRINTERS.length - 1, Math.max(0, parseInt(localStorage.getItem('lbCardPrinter') || '0', 10) || 0));
 function savePrinters(){ try{ localStorage.setItem('lbCardPrinters', JSON.stringify(PRINTERS)); localStorage.setItem('lbCardPrinter', String(PRN)); }catch(e){} }
-function printerFeed(){ return (PRINTERS[PRN] && PRINTERS[PRN].feed) || 'center'; }
+function printerFeed(){ return 'center'; }   // Nov 22: left/right page trick depended on each driver's paper size — always card-size page now (like Middle); set the card paper size in the printer instead
 let printOffsetX = Number(PRINTERS[PRN].x) || 0;
 let printOffsetY = Number(PRINTERS[PRN].y) || 0;
 
@@ -2125,7 +2125,7 @@ function printCardExact(){
         '<div style="position:absolute;top:8mm;left:0;right:0;text-align:center;font:700 5mm Arial">▲ TOP</div><div style="position:absolute;bottom:8mm;left:0;right:0;text-align:center;font:3.2mm Arial">' +
         lbEsc(PRINTERS[PRN].name) + ' · card sits: ' + printerFeed() + ' · X ' + printOffsetX.toFixed(1) + ' Y ' + printOffsetY.toFixed(1) + 'mm</div>' +
         '<div style="position:absolute;left:3mm;top:50%;transform:translateY(-140%);font:700 4mm Arial">◀ LEFT</div><div style="position:absolute;right:3mm;top:50%;transform:translateY(-140%);font:700 4mm Arial">RIGHT ▶</div>' +
-        '<div style="position:absolute;left:0;right:0;top:62%;text-align:center;font:3mm Arial">The thick line should sit on the card edge. Off to one side? Change “Card sits” or nudge with ✛.</div>';
+        '<div style="position:absolute;left:0;right:0;top:62%;text-align:center;font:3mm Arial">The thick line should sit on the card edge. Off to one side? Nudge with ✛ (saved for this printer).</div>';
     }
     sheet.appendChild(copy);
     document.body.classList.add('printing-card');
