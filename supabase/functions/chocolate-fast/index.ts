@@ -30,6 +30,10 @@ async function sbPost(table: string, rows: unknown[]) {
   if (!res.ok) throw new Error(`db ${res.status}: ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : [];
 }
+async function sbDelete(table: string, filter: string) {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } });
+  if (!res.ok) throw new Error('Delete failed: ' + (await res.text()).slice(0, 200));
+}
 async function sbPatch(table: string, filter: string, fields: Record<string, unknown>) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, {
     method: 'PATCH',
@@ -189,46 +193,89 @@ function mapReleaseRow(r: any, expiryDate: string) {
     'Database ID': r.database_id, 'To Branch': r.to_branch, 'ExpiryDate': expiryDate };
 }
 
-async function getArrangements() {
-  const [arrangements, allItems] = await Promise.all([
-    sbGet('chocolate_arrangements', 'select=*&order=arrangement_name.asc'),
-    sbGet('chocolate_arrangement_items', 'select=*&order=id.asc'),
-  ]);
-  const itemsByArrangement: Record<string, any[]> = {};
-  allItems.forEach((it: any) => { (itemsByArrangement[it.arrangement_id] = itemsByArrangement[it.arrangement_id] || []).push({ chocolateName: it.chocolate_name, qty: Number(it.qty) }); });
-  return arrangements.map((a: any) => ({
-    id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
-    createdBy: a.created_by, createdDate: a.created_date, notes: a.notes || '', photoData: a.photo_data || '',
-    items: itemsByArrangement[a.id] || [],
-  }));
+// Arrangement catalog (Nov 22 2026, Bench): recipes for online / standard arrangements, with extras (Item Inventory),
+// edit + delete (admin or the person who recorded it), and a DISP- code from Build a Display opens as a read-only recipe.
+function cleanExtras(v: any) {
+  let a: any[] = []; try { a = typeof v === 'string' ? JSON.parse(v || '[]') : (v || []); } catch { a = []; }
+  return (Array.isArray(a) ? a : []).map((x: any) => ({ desc: String((x && x.desc) || '').trim().slice(0, 80), price: Math.round((Number(x && x.price) || 0) * 1000) / 1000 })).filter((x: any) => x.desc).slice(0, 30);
 }
-async function getArrangementByCode(code: string) {
-  code = (code || '').trim();
-  if (!code) return { error: 'No code provided.' };
-  const rows = await sbGet('chocolate_arrangements', `select=*&arrangement_code=eq.${encodeURIComponent(code)}`);
-  if (!rows.length) return { error: 'No arrangement found for this code.' };
-  const a = rows[0];
-  const items = await sbGet('chocolate_arrangement_items', `select=*&arrangement_id=eq.${a.id}&order=id.asc`);
-  return { success: true, id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
-    createdBy: a.created_by, createdDate: a.created_date, notes: a.notes || '', photoData: a.photo_data || '',
+function mapArr(a: any, items: any[]) {
+  return { id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
+    createdBy: a.created_by, createdDate: a.created_date, updatedBy: a.updated_by || '', updatedDate: a.updated_date || '', notes: a.notes || '', photoData: a.photo_data || '',
+    fromDisplay: a.from_display || '', extras: Array.isArray(a.extras) ? a.extras : [],
     items: items.map((it: any) => ({ chocolateName: it.chocolate_name, qty: Number(it.qty) })) };
 }
-async function addArrangement(p: Record<string, any>) {
-  const arrangementName = (p.arrangementName || '').trim();
-  const createdBy = p.createdBy || '', notes = p.notes || '', photoData = p.photoData || '', displayName = p.displayName || '';
+async function getArrangements() {
+  const [arrangements, allItems] = await Promise.all([
+    sbGet('chocolate_arrangements', 'select=*&status=eq.Active&order=created_date.desc'),
+    sbGet('chocolate_arrangement_items', 'select=*&order=id.asc'),
+  ]);
+  const by: Record<string, any[]> = {};
+  allItems.forEach((it: any) => { (by[it.arrangement_id] = by[it.arrangement_id] || []).push(it); });
+  return arrangements.map((a: any) => mapArr(a, by[a.id] || []));
+}
+async function getArrangementByCode(code: string) {
+  code = (code || '').trim().toUpperCase();
+  if (!code) return { error: 'No code provided.' };
+  if (/^DISP-\d+$/.test(code)) {
+    const d = await sbGet('chocolate_display', `select=*&display_code=eq.${encodeURIComponent(code)}`);
+    if (!d.length) return { error: 'No display found for this code.' };
+    const r = d[0], its = Array.isArray(r.items) ? r.items : [];
+    return { success: true, isDisplay: true, arrangementCode: r.display_code, arrangementName: r.display_name || r.display_code, displayName: '', createdBy: r.created_by, createdDate: r.created_at,
+      notes: '', photoData: '', totalPrice: Number(r.total_price) || 0,
+      items: its.filter((i: any) => !i.extra).map((i: any) => ({ chocolateName: i.name, qty: Number(i.qty) || 0, unit: i.unit || 'piece', price: Number(i.price) || 0 })),
+      extras: its.filter((i: any) => i.extra).map((i: any) => ({ desc: i.name, price: Math.round((Number(i.price) || 0) * (Number(i.qty) || 1) * 1000) / 1000 })) };
+  }
+  const rows = await sbGet('chocolate_arrangements', `select=*&status=eq.Active&arrangement_code=eq.${encodeURIComponent(code)}`);
+  if (!rows.length) return { error: 'No arrangement found for this code.' };
+  const items = await sbGet('chocolate_arrangement_items', `select=*&arrangement_id=eq.${rows[0].id}&order=id.asc`);
+  return { success: true, ...mapArr(rows[0], items) };
+}
+function canManageArr(row: any, u: any) {
+  if (String((u && u.role) || '').toLowerCase() === 'admin') return true;
+  const n = String((u && (u.full_name || u.username)) || '').trim().toLowerCase();
+  return !!n && String(row.created_by || '').trim().toLowerCase() === n;
+}
+async function addArrangement(p: Record<string, any>, u: any) {
+  const arrangementName = String(p.arrangementName || '').trim().slice(0, 80);
+  const me = String((u && (u.full_name || u.username)) || '').trim();
+  const notes = String(p.notes || '').slice(0, 500), displayName = String(p.displayName || '').trim().slice(0, 80);
   let items: any[] = [];
   try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
+  items = items.map((it: any) => ({ chocolateName: String((it && it.chocolateName) || '').trim(), qty: Number(it && it.qty) || 0 })).filter((it: any) => it.chocolateName && it.qty > 0);
   if (!arrangementName) return { error: 'Arrangement name is required.' };
   if (!items.length) return { error: 'Add at least one chocolate to the arrangement.' };
-  const existing = await sbGet('chocolate_arrangements', `select=id&arrangement_name=eq.${encodeURIComponent(arrangementName)}`);
-  if (existing.length) return { error: 'An arrangement with this name already exists.' };
+  const extras = cleanExtras(p.extras);
+  const id = /^\d+$/.test(String(p.id || '')) ? Number(p.id) : null;
+  const same = await sbGet('chocolate_arrangements', `select=id&status=eq.Active&arrangement_name=eq.${encodeURIComponent(arrangementName)}`);
+  if (same.some((r: any) => r.id !== id)) return { error: 'An arrangement with this name already exists.' };
+  if (id) {
+    const ex = await sbGet('chocolate_arrangements', `select=*&status=eq.Active&id=eq.${id}`);
+    if (!ex.length) return { error: 'Arrangement not found.' };
+    if (!canManageArr(ex[0], u)) return { error: 'Only an admin or the person who recorded this arrangement can edit it.' };
+    const patch: any = { arrangement_name: arrangementName, display_name: displayName, notes, extras, created_by: String(p.createdBy || ex[0].created_by || '').slice(0, 60), updated_by: me, updated_date: new Date().toISOString() };
+    if (p.photoData !== undefined) patch.photo_data = p.photoData === '__REMOVE__' ? '' : p.photoData;
+    await sbPatch('chocolate_arrangements', `id=eq.${id}`, patch);
+    await sbDelete('chocolate_arrangement_items', `arrangement_id=eq.${id}`);
+    await sbPost('chocolate_arrangement_items', items.map((it: any) => ({ arrangement_id: id, chocolate_name: it.chocolateName, qty: it.qty })));
+    return { success: true, id, arrangementCode: ex[0].arrangement_code };
+  }
   const codeNum = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Arrangement Code', start_at: 1 });
   const arrangementCode = 'ARR-' + String(codeNum).padStart(5, '0');
-  const inserted = await sbPost('chocolate_arrangements', [{ arrangement_name: arrangementName, created_by: createdBy, notes, arrangement_code: arrangementCode, photo_data: photoData, display_name: displayName }]);
+  const fromDisplay = /^DISP-\d{1,8}$/i.test(String(p.fromDisplay || '')) ? String(p.fromDisplay).toUpperCase() : null;
+  const inserted = await sbPost('chocolate_arrangements', [{ arrangement_name: arrangementName, created_by: String(p.createdBy || me).slice(0, 60), notes, arrangement_code: arrangementCode, photo_data: p.photoData && p.photoData !== '__REMOVE__' ? p.photoData : '', display_name: displayName, extras, from_display: fromDisplay }]);
   const arrangementId = inserted[0].id;
-  const itemRows = items.filter((it: any) => it.chocolateName && Number(it.qty) > 0).map((it: any) => ({ arrangement_id: arrangementId, chocolate_name: it.chocolateName, qty: Number(it.qty) }));
-  if (itemRows.length) await sbPost('chocolate_arrangement_items', itemRows);
+  await sbPost('chocolate_arrangement_items', items.map((it: any) => ({ arrangement_id: arrangementId, chocolate_name: it.chocolateName, qty: it.qty })));
   return { success: true, id: arrangementId, arrangementCode };
+}
+async function deleteArrangement(p: Record<string, any>, u: any) {
+  const id = Number(p.id);
+  if (!Number.isInteger(id) || id < 1) return { error: 'Invalid arrangement.' };
+  const rows = await sbGet('chocolate_arrangements', `select=*&status=eq.Active&id=eq.${id}`);
+  if (!rows.length) return { error: 'Arrangement not found.' };
+  if (!canManageArr(rows[0], u)) return { error: 'Only an admin or the person who recorded this arrangement can delete it.' };
+  await sbPatch('chocolate_arrangements', `id=eq.${id}`, { status: 'Inactive', updated_by: String((u && (u.full_name || u.username)) || ''), updated_date: new Date().toISOString() });
+  return { success: true };
 }
 
 async function addEntry(p: Record<string, any>) {
@@ -880,6 +927,7 @@ Deno.serve(async (req) => {
     }
     if (action === 'getArrangements') return json(await getArrangements());
     if (action === 'getArrangementByCode') return json(await getArrangementByCode(p.code));
+    if (action === 'deleteArrangement') return json(await deleteArrangement(p, me));
 
     if (DUP_WRITE_ACTIONS.has(action)) {
       const key = await dedupKeyFor(action, p);
@@ -896,7 +944,7 @@ Deno.serve(async (req) => {
         else if (action === 'rejectCount') result = await setCountStatus(p.countId, 'Rejected');
         else if (action === 'requestRecount') result = await setCountStatus(p.countId, 'Recount Requested');
         else if (action === 'saveDisplay') result = await saveDisplay(p);
-        else if (action === 'addArrangement') result = await addArrangement(p);
+        else if (action === 'addArrangement') result = await addArrangement(p, me);
         else if (action === 'addChocolateItem') result = await addChocolateItem(p);
         else if (action === 'addSupplier') { await addIfNotExists('chocolate_suppliers', p.name || ''); result = { success: true }; }
         else if (action === 'addReceivedBy') { await addIfNotExists('chocolate_received_by', p.name || ''); result = { success: true }; }

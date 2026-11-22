@@ -234,7 +234,7 @@ function mapArrangement(a: any, items: any[], rates: Record<string, number>) {
     return { flowerName: it.flower_name, qty, rate, hasRate };
   });
   return { id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
-    florist: a.florist || '', notes: a.notes || '', photoData: a.photo_data || '', createdBy: a.created_by || '', createdDate: a.created_date,
+    florist: a.florist || '', notes: a.notes || '', photoData: a.photo_data || '', createdBy: a.created_by || '', createdDate: a.created_date, extras: Array.isArray(a.extras) ? a.extras : [],
     updatedBy: a.updated_by || '', updatedDate: a.updated_date || '', items: list, totalStems, estValue: Math.round(estValue * 1000) / 1000, unpricedCount: unpriced };
 }
 
@@ -809,6 +809,12 @@ async function saveFlowerArrangement(p: Record<string, any>, authUser: any) {
   });
   if (out.error) return { success: false, error: out.error };
   const row = out.data && out.data[0];
+  // extras (Item Inventory: vase, wrapping, ribbon…) — Nov 22 2026
+  if (p.extras !== undefined) {
+    let ex: any[] = []; try { ex = JSON.parse(p.extras || '[]'); } catch { ex = []; }
+    ex = (Array.isArray(ex) ? ex : []).map((x: any) => ({ desc: String((x && x.desc) || '').trim().slice(0, 80), price: Math.round((Number(x && x.price) || 0) * 1000) / 1000 })).filter((x: any) => x.desc).slice(0, 30);
+    await sbPatch('flower_arrangements', `id=eq.${row.id}`, { extras: ex });
+  }
   return { success: true, id: row.id, arrangementCode: row.arrangement_code };
 }
 async function deleteFlowerArrangement(p: Record<string, any>, authUser: any) {

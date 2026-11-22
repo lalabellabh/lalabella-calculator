@@ -66,9 +66,9 @@
       var who = s.customer || (s.ref && s.ref !== s.source ? s.ref : '') || '';
       return head + '<div class="r' + (s.status !== 'Active' ? ' x' : '') + '"><div class="a"><span class="no">' + esc(s.saleNo) + '</span>' +
         (KIND === 'mixed' ? '<span class="tag ' + (s.kind === 'flower' ? 'f' : 'k') + '">' + (s.kind === 'flower' ? '🌸' : '🍫') + '</span>' : '') +
-        (s.source === 'Display' ? '<span class="tag">Display</span>' : '') + (s.status !== 'Active' ? '<span class="tag c">Cancelled</span>' : '') +
+        (s.source === 'Display' || s.source === 'Arrangement' ? '<span class="tag">' + s.source + '</span>' : '') + (s.status !== 'Active' ? '<span class="tag c">Cancelled</span>' : '') +
         '<span class="t">' + bd(s.total) + '</span></div>' +
-        '<div class="m">' + esc((when(s.at).split(' · ')[1] || '') + ' · ' + s.branch + (who ? ' · ' + who : '') + (s.source && s.source !== 'Display' ? ' · ' + s.source : '') + (s.by ? ' · by ' + s.by : '') + (s.releaseNo ? ' · ' + s.releaseNo : '')) + '</div>' +
+        '<div class="m">' + esc((when(s.at).split(' · ')[1] || '') + ' · ' + s.branch + (who ? ' · ' + who : '') + (s.source && s.source !== 'Display' && s.source !== 'Arrangement' ? ' · ' + s.source : '') + (s.by ? ' · by ' + s.by : '') + (s.releaseNo ? ' · ' + s.releaseNo : '')) + '</div>' +
         '<div class="it">' + itemsText(s) + (s.status !== 'Active' ? '<div style="margin-top:4px;color:#b8483c">Cancelled' + (s.cancelledBy ? ' by ' + esc(s.cancelledBy) : '') + (s.cancelledAt ? ' · ' + esc(when(s.cancelledAt)) : '') + '</div>' : '') + '</div></div>';
     }).join('') : '<div class="e">No sales in the last 30 days' + (q || br ? ' for this filter' : '') + '.</div>';
   }

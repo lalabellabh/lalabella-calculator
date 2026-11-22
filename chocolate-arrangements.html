@@ -16,60 +16,97 @@
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
-    --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c;
-    --cream:#fdf1f0; --ink:#2f2024; --muted:#8a7078; --line:#f0dede;
-    --panel:#ffffff; --bg:#fdf1f0;
+    --rose:#c9506b; --rose-dark:#9e2f4a; --gold:#d9a441; --gold-light:#f1d38c; --choc:#5c3a24; --choc-soft:#f6ece3;
+    --ink:#2f2024; --muted:#8a7078; --line:#f0dede; --panel:#ffffff;
   }
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;background:linear-gradient(160deg,#fdf1f0 0%,#f6e0da 45%,#eaf3ec 100%);font-family:'Space Grotesk',Arial,sans-serif;color:var(--ink);}
   body{padding:22px 16px 60px;}
-  .wrap{max-width:1000px;margin:0 auto;}
+  .wrap{max-width:1080px;margin:0 auto;}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
   .brand{display:flex;align-items:center;gap:10px;}
-  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3a2a1a,#5c1a28);display:grid;place-items:center;font-weight:800;color:var(--gold-light);}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3a2a1a,#5c1a28);display:grid;place-items:center;font-size:17px;}
   .brand b{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.02em;}
   .backlink{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:7px 12px;border-radius:9px;background:#fff;}
-
-  h1{font-family:'Fraunces',serif;font-size:26px;margin:0 0 4px;}
+  h1{font-family:'Fraunces',serif;font-size:27px;margin:0 0 4px;}
   .sub{font-size:12.5px;color:var(--muted);margin:0 0 22px;}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:20px;box-shadow:0 6px 18px rgba(158,47,74,.06);}
-  .card h2{font-family:'Fraunces',serif;font-size:17px;margin:0 0 14px;}
-  label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-  input,textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;box-sizing:border-box;margin-bottom:14px;}
-  input:focus,textarea:focus{border-color:var(--rose);}
-  .item-row{display:grid;grid-template-columns:2fr 90px 34px;gap:8px;margin-bottom:8px;align-items:center;}
+  .card h2{font-family:'Fraunces',serif;font-size:17px;margin:0;}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:600;}
+  input,textarea,select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fdf9f8;color:var(--ink);outline:none;margin-bottom:14px;}
+  input:focus,textarea:focus,select:focus{border-color:var(--rose);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  .hint{font-size:11px;color:var(--muted);margin:-8px 0 12px;}
+
+  .item-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 90px 34px;gap:8px;margin-bottom:8px;align-items:center;}
   .item-row input{margin-bottom:0;}
+  .item-row .line-val{font-size:12px;color:var(--muted);text-align:right;}
+  .item-row .line-val.warn{color:#b9770e;}
   .remove-item{background:none;border:none;color:#c0392b;font-size:18px;cursor:pointer;padding:4px;}
-  .add-item-btn{font-size:12.5px;color:var(--rose-dark);background:none;border:1px dashed var(--rose);border-radius:9px;padding:8px 14px;cursor:pointer;margin-bottom:16px;}
+  .add-item-btn{font-size:12.5px;color:var(--rose-dark);background:none;border:1px dashed var(--rose);border-radius:9px;padding:8px 14px;cursor:pointer;margin:4px 0 14px;}
+  .summary-bar{display:flex;gap:18px;flex-wrap:wrap;background:var(--choc-soft);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;}
+  .summary-bar b{font-size:16px;color:var(--choc);}
+  .make-box{border:1.5px solid var(--gold);background:#fffaf0;border-radius:12px;padding:12px 14px;margin-bottom:16px;}
+  .make-box .chk{display:flex;align-items:center;gap:10px;font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);margin:0;cursor:pointer;}
+  .make-box .chk input{width:20px;height:20px;margin:0;accent-color:var(--rose-dark);flex:none}
+  .make-box select{margin:10px 0 0;}
+  .make-box .s{font-size:11.5px;color:var(--muted);margin-top:6px;}
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
   .save-btn{padding:12px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
   .save-btn:disabled{opacity:.6;cursor:default;}
-  .msg{font-size:12.5px;margin-top:10px;display:none;}
+  .ghost-btn{padding:11px 18px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--muted);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;}
+  .msg{font-size:12.5px;margin-top:10px;display:none;white-space:pre-line;}
   .msg.error{color:#c0392b;display:block;}
   .msg.success{color:#3d7a4f;display:block;}
+  .editing-banner{display:none;background:#fff6e0;border:1px solid var(--gold-light);color:#7a5a12;border-radius:10px;padding:9px 12px;font-size:12.5px;margin-bottom:14px;}
 
-  .arr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
-  .arr-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 4px 14px rgba(158,47,74,.06);}
-  .arr-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 4px;}
-  .arr-card .by{font-size:11px;color:var(--muted);margin-bottom:10px;}
-  .arr-card ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;}
-  .arr-card .notes{margin-top:8px;font-size:11.5px;color:var(--muted);font-style:italic;}
-  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+  .search{max-width:280px;margin:0;}
+  .arr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .arr-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 4px 14px rgba(158,47,74,.06);display:flex;flex-direction:column;}
+  .arr-card img.photo, .result-card img.photo{width:100%;border-radius:10px;margin-bottom:10px;object-fit:contain;max-height:280px;background:#faf5f4;}
+  .arr-card .code-badge{align-self:flex-start;}
+  .arr-card h3, .result-card h3{font-family:'Fraunces',serif;font-size:16px;margin:0 0 4px;}
+  .display{font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;}
+  .by{font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+  .arr-card ul, .result-card ul{margin:0 0 10px;padding-left:18px;font-size:12.5px;line-height:1.75;}
+  li.ex{color:#8a5a2b;}
+  .totals{display:flex;justify-content:space-between;gap:8px;font-size:12px;border-top:1px dashed var(--line);padding-top:8px;margin-top:auto;}
+  .totals b{color:var(--choc);}
+  .notes{font-size:11.5px;color:var(--muted);font-style:italic;margin-bottom:8px;}
+  .arr-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .arr-actions button{flex:1;font-size:11.5px;padding:7px 8px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--ink);font-family:inherit;white-space:nowrap;}
+  .arr-actions button.make{background:linear-gradient(135deg,var(--gold-light),var(--gold));border:0;font-weight:700;color:#3a2a10;flex-basis:100%;}
+  .arr-actions button.del{color:#c0392b;}
+  .barcode-wrap{display:none;text-align:center;margin-top:8px;}
+  .barcode-wrap svg{max-width:100%;}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;grid-column:1/-1;}
+  .disp-note{background:#eef7f0;border:1px solid #cfe6d6;color:#2f6b45;border-radius:10px;padding:8px 11px;font-size:12px;margin:8px 0;}
 
   .scan-hero{background:linear-gradient(150deg,#3a1420,#5c1a28 55%,#7a2436);border-radius:18px;padding:24px;text-align:center;margin-bottom:20px;}
   .scan-hero h2{color:#fff;font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;}
-  .scan-hero p{color:rgba(255,255,255,.7);font-size:12px;margin:0 0 16px;}
-  .scan-btn-big{padding:13px 26px;border:none;border-radius:30px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#3a2a10;font-weight:700;font-size:14px;cursor:pointer;}
+  .scan-hero p{color:rgba(255,255,255,.72);font-size:12px;margin:0 0 16px;}
+  .scan-row{display:flex;gap:8px;max-width:420px;margin:0 auto;flex-wrap:wrap;justify-content:center;}
+  .scan-row input{flex:1;min-width:150px;margin:0;background:rgba(255,255,255,.95);text-transform:uppercase;}
+  .scan-btn-big{padding:13px 26px;border:none;border-radius:30px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#3a2a10;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
+  .code-badge{display:inline-block;background:var(--gold-light);color:#5c4416;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:8px;}
+  .code-badge.disp{background:#dcefe2;color:#2f6b45;}
+  .result-card{border:2px solid var(--rose);}
 
-  .scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
+  .scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
   .scanner-modal.show{display:flex;}
   .scanner-modal video{width:100%;max-width:400px;border-radius:10px;}
   .scanner-modal .close-scan{margin-top:16px;background:var(--rose-dark);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;}
   .scanner-hint{color:#fff;font-size:12px;margin-top:10px;text-align:center;}
 
-  .code-badge{display:inline-block;background:var(--gold-light);color:#5c4416;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:10px;}
-  .barcode-box{text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;}
-  .result-card{border:2px solid var(--rose);}
+  @media (max-width:640px){
+    .grid2{grid-template-columns:1fr;}
+    .item-row{grid-template-columns:minmax(0,1fr) 70px 34px;}
+    .item-row .line-val{display:none;}
+    .search{max-width:none;width:100%;}
+  }
 </style>
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
@@ -142,265 +179,473 @@
   </div>
 
   <h1>Chocolate Arrangement Catalog</h1>
-  <p class="sub">Reference recipes for standard boxes/arrangements — composition and who designed them.</p>
+  <p class="sub">Recipes for online / standard arrangements — chocolates, extras and who designed them. Make one here and it is taken out of stock.</p>
 
   <div class="scan-hero">
-    <h2>📷 Scan Arrangement Barcode</h2>
-    <p>Point your camera at the barcode on a box to instantly see what's inside.</p>
-    <button class="scan-btn-big" id="scanBtn">Scan Now</button>
+    <h2>📷 Scan Arrangement or Display Barcode</h2>
+    <p>ARR- (catalog) or DISP- (made in Build a Display) — see what's inside, save it to the catalog, or make another one.</p>
+    <div class="scan-row">
+      <button class="scan-btn-big" id="scanBtn">Scan Now</button>
+      <input type="text" id="codeInput" placeholder="or type ARR-00001 / DISP-00023" autocomplete="off">
+    </div>
   </div>
 
   <div id="scanResultCard" style="display:none;" class="card result-card">
-    <h2>🔍 Scan Result</h2>
+    <div class="card-head"><h2>🔍 Scan Result</h2><button class="ghost-btn" id="closeResultBtn">Close</button></div>
     <div id="scanResultBody"></div>
   </div>
 
-  <div class="card">
-    <h2>➕ Add New Arrangement</h2>
-    <label>Arrangement Name</label>
-    <input type="text" id="arrName" placeholder="e.g. Deluxe Box A">
-    <label>Display Name (optional — for online/customer display)</label>
-    <input type="text" id="arrDisplayName" placeholder="e.g. Valentine's Sweetheart Box">
-    <label>Made By (Florist/Staff)</label>
-    <input type="text" id="arrCreator" placeholder="Your name">
+  <div class="card" id="formCard">
+    <div class="card-head"><h2 id="formTitle">➕ Add New Arrangement</h2></div>
+    <div class="editing-banner" id="editingBanner"></div>
+    <div class="grid2">
+      <div>
+        <label>Arrangement Name</label>
+        <input type="text" id="arrName" placeholder="e.g. Deluxe Box A" maxlength="80">
+      </div>
+      <div>
+        <label>Display Name (optional — online / customer)</label>
+        <input type="text" id="arrDisplayName" placeholder="e.g. Valentine's Sweetheart Box" maxlength="80">
+      </div>
+    </div>
+    <label>Made By (Florist / Staff)</label>
+    <input type="text" id="arrCreator" placeholder="Who designed this arrangement?" maxlength="60">
 
-    <label>Chocolates in this Arrangement</label>
+    <label>Chocolates in this Arrangement (pieces)</label>
     <div id="itemRows"></div>
+    <datalist id="chocOptions"></datalist>
     <button type="button" class="add-item-btn" id="addItemBtn">+ Add Chocolate</button>
 
+    <label>Extras (Item Inventory)</label>
+    <div id="extrasBox"></div>
+
+    <div class="summary-bar">
+      <div>Total pieces<br><b id="sumPcs">0</b></div>
+      <div>Chocolates<br><b id="sumChoc">0.000 BD</b></div>
+      <div>Extras<br><b id="sumEx">0.000 BD</b></div>
+      <div>Total<br><b id="sumTotal">0.000 BD</b></div>
+    </div>
+
     <label>Notes (optional)</label>
-    <textarea id="arrNotes" rows="2" placeholder="Any extra notes..."></textarea>
+    <textarea id="arrNotes" rows="2" placeholder="Any extra notes…" maxlength="500"></textarea>
 
     <label>Reference Photo (optional — auto-compressed)</label>
     <input type="file" id="arrPhoto" accept="image/*">
     <div id="arrPasteBox"></div>
-    <div id="arrPhotoHint" style="font-size:11px;color:var(--muted);margin:-8px 0 10px;"></div>
-    <img id="arrPhotoPreview" style="display:none;max-width:120px;border-radius:10px;margin-bottom:14px;">
+    <div class="hint" id="arrPhotoHint"></div>
+    <div id="photoPreviewWrap" style="display:none;margin-bottom:14px;">
+      <img id="arrPhotoPreview" style="max-width:130px;border-radius:10px;display:block;margin-bottom:6px;">
+      <button type="button" class="ghost-btn" id="removePhotoBtn" style="padding:6px 12px;font-size:11.5px;">Remove photo</button>
+    </div>
 
-    <button class="save-btn" id="saveBtn">Save Arrangement</button>
+    <div class="make-box" id="makeBox">
+      <label class="chk"><input type="checkbox" id="makeNow"> 📦 I made one now — take it out of stock</label>
+      <select id="makeBranch"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+      <div class="s">Leave it off if you are only saving the recipe (online arrangement). You can make one later with “📦 Make one”.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="save-btn" id="saveBtn">Save Arrangement</button>
+      <button class="ghost-btn" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
+    </div>
     <div class="msg" id="formMsg"></div>
+    <div id="newBarcodeBox" style="display:none;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;"><svg id="newArrBarcode"></svg></div>
   </div>
 
   <div class="card">
-    <h2>📋 Existing Arrangements</h2>
+    <div class="card-head">
+      <h2>📋 Existing Arrangements <span id="arrCount" style="font-size:13px;color:var(--muted);font-family:'Space Grotesk',sans-serif;"></span></h2>
+      <input type="search" class="search" id="searchBox" placeholder="Search name, chocolate, extra or code…">
+    </div>
     <div id="arrGrid" class="arr-grid"><div class="empty">Loading…</div></div>
   </div>
 </div>
 
 <div class="scanner-modal" id="scannerModal">
   <video id="scannerVideo" autoplay playsinline muted></video>
-  <div class="scanner-hint">Point the camera at an arrangement barcode</div>
+  <div class="scanner-hint">Point the camera at an ARR- or DISP- barcode</div>
   <button class="close-scan" id="closeScanBtn">Cancel</button>
 </div>
 
+<script src="shared/extras-pick.js?v=6"></script>
+<script src="shared/arr-extras.js?v=1"></script>
 <script>
 const CHOCOLATE_API_URL = LB_CONFIG.CHOCOLATE_FAST_API;
+const SALE_API = LB_CONFIG.CALC_SALE_API;
+const $ = id => document.getElementById(id);
+function token(){ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }
+function currentUser(){ try{ return JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; }catch(e){ return {}; } }
+const esc = lbEsc;
+function bd(n){ return (Number(n)||0).toFixed(3) + ' BD'; }
+function fmtDate(v){ const d=new Date(v); return isNaN(d)?'':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+async function api(params){
+  const p = new URLSearchParams(Object.assign({}, params, { token: token() }));
+  const res = await fetch(CHOCOLATE_API_URL, { method:'POST', body:p });
+  return res.json();
+}
+function canManage(a){
+  const u = currentUser();
+  if(String(u.role||'').toLowerCase()==='admin') return true;
+  const me = String(u.fullName || u.username || '').trim().toLowerCase();
+  return !!me && String(a.createdBy||'').trim().toLowerCase() === me;
+}
 
+/* ---------- chocolate list (names, code, price per piece) ---------- */
+let CHOC = {};   // lower name -> {name, code, cat, gpp, pp}
+async function loadChocList(){
+  try{
+    const list = await (await fetch(CHOCOLATE_API_URL + '?action=getItems&token=' + encodeURIComponent(token()))).json();
+    if(!Array.isArray(list)) return;
+    CHOC = {};
+    list.forEach(it => {
+      const n = String(it['Chocolate Name']||'').trim(); if(!n) return;
+      const kg = Number(String(it['Standard Price / Kg']||'').replace(/[^0-9.]/g,'')) || 0, g = Number(it['Grams']) || 0;
+      const whole = String(it['Packaging Type']||'Piece').trim().toLowerCase() !== 'piece';
+      CHOC[n.toLowerCase()] = { name:n, code:it['Product Code']||'', cat:it['Category']||'', gpp:g, pp: whole ? kg : (g ? kg*g/1000 : 0) };
+    });
+    $('chocOptions').innerHTML = Object.values(CHOC).map(c => `<option value="${esc(c.name)}">`).join('');
+    recalc();
+  }catch(e){}
+}
+function chocInfo(name){ return CHOC[String(name||'').trim().toLowerCase()] || null; }
+function chocValue(items){ return (items||[]).reduce((s,it)=>{ const c=chocInfo(it.chocolateName); return s + (c ? c.pp*(Number(it.qty)||0) : 0); }, 0); }
+
+/* ---------- form rows ---------- */
 function addItemRow(name, qty){
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.innerHTML = `<input type="text" class="item-name" placeholder="Chocolate name" value="${lbEsc(name||'')}">
-    <input type="number" class="item-qty" placeholder="Qty" min="1" value="${qty||''}">
+  row.innerHTML = `<input type="text" class="item-name" list="chocOptions" placeholder="Chocolate name" autocomplete="off">
+    <input type="number" class="item-qty" placeholder="Pcs" min="1" step="1">
+    <div class="line-val">—</div>
     <button type="button" class="remove-item" aria-label="Remove">✕</button>`;
-  row.querySelector('.remove-item').addEventListener('click', ()=> row.remove());
-  document.getElementById('itemRows').appendChild(row);
+  row.querySelector('.item-name').value = name || '';
+  row.querySelector('.item-qty').value = qty || '';
+  row.querySelector('.remove-item').addEventListener('click', ()=>{ row.remove(); recalc(); });
+  row.querySelectorAll('input').forEach(i => i.addEventListener('input', recalc));
+  $('itemRows').appendChild(row);
+  recalc();
 }
-document.getElementById('addItemBtn').addEventListener('click', ()=> addItemRow());
-addItemRow(); addItemRow();
-
-/* ---------- Photo compression (same pattern as item-admin.html) ---------- */
-let arrPhotoData = null;
-function compressImage(file){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = (e)=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const maxDim = 150;
-        let w = img.width, h = img.height;
-        if(w > h){ if(w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; } }
-        else { if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; } }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-document.getElementById('arrPhoto').addEventListener('change', function(){ arrPhotoUse(this.files[0]); });
-try{ LBPastePic.attach(document.getElementById('arrPasteBox'), function(f){ arrPhotoUse(f); }); }catch(e){}
-async function arrPhotoUse(file){
-  if(!file) return;
-  const hint = document.getElementById('arrPhotoHint');
-  hint.textContent = 'Compressing…';
-  try{
-    arrPhotoData = await compressImage(file);
-    const preview = document.getElementById('arrPhotoPreview');
-    preview.src = arrPhotoData;
-    preview.style.display = 'block';
-    const approxKB = Math.round((arrPhotoData.length * 0.75) / 1024);
-    hint.textContent = 'Compressed to ~' + approxKB + ' KB';
-  }catch(e){
-    hint.textContent = 'Could not process this image.';
-    arrPhotoData = null;
-  }
-}
-
-/* ---------- Barcode scanning (same native BarcodeDetector pattern used in chocolate-barcode.html) ---------- */
-let scanStream = null;
-let scanLoopActive = false;
-
-document.getElementById('scanBtn').addEventListener('click', async ()=>{
-  if(!('BarcodeDetector' in window)){
-    alert('Barcode scanning is not supported in this browser.');
-    return;
-  }
-  const modal = document.getElementById('scannerModal');
-  const video = document.getElementById('scannerVideo');
-  modal.classList.add('show');
-  try{
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    video.srcObject = scanStream;
-    scanLoopActive = true;
-    const detector = new BarcodeDetector({ formats: ['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
-    const scanLoop = async ()=>{
-      if(!scanLoopActive) return;
-      try{
-        const codes = await detector.detect(video);
-        if(codes.length > 0){
-          stopScanner();
-          lookupByCode(codes[0].rawValue);
-          return;
-        }
-      }catch(e){}
-      requestAnimationFrame(scanLoop);
-    };
-    scanLoop();
-  }catch(e){
-    alert('Could not access the camera. Check permissions and try again.');
-    modal.classList.remove('show');
-  }
-});
-function stopScanner(){
-  scanLoopActive = false;
-  if(scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
-  document.getElementById('scannerModal').classList.remove('show');
-}
-document.getElementById('closeScanBtn').addEventListener('click', stopScanner);
-
-async function lookupByCode(code){
-  const card = document.getElementById('scanResultCard');
-  const body = document.getElementById('scanResultBody');
-  card.style.display = 'block';
-  body.innerHTML = 'Looking up…';
-  card.scrollIntoView({behavior:'smooth', block:'center'});
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-  try{
-    const res = await fetch(CHOCOLATE_API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token));
-    const data = await res.json();
-    if(!data.success){
-      body.innerHTML = `<div class="msg error" style="display:block;">${lbEsc(data.error || 'Not found.')} (Scanned: ${lbEsc(code)})</div>`;
-      return;
-    }
-    body.innerHTML = `
-      ${data.photoData ? `<img src="${lbEsc(data.photoData)}" style="width:100%;max-width:200px;border-radius:10px;margin-bottom:10px;">` : ''}
-      <span class="code-badge">${lbEsc(data.arrangementCode)}</span>
-      <h3 style="font-family:'Fraunces',serif;margin:4px 0;">${lbEsc(data.arrangementName)}</h3>
-      ${data.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${lbEsc(data.displayName)}</div>` : ''}
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">👤 ${lbEsc(data.createdBy || 'Unknown')}</div>
-      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.9;">
-        ${data.items.map(it => `<li>${lbEsc(it.qty)}x ${lbEsc(it.chocolateName)}</li>`).join('')}
-      </ul>
-      ${data.notes ? `<div class="notes" style="margin-top:8px;">${lbEsc(data.notes)}</div>` : ''}
-    `;
-  }catch(e){
-    body.innerHTML = '<div class="msg error" style="display:block;">Connection error.</div>';
-  }
-}
-
-function showMsg(text, isError){
-  const el = document.getElementById('formMsg');
-  el.textContent = text;
-  el.className = 'msg ' + (isError ? 'error' : 'success');
-}
-
-async function loadArrangements(){
-  const grid = document.getElementById('arrGrid');
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
-  try{
-    const res = await fetch(CHOCOLATE_API_URL + '?action=getArrangements&token=' + encodeURIComponent(token));
-    const data = await res.json();
-    if(!Array.isArray(data)) throw new Error(data.error || 'Failed to load');
-    if(!data.length){ grid.innerHTML = '<div class="empty">No arrangements recorded yet. Add the first one above!</div>'; return; }
-    grid.innerHTML = data.map(a => `
-      <div class="arr-card">
-        ${a.photoData ? `<img src="${lbEsc(a.photoData)}" style="width:100%;border-radius:10px;margin-bottom:10px;">` : ''}
-        <span class="code-badge">${lbEsc(a.arrangementCode||'')}</span>
-        <h3>${lbEsc(a.arrangementName)}</h3>
-        ${a.displayName ? `<div style="font-size:11.5px;color:var(--rose-dark);font-weight:600;margin-bottom:4px;">🏷️ ${lbEsc(a.displayName)}</div>` : ''}
-        <div class="by">👤 ${lbEsc(a.createdBy || 'Unknown')} · ${new Date(a.createdDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
-        <ul>${a.items.map(it => `<li>${lbEsc(it.qty)}x ${lbEsc(it.chocolateName)}</li>`).join('')}</ul>
-        ${a.notes ? `<div class="notes">${lbEsc(a.notes)}</div>` : ''}
-      </div>
-    `).join('');
-  }catch(e){
-    grid.innerHTML = '<div class="empty">Could not load arrangements — check your connection.</div>';
-  }
-}
-loadArrangements();
-
-document.getElementById('saveBtn').addEventListener('click', async ()=>{
-  const arrangementName = document.getElementById('arrName').value.trim();
-  const displayName = document.getElementById('arrDisplayName').value.trim();
-  const createdBy = document.getElementById('arrCreator').value.trim();
-  const notes = document.getElementById('arrNotes').value.trim();
-  const items = Array.from(document.querySelectorAll('.item-row')).map(row => ({
+function readItems(){
+  return Array.from(document.querySelectorAll('#itemRows .item-row')).map(row => ({
     chocolateName: row.querySelector('.item-name').value.trim(),
     qty: Number(row.querySelector('.item-qty').value) || 0
   })).filter(it => it.chocolateName && it.qty > 0);
+}
+const EX = LBArrExtras.mount($('extrasBox'), ()=>recalc());
+function recalc(){
+  let pcs=0, val=0;
+  document.querySelectorAll('#itemRows .item-row').forEach(row => {
+    const name=row.querySelector('.item-name').value.trim(), qty=Number(row.querySelector('.item-qty').value)||0, cell=row.querySelector('.line-val');
+    if(!name || qty<=0){ cell.textContent='—'; cell.classList.remove('warn'); return; }
+    pcs += qty; const c = chocInfo(name);
+    if(c){ cell.textContent=(c.pp*qty).toFixed(3); cell.classList.remove('warn'); cell.title=''; val += c.pp*qty; }
+    else if(Object.keys(CHOC).length){ cell.textContent='not in list'; cell.classList.add('warn'); cell.title='Not in the Chocolate Item List — check the spelling'; }
+  });
+  const ex = (typeof EX !== 'undefined' && EX) ? EX.total() : 0;
+  $('sumPcs').textContent = pcs; $('sumChoc').textContent = bd(val); $('sumEx').textContent = bd(ex); $('sumTotal').textContent = bd(val + ex);
+}
+$('addItemBtn').addEventListener('click', ()=> addItemRow());
 
-  if(!arrangementName){ showMsg('Arrangement name is required.', true); return; }
-  if(!items.length){ showMsg('Add at least one chocolate with a quantity.', true); return; }
+/* ---------- photo ---------- */
+let photoState = { data:null, changed:false };
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const maxDim=220; let w=img.width,h=img.height;
+        if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } } else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',0.6));
+      };
+      img.onerror=reject; img.src=e.target.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+function showPhoto(src){ if(src){ $('arrPhotoPreview').src=src; $('photoPreviewWrap').style.display='block'; } else $('photoPreviewWrap').style.display='none'; }
+async function usePhoto(file){
+  if(!file) return; $('arrPhotoHint').textContent='Compressing…';
+  try{ photoState={ data: await compressImage(file), changed:true }; showPhoto(photoState.data); $('arrPhotoHint').textContent='Compressed to ~' + Math.round(photoState.data.length*0.75/1024) + ' KB'; }
+  catch(e){ $('arrPhotoHint').textContent='Could not process this image.'; }
+}
+$('arrPhoto').addEventListener('change', function(){ usePhoto(this.files[0]); });
+try{ LBPastePic.attach($('arrPasteBox'), usePhoto); }catch(e){}
+$('removePhotoBtn').addEventListener('click', ()=>{ photoState={ data:'__REMOVE__', changed:true }; $('arrPhoto').value=''; $('arrPhotoHint').textContent='Photo will be removed when you save.'; showPhoto(null); });
 
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-  const token = window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || '';
+/* ---------- branch memory ---------- */
+(function(){ try{ const b = localStorage.getItem('lbArrBranch') || (currentUser().branch || ''); if(b && [...$('makeBranch').options].some(o=>o.value===b)) $('makeBranch').value=b; }catch(e){} })();
+$('makeBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('makeBranch').value); }catch(e){} });
 
+/* ---------- form state ---------- */
+let editingId = null, fromDisplay = '';
+function resetForm(){
+  editingId=null; fromDisplay='';
+  ['arrName','arrDisplayName','arrCreator','arrNotes','arrPhoto'].forEach(id=>$(id).value='');
+  $('itemRows').innerHTML=''; EX.set([]);
+  $('arrPhotoHint').textContent=''; photoState={ data:null, changed:false }; showPhoto(null);
+  $('formTitle').textContent='➕ Add New Arrangement';
+  $('editingBanner').style.display='none'; $('cancelEditBtn').style.display='none';
+  $('saveBtn').textContent='Save Arrangement'; $('makeNow').checked=false; $('makeBox').style.display='';
+  addItemRow(); addItemRow(); addItemRow();
+}
+function fillForm(a, banner){
+  $('arrName').value=a.arrangementName||''; $('arrDisplayName').value=a.displayName||''; $('arrCreator').value=a.createdBy||''; $('arrNotes').value=a.notes||'';
+  $('itemRows').innerHTML=''; (a.items||[]).forEach(it=>addItemRow(it.chocolateName, it.qty)); if(!(a.items||[]).length) addItemRow();
+  EX.set(a.extras||[]);
+  photoState={ data:null, changed:false }; showPhoto(a.photoData||null); $('arrPhoto').value=''; $('arrPhotoHint').textContent='';
+  $('editingBanner').textContent=banner; $('editingBanner').style.display='block'; $('cancelEditBtn').style.display='inline-block';
+  $('newBarcodeBox').style.display='none'; $('formMsg').className='msg'; $('makeNow').checked=false;
+  $('formCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function startEdit(a){
+  editingId=a.id; fromDisplay='';
+  fillForm(a, 'Editing ' + (a.arrangementCode||'') + ' — ' + (a.arrangementName||'') + '. The barcode stays the same. Editing does NOT touch the stock.');
+  $('formTitle').textContent='✏️ Edit Arrangement'; $('saveBtn').textContent='Save Changes'; $('makeBox').style.display='none';
+}
+function startFromDisplay(d){
+  editingId=null; fromDisplay=d.arrangementCode;
+  const skipped=[], items=[];
+  (d.items||[]).forEach(it=>{
+    if(!it.unit || it.unit==='piece'){ items.push({ chocolateName: it.chocolateName, qty: it.qty }); return; }
+    const c=chocInfo(it.chocolateName), g = it.unit==='kg' ? it.qty*1000 : it.qty;
+    if(c && c.gpp){ items.push({ chocolateName: it.chocolateName, qty: Math.max(1, Math.round(g / c.gpp)) }); } else skipped.push(it.chocolateName + ' (' + it.qty + ' ' + it.unit + ')');
+  });
+  fillForm({ arrangementName: d.arrangementName, createdBy: d.createdBy, items, extras: d.extras },
+    'From display ' + d.arrangementCode + ' — this display is already out of stock. Saving makes a NEW catalog recipe (ARR- code); stock is not touched unless you tick “I made one now”.' + (skipped.length ? '\n⚠️ Not added (sold by weight, no grams per piece): ' + skipped.join(', ') : ''));
+  $('formTitle').textContent='⭐ Save display as catalog arrangement'; $('saveBtn').textContent='Save to Catalog';
+}
+$('cancelEditBtn').addEventListener('click', resetForm);
+function showMsg(text,isError){ const el=$('formMsg'); el.textContent=text; el.className='msg '+(isError?'error':'success'); }
+
+/* ---------- take out of stock (same as Build a Display / Calc ✓ Sold) ---------- */
+async function makeOne(a, branch){
+  const chocs = (a.items||[]).map(it => {
+    const c = chocInfo(it.chocolateName) || {}, q = Number(it.qty)||0;
+    return { name: it.chocolateName, code: c.code||'', cat: c.cat||'', mode:'pieces', amount:q, kg: c.gpp ? Math.round(q*c.gpp)/1000 : 0, gpp: c.gpp||0, total: Math.round(q*(c.pp||0)*1000)/1000 };
+  });
+  const ex = (a.extras||[]).map(x => ({ desc:x.desc, price:Number(x.price)||0 }));
+  const key = 'arr' + String(a.arrangementCode||'x').replace(/[^A-Za-z0-9]/g,'') + Date.now().toString(36);
   try{
-    const params = new URLSearchParams({
-      action: 'addArrangement', arrangementName, displayName, createdBy, notes,
-      items: JSON.stringify(items), photoData: arrPhotoData || '', token
-    });
-    const res = await fetch(CHOCOLATE_API_URL + '?' + params.toString());
-    const data = await res.json();
-    if(!data.success){ showMsg(data.error || 'Failed to save.', true); btn.disabled=false; btn.textContent='Save Arrangement'; return; }
-    showMsg('Arrangement saved! Code: ' + data.arrangementCode, false);
-    const oldBox = document.querySelector('.barcode-box');
-    if(oldBox) oldBox.remove();
-    document.getElementById('formMsg').insertAdjacentHTML('afterend',
-      `<div class="barcode-box"><svg id="newArrBarcode"></svg></div>`);
-    JsBarcode('#newArrBarcode', data.arrangementCode, { format: 'CODE128', width: 1.6, height: 46, displayValue: true, fontSize: 12 });
-    document.getElementById('arrName').value = '';
-    document.getElementById('arrDisplayName').value = '';
-    document.getElementById('arrCreator').value = '';
-    document.getElementById('arrNotes').value = '';
-    document.getElementById('itemRows').innerHTML = '';
-    document.getElementById('arrPhoto').value = '';
-    document.getElementById('arrPhotoPreview').style.display = 'none';
-    document.getElementById('arrPhotoHint').textContent = '';
-    arrPhotoData = null;
-    addItemRow(); addItemRow();
+    const body = new URLSearchParams({ action:'saveChocolateSale', token: token(), reqKey:key, branch, source:'Arrangement', ref: String(a.arrangementName||'').slice(0,60), customer:'Arrangement ' + (a.arrangementCode||''),
+      extras: String(ex.reduce((s,x)=>s+x.price,0)), extrasList: JSON.stringify(ex), items: JSON.stringify(chocs) });
+    const d = await (await fetch(SALE_API, { method:'POST', body })).json();
+    if(!d || !d.success) return { ok:false, text:'⚠️ NOT taken out of stock: ' + ((d && d.error) || 'no reply') };
+    const sh = (d.short||[]).map(x => '• ' + x.name + ': needed ' + x.need + ', had ' + x.have).join('\n');
+    return { ok:true, text:'✅ Taken out of ' + branch + ' stock (' + (d.releaseNo || d.saleNo) + ').' + (sh ? '\n⚠️ Not enough in stock:\n' + sh : '') };
+  }catch(e){ return { ok:false, text:'⚠️ NOT taken out of stock (connection problem).' }; }
+}
+function makeConfirm(a, branch){
+  return confirm('Take this out of ' + branch + ' stock?\n\n' + (a.items||[]).map(i=>i.qty + ' pcs ' + i.chocolateName).join('\n') +
+    ((a.extras||[]).length ? '\n+ ' + a.extras.map(x=>x.desc).join(', ') : '') + '\n\nIt shows in the Chocolate Calc 📜 Log (Calc Sales) — cancel it there if it was a mistake.');
+}
+
+/* ---------- save ---------- */
+$('saveBtn').addEventListener('click', async ()=>{
+  const arrangementName=$('arrName').value.trim(), items=readItems(), extras=EX.get();
+  if(!arrangementName){ showMsg('Arrangement name is required.', true); return; }
+  if(!items.length){ showMsg('Add at least one chocolate with a number of pieces.', true); return; }
+  const unknown=Object.keys(CHOC).length ? items.filter(it=>!chocInfo(it.chocolateName)).map(it=>it.chocolateName) : [];
+  if(unknown.length && !confirm('These are not in the Chocolate Item List:\n\n• ' + unknown.join('\n• ') + '\n\nSave anyway? (they cannot be taken out of stock)')) return;
+  const make = !editingId && $('makeNow').checked, branch = $('makeBranch').value;
+  if(make && !branch){ showMsg('Pick the branch to take the stock from (or untick “I made one now”).', true); $('makeBranch').focus(); return; }
+  if(make && !makeConfirm({ items, extras }, branch)) return;
+
+  const btn=$('saveBtn'), label=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
+  const params={ action:'addArrangement', arrangementName, displayName:$('arrDisplayName').value.trim(), createdBy:$('arrCreator').value.trim(), notes:$('arrNotes').value.trim(),
+    items:JSON.stringify(items), extras:JSON.stringify(extras) };
+  if(editingId) params.id=editingId;
+  if(fromDisplay) params.fromDisplay=fromDisplay;
+  if(photoState.changed || !editingId) params.photoData = photoState.data || '';
+  try{
+    const data=await api(params);
+    if(!data.success){ showMsg(data.error || 'Could not save.', true); btn.disabled=false; btn.textContent=label; return; }
+    const wasEdit=!!editingId; let stockTxt='';
+    if(make){ btn.textContent='Taking out of stock…'; stockTxt = '\n' + (await makeOne({ arrangementCode:data.arrangementCode, arrangementName, items, extras }, branch)).text; }
+    resetForm();
+    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Arrangement saved! Code: ' + data.arrangementCode) + stockTxt, false);
+    if(!wasEdit){ $('newBarcodeBox').style.display='block'; try{ JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 }); }catch(e){} }
     loadArrangements();
-  }catch(e){
-    showMsg('Connection error — check your connection.', true);
-  }
-  btn.disabled = false; btn.textContent = 'Save Arrangement';
+  }catch(e){ showMsg('Connection error — please check your connection.', true); btn.textContent=label; }
+  btn.disabled=false;
 });
+
+/* ---------- list ---------- */
+let allArrangements=[];
+function itemsHtml(a){
+  return (a.items||[]).map(it=>{ const u = it.unit && it.unit!=='piece' ? (it.unit==='kg' ? ' kg' : ' g') : ' pcs'; return `<li>${esc(it.qty)}${u} · ${esc(it.chocolateName)}${!a.isDisplay && Object.keys(CHOC).length && !chocInfo(it.chocolateName) ? ' <span title="Not in the Chocolate Item List" style="color:#b9770e;">⚠</span>' : ''}</li>`; }).join('')
+    + (a.extras||[]).map(x=>`<li class="ex">✨ ${esc(x.desc)}${x.price ? ' · ' + bd(x.price) : ''}</li>`).join('');
+}
+function totalOf(a){
+  if(a.isDisplay) return Number(a.totalPrice)||0;
+  return chocValue(a.items) + (a.extras||[]).reduce((s,x)=>s+(Number(x.price)||0),0);
+}
+function cardHtml(a, withActions){
+  const pcs=(a.items||[]).reduce((s,i)=>s+(!i.unit||i.unit==='piece' ? Number(i.qty)||0 : 0),0);
+  const manage = withActions && canManage(a);
+  return `
+    ${a.photoData ? `<img class="photo" src="${esc(a.photoData)}" alt="">` : ''}
+    <span class="code-badge${a.isDisplay?' disp':''}">${esc(a.arrangementCode||'')}${a.isDisplay?' · Display':''}</span>
+    <h3>${esc(a.arrangementName)}</h3>
+    ${a.displayName ? `<div class="display">🏷️ ${esc(a.displayName)}</div>` : ''}
+    <div class="by">👤 ${esc(a.createdBy || 'Unknown')} · ${esc(fmtDate(a.createdDate))}${a.fromDisplay ? ' · from ' + esc(a.fromDisplay) : ''}${a.updatedDate ? '<br>✏️ Edited by ' + esc(a.updatedBy||'') + ' · ' + esc(fmtDate(a.updatedDate)) : ''}</div>
+    <ul>${itemsHtml(a)}</ul>
+    ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
+    <div class="totals"><span>${pcs ? 'Pieces: <b>' + pcs + '</b>' : ''}</span><span>${a.isDisplay ? 'Price' : 'Est. value'}: <b>${esc(bd(totalOf(a)))}</b></span></div>
+    ${withActions ? `<div class="arr-actions">
+      <button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>
+      <button type="button" data-act="barcode" data-id="${a.id}">🏷️ Barcode</button>
+      <button type="button" data-act="print" data-id="${a.id}">🖨️ Print</button>
+      ${manage ? `<button type="button" data-act="edit" data-id="${a.id}">✏️ Edit</button><button type="button" class="del" data-act="delete" data-id="${a.id}">🗑️</button>` : ''}
+    </div>
+    <div class="barcode-wrap" id="bc-${a.id}"><svg></svg></div>` : ''}`;
+}
+function renderList(){
+  const q=$('searchBox').value.trim().toLowerCase();
+  const list=allArrangements.filter(a=>!q || [a.arrangementName,a.displayName,a.arrangementCode,a.createdBy,a.fromDisplay].concat((a.items||[]).map(i=>i.chocolateName),(a.extras||[]).map(x=>x.desc)).join(' ').toLowerCase().includes(q));
+  $('arrCount').textContent = allArrangements.length ? '(' + list.length + (q ? ' of ' + allArrangements.length : '') + ')' : '';
+  const grid=$('arrGrid');
+  if(!allArrangements.length){ grid.innerHTML='<div class="empty">No arrangements yet. Add the first one above — or scan a DISP- display and press “⭐ Save to catalog”.</div>'; return; }
+  if(!list.length){ grid.innerHTML='<div class="empty">No arrangements match your search.</div>'; return; }
+  grid.innerHTML=list.map(a=>`<div class="arr-card">${cardHtml(a,true)}</div>`).join('');
+}
+async function loadArrangements(){
+  try{
+    const data=await (await fetch(CHOCOLATE_API_URL + '?action=getArrangements&token=' + encodeURIComponent(token()))).json();
+    if(!Array.isArray(data)) throw new Error(data.error||'Failed');
+    allArrangements=data; renderList();
+  }catch(e){ $('arrGrid').innerHTML='<div class="empty">Could not load arrangements — please check your connection.</div>'; }
+}
+$('searchBox').addEventListener('input', renderList);
+$('arrGrid').addEventListener('click', async ev=>{
+  const btn=ev.target.closest('button[data-act]'); if(!btn) return;
+  const a=allArrangements.find(x=>String(x.id)===btn.dataset.id); if(!a) return;
+  const act=btn.dataset.act;
+  if(act==='edit'){ startEdit(a); return; }
+  if(act==='print'){ printArrangement(a); return; }
+  if(act==='make'){ showResult(a); return; }
+  if(act==='barcode'){
+    const box=$('bc-'+a.id), show=box.style.display!=='block'; box.style.display=show?'block':'none';
+    if(show) JsBarcode(box.querySelector('svg'), a.arrangementCode, { format:'CODE128', width:1.5, height:42, displayValue:true, fontSize:11 });
+    return;
+  }
+  if(act==='delete'){
+    if(!confirm('Delete "' + a.arrangementName + '" (' + a.arrangementCode + ') from the catalog?\n\nStock already taken out is not changed.')) return;
+    btn.disabled=true;
+    try{
+      const d=await (await fetch(CHOCOLATE_API_URL + '?action=deleteArrangement&id=' + a.id + '&token=' + encodeURIComponent(token()))).json();
+      if(!d.success){ alert(d.error || 'Could not delete.'); btn.disabled=false; return; }
+      if(editingId===a.id) resetForm(); loadArrangements();
+    }catch(e){ alert('Connection error — please try again.'); btn.disabled=false; }
+  }
+});
+
+/* ---------- scan / type a code ---------- */
+let scanStream=null, scanLoopActive=false;
+$('scanBtn').addEventListener('click', async ()=>{
+  if(!('BarcodeDetector' in window)){ alert('Barcode scanning is not supported on this browser — type the code instead.'); $('codeInput').focus(); return; }
+  const modal=$('scannerModal'), video=$('scannerVideo'); modal.classList.add('show');
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+    video.srcObject=scanStream; scanLoopActive=true;
+    const detector=new BarcodeDetector({ formats:['code_128','ean_13','ean_8','upc_a','upc_e','qr_code'] });
+    const loop=async()=>{
+      if(!scanLoopActive) return;
+      try{ const codes=await detector.detect(video); if(codes.length){ stopScanner(); lookupByCode(codes[0].rawValue); return; } }catch(e){}
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){ alert('Cannot access the camera. Please check permissions.'); modal.classList.remove('show'); }
+});
+function stopScanner(){ scanLoopActive=false; if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; } $('scannerModal').classList.remove('show'); }
+$('closeScanBtn').addEventListener('click', stopScanner);
+$('closeResultBtn').addEventListener('click', ()=>{ $('scanResultCard').style.display='none'; });
+$('codeInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.value.trim()){ lookupByCode(e.target.value.trim()); e.target.value=''; } });
+
+async function lookupByCode(code){
+  code = String(code||'').trim().toUpperCase();
+  const card=$('scanResultCard'), body=$('scanResultBody');
+  card.style.display='block'; body.textContent='Looking up…'; card.scrollIntoView({behavior:'smooth',block:'center'});
+  try{
+    const data=await (await fetch(CHOCOLATE_API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token()))).json();
+    if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
+    showResult(data);
+  }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
+}
+let resultArr=null;
+function showResult(a){
+  resultArr=a;
+  const card=$('scanResultCard'), body=$('scanResultBody'); card.style.display='block';
+  const saved = a.isDisplay ? allArrangements.find(x=>x.fromDisplay===a.arrangementCode) : null;
+  body.innerHTML = cardHtml(a,false)
+    + (a.isDisplay ? `<div class="disp-note">✓ Made in Build a Display — this one is already out of stock.${saved ? ' Saved in the catalog as <b>' + esc(saved.arrangementCode) + '</b>.' : ''}</div>` : '')
+    + `<div class="btn-row" style="margin-top:8px">${a.isDisplay ? `<button type="button" class="save-btn" id="rsSave">⭐ ${saved ? 'Save again' : 'Save to catalog'} (online arrangement)</button>` : ''}<button type="button" class="ghost-btn" id="rsPrint">🖨️ Print receipt</button></div>`
+    + `<div class="make-box" style="margin-top:14px">
+        <label style="margin-bottom:6px">${a.isDisplay ? '📦 Make another one like this' : '📦 Make one'} — take out of stock</label>
+        <select id="rsBranch" style="margin:0 0 10px"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+        <button type="button" class="scan-btn-big" id="rsMake" style="width:100%">📦 Made it — take out of stock</button>
+        <div id="rsMsg" class="msg"></div>
+      </div>`;
+  try{ const b=localStorage.getItem('lbArrBranch') || currentUser().branch || ''; if(b) $('rsBranch').value=b; }catch(e){}
+  $('rsBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('rsBranch').value); }catch(e){} });
+  $('rsPrint').onclick=()=>printArrangement(a);
+  if($('rsSave')) $('rsSave').onclick=()=>startFromDisplay(a);
+  $('rsMake').onclick=async ()=>{
+    const br=$('rsBranch').value, m=$('rsMsg');
+    if(!br){ m.className='msg error'; m.textContent='Pick the branch first.'; return; }
+    let src=a;
+    if(a.isDisplay){   // weight items → pieces where we can
+      const items=[], skip=[];
+      (a.items||[]).forEach(it=>{ if(!it.unit||it.unit==='piece') items.push({chocolateName:it.chocolateName,qty:it.qty}); else { const c=chocInfo(it.chocolateName), g=it.unit==='kg'?it.qty*1000:it.qty; if(c&&c.gpp) items.push({chocolateName:it.chocolateName,qty:Math.max(1,Math.round(g/c.gpp))}); else skip.push(it.chocolateName); } });
+      if(skip.length && !confirm('Sold by weight, not taken out: ' + skip.join(', ') + '\n\nContinue?')) return;
+      src={ arrangementCode:a.arrangementCode, arrangementName:a.arrangementName, items, extras:a.extras };
+    }
+    if(!makeConfirm(src, br)) return;
+    const b=$('rsMake'); b.disabled=true; b.textContent='Taking out of stock…';
+    const r=await makeOne(src, br);
+    m.className='msg ' + (r.ok?'success':'error'); m.textContent=r.text;
+    b.textContent = r.ok ? '✓ Done — make another?' : '📦 Made it — take out of stock'; b.disabled=false;
+  };
+  card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- print (receipt, 80mm) ---------- */
+function printArrangement(a){
+  const tmp=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  try{ JsBarcode(tmp, a.arrangementCode||'', { format:'CODE128', width:1.6, height:44, displayValue:true, fontSize:12, margin:0 }); }catch(e){}
+  const u=currentUser(), now=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const lines=(a.items||[]).map(it=>{ const c=chocInfo(it.chocolateName); const v = a.isDisplay ? (Number(it.price)||0)*(Number(it.qty)||0) : (c ? c.pp*(Number(it.qty)||0) : 0); const un = it.unit && it.unit!=='piece' ? (it.unit==='kg'?' kg':' g') : ' pcs';
+    return `<tr><td>${esc(it.qty)}${un} · ${esc(it.chocolateName)}</td><td class="r">${v ? v.toFixed(3) : '—'}</td></tr>`; }).join('')
+    + (a.extras||[]).map(x=>`<tr><td>+ ${esc(x.desc)}</td><td class="r">${(Number(x.price)||0).toFixed(3)}</td></tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(a.arrangementCode||'Arrangement')}</title><style>
+    @page{size:80mm auto;margin:4mm}*{box-sizing:border-box}body{margin:0;width:72mm;font-family:Arial,Helvetica,sans-serif;font-size:11.5px;color:#000}
+    .c{text-align:center}.r{text-align:right;white-space:nowrap}h1{font-size:15px;letter-spacing:.25em;margin:0}.sub{font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin:2px 0 8px}
+    .name{font-size:14px;font-weight:700;margin:6px 0 2px}.dash{border-top:1px dashed #000;margin:7px 0}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}
+    .tot td{font-weight:700;padding-top:4px}img.ph{display:block;max-width:100%;max-height:48mm;margin:6px auto;object-fit:contain}svg{max-width:100%;height:auto}.small{font-size:9.5px}
+  </style></head><body>
+    <div class="c"><h1>LALABELLA</h1><div class="sub">Chocolate ${a.isDisplay?'Display':'Arrangement'}</div>${a.arrangementCode ? tmp.outerHTML : ''}</div>
+    <div class="c name">${esc(a.arrangementName||'')}</div>${a.displayName && a.displayName!==a.arrangementName ? `<div class="c">${esc(a.displayName)}</div>` : ''}
+    ${a.photoData ? `<img class="ph" src="${esc(a.photoData)}" alt="">` : ''}
+    <div class="dash"></div><div>Made by: <b>${esc(a.createdBy||'—')}</b></div><div class="dash"></div>
+    <table>${lines}<tr><td colspan="2"><div class="dash"></div></td></tr><tr class="tot"><td>${a.isDisplay?'Price':'Est. value'}</td><td class="r">${totalOf(a).toFixed(3)} BD</td></tr></table>
+    ${a.notes ? `<div class="dash"></div><div>Notes: ${esc(a.notes)}</div>` : ''}
+    <div class="dash"></div><div class="c small">Printed ${esc(now)}${u.fullName||u.username ? ' by ' + esc(u.fullName||u.username) : ''}</div>
+  </body></html>`;
+  let frame=$('printFrame'); if(frame) frame.remove();
+  frame=document.createElement('iframe'); frame.id='printFrame'; frame.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(frame);
+  const doc=frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
+  const go=()=>{ try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(e){ alert('Could not open the print window.'); } };
+  const img=doc.querySelector('img.ph'); if(img && !img.complete){ img.onload=go; img.onerror=go; } else setTimeout(go,150);
+}
+
+/* ---------- start ---------- */
+resetForm();
+loadChocList().then(()=>{ renderList(); });
+loadArrangements();
+(function(){ const c=new URLSearchParams(location.search).get('code'); if(c) lookupByCode(c); })();
 </script>
 <script src="joyboy-bubble.js"></script>
 </body>

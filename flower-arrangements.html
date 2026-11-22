@@ -47,6 +47,13 @@
   .add-item-btn{font-size:12.5px;color:var(--sage-dark);background:none;border:1px dashed var(--sage);border-radius:9px;padding:8px 14px;cursor:pointer;margin:4px 0 14px;}
   .summary-bar{display:flex;gap:18px;flex-wrap:wrap;background:var(--sage-soft);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;}
   .summary-bar b{font-size:16px;color:var(--sage-dark);}
+  .make-box{border:1.5px solid var(--gold-light);background:#fffaf0;border-radius:12px;padding:12px 14px;margin-bottom:16px;}
+  .make-box .chk{display:flex;align-items:center;gap:10px;font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);margin:0;cursor:pointer;}
+  .make-box .chk input{width:20px;height:20px;margin:0;accent-color:var(--sage-dark);flex:none}
+  .make-box select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:10px 0 0;font:inherit;background:#fff}
+  .make-box .s{font-size:11.5px;color:var(--muted);margin-top:6px;}
+  li.ex{color:#8a5a2b;}
+  .arr-actions button.make{background:linear-gradient(135deg,#fff,var(--gold-light));border:1px solid var(--gold-light);font-weight:700;color:#3a2a10;flex-basis:100%;}
 
   .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
   .save-btn{padding:12px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--sage),var(--sage-dark));color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
@@ -162,10 +169,15 @@
     <datalist id="flowerOptions"></datalist>
     <button type="button" class="add-item-btn" id="addItemBtn">+ Add Flower</button>
 
+    <label>Extras (Item Inventory)</label>
+    <div id="extrasBox"></div>
+
     <div class="summary-bar">
       <div>Total stems<br><b id="sumStems">0</b></div>
       <div>Flower types<br><b id="sumTypes">0</b></div>
       <div>Est. flower value (company rate)<br><b id="sumValue">0.000 BHD</b></div>
+      <div>Extras<br><b id="sumEx">0.000 BHD</b></div>
+      <div>Total<br><b id="sumTotal">0.000 BHD</b></div>
     </div>
 
     <label>Notes (optional)</label>
@@ -177,6 +189,12 @@
     <div id="photoPreviewWrap" style="display:none;margin-bottom:14px;">
       <img id="arrPhotoPreview" style="max-width:130px;border-radius:10px;display:block;margin-bottom:6px;">
       <button type="button" class="ghost-btn" id="removePhotoBtn" style="padding:6px 12px;font-size:11.5px;">Remove photo</button>
+    </div>
+
+    <div class="make-box" id="makeBox">
+      <label class="chk"><input type="checkbox" id="makeNow"> 📦 I made one now — take it out of stock</label>
+      <select id="makeBranch"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+      <div class="s">Leave it off if you are only saving the recipe (online arrangement). You can make one later with “📦 Make one”.</div>
     </div>
 
     <div class="btn-row">
@@ -202,6 +220,8 @@
   <button class="close-scan" id="closeScanBtn">Cancel</button>
 </div>
 
+<script src="shared/extras-pick.js?v=6"></script>
+<script src="shared/arr-extras.js?v=1"></script>
 <script>
 const FLOWER_API = LB_CONFIG.FLOWER_FAST_API;
 
@@ -282,7 +302,14 @@ function recalc(){
   document.getElementById('sumStems').textContent = stems;
   document.getElementById('sumTypes').textContent = types.size;
   document.getElementById('sumValue').textContent = bhd(value);
+  const ex = window.__EX ? window.__EX.total() : 0;
+  document.getElementById('sumEx').textContent = bhd(ex);
+  document.getElementById('sumTotal').textContent = bhd(value + ex);
 }
+window.__EX = LBArrExtras.mount(document.getElementById('extrasBox'), ()=>recalc());
+const EX = window.__EX;
+(function(){ try{ const u=currentUser(), b = localStorage.getItem('lbArrBranch') || u.branch || ''; const el=document.getElementById('makeBranch'); if(b && [...el.options].some(o=>o.value===b)) el.value=b; }catch(e){} })();
+document.getElementById('makeBranch').addEventListener('change', e=>{ try{ localStorage.setItem('lbArrBranch', e.target.value); }catch(_){} });
 document.getElementById('addItemBtn').addEventListener('click', ()=> addItemRow());
 
 /* ---------- photo ---------- */
@@ -329,7 +356,8 @@ let editingId = null;
 function resetForm(){
   editingId=null;
   ['arrName','arrDisplayName','arrFlorist','arrNotes','arrPhoto'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('itemRows').innerHTML='';
+  document.getElementById('itemRows').innerHTML=''; EX.set([]);
+  document.getElementById('makeNow').checked=false; document.getElementById('makeBox').style.display='';
   document.getElementById('arrPhotoHint').textContent='';
   photoState={ data:null, changed:false }; showPhoto(null);
   document.getElementById('formTitle').textContent='➕ Add New Arrangement';
@@ -347,6 +375,7 @@ function startEdit(a){
   document.getElementById('itemRows').innerHTML='';
   (a.items||[]).forEach(it=>addItemRow(it.flowerName, it.qty));
   if(!(a.items||[]).length) addItemRow();
+  EX.set(a.extras||[]); document.getElementById('makeBox').style.display='none'; document.getElementById('makeNow').checked=false;
   photoState={ data:null, changed:false }; showPhoto(a.photoData||null);
   document.getElementById('arrPhoto').value=''; document.getElementById('arrPhotoHint').textContent='';
   document.getElementById('formTitle').textContent='✏️ Edit Arrangement';
@@ -371,6 +400,10 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const unknown=items.filter(it=>Object.keys(flowerRates).length && !(it.flowerName.toLowerCase() in flowerRates)).map(it=>it.flowerName);
   if(unknown.length && !confirm('These flowers are not in the Flower Catalog:\n\n• ' + unknown.join('\n• ') + '\n\nSave anyway?')) return;
 
+  const extras=EX.get(), make=!editingId && document.getElementById('makeNow').checked, branch=document.getElementById('makeBranch').value;
+  if(make && !branch){ showMsg('Pick the branch to take the stock from (or untick “I made one now”).', true); return; }
+  const rates=items.map(it=>({ flowerName:it.flowerName, qty:it.qty, rate:flowerRates[it.flowerName.toLowerCase()]||0 }));
+  if(make && !makeConfirm({ items:rates, extras }, branch)) return;
   const btn=document.getElementById('saveBtn'), label=btn.textContent;
   btn.disabled=true; btn.textContent='Saving…';
   const params={
@@ -378,19 +411,20 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     displayName:document.getElementById('arrDisplayName').value.trim(),
     florist:document.getElementById('arrFlorist').value.trim(),
     notes:document.getElementById('arrNotes').value.trim(),
-    items:JSON.stringify(items)
+    items:JSON.stringify(items), extras:JSON.stringify(extras)
   };
   if(editingId) params.id=editingId;
   if(photoState.changed || !editingId) params.photoData = photoState.data || '';
   try{
     const data=await api(params);
     if(!data.success){ showMsg(data.error || 'Could not save.', true); btn.disabled=false; btn.textContent=label; return; }
-    const wasEdit=!!editingId;
+    const wasEdit=!!editingId; let stockTxt='';
+    if(make){ btn.textContent='Taking out of stock…'; stockTxt='\n' + (await makeOne({ arrangementCode:data.arrangementCode, arrangementName, items:rates, extras }, branch)).text; }
     resetForm();
-    showMsg(wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Arrangement saved! Code: ' + data.arrangementCode, false);
+    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Arrangement saved! Code: ' + data.arrangementCode) + stockTxt, false);
     if(!wasEdit){
       document.getElementById('newBarcodeBox').style.display='block';
-      JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 });
+      try{ JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 }); }catch(e){}
     }
     loadArrangements();
   }catch(e){ showMsg('Connection error — please check your connection.', true); }
@@ -408,10 +442,11 @@ function cardHtml(a, withActions){
     <h3>${esc(a.arrangementName)}</h3>
     ${a.displayName ? `<div class="display">🏷️ ${esc(a.displayName)}</div>` : ''}
     <div class="by">💐 Florist: <b>${esc(a.florist || 'Not recorded')}</b><br>📝 Recorded by ${esc(a.createdBy || 'Unknown')} · ${esc(fmtDate(a.createdDate))}${a.updatedDate ? '<br>✏️ Edited by ' + esc(a.updatedBy||'') + ' · ' + esc(fmtDate(a.updatedDate)) : ''}</div>
-    <ul>${items}</ul>
+    <ul>${items}${(a.extras||[]).map(x=>`<li class="ex">✨ ${esc(x.desc)}${x.price ? ' · ' + bhd(x.price) : ''}</li>`).join('')}</ul>
     ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
-    <div class="totals"><span>Total stems: <b>${esc(a.totalStems)}</b></span><span>Est. value: <b>${esc(bhd(a.estValue))}</b></span></div>
+    <div class="totals"><span>Total stems: <b>${esc(a.totalStems)}</b></span><span>Est. value: <b>${esc(bhd((Number(a.estValue)||0) + (a.extras||[]).reduce((s,x)=>s+(Number(x.price)||0),0)))}</b></span></div>
     ${withActions ? `<div class="arr-actions">
+      <button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>
       <button type="button" data-act="barcode" data-id="${a.id}">🏷️ Barcode</button>
       <button type="button" data-act="print" data-id="${a.id}">🖨️ Print</button>
       ${manage ? `<button type="button" data-act="edit" data-id="${a.id}">✏️ Edit</button><button type="button" class="del" data-act="delete" data-id="${a.id}">🗑️ Delete</button>` : ''}
@@ -442,6 +477,7 @@ document.getElementById('arrGrid').addEventListener('click', async ev=>{
   const a=allArrangements.find(x=>String(x.id)===btn.dataset.id); if(!a) return;
   if(btn.dataset.act==='edit'){ startEdit(a); return; }
   if(btn.dataset.act==='print'){ printArrangement(a); return; }
+  if(btn.dataset.act==='make'){ showResult(a); return; }
   if(btn.dataset.act==='barcode'){
     const box=document.getElementById('bc-'+a.id);
     const show=box.style.display!=='block'; box.style.display=show?'block':'none';
@@ -492,59 +528,69 @@ async function lookupByCode(code){
   try{
     const data=await api({ action:'getFlowerArrangementByCode', code });
     if(!data.success){ body.innerHTML=`<div class="msg error">${esc(data.error||'Not found.')} (Scanned: ${esc(code)})</div>`; return; }
+    showResult(data);
+  }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
+}
+function showResult(data){
+  const card=document.getElementById('scanResultCard'), body=document.getElementById('scanResultBody');
+  card.style.display='block';
+  {
     body.innerHTML = cardHtml(data,false)
       + '<button type="button" class="ghost-btn" id="scanPrintBtn" style="width:100%;margin-top:10px;">🖨️ Print Receipt</button>'
       + fulfillSectionHtml(data);
     document.getElementById('scanPrintBtn').addEventListener('click', ()=>printArrangement(data));
     wireFulfillSection(data);
-  }catch(e){ body.innerHTML='<div class="msg error">Connection error.</div>'; }
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
 }
 
 function fulfillSectionHtml(a){
   return `
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Deduct from branch</label>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">📦 Make one — take out of which branch's stock?</label>
       <select id="fulfillBranchSelect" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0 10px;">
         <option value="">Select branch…</option>
         <option value="ModaMall">ModaMall</option>
         <option value="Hamala">Hamala</option>
         <option value="Galali">Galali</option>
       </select>
-      <button type="button" id="fulfillBtn" class="scan-btn-big" style="width:100%;">🌸 Fulfill & Deduct Stock</button>
+      <button type="button" id="fulfillBtn" class="scan-btn-big" style="width:100%;">🌸 Made it — take out of stock</button>
       <div id="fulfillMsg" style="font-size:12.5px;margin-top:8px;"></div>
     </div>
   `;
 }
 
+/* Take out of stock = a calc sale (source "Arrangement") — same as the Flower Calc ✓ Sold, so it shows in the 📜 Log and can be cancelled there. */
+async function makeOne(a, branch){
+  const items=(a.items||[]).map(it=>({ name:it.flowerName, qty:Number(it.qty)||0, rate:Number(it.rate)||0 }));
+  const ex=(a.extras||[]).map(x=>({ desc:x.desc, price:Number(x.price)||0 }));
+  try{
+    const body=new URLSearchParams({ action:'saveFlowerSale', token:token(), reqKey:'arr' + String(a.arrangementCode||'x').replace(/[^A-Za-z0-9]/g,'') + Date.now().toString(36), branch, source:'Arrangement',
+      ref:String(a.arrangementName||'').slice(0,60), customer:'Arrangement ' + (a.arrangementCode||''), extras:String(ex.reduce((s,x)=>s+x.price,0)), extrasList:JSON.stringify(ex), items:JSON.stringify(items) });
+    const d=await (await fetch(LB_CONFIG.CALC_SALE_API, { method:'POST', body })).json();
+    if(!d || !d.success) return { ok:false, text:'⚠️ NOT taken out of stock: ' + ((d && d.error) || 'no reply') };
+    const sh=(d.short||[]).map(x=>'• ' + x.name + ': needed ' + x.need + ', had ' + x.have).join('\n');
+    return { ok:true, text:'✅ Taken out of ' + branch + ' stock (' + (d.saleNo||'saved') + ').' + (sh ? '\n⚠️ Not enough in stock:\n' + sh : '') };
+  }catch(e){ return { ok:false, text:'⚠️ NOT taken out of stock (connection problem).' }; }
+}
+function makeConfirm(a, branch){
+  return confirm('Take this out of ' + branch + ' stock?\n\n' + (a.items||[]).map(i=>i.qty + ' × ' + i.flowerName).join('\n') +
+    ((a.extras||[]).length ? '\n+ ' + a.extras.map(x=>x.desc).join(', ') : '') + '\n\nIt shows in the Flower Calc 📜 Log (Calc Sales) — cancel it there if it was a mistake.');
+}
 function wireFulfillSection(a){
   const btn = document.getElementById('fulfillBtn');
   if(!btn) return;
+  const sel=document.getElementById('fulfillBranchSelect');
+  try{ const b=localStorage.getItem('lbArrBranch') || currentUser().branch || ''; if(b) sel.value=b; }catch(e){}
+  sel.addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', sel.value); }catch(e){} });
   btn.addEventListener('click', async ()=>{
-    const branch = document.getElementById('fulfillBranchSelect').value;
-    const msg = document.getElementById('fulfillMsg');
+    const branch = sel.value, msg = document.getElementById('fulfillMsg');
     if(!branch){ msg.innerHTML = '<span style="color:#b9770e;">Please select a branch first.</span>'; return; }
-
-    const itemsList = (a.items||[]).map(it => it.qty + ' × ' + it.flowerName).join('\n');
-    const confirmed = confirm(
-      'Deduct these flowers from ' + branch + '?\n\n' + itemsList +
-      '\n\nThis cannot be undone.'
-    );
-    if(!confirmed) return;
-
-    btn.disabled = true; btn.textContent = 'Deducting…';
-    try{
-      const res = await api({ action:'fulfillFlowerArrangement', code: a.arrangementCode, branch });
-      if(!res.success){
-        msg.innerHTML = `<span style="color:#b9770e;">${esc(res.error||'Failed.')}</span>`;
-        btn.disabled = false; btn.textContent = '🌸 Fulfill & Deduct Stock';
-        return;
-      }
-      msg.innerHTML = `<span style="color:#3d7a4f;font-weight:600;">✓ Deducted from ${esc(branch)}.</span>`;
-      btn.textContent = '✓ Done';
-    }catch(e){
-      msg.innerHTML = '<span style="color:#b9770e;">Connection error.</span>';
-      btn.disabled = false; btn.textContent = '🌸 Fulfill & Deduct Stock';
-    }
+    if(!makeConfirm(a, branch)) return;
+    btn.disabled = true; btn.textContent = 'Taking out of stock…';
+    const r = await makeOne(a, branch);
+    msg.innerHTML = '<span style="white-space:pre-line;color:' + (r.ok ? '#3d7a4f;font-weight:600' : '#b9770e') + '">' + esc(r.text) + '</span>';
+    btn.disabled = false; btn.textContent = r.ok ? '✓ Done — make another?' : '🌸 Made it — take out of stock';
   });
 }
 
@@ -557,7 +603,8 @@ function printArrangement(a){
   const u = currentUser();
   const now = new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const lines = (a.items||[]).map(it => `
-    <tr><td>${esc(it.qty)} × ${esc(it.flowerName)}</td><td class="r">${it.hasRate ? (Number(it.qty)*Number(it.rate)).toFixed(3) : '—'}</td></tr>`).join('');
+    <tr><td>${esc(it.qty)} × ${esc(it.flowerName)}</td><td class="r">${it.hasRate ? (Number(it.qty)*Number(it.rate)).toFixed(3) : '—'}</td></tr>`).join('')
+    + (a.extras||[]).map(x=>`<tr><td>+ ${esc(x.desc)}</td><td class="r">${(Number(x.price)||0).toFixed(3)}</td></tr>`).join('');
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(a.arrangementCode||'Arrangement')}</title>
   <style>
     @page{ size:80mm auto; margin:4mm; }
@@ -584,7 +631,7 @@ function printArrangement(a){
     <table>${lines}
       <tr><td colspan="2"><div class="dash"></div></td></tr>
       <tr class="tot"><td>Total stems</td><td class="r">${esc(a.totalStems)}</td></tr>
-      <tr class="tot"><td>Est. value</td><td class="r">${(Number(a.estValue)||0).toFixed(3)} BHD</td></tr>
+      <tr class="tot"><td>Est. value</td><td class="r">${((Number(a.estValue)||0) + (a.extras||[]).reduce((t,x)=>t+(Number(x.price)||0),0)).toFixed(3)} BHD</td></tr>
     </table>
     ${a.notes ? `<div class="dash"></div><div>Notes: ${esc(a.notes)}</div>` : ''}
     <div class="dash"></div>
