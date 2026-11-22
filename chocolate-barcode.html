@@ -546,7 +546,11 @@
       </div>
 
       <label>Search Chocolate</label>
-      <input type="text" id="displaySearch" list="displayItemList" placeholder="Type a chocolate name…" autocomplete="off" />
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="displaySearch" list="displayItemList" placeholder="Type or say a chocolate name…" autocomplete="off" style="flex:1;" />
+        <button type="button" id="displayMic" title="Say it: a chocolate, then how many, then “add”" style="flex:none;width:46px;height:46px;border-radius:50%;border:0;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font-size:19px;cursor:pointer;box-shadow:0 4px 12px rgba(158,47,74,.3);">🎤</button>
+      </div>
+      <div id="displayVoiceNote" style="display:none;margin-top:8px;padding:9px 12px;border-radius:12px;background:#fdf0f3;border:1px solid #f0d3dc;font-size:12.5px;line-height:1.5;"></div>
       <datalist id="displayItemList"></datalist>
 
       <div class="unit-row" style="display:flex; gap:8px; margin-top:10px; align-items:flex-end;">
@@ -572,15 +576,15 @@
         </div>
       </div>
       <div id="displayLineHint" style="font-size:12px; color:var(--ink-dim); margin-top:6px; min-height:1em;"></div>
-      <button class="submit-btn" id="addToDisplayBtn" style="margin-top:10px;">+ Add to Display</button>
+      <button class="submit-btn" id="addToDisplayBtn" style="margin-top:10px;">+ Add to list</button>
 
       <div style="margin-top:16px; border-top:1px dashed var(--line); padding-top:12px;">
         <label>Extras <span style="font-weight:400; color:var(--ink-dim);">(vase, hand work, plate, ribbon…)</span></label>
         <div style="display:flex; gap:8px; margin-top:6px;">
-          <input type="text" id="displayExtraDesc" placeholder="e.g. Vase" style="flex:2;" />
+          <input type="text" id="displayExtraDesc" placeholder="Type or pick from Item Inventory (vase, ribbon…)" autocomplete="off" style="flex:2;" />
           <input type="number" id="displayExtraAmt" min="0" step="0.001" placeholder="0.000 BD" style="flex:1;" />
         </div>
-        <button class="submit-btn" id="addDisplayExtraBtn" type="button" style="margin-top:8px;">+ Add Extra</button>
+        <button class="submit-btn" id="addDisplayExtraBtn" type="button" style="margin-top:8px;">+ Add extra to list</button>
       </div>
 
       <div id="displayCartList" style="margin-top:16px;"></div>
@@ -1265,8 +1269,100 @@ document.getElementById('addDisplayExtraBtn').addEventListener('click', ()=>{
   const name = d.value.trim(), amt = parseFloat(a.value);
   if(!name || isNaN(amt) || amt <= 0){ alert('Enter the extra (e.g. Vase) and its amount.'); return; }
   displayCart.push({ name, qty: 1, price: amt, unit: 'piece', extra: true });
+  try{ LBExtrasPick.noteAdd(d, amt, 'chocolate'); }catch(e){}
   d.value = ''; a.value = '';
   renderDisplayCart();
+});
+
+
+// Nov 22 2026 (Bench): 🎤 voice for Build a Display — one thing per tap, like Chocolate Receiving:
+//   🎤 "Cylinder Silver" → 🎤 "7" (or "7 pieces", "200 grams", "1 kilo") → 🎤 "add".   Also: "extra vase", "extra hand work price 7",
+//   "remove last", "clear all", "total". It only fills the form / list — nothing is saved until you press Save.
+window.addEventListener('load', function(){
+  const btn = document.getElementById('displayMic'), note = document.getElementById('displayVoiceNote');
+  if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
+  try{ LBExtrasPick.load(); }catch(e){}
+  const $ = id => document.getElementById(id), say = t => LBVoice.speak(t);
+  const money = n => { const v = Math.round(Number(n || 0) * 1000) / 1000; return v + ' dinar' + (v === 1 ? '' : 's'); };
+  const grand = () => displayCart.reduce((a, c) => a + (Number(c.qty) || 0) * (Number(c.price) || 0), 0);
+  let vmode = 'choc';
+  const names = () => items.map(it => String(it['Chocolate Name'] || '').trim()).filter(Boolean);
+  function next(){
+    if(vmode === 'extra') return $('displayExtraDesc').value ? (parseFloat($('displayExtraAmt').value) > 0 ? 'Say “add”' : 'Say the price, like “price 7”') : 'Say the extra, like “vase” or “hand work”';
+    if(!displayMatch) return 'Say a chocolate name (or “extra vase”, “total”)';
+    if(!(parseFloat($('displayQty').value) > 0)) return 'Say how many, like “7” or “200 grams”';
+    return 'Say “add” — or another amount';
+  }
+  function show(said, html){
+    note.innerHTML = (said ? '🎤 “' + lbEsc(said) + '”<br>' : '') + html + '<div style="margin-top:4px;color:#9e2f4a;font-weight:600">👉 Next: ' + lbEsc(next()) + '</div>';
+    note.style.display = 'block';
+  }
+  function talk(t){ say((t ? t + '. ' : '') + next().replace(/[“”]/g, '').replace(/ — /g, '. ').replace(/\(.*?\)/g, '') + '.'); }
+  function pickChoc(n){ $('displaySearch').value = n; $('displaySearch').dispatchEvent(new Event('input')); }
+  function setUnit(u){ const el = $('displayUnit'); const o = el.querySelector('option[value="' + u + '"]'); if(o && !o.disabled){ el.value = u; el.dispatchEvent(new Event('change')); return true; } return false; }
+  function setQty(n){ $('displayQty').value = n; $('displayQty').dispatchEvent(new Event('input')); }
+  function unitOf(w){ return /^(pieces?|pcs|pc|piraso|box(es)?)$/.test(w) ? 'piece' : /^(grams?|g|gms?|gramo)$/.test(w) ? 'g' : /^(kilos?|kgs?|kilograms?|kilo)$/.test(w) ? 'kg' : ''; }
+  note.addEventListener('click', e => { const c = e.target.closest('[data-vn]'); if(!c) return; pickChoc(c.dataset.vn); show('', '✅ <b>' + lbEsc(c.dataset.vn) + '</b>'); talk(c.dataset.vn); });
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; btn.style.opacity = .6;
+    let alts = []; try{ alts = await LBVoice.listen({ hint: next() }); }catch(e){}
+    btn.disabled = false; btn.style.opacity = 1;
+    if(!alts.length) return;
+    const said = alts[0];
+    let t = LBVoice.wordsToDigits(said).toLowerCase().replace(/(?<!\d)[.,]+|[.,]+(?!\d)|[?!;]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if(/^(remove|clear|delete|cancel) (the )?last( one)?$|^(undo|bura (yung |ung )?huli)$/.test(t)){ const c = displayCart.pop(); renderDisplayCart(); show(said, c ? '↩️ Removed ' + lbEsc(c.name) : 'Nothing to remove'); return talk(c ? 'Removed ' + c.name : 'Nothing to remove'); }
+    if(/\b(clear all|start over|reset|bura lahat|cancel all)\b/.test(t)){ if(displayCart.length && confirm('Clear the whole list?')){ displayCart = []; renderDisplayCart(); } show(said, '↺ List cleared'); return talk('List cleared'); }
+    if(/^(total|how much|magkano( lahat)?)\b/.test(t)){ show(said, 'Total: <b>' + grand().toFixed(3) + ' BD</b>'); return talk('Total is ' + money(grand())); }
+    let add = false;
+    t = t.replace(/\b(add to (the )?list|add it|add|idagdag|i-add)\s*$/, () => { add = true; return ''; }).trim();
+    if(/^(chocolates?|back|tsokolate)$/.test(t)){ vmode = 'choc'; show(said, '🍫 Chocolates'); return talk('Chocolates'); }
+    const ex = t.match(/^(extras?|dagdag)(\s+(.*))?$/); if(ex){ vmode = 'extra'; t = (ex[3] || '').trim(); $('displayExtraDesc').scrollIntoView({ behavior:'smooth', block:'center' }); }
+    const done = [], words = []; let warn = '';
+    if(vmode === 'extra'){
+      const list = LBExtrasPick.items ? LBExtrasPick.items() : [], labels = list.map(i => i.name);
+      t = t.replace(/\b(price|presyo|at)\s+(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?)\s*(bd|dinars?)\b/, (m, k, n, n2) => { $('displayExtraAmt').value = Number(n || n2).toFixed(3); done.push('Price ' + Number(n || n2).toFixed(3)); words.push('price ' + Number(n || n2)); return ' '; }).trim();
+      if(t){
+        const p = LBVoice.parse(t, labels);
+        if(p.name && p.nameScore >= .75){ LBExtrasPick.choose($('displayExtraDesc'), $('displayExtraAmt'), list[labels.indexOf(p.name)]); const pr = parseFloat($('displayExtraAmt').value) || 0; done.push('Extra <b>' + lbEsc($('displayExtraDesc').value) + '</b>' + (pr ? ' · ' + pr.toFixed(3) + ' BD' : '')); words.push($('displayExtraDesc').value + (pr ? ', ' + money(pr) : '')); }
+        else {
+          const hits = list.filter(it => { const h = (it.name + ' ' + (it.size || '') + ' ' + (it.code || '')).toLowerCase(); return t.split(/\s+/).every(w => h.includes(w.replace(/(es|s)$/, ''))); });
+          if(hits.length === 1){ LBExtrasPick.choose($('displayExtraDesc'), $('displayExtraAmt'), hits[0]); const pr = parseFloat($('displayExtraAmt').value) || 0; done.push('Extra <b>' + lbEsc($('displayExtraDesc').value) + '</b>' + (pr ? ' · ' + pr.toFixed(3) + ' BD' : '')); words.push($('displayExtraDesc').value + (pr ? ', ' + money(pr) : '')); }
+          else if(hits.length > 1){ $('displayExtraDesc').value = t.replace(/(es|s)$/, ''); $('displayExtraAmt').value = ''; setTimeout(() => { $('displayExtraDesc').focus(); $('displayExtraDesc').dispatchEvent(new Event('input')); }, 350); warn = '📋 ' + hits.length + ' items for “' + lbEsc(t) + '” — pick one from the list.'; words.push(hits.length + ' items for ' + t + '. Please pick one from the list'); }
+          else { $('displayExtraDesc').value = t.replace(/\b\w/g, c => c.toUpperCase()); done.push('Extra <b>' + lbEsc($('displayExtraDesc').value) + '</b> (not in Item Inventory — say or type the price)'); words.push($('displayExtraDesc').value + ', not in the list'); }
+        }
+      }
+      if(add){ const d = $('displayExtraDesc').value.trim(), pr = parseFloat($('displayExtraAmt').value);
+        if(d && pr > 0){ $('addDisplayExtraBtn').click(); done.push('Added extra ' + lbEsc(d)); words.length = 0; words.push(d + ' added. Total ' + money(grand())); vmode = 'choc'; }
+        else { warn = d ? '⚠️ Say the price first, like “price 7”.' : '⚠️ Say the extra first.'; words.push(d ? 'Say the price first' : 'Say the extra first'); } }
+    } else {
+      const um = t.match(/^(pieces?|pcs|grams?|kilos?|kg)$/);
+      if(um){ if(setUnit(unitOf(um[1]))){ done.push('Unit: ' + lbEsc(um[1])); words.push(um[1]); } else warn = 'This chocolate is per piece only.'; t = ''; }
+      const am = t.match(/^(\d+(?:\.\d+)?)\s*(pieces?|pcs|pc|piraso|grams?|g|gms?|kilos?|kgs?|kilo|box(es)?)?$/);
+      if(am){
+        if(!displayMatch) warn = 'Say the chocolate first.';
+        else { if(am[2]) setUnit(unitOf(am[2])); setQty(Number(am[1])); const tot = $('displayLineTotal').value; done.push(am[1] + ' ' + $('displayUnit').selectedOptions[0].text.toLowerCase() + (tot ? ' · ' + tot + ' BD' : '')); words.push(am[1] + ' ' + $('displayUnit').selectedOptions[0].text.toLowerCase() + (tot ? ', ' + money(tot) : '')); }
+        t = '';
+      }
+      if(t){
+        const p = LBVoice.parse(t, names()), one = (p.choices || []).filter(c => c.s >= .4);
+        if(!(p.name && p.nameScore >= .8) && one.length === 1 && one[0].s >= .45){ p.name = one[0].name; p.nameScore = .8; }
+        if(p.name && p.nameScore >= .8){
+          pickChoc(p.name); done.push('<b>' + lbEsc(p.name) + '</b>'); words.push(p.name);
+          if(p.qty != null){ if(p.unit === 'g') setUnit('g'); else if(p.unit === 'Kg') setUnit('kg'); setQty(p.qty); done.push(p.qty + ' ' + $('displayUnit').selectedOptions[0].text.toLowerCase()); words.push(String(p.qty)); }
+        } else if(one.length){ warn = 'Which one? ' + one.slice(0, 3).map(c => '<button type="button" data-vn="' + lbEsc(c.name) + '" style="margin:3px 4px 0 0;border:1px solid #e3c3cf;background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer">' + lbEsc(c.name) + '</button>').join(''); words.push('Which one? ' + one.slice(0, 3).map(c => c.name).join(', or ')); }
+        else { warn = '⚠️ “' + lbEsc(t) + '” is not in the chocolate list.'; words.push("Sorry, I didn't get the chocolate"); }
+      }
+      if(add && !warn){
+        if(displayMatch && parseFloat($('displayQty').value) > 0){ const nm = displayMatch['Chocolate Name'], q = $('displayQty').value + ' ' + $('displayUnit').selectedOptions[0].text.toLowerCase(); $('addToDisplayBtn').click(); done.push('Added ' + lbEsc(nm)); words.length = 0; words.push(nm + ', ' + q + ', added. Total ' + money(grand())); }
+        else { warn = displayMatch ? '⚠️ Say how many first.' : '⚠️ Say the chocolate first.'; words.push(displayMatch ? 'Say how many first' : 'Say the chocolate first'); }
+      }
+    }
+    let html = done.length ? '✅ ' + done.join(' · ') : '';
+    if(warn) html += (html ? '<br>' : '') + warn;
+    if(!html){ html = '⚠️ Did not catch anything — please try again.'; words.push("Sorry, I didn't get that"); }
+    if(displayCart.length) html += '<br>List total: <b>' + grand().toFixed(3) + ' BD</b>';
+    show(said, html); talk(words.join('. '));
+  });
 });
 
 function fmtGrams(g){ g = Math.round((Number(g) || 0) * 10) / 10; var s = g.toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' g'; return s; }   // 1800 -> "1,800 g" (comma for thousands so it is not mixed up with BD decimals)
@@ -1665,6 +1761,9 @@ document.getElementById('exportOdooBtn').addEventListener('click', ()=>{
 </script>
 
 
+<script src="shared/voice.js?v=7"></script>
+<script src="shared/extras-pick.js?v=6"></script>
+<script>try{ LBExtrasPick.attach(document.getElementById("displayExtraDesc"), document.getElementById("displayExtraAmt")); }catch(e){}</script>
 <script src="joyboy-bubble.js"></script>
 </body>
 </html>
