@@ -189,6 +189,8 @@
     .label-cell .l-name{ font-weight:bold; font-size:8pt; }
     .label-cell .l-price{ font-size:7pt; }
     .label-cell .l-code{ font-size:6pt; }
+    .label-cell .l-items{ font-size:6pt; line-height:1.25; margin:.6mm 0 .4mm; }
+    .label-cell .l-items.sm{ font-size:5pt; }
     body.lp-on{ background:#fff !important; }
     body.lp-on > *:not(#lookupPrintArea){ display:none !important; }
     #lookupPrintArea.printing, #lookupPrintArea.printing *{ visibility:visible; }
@@ -606,6 +608,7 @@
       <div class="preview-label" id="displayPreview" style="display:none; margin-top:16px;">
         <div class="p-name" id="dpName"></div>
         <div class="p-price" id="dpPrice"></div>
+        <div id="dpItems" style="font-size:11px;line-height:1.35;color:#555;margin:2px 0 4px;"></div>
         <svg id="dpBarcode"></svg>
         <div class="p-code" id="dpCode"></div>
       </div>
@@ -1411,6 +1414,10 @@ function renderDisplayCart(skipAuto){
 }
 
 // "92pcs / 1.680kgs best before 07/27 vat inclusive" for the display being built
+// Nov 22 2026 (Bench): what went into the display, printed under the price — "Mia Pink 35pcs · Mia White 34pcs · Cylinder Silver 7pcs"
+function displayItemsText(cart){
+  return (cart || []).map(c => c.extra ? '+ ' + c.name : c.name + ' ' + (Math.round((Number(c.qty) || 0) * 1000) / 1000) + DISPLAY_UNIT_SHORT[c.unit || 'piece']).join(' · ');
+}
 function displaySummary(){
   let pcs = 0, kg = 0;
   displayCart.forEach(c=>{
@@ -1481,11 +1488,12 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
     if(data.error){
       alert(data.error);
     } else {
-      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary(), made: new Date() };
+      lastSavedDisplay = { name: displayName, code: data.displayCode, total: data.totalPrice, sum: displaySummary(), made: new Date(), items: displayItemsText(displayCart), n: displayCart.length };
       const bbVal = document.getElementById('displayBestBefore').value || '';
       if(bbVal){ try{ await fetch(LB_CONFIG.CHOCOLATE_BB_API + '?' + new URLSearchParams({ action:'setBestBefore', code:data.displayCode, value:bbVal }).toString()); }catch(e){ console.error('[Lalabella] best before not saved'); } }
       document.getElementById('dpName').textContent = displayName;
       document.getElementById('dpPrice').textContent = fmtBD(data.totalPrice);
+      document.getElementById('dpItems').textContent = lastSavedDisplay.items;
       document.getElementById('dpCode').textContent = data.displayCode;
       document.getElementById('dpBarcode').innerHTML = '';
       try{
@@ -1513,6 +1521,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
     <div class="label-cell">
       <div class="l-name">${lastSavedDisplay.name}</div>
       <div class="l-price">${fmtBD(lastSavedDisplay.total)}</div>
+      ${lastSavedDisplay.items ? `<div class="l-items${lastSavedDisplay.n > 6 ? ' sm' : ''}">${lbEsc(lastSavedDisplay.items)}</div>` : ''}
       ${lastSavedDisplay.sum ? `<div class="l-price">${lastSavedDisplay.sum}</div>` : ''}
       <svg id="printDpBarcode"></svg>
       <div class="l-code">${lastSavedDisplay.code}</div>
@@ -1520,7 +1529,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{
     </div>
   `;
   try{
-    fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, 42);
+    fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, lastSavedDisplay.items ? (lastSavedDisplay.n > 6 ? 26 : 32) : 42);   // shorter bars when the item list is on the label, so it all fits
   }catch(e){}
   document.getElementById('labelPrintArea').classList.add('printing');
   window.print();
