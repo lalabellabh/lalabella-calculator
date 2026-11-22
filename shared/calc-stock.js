@@ -13,6 +13,7 @@
   var cache = {}, wait = {};
   function token() { try { return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; } catch (e) { return ''; } }
   function branch() {
+    var t = document.getElementById('lbStBranch'); if (t && t.value) return t.value;
     var s = document.querySelector('.lbcs select'); if (s && s.value) return s.value;
     var lb = document.getElementById('listBranch'); if (lb && lb.value && lb.value !== 'All') return lb.value;
     try { var u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}'); return u.branch || ''; } catch (e) { return ''; }
@@ -64,5 +65,31 @@
   // a Sold or a branch change -> fresh numbers
   document.addEventListener('change', function (e) { if (e.target.closest && (e.target.closest('.lbcs') || e.target.id === 'listBranch')) { cache = {}; paint(); } });
   document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.lbcs .go')) setTimeout(function () { cache = {}; paint(); }, 2500); });
+  // Nov 22 2026 (Bench): branch picker at the TOP of the calc (above the search) — the stock shown follows it,
+  // and it stays the same as the branch in the ✓ Sold box (both ways).
+  var BRS = ['ModaMall', 'Hamala', 'Galali'];
+  function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) { return ''; } }
+  function soldSel() { return document.querySelector('.lbcs select[data-br]') || document.getElementById('listBranch'); }
+  function mountBar() {
+    if (document.getElementById('lbStBranch')) return;
+    var inp = document.getElementById('search') || document.getElementById('searchInput'); if (!inp) return;
+    var anchor = inp.closest('.search-box') || inp.parentNode;
+    var bar = document.createElement('div'); bar.className = 'lbst-bar';
+    bar.innerHTML = '<span>📍 Stock of</span><select id="lbStBranch" aria-label="Branch for the stock"><option value="">— pick branch —</option>' + BRS.map(function (b) { return '<option>' + b + '</option>'; }).join('') + '</select>';
+    var hdr = anchor.parentNode.querySelector(':scope > header');   // Chocolate Calc lays .wrap out as a grid — keep it in the header (top)
+    if (hdr && anchor.parentNode.classList.contains('wrap')) { bar.style.margin = '10px 0 0'; hdr.appendChild(bar); } else anchor.parentNode.insertBefore(bar, anchor);
+    var sel = bar.querySelector('select'), u = {};
+    try { u = JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}') || {}; } catch (e) {}
+    var start = ls('lbCalcSaleBranch') || u.branch || '';
+    BRS.forEach(function (b) { if (b.toLowerCase() === String(start).toLowerCase()) sel.value = b; });
+    function toSold() { var s = soldSel(); if (s && sel.value && s.value !== sel.value) { s.value = sel.value; s.dispatchEvent(new Event('change', { bubbles: true })); } }
+    sel.addEventListener('change', function () { if (sel.value) ls('lbCalcSaleBranch', sel.value); toSold(); cache = {}; paint(); });
+    document.addEventListener('change', function (e) { var s = soldSel(); if (s && e.target === s && s.value && s.value !== sel.value) { sel.value = s.value; cache = {}; paint(); } });
+    setTimeout(toSold, 800); setTimeout(toSold, 2500);   // the ✓ Sold box is built a bit later
+    paint();
+  }
+  css.textContent += '.lbst-bar{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:700}.lbst-bar span{white-space:nowrap}' +
+    '.lbst-bar select{flex:1;max-width:240px;font:inherit;font-weight:700;padding:8px 10px;border-radius:10px;border:1.5px solid #c9a24a;background:#fffaf0;color:#5c3a10;cursor:pointer}';
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountBar); else mountBar();
   window.LBCalcStock = { paint: paint, tag: tag, refresh: function () { cache = {}; paint(); } };
 })();
