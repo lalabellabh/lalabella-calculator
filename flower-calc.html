@@ -470,7 +470,29 @@
     document.getElementById('qtyInput').focus();
     return true;
   }
+  // FSMP-xxxxx = a sample / online / free-made flower arrangement (Arrangement Catalog), NOT out of stock yet:
+  // load it here, ✓ Sold takes it out of stock and the sale keeps the code (= marked sold). (Nov 22 2026, Bench)
+  async function loadSample(code){
+    code = String(code||'').trim().toUpperCase();
+    try{
+      const tk = (()=>{ try{ return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } })();
+      const a = await (await fetch(API_URL + '?action=getFlowerArrangementByCode&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(tk))).json();
+      if(!a || !a.success){ alert((a && a.error) || ('No sample found for ' + code)); return; }
+      if(window.LBDispGuard && !(await LBDispGuard.ok(code))){ searchInput.value = ''; return; }
+      window.LB_CALC_DISP = code;
+      (a.items||[]).forEach(it=>{
+        const c = CATALOG.find(x => x.name.toLowerCase() === String(it.flowerName).trim().toLowerCase());
+        cart.push({ name: c ? c.name : it.flowerName, qty: Number(it.qty)||0, rate: c ? c.rate : (Number(it.rate)||0) });
+      });
+      (a.extras||[]).forEach(x=>{ const ea = Number(x.price)||0; extras.push({ desc: x.desc, qty: 1, each: ea, price: ea }); });
+      const cn = document.getElementById('customerName'); if(cn && !cn.value) cn.value = a.arrangementName || '';
+      searchInput.value = '';
+      renderCart();
+      alert('🧮 ' + code + ' — ' + (a.arrangementName||'') + ' loaded.\n\nPress ✓ Sold to take it out of stock (it will be marked SOLD).');
+    }catch(e){ alert('Could not open that sample. Check your internet and try again.'); }
+  }
   function useScanned(raw){
+    if(/^FSMP-\d+$/i.test(String(raw||'').trim())){ loadSample(raw); return; }
     const code = String(raw||'').trim().toLowerCase();
     const nm = CODE_TO_NAME[code];
     if(!nm || !pickByName(nm)) alert('No flower found for code: ' + raw);
@@ -478,6 +500,7 @@
   searchInput.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter') return;
     const q = searchInput.value.trim().toLowerCase();
+    if(/^fsmp-\d+$/.test(q)){ e.preventDefault(); loadSample(q); return; }
     if(CODE_TO_NAME[q]){ e.preventDefault(); useScanned(q); }
   });
   let scanStop = null;
@@ -886,7 +909,7 @@
     document.body.classList.remove('print-a4', 'print-thermal');
   });
 
-  loadCatalog();
+  loadCatalog().then(()=>{ const c = new URLSearchParams(location.search).get('code'); if(c && /^FSMP-\d+$/i.test(c)) loadSample(c); });   // from the Arrangement Catalog: 🧾 Sold? Open in Calc
   renderCart();
 </script>
 <script>
@@ -1037,6 +1060,7 @@
 
 <script src="shared/calc-sale.js?v=11"></script>
 <script src="shared/calc-stock.js?v=1"></script>
+<script src="shared/disp-guard.js?v=3"></script>
 <script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDesc"), document.getElementById("extraPrice")); }catch(e){}</script>
 <script>

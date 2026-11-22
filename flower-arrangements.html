@@ -115,6 +115,14 @@
     .item-row .line-val{display:none;}
     .search{max-width:none;width:100%;}
   }
+  .mode-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mode-o{display:flex!important;gap:8px;align-items:flex-start;border:1.5px solid var(--line);border-radius:11px;padding:10px;background:#fff;cursor:pointer;text-transform:none!important;letter-spacing:0!important;margin:0!important;color:var(--ink)!important;font-weight:400!important}
+  .mode-o input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--rose-dark)}
+  .mode-o b{display:block;font-size:13.5px}.mode-o small{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
+  .mode-o:has(input:checked){border-color:var(--rose-dark);background:#fff6f8}
+  .code-badge.smp{background:#fde9c8;color:#8a5a12}.code-badge.sold{background:#dcefe2;color:#2f6b45}
+  .smp-note{background:#fff6e0;border:1px solid #f1d38c;color:#7a5a12;border-radius:10px;padding:8px 11px;font-size:12px;margin:8px 0}
+  @media(max-width:640px){.mode-seg{grid-template-columns:1fr}}
 </style>
 <meta name="lb-theme-keep" content=".wrap, .modal-overlay, .gbg">
 <link rel="stylesheet" href="shared/glass-skin.css">
@@ -192,9 +200,12 @@
     </div>
 
     <div class="make-box" id="makeBox">
-      <label class="chk"><input type="checkbox" id="makeNow"> 📦 I made one now — take it out of stock</label>
+      <label style="margin-bottom:8px">What is this?</label>
+      <div class="mode-seg">
+        <label class="mode-o"><input type="radio" name="arrMode" value="build" checked><span><b>📦 Made / Build</b><small>Barcode ARR- · taken out of stock now</small></span></label>
+        <label class="mode-o"><input type="radio" name="arrMode" value="sample"><span><b>🧮 Sample / online / free made</b><small>Barcode FSMP- · NOT out of stock — when sold, scan it in the Calc → ✓ Sold</small></span></label>
+      </div>
       <select id="makeBranch"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
-      <div class="s">Leave it off if you are only saving the recipe (online arrangement). You can make one later with “📦 Make one”.</div>
     </div>
 
     <div class="btn-row">
@@ -202,7 +213,7 @@
       <button class="ghost-btn" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
     </div>
     <div class="msg" id="formMsg"></div>
-    <div id="newBarcodeBox" style="display:none;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;"><svg id="newArrBarcode"></svg></div>
+    <div id="newBarcodeBox" style="display:none;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;"><svg id="newArrBarcode"></svg><br><button type="button" class="save-btn" id="newLabelBtn" style="margin-top:8px">🏷️ Print label (sticker)</button></div>
   </div>
 
   <div class="card">
@@ -222,6 +233,7 @@
 
 <script src="shared/extras-pick.js?v=6"></script>
 <script src="shared/arr-extras.js?v=1"></script>
+<script src="shared/arr-label.js?v=1"></script>
 <script>
 const FLOWER_API = LB_CONFIG.FLOWER_FAST_API;
 
@@ -309,6 +321,9 @@ function recalc(){
 window.__EX = LBArrExtras.mount(document.getElementById('extrasBox'), ()=>recalc());
 const EX = window.__EX;
 (function(){ try{ const u=currentUser(), b = localStorage.getItem('lbArrBranch') || u.branch || ''; const el=document.getElementById('makeBranch'); if(b && [...el.options].some(o=>o.value===b)) el.value=b; }catch(e){} })();
+function arrMode(){ const r=document.querySelector('input[name=arrMode]:checked'); return r ? r.value : 'build'; }
+function setMode(v){ document.querySelectorAll('input[name=arrMode]').forEach(r=>r.checked=(r.value===v)); document.getElementById('makeBranch').style.display = v==='build' ? '' : 'none'; if(!editingId) document.getElementById('saveBtn').textContent = v==='build' ? '💾 Save + barcode + take out of stock' : '💾 Save + barcode (no stock out)'; }
+document.querySelectorAll('input[name=arrMode]').forEach(r=>r.addEventListener('change', ()=>setMode(arrMode())));
 document.getElementById('makeBranch').addEventListener('change', e=>{ try{ localStorage.setItem('lbArrBranch', e.target.value); }catch(_){} });
 document.getElementById('addItemBtn').addEventListener('click', ()=> addItemRow());
 
@@ -357,13 +372,13 @@ function resetForm(){
   editingId=null;
   ['arrName','arrDisplayName','arrFlorist','arrNotes','arrPhoto'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('itemRows').innerHTML=''; EX.set([]);
-  document.getElementById('makeNow').checked=false; document.getElementById('makeBox').style.display='';
+  setMode('build'); document.getElementById('makeBox').style.display='';
   document.getElementById('arrPhotoHint').textContent='';
   photoState={ data:null, changed:false }; showPhoto(null);
   document.getElementById('formTitle').textContent='➕ Add New Arrangement';
   document.getElementById('editingBanner').style.display='none';
   document.getElementById('cancelEditBtn').style.display='none';
-  document.getElementById('saveBtn').textContent='Save Arrangement';
+  setMode('build');
   addItemRow(); addItemRow(); addItemRow();
 }
 function startEdit(a){
@@ -375,7 +390,7 @@ function startEdit(a){
   document.getElementById('itemRows').innerHTML='';
   (a.items||[]).forEach(it=>addItemRow(it.flowerName, it.qty));
   if(!(a.items||[]).length) addItemRow();
-  EX.set(a.extras||[]); document.getElementById('makeBox').style.display='none'; document.getElementById('makeNow').checked=false;
+  EX.set(a.extras||[]); document.getElementById('makeBox').style.display='none';
   photoState={ data:null, changed:false }; showPhoto(a.photoData||null);
   document.getElementById('arrPhoto').value=''; document.getElementById('arrPhotoHint').textContent='';
   document.getElementById('formTitle').textContent='✏️ Edit Arrangement';
@@ -400,8 +415,8 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const unknown=items.filter(it=>Object.keys(flowerRates).length && !(it.flowerName.toLowerCase() in flowerRates)).map(it=>it.flowerName);
   if(unknown.length && !confirm('These flowers are not in the Flower Catalog:\n\n• ' + unknown.join('\n• ') + '\n\nSave anyway?')) return;
 
-  const extras=EX.get(), make=!editingId && document.getElementById('makeNow').checked, branch=document.getElementById('makeBranch').value;
-  if(make && !branch){ showMsg('Pick the branch to take the stock from (or untick “I made one now”).', true); return; }
+  const extras=EX.get(), mode=arrMode(), make=!editingId && mode==='build', branch=document.getElementById('makeBranch').value;
+  if(make && !branch){ showMsg('Pick the branch to take the stock from (or choose 🧮 Sample — no stock out).', true); return; }
   const rates=items.map(it=>({ flowerName:it.flowerName, qty:it.qty, rate:flowerRates[it.flowerName.toLowerCase()]||0 }));
   if(make && !makeConfirm({ items:rates, extras }, branch)) return;
   const btn=document.getElementById('saveBtn'), label=btn.textContent;
@@ -413,6 +428,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     notes:document.getElementById('arrNotes').value.trim(),
     items:JSON.stringify(items), extras:JSON.stringify(extras)
   };
+  if(!editingId) params.mode=mode;
   if(editingId) params.id=editingId;
   if(photoState.changed || !editingId) params.photoData = photoState.data || '';
   try{
@@ -421,10 +437,12 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     const wasEdit=!!editingId; let stockTxt='';
     if(make){ btn.textContent='Taking out of stock…'; stockTxt='\n' + (await makeOne({ arrangementCode:data.arrangementCode, arrangementName, items:rates, extras }, branch)).text; }
     resetForm();
-    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Arrangement saved! Code: ' + data.arrangementCode) + stockTxt, false);
+    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Saved! Code: ' + data.arrangementCode) + (!wasEdit && mode==='sample' ? '\n🧮 Sample — NOT out of stock. When it is sold, scan ' + data.arrangementCode + ' in the Flower Calc → ✓ Sold.' : '') + stockTxt, false);
     if(!wasEdit){
       document.getElementById('newBarcodeBox').style.display='block';
       try{ JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 }); }catch(e){}
+      const lab={ arrangementCode:data.arrangementCode, arrangementName, items:rates, extras, isSample:/^FSMP-/.test(data.arrangementCode) };
+      document.getElementById('newLabelBtn').onclick=()=>printLabel(lab);
     }
     loadArrangements();
   }catch(e){ showMsg('Connection error — please check your connection.', true); }
@@ -438,7 +456,7 @@ function cardHtml(a, withActions){
   const manage = withActions && canManage(a);
   return `
     ${a.photoData ? `<img class="photo" src="${esc(a.photoData)}" alt="">` : ''}
-    <span class="code-badge">${esc(a.arrangementCode||'')}</span>
+    <span class="code-badge${a.isSample?(a.sold?' sold':' smp'):''}">${esc(a.arrangementCode||'')}${a.isSample?(a.sold?' · ✓ Sold ' + esc(a.sold.saleNo):' · Sample · not out of stock'):''}</span>
     <h3>${esc(a.arrangementName)}</h3>
     ${a.displayName ? `<div class="display">🏷️ ${esc(a.displayName)}</div>` : ''}
     <div class="by">💐 Florist: <b>${esc(a.florist || 'Not recorded')}</b><br>📝 Recorded by ${esc(a.createdBy || 'Unknown')} · ${esc(fmtDate(a.createdDate))}${a.updatedDate ? '<br>✏️ Edited by ' + esc(a.updatedBy||'') + ' · ' + esc(fmtDate(a.updatedDate)) : ''}</div>
@@ -446,7 +464,8 @@ function cardHtml(a, withActions){
     ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
     <div class="totals"><span>Total stems: <b>${esc(a.totalStems)}</b></span><span>Est. value: <b>${esc(bhd((Number(a.estValue)||0) + (a.extras||[]).reduce((s,x)=>s+(Number(x.price)||0),0)))}</b></span></div>
     ${withActions ? `<div class="arr-actions">
-      <button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>
+      ${a.isSample ? (a.sold ? '' : `<button type="button" class="make" data-act="sell" data-id="${a.id}">🧾 Sold? Open in Flower Calc → ✓ Sold</button>`) : `<button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>`}
+      <button type="button" data-act="label" data-id="${a.id}">🏷️ Label</button>
       <button type="button" data-act="barcode" data-id="${a.id}">🏷️ Barcode</button>
       <button type="button" data-act="print" data-id="${a.id}">🖨️ Print</button>
       ${manage ? `<button type="button" data-act="edit" data-id="${a.id}">✏️ Edit</button><button type="button" class="del" data-act="delete" data-id="${a.id}">🗑️ Delete</button>` : ''}
@@ -478,6 +497,8 @@ document.getElementById('arrGrid').addEventListener('click', async ev=>{
   if(btn.dataset.act==='edit'){ startEdit(a); return; }
   if(btn.dataset.act==='print'){ printArrangement(a); return; }
   if(btn.dataset.act==='make'){ showResult(a); return; }
+  if(btn.dataset.act==='sell'){ location.href='flower-calc.html?code=' + encodeURIComponent(a.arrangementCode); return; }
+  if(btn.dataset.act==='label'){ printLabel(a); return; }
   if(btn.dataset.act==='barcode'){
     const box=document.getElementById('bc-'+a.id);
     const show=box.style.display!=='block'; box.style.display=show?'block':'none';
@@ -536,10 +557,13 @@ function showResult(data, scanned){
   card.style.display='block';
   {
     body.innerHTML = cardHtml(data,false)
-      + '<button type="button" class="ghost-btn" id="scanPrintBtn" style="width:100%;margin-top:10px;">🖨️ Print Receipt</button>'
-      + (scanned ? '<div style="margin-top:12px;background:#eef7f0;border:1px solid #cfe6d6;color:#2f6b45;border-radius:10px;padding:8px 11px;font-size:12px">✓ Scanned = already made — already out of stock. Scanning never takes anything out again. To make a NEW one, use “📦 Make one” on the arrangement below.</div>' : fulfillSectionHtml(data));
+      + '<button type="button" class="ghost-btn" id="scanPrintBtn" style="width:100%;margin-top:10px;">🖨️ Print Receipt</button><button type="button" class="ghost-btn" id="scanLabelBtn" style="width:100%;margin-top:8px;">🏷️ Label (sticker)</button>'
+      + (data.isSample ? (data.sold ? '<div style="margin-top:12px;background:#eef7f0;border:1px solid #cfe6d6;color:#2f6b45;border-radius:10px;padding:8px 11px;font-size:12px">✓ Sample SOLD — ' + esc(data.sold.saleNo) + ' (' + esc(data.sold.branch) + ') — already out of stock.</div>'
+          : '<div class="smp-note">🧮 Sample / online / free made — NOT out of stock yet. If it is sold: <a href="flower-calc.html?code=' + encodeURIComponent(data.arrangementCode) + '"><b>open it in the Flower Calc → ✓ Sold</b></a> (takes it out of stock and marks it sold).</div>')
+      : scanned ? '<div style="margin-top:12px;background:#eef7f0;border:1px solid #cfe6d6;color:#2f6b45;border-radius:10px;padding:8px 11px;font-size:12px">✓ Scanned = already made — already out of stock. Scanning never takes anything out again. To make a NEW one, use “📦 Make one” on the arrangement below.</div>' : fulfillSectionHtml(data));
     document.getElementById('scanPrintBtn').addEventListener('click', ()=>printArrangement(data));
-    if(!scanned) wireFulfillSection(data);
+    document.getElementById('scanLabelBtn').addEventListener('click', ()=>printLabel(data));
+    if(!scanned && !data.isSample) wireFulfillSection(data);
     card.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }
@@ -594,6 +618,12 @@ function wireFulfillSection(a){
   });
 }
 
+/* ---------- sticker label (same as Build a Display) ---------- */
+function printLabel(a){
+  const items=(a.items||[]).map(i=>i.flowerName + ' ' + i.qty).concat((a.extras||[]).map(x=>'+ ' + x.desc)).join(', ');
+  const tot=(a.items||[]).reduce((t,i)=>t+(Number(i.qty)||0)*(Number(i.rate)||0),0) + (a.extras||[]).reduce((t,x)=>t+(Number(x.price)||0),0);
+  LBArrLabel.print({ name:a.arrangementName, code:a.arrangementCode, total:tot, items, note: a.isSample && !a.sold ? 'SAMPLE · not out of stock' : '' });
+}
 /* ---------- print (receipt style, fits 80mm thermal paper or A4) ---------- */
 function printArrangement(a){
   // Barcode is drawn here, then copied into the print page as plain SVG.

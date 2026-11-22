@@ -233,7 +233,7 @@ function mapArrangement(a: any, items: any[], rates: Record<string, number>) {
     totalStems += qty; estValue += qty * rate;
     return { flowerName: it.flower_name, qty, rate, hasRate };
   });
-  return { id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
+  return { id: a.id, isSample: /^FSMP-/.test(String(a.arrangement_code || '')), arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
     florist: a.florist || '', notes: a.notes || '', photoData: a.photo_data || '', createdBy: a.created_by || '', createdDate: a.created_date, extras: Array.isArray(a.extras) ? a.extras : [],
     updatedBy: a.updated_by || '', updatedDate: a.updated_date || '', items: list, totalStems, estValue: Math.round(estValue * 1000) / 1000, unpricedCount: unpriced };
 }
@@ -765,6 +765,15 @@ async function getFlowerDashboard(selBranch: string) {
 // ---------------------------------------------------------------
 // FLOWER ARRANGEMENTS
 // ---------------------------------------------------------------
+// FSMP- = sample / online / free-made flower arrangement, NOT out of stock until a calc ✓ Sold uses the code (calc_sales.disp_code)
+async function flowerSoldMap(codes: string[]) {
+  const c = codes.filter((x) => /^FSMP-\d+$/.test(String(x || '')));
+  const m: Record<string, any> = {};
+  if (!c.length) return m;
+  const rows = await sbGet('calc_sales', `select=sale_no,disp_code,branch,created_at&status=eq.Active&disp_code=in.(${c.map(encodeURIComponent).join(',')})&order=id.desc`);
+  (rows || []).forEach((r: any) => { if (!m[r.disp_code]) m[r.disp_code] = { saleNo: r.sale_no, branch: r.branch, at: r.created_at }; });
+  return m;
+}
 async function getFlowerArrangements() {
   const [arrRows, itemRows, flowerRows] = await Promise.all([
     sbGet('flower_arrangements', 'select=*&status=eq.Active&order=created_date.desc'),
@@ -774,7 +783,8 @@ async function getFlowerArrangements() {
   const rates = arrangementRateMap(flowerRows);
   const itemsByArr: Record<string, any[]> = {};
   itemRows.forEach((r: any) => { (itemsByArr[r.arrangement_id] = itemsByArr[r.arrangement_id] || []).push(r); });
-  return arrRows.map((a: any) => mapArrangement(a, itemsByArr[a.id] || [], rates));
+  const sold = await flowerSoldMap(arrRows.map((a: any) => a.arrangement_code));
+  return arrRows.map((a: any) => ({ ...mapArrangement(a, itemsByArr[a.id] || [], rates), sold: sold[a.arrangement_code] || null }));
 }
 async function getFlowerArrangementByCode(codeRaw: string) {
   const code = String(codeRaw || '').trim().toUpperCase();
@@ -786,7 +796,7 @@ async function getFlowerArrangementByCode(codeRaw: string) {
     sbGet('flower_item', 'select=flower_name,origin,rate&status=eq.Active'),
   ]);
   const result: any = mapArrangement(rows[0], itemRows, arrangementRateMap(flowerRows));
-  result.success = true;
+  result.success = true; result.sold = (await flowerSoldMap([rows[0].arrangement_code]))[rows[0].arrangement_code] || null;
   return result;
 }
 async function saveFlowerArrangement(p: Record<string, any>, authUser: any) {
@@ -809,6 +819,11 @@ async function saveFlowerArrangement(p: Record<string, any>, authUser: any) {
   });
   if (out.error) return { success: false, error: out.error };
   const row = out.data && out.data[0];
+  if (!id && p.mode === 'sample' && row) {   // a sample gets its own code so everyone sees it is NOT out of stock yet
+    const n = await sbRpcSafe('get_next_chocolate_counter', { counter_key: 'Next Flower Sample Code', start_at: 1 });
+    const num = Number(Array.isArray(n.data) ? n.data[0] : n.data) || 0;
+    if (num) { row.arrangement_code = 'FSMP-' + String(num).padStart(5, '0'); await sbPatch('flower_arrangements', `id=eq.${row.id}`, { arrangement_code: row.arrangement_code }); }
+  }
   // extras (Item Inventory: vase, wrapping, ribbon…) — Nov 22 2026
   if (p.extras !== undefined) {
     let ex: any[] = []; try { ex = JSON.parse(p.extras || '[]'); } catch { ex = []; }

@@ -107,6 +107,14 @@
     .item-row .line-val{display:none;}
     .search{max-width:none;width:100%;}
   }
+  .mode-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mode-o{display:flex!important;gap:8px;align-items:flex-start;border:1.5px solid var(--line);border-radius:11px;padding:10px;background:#fff;cursor:pointer;text-transform:none!important;letter-spacing:0!important;margin:0!important;color:var(--ink)!important;font-weight:400!important}
+  .mode-o input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--rose-dark)}
+  .mode-o b{display:block;font-size:13.5px}.mode-o small{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
+  .mode-o:has(input:checked){border-color:var(--rose-dark);background:#fff6f8}
+  .code-badge.smp{background:#fde9c8;color:#8a5a12}.code-badge.sold{background:#dcefe2;color:#2f6b45}
+  .smp-note{background:#fff6e0;border:1px solid #f1d38c;color:#7a5a12;border-radius:10px;padding:8px 11px;font-size:12px;margin:8px 0}
+  @media(max-width:640px){.mode-seg{grid-template-columns:1fr}}
 </style>
 <style id="chocoSharedNavStyles">
 .choco-nav-toggle{
@@ -183,7 +191,7 @@
 
   <div class="scan-hero">
     <h2>📷 Scan Arrangement or Display Barcode</h2>
-    <p>A barcode means it is already made and already out of stock — scanning only shows what's inside (and lets you save a display to the catalog).</p>
+    <p>ARR- / DISP- = made and already out of stock. SMP- = sample / online / free made, NOT out of stock yet (sell it in the Chocolate Calc). Scanning never takes stock out.</p>
     <div class="scan-row">
       <button class="scan-btn-big" id="scanBtn">Scan Now</button>
       <input type="text" id="codeInput" placeholder="or type ARR-00001 / DISP-00023" autocomplete="off">
@@ -239,9 +247,12 @@
     </div>
 
     <div class="make-box" id="makeBox">
-      <label class="chk"><input type="checkbox" id="makeNow"> 📦 I made one now — take it out of stock</label>
+      <label style="margin-bottom:8px">What is this?</label>
+      <div class="mode-seg">
+        <label class="mode-o"><input type="radio" name="arrMode" value="build" checked><span><b>📦 Made / Build</b><small>Barcode ARR- · taken out of stock now</small></span></label>
+        <label class="mode-o"><input type="radio" name="arrMode" value="sample"><span><b>🧮 Sample / online / free made</b><small>Barcode SMP- · NOT out of stock — when sold, scan it in the Calc → ✓ Sold</small></span></label>
+      </div>
       <select id="makeBranch"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
-      <div class="s">Leave it off if you are only saving the recipe (online arrangement). You can make one later with “📦 Make one”.</div>
     </div>
 
     <div class="btn-row">
@@ -249,7 +260,7 @@
       <button class="ghost-btn" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
     </div>
     <div class="msg" id="formMsg"></div>
-    <div id="newBarcodeBox" style="display:none;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;"><svg id="newArrBarcode"></svg></div>
+    <div id="newBarcodeBox" style="display:none;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;"><svg id="newArrBarcode"></svg><br><button type="button" class="save-btn" id="newLabelBtn" style="margin-top:8px">🏷️ Print label (sticker)</button></div>
   </div>
 
   <div class="card">
@@ -269,6 +280,7 @@
 
 <script src="shared/extras-pick.js?v=6"></script>
 <script src="shared/arr-extras.js?v=1"></script>
+<script src="shared/arr-label.js?v=1"></script>
 <script>
 const CHOCOLATE_API_URL = LB_CONFIG.CHOCOLATE_FAST_API;
 const SALE_API = LB_CONFIG.CALC_SALE_API;
@@ -375,6 +387,10 @@ $('arrPhoto').addEventListener('change', function(){ usePhoto(this.files[0]); })
 try{ LBPastePic.attach($('arrPasteBox'), usePhoto); }catch(e){}
 $('removePhotoBtn').addEventListener('click', ()=>{ photoState={ data:'__REMOVE__', changed:true }; $('arrPhoto').value=''; $('arrPhotoHint').textContent='Photo will be removed when you save.'; showPhoto(null); });
 
+/* ---------- Made (stock out) or Sample (no stock out) ---------- */
+function arrMode(){ const r=document.querySelector('input[name=arrMode]:checked'); return r ? r.value : 'build'; }
+function setMode(v){ document.querySelectorAll('input[name=arrMode]').forEach(r=>r.checked=(r.value===v)); $('makeBranch').style.display = v==='build' ? '' : 'none'; $('saveBtn').textContent = editingId ? 'Save Changes' : (v==='build' ? '💾 Save + barcode + take out of stock' : '💾 Save + barcode (no stock out)'); }
+document.querySelectorAll('input[name=arrMode]').forEach(r=>r.addEventListener('change', ()=>setMode(arrMode())));
 /* ---------- branch memory ---------- */
 (function(){ try{ const b = localStorage.getItem('lbArrBranch') || (currentUser().branch || ''); if(b && [...$('makeBranch').options].some(o=>o.value===b)) $('makeBranch').value=b; }catch(e){} })();
 $('makeBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('makeBranch').value); }catch(e){} });
@@ -388,7 +404,7 @@ function resetForm(){
   $('arrPhotoHint').textContent=''; photoState={ data:null, changed:false }; showPhoto(null);
   $('formTitle').textContent='➕ Add New Arrangement';
   $('editingBanner').style.display='none'; $('cancelEditBtn').style.display='none';
-  $('saveBtn').textContent='Save Arrangement'; $('makeNow').checked=false; $('makeBox').style.display='';
+  $('saveBtn').textContent='Save Arrangement'; setMode('build'); $('makeBox').style.display='';
   addItemRow(); addItemRow(); addItemRow();
 }
 function fillForm(a, banner){
@@ -397,7 +413,7 @@ function fillForm(a, banner){
   EX.set(a.extras||[]);
   photoState={ data:null, changed:false }; showPhoto(a.photoData||null); $('arrPhoto').value=''; $('arrPhotoHint').textContent='';
   $('editingBanner').textContent=banner; $('editingBanner').style.display='block'; $('cancelEditBtn').style.display='inline-block';
-  $('newBarcodeBox').style.display='none'; $('formMsg').className='msg'; $('makeNow').checked=false;
+  $('newBarcodeBox').style.display='none'; $('formMsg').className='msg'; setMode('sample');
   $('formCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function startEdit(a){
@@ -414,7 +430,7 @@ function startFromDisplay(d){
     if(c && c.gpp){ items.push({ chocolateName: it.chocolateName, qty: Math.max(1, Math.round(g / c.gpp)) }); } else skipped.push(it.chocolateName + ' (' + it.qty + ' ' + it.unit + ')');
   });
   fillForm({ arrangementName: d.arrangementName, createdBy: d.createdBy, items, extras: d.extras },
-    'From display ' + d.arrangementCode + ' — this display is already out of stock. Saving makes a NEW catalog recipe (ARR- code); stock is not touched unless you tick “I made one now”.' + (skipped.length ? '\n⚠️ Not added (sold by weight, no grams per piece): ' + skipped.join(', ') : ''));
+    'From display ' + d.arrangementCode + ' — this display is already out of stock. Saving as 🧮 Sample makes an SMP- code for online (no stock out). Choose 📦 Made only if you really built another one now.' + (skipped.length ? '\n⚠️ Not added (sold by weight, no grams per piece): ' + skipped.join(', ') : ''));
   $('formTitle').textContent='⭐ Save display as catalog arrangement'; $('saveBtn').textContent='Save to Catalog';
 }
 $('cancelEditBtn').addEventListener('click', resetForm);
@@ -449,13 +465,14 @@ $('saveBtn').addEventListener('click', async ()=>{
   if(!items.length){ showMsg('Add at least one chocolate with a number of pieces.', true); return; }
   const unknown=Object.keys(CHOC).length ? items.filter(it=>!chocInfo(it.chocolateName)).map(it=>it.chocolateName) : [];
   if(unknown.length && !confirm('These are not in the Chocolate Item List:\n\n• ' + unknown.join('\n• ') + '\n\nSave anyway? (they cannot be taken out of stock)')) return;
-  const make = !editingId && $('makeNow').checked, branch = $('makeBranch').value;
-  if(make && !branch){ showMsg('Pick the branch to take the stock from (or untick “I made one now”).', true); $('makeBranch').focus(); return; }
+  const mode = arrMode(), make = !editingId && mode === 'build', branch = $('makeBranch').value;
+  if(make && !branch){ showMsg('Pick the branch to take the stock from (or choose 🧮 Sample — no stock out).', true); $('makeBranch').focus(); return; }
   if(make && !makeConfirm({ items, extras }, branch)) return;
 
   const btn=$('saveBtn'), label=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
   const params={ action:'addArrangement', arrangementName, displayName:$('arrDisplayName').value.trim(), createdBy:$('arrCreator').value.trim(), notes:$('arrNotes').value.trim(),
     items:JSON.stringify(items), extras:JSON.stringify(extras) };
+  if(!editingId) params.mode=mode;
   if(editingId) params.id=editingId;
   if(fromDisplay) params.fromDisplay=fromDisplay;
   if(photoState.changed || !editingId) params.photoData = photoState.data || '';
@@ -465,8 +482,10 @@ $('saveBtn').addEventListener('click', async ()=>{
     const wasEdit=!!editingId; let stockTxt='';
     if(make){ btn.textContent='Taking out of stock…'; stockTxt = '\n' + (await makeOne({ arrangementCode:data.arrangementCode, arrangementName, items, extras }, branch)).text; }
     resetForm();
-    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Arrangement saved! Code: ' + data.arrangementCode) + stockTxt, false);
-    if(!wasEdit){ $('newBarcodeBox').style.display='block'; try{ JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 }); }catch(e){} }
+    showMsg((wasEdit ? 'Changes saved! (' + data.arrangementCode + ')' : 'Saved! Code: ' + data.arrangementCode) + (!wasEdit && mode==='sample' ? '\n🧮 Sample — NOT out of stock. When it is sold, scan ' + data.arrangementCode + ' in the Chocolate Calc → ✓ Sold.' : '') + stockTxt, false);
+    if(!wasEdit){ $('newBarcodeBox').style.display='block'; try{ JsBarcode('#newArrBarcode', data.arrangementCode, { format:'CODE128', width:1.6, height:46, displayValue:true, fontSize:12 }); }catch(e){}
+      const lab = { arrangementCode:data.arrangementCode, arrangementName, items, extras, isSample: /^SMP-/.test(data.arrangementCode) };
+      $('newLabelBtn').onclick = ()=>printLabel(lab); }
     loadArrangements();
   }catch(e){ showMsg('Connection error — please check your connection.', true); btn.textContent=label; }
   btn.disabled=false;
@@ -487,7 +506,7 @@ function cardHtml(a, withActions){
   const manage = withActions && canManage(a);
   return `
     ${a.photoData ? `<img class="photo" src="${esc(a.photoData)}" alt="">` : ''}
-    <span class="code-badge${a.isDisplay?' disp':''}">${esc(a.arrangementCode||'')}${a.isDisplay?' · Display':''}</span>
+    <span class="code-badge${a.isDisplay?' disp':''}${a.isSample?(a.sold?' sold':' smp'):''}">${esc(a.arrangementCode||'')}${a.isDisplay?' · Display':''}${a.isSample?(a.sold?' · ✓ Sold ' + esc(a.sold.saleNo):' · Sample · not out of stock'):''}</span>
     <h3>${esc(a.arrangementName)}</h3>
     ${a.displayName ? `<div class="display">🏷️ ${esc(a.displayName)}</div>` : ''}
     <div class="by">👤 ${esc(a.createdBy || 'Unknown')} · ${esc(fmtDate(a.createdDate))}${a.fromDisplay ? ' · from ' + esc(a.fromDisplay) : ''}${a.updatedDate ? '<br>✏️ Edited by ' + esc(a.updatedBy||'') + ' · ' + esc(fmtDate(a.updatedDate)) : ''}</div>
@@ -495,7 +514,8 @@ function cardHtml(a, withActions){
     ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
     <div class="totals"><span>${pcs ? 'Pieces: <b>' + pcs + '</b>' : ''}</span><span>${a.isDisplay ? 'Price' : 'Est. value'}: <b>${esc(bd(totalOf(a)))}</b></span></div>
     ${withActions ? `<div class="arr-actions">
-      <button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>
+      ${a.isSample ? (a.sold ? '' : `<button type="button" class="make" data-act="sell" data-id="${a.id}">🧾 Sold? Open in Chocolate Calc → ✓ Sold</button>`) : `<button type="button" class="make" data-act="make" data-id="${a.id}">📦 Make one (take out of stock)</button>`}
+      <button type="button" data-act="label" data-id="${a.id}">🏷️ Label</button>
       <button type="button" data-act="barcode" data-id="${a.id}">🏷️ Barcode</button>
       <button type="button" data-act="print" data-id="${a.id}">🖨️ Print</button>
       ${manage ? `<button type="button" data-act="edit" data-id="${a.id}">✏️ Edit</button><button type="button" class="del" data-act="delete" data-id="${a.id}">🗑️</button>` : ''}
@@ -526,6 +546,8 @@ $('arrGrid').addEventListener('click', async ev=>{
   if(act==='edit'){ startEdit(a); return; }
   if(act==='print'){ printArrangement(a); return; }
   if(act==='make'){ showResult(a); return; }
+  if(act==='sell'){ location.href='chocolate-calc.html?code=' + encodeURIComponent(a.arrangementCode); return; }
+  if(act==='label'){ printLabel(a); return; }
   if(act==='barcode'){
     const box=$('bc-'+a.id), show=box.style.display!=='block'; box.style.display=show?'block':'none';
     if(show) JsBarcode(box.querySelector('svg'), a.arrangementCode, { format:'CODE128', width:1.5, height:42, displayValue:true, fontSize:11 });
@@ -580,17 +602,18 @@ function showResult(a, scanned){
   const card=$('scanResultCard'), body=$('scanResultBody'); card.style.display='block';
   const saved = a.isDisplay ? allArrangements.find(x=>x.fromDisplay===a.arrangementCode) : null;
   body.innerHTML = cardHtml(a,false)
-    + (scanned ? `<div class="disp-note">✓ Scanned = already made — this one is already out of stock. Scanning never takes anything out again.${saved ? ' Saved in the catalog as <b>' + esc(saved.arrangementCode) + '</b>.' : ''}</div>` : '')
-    + `<div class="btn-row" style="margin-top:8px">${a.isDisplay ? `<button type="button" class="save-btn" id="rsSave">⭐ ${saved ? 'Save again' : 'Save to catalog'} (online arrangement)</button>` : ''}<button type="button" class="ghost-btn" id="rsPrint">🖨️ Print receipt</button></div>`
-    + (scanned ? '' : `<div class="make-box" style="margin-top:14px">
+    + (a.isSample ? (a.sold ? `<div class="disp-note">✓ Sample SOLD — ${esc(a.sold.saleNo)} (${esc(a.sold.branch)}) — already out of stock.</div>` : `<div class="smp-note">🧮 Sample / online / free made — NOT out of stock yet. If it is sold: <a href="chocolate-calc.html?code=${encodeURIComponent(a.arrangementCode)}"><b>open it in the Chocolate Calc → ✓ Sold</b></a> (takes it out of stock and marks it sold).</div>`)
+      : scanned ? `<div class="disp-note">✓ Scanned = already made — this one is already out of stock. Scanning never takes anything out again.${saved ? ' Saved in the catalog as <b>' + esc(saved.arrangementCode) + '</b>.' : ''}</div>` : '')
+    + `<div class="btn-row" style="margin-top:8px">${a.isDisplay ? `<button type="button" class="save-btn" id="rsSave">⭐ ${saved ? 'Save again' : 'Save to catalog'} (online arrangement)</button>` : ''}<button type="button" class="ghost-btn" id="rsPrint">🖨️ Print receipt</button><button type="button" class="ghost-btn" id="rsLabel">🏷️ Label</button></div>`
+    + (scanned || a.isSample ? '' : `<div class="make-box" style="margin-top:14px">
         <label style="margin-bottom:6px">${a.isDisplay ? '📦 Make another one like this' : '📦 Make one'} — take out of stock</label>
         <select id="rsBranch" style="margin:0 0 10px"><option value="">Which branch's stock?</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
         <button type="button" class="scan-btn-big" id="rsMake" style="width:100%">📦 Made it — take out of stock</button>
         <div id="rsMsg" class="msg"></div>
       </div>`);
-  $('rsPrint').onclick=()=>printArrangement(a);
+  $('rsPrint').onclick=()=>printArrangement(a); $('rsLabel').onclick=()=>printLabel(a);
   if($('rsSave')) $('rsSave').onclick=()=>startFromDisplay(a);
-  if(scanned){ card.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+  if(scanned || a.isSample){ card.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   try{ const b=localStorage.getItem('lbArrBranch') || currentUser().branch || ''; if(b) $('rsBranch').value=b; }catch(e){}
   $('rsBranch').addEventListener('change', ()=>{ try{ localStorage.setItem('lbArrBranch', $('rsBranch').value); }catch(e){} });
   $('rsMake').onclick=async ()=>{
@@ -612,6 +635,11 @@ function showResult(a, scanned){
   card.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+/* ---------- sticker label (same as Build a Display) ---------- */
+function printLabel(a){
+  const items=(a.items||[]).map(i=>i.chocolateName + ' ' + i.qty + (i.unit && i.unit!=='piece' ? (i.unit==='kg'?'kg':'g') : 'pcs')).concat((a.extras||[]).map(x=>'+ ' + x.desc)).join(', ');
+  LBArrLabel.print({ name:a.arrangementName, code:a.arrangementCode, total: totalOf(a), items, note: a.isSample && !a.sold ? 'SAMPLE · not out of stock' : '' });
+}
 /* ---------- print (receipt, 80mm) ---------- */
 function printArrangement(a){
   const tmp=document.createElementNS('http://www.w3.org/2000/svg','svg');

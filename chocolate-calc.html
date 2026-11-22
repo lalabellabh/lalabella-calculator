@@ -1742,7 +1742,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
     return DATA.find(d => String(d.code || '').trim().toLowerCase() === c) || null;
   }
   function useCode(v){
-    if(/^DISP-\d+$/i.test(String(v).trim())){ loadSavedList(String(v).trim()); return true; }
+    if(/^(DISP|SMP)-\d+$/i.test(String(v).trim())){ loadSavedList(String(v).trim()); return true; }
     const hit = findByCode(v);
     if(hit){ selectItem(hit); return true; }
     searchEl.value = String(v || '').trim();
@@ -1751,7 +1751,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   }
   searchEl.addEventListener('keydown', e=>{
     if(e.key !== 'Enter') return;
-    if(/^DISP-\d+$/i.test(searchEl.value.trim())){ e.preventDefault(); loadSavedList(searchEl.value.trim()); return; }
+    if(/^(DISP|SMP)-\d+$/i.test(searchEl.value.trim())){ e.preventDefault(); loadSavedList(searchEl.value.trim()); return; }
     const hit = findByCode(searchEl.value);
     if(hit){ e.preventDefault(); selectItem(hit); }
   });
@@ -2090,7 +2090,29 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   }
 
   // Scan / type a saved list code (DISP-xxxxx) to bring that list back.
+  // SMP-xxxxx = a sample / online / free-made arrangement from the Arrangement Catalog, NOT out of stock yet:
+  // load it here, ✓ Sold takes it out of stock and the sale keeps the code (= marked sold). (Nov 22 2026, Bench)
+  async function loadSample(code){
+    try{
+      const a = await (await fetch(API_URL + '?action=getArrangementByCode&code=' + encodeURIComponent(code) + '&_ts=' + Date.now())).json();
+      if(!a || !a.success){ alert((a && a.error) || ('No sample found for ' + code)); return; }
+      if(!a.isSample){ alert(code + ' is not a sample.'); return; }
+      if(window.LBDispGuard && !(await LBDispGuard.ok(a.arrangementCode))){ searchEl.value = ''; return; }
+      window.LB_CALC_DISP = String(a.arrangementCode).toUpperCase();
+      (a.items || []).forEach(it=>{
+        const cat = DATA.find(d => String(d.name).trim().toLowerCase() === String(it.chocolateName).trim().toLowerCase());
+        const qty = Number(it.qty) || 0, kg = qty * ((cat && cat.grams) || 0) / 1000;
+        const total = cat ? (cat.whole ? qty * cat.pricePerKg : kg * cat.pricePerKg) : 0;
+        cart.push({ name: it.chocolateName, code: cat ? cat.code : '', amount: qty, mode: 'pieces', kg, gpp: cat ? cat.grams : 0, whole: cat ? !!cat.whole : false, cat: cat ? cat.category || '' : '', total: Math.round(total * 1000) / 1000 });
+      });
+      (a.extras || []).forEach(x=>{ const ea = Number(x.price) || 0; extras.push({ description: x.desc, qty: 1, each: ea, amount: ea }); });
+      renderCart();
+      searchEl.value = ''; handleSearchTyping('');
+      alert('🧮 ' + code + ' — ' + (a.arrangementName || '') + ' loaded.\n\nPress ✓ Sold to take it out of stock (it will be marked SOLD).');
+    }catch(e){ alert('Could not open that sample. Check your internet and try again.'); }
+  }
   async function loadSavedList(code){
+    if(/^SMP-/i.test(String(code).trim())) return loadSample(String(code).trim().toUpperCase());
     try{
       const rows = await (await fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now())).json();
       const hit = (Array.isArray(rows) ? rows : []).find(r => String(r['Display Code']).toLowerCase() === String(code).trim().toLowerCase());
@@ -2286,7 +2308,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
   (function startWhenAuthGuardReady(attempt){
     attempt = attempt || 1;
     if (typeof lalabellaCheckResponse === 'function') {
-      loadData();
+      loadData().then(()=>{ const c = new URLSearchParams(location.search).get('code'); if(c && /^(DISP|SMP)-\d+$/i.test(c)) loadSavedList(c); });   // from the Arrangement Catalog: 🧾 Sold? Open in Calc
       return;
     }
     if (attempt >= 6) {
@@ -2735,7 +2757,7 @@ html.idx-dark-ui .choco-drawer .choco-music-now{ color:#c9b6ac; }
 <script src="shared/dup-check.js?v=2"></script>
 <script src="shared/calc-sale.js?v=11"></script>
 <script src="shared/calc-stock.js?v=1"></script>
-<script src="shared/disp-guard.js?v=2"></script>
+<script src="shared/disp-guard.js?v=3"></script>
 <script src="shared/extras-pick.js?v=6"></script>
 <script>try{ LBExtrasPick.attach(document.getElementById("extraDescription"), document.getElementById("extraAmount")); }catch(e){}</script>
 <script>

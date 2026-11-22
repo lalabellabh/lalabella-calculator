@@ -10,7 +10,7 @@
   function day(t) { try { return new Date(t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return String(t || ''); } }
   function ok(code) {
     code = String(code || '').trim().toUpperCase();
-    if (!/^DISP-\d+$/.test(code)) return Promise.resolve(true);
+    if (!/^(DISP|SMP|FSMP)-\d+$/.test(code)) return Promise.resolve(true);
     return fetch(API + '?action=dispUsed&code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(token())).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.success) return true;
       var lines = (d.sales || []).map(function (x) { return '• SOLD in calc: ' + x.no + ' (' + x.branch + ', ' + day(x.at) + (x.by ? ', ' + x.by : '') + ')'; })

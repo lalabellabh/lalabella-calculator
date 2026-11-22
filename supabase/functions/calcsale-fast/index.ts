@@ -115,7 +115,7 @@ async function saveFlowerSale(p: any, u: any) {
   const short = names.filter((n) => avail[n] < sum[n]).map((n) => ({ name: n, need: sum[n], have: avail[n] }));
   const exList = parseExtras(p.extrasList);
   const total = r3(names.reduce((s, n) => s + sum[n] * (rate[n] || 0), 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0)));
-  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^(DISP|SMP|FSMP)-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
   await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
@@ -172,7 +172,7 @@ async function saveChocolateSale(p: any, u: any) {
     .filter((c: any) => c.name && (c.amount > 0 || c.kg > 0));
   if (!items.length) return { success: false, error: 'The list is empty.' };
   const exList = parseExtras(p.extrasList);
-  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^DISP-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
+  const head = (await sbPost('calc_sales', [{ kind: 'chocolate', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^(DISP|SMP|FSMP)-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items, total: r3(items.reduce((s: number, c: any) => s + c.total, 0) + (exList ? extrasSum(exList) : (Number(p.extras) || 0))), created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const { releaseNo, deducted, short, moves } = await takeChoc(branch, items, saleNo, p, u);
   await sbPatch('calc_sales', `id=eq.${head.id}`, { sale_no: saleNo, release_no: releaseNo || null, deducted, short });
@@ -403,11 +403,13 @@ Deno.serve(async (req) => {
     // Guard: was this display (DISP-…) already sold in a calc or released? (so it is not taken out of stock twice)
     if (a === 'dispUsed') {
       const code = String(p.code || '').toUpperCase();
-      if (!/^DISP-\d{1,8}$/.test(code)) return json({ success: false, error: 'Invalid code.' });
+      if (!/^(DISP|SMP|FSMP)-\d{1,8}$/.test(code)) return json({ success: false, error: 'Invalid code.' });
+      const isD = /^DISP-/.test(code);
       const [cs, rel, dp] = await Promise.all([
         sbGet(`calc_sales?select=sale_no,branch,created_at,created_by&disp_code=eq.${code}&status=eq.Active&order=id.desc&limit=5`),
-        sbGet(`chocolate_release_database?select=release_no,branch,release_date,prepared_by&remarks=ilike.*${code}*&order=id.desc&limit=50`),
-        sbGet(`chocolate_display?select=display_name,created_at,created_by&display_code=eq.${code}&limit=1`),
+        isD ? sbGet(`chocolate_release_database?select=release_no,branch,release_date,prepared_by&remarks=ilike.*${code}*&order=id.desc&limit=50`) : Promise.resolve([]),
+        isD ? sbGet(`chocolate_display?select=display_name,created_at,created_by&display_code=eq.${code}&limit=1`)
+          : sbGet(`${/^SMP-/.test(code) ? 'chocolate_arrangements' : 'flower_arrangements'}?select=display_name:arrangement_name,created_at:created_date,created_by&arrangement_code=eq.${code}&limit=1`),
       ]);
       const seen: Record<string, boolean> = {}; const releases: any[] = [];
       (rel || []).forEach((r: any) => { if (seen[r.release_no]) return; seen[r.release_no] = true; releases.push({ no: r.release_no, branch: r.branch, date: r.release_date, by: r.prepared_by }); });

@@ -199,8 +199,17 @@ function cleanExtras(v: any) {
   let a: any[] = []; try { a = typeof v === 'string' ? JSON.parse(v || '[]') : (v || []); } catch { a = []; }
   return (Array.isArray(a) ? a : []).map((x: any) => ({ desc: String((x && x.desc) || '').trim().slice(0, 80), price: Math.round((Number(x && x.price) || 0) * 1000) / 1000 })).filter((x: any) => x.desc).slice(0, 30);
 }
-function mapArr(a: any, items: any[]) {
-  return { id: a.id, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
+// Sample / online / free-made arrangements get an SMP- code: NOT out of stock yet. When one is sold, the calc loads the
+// SMP- code, ✓ Sold takes it out of stock and the sale keeps the code (calc_sales.disp_code) = marked sold.
+async function soldMap(codes: string[]) {
+  const c = codes.filter((x) => /^(SMP|FSMP)-\d+$/.test(String(x || '')));
+  if (!c.length) return {} as Record<string, any>;
+  const rows = await sbGet('calc_sales', `select=sale_no,disp_code,branch,created_at&status=eq.Active&disp_code=in.(${c.map(encodeURIComponent).join(',')})&order=id.desc`);
+  const m: Record<string, any> = {}; (rows || []).forEach((r: any) => { if (!m[r.disp_code]) m[r.disp_code] = { saleNo: r.sale_no, branch: r.branch, at: r.created_at }; });
+  return m;
+}
+function mapArr(a: any, items: any[], sold?: Record<string, any>) {
+  return { id: a.id, isSample: /^SMP-/.test(String(a.arrangement_code || '')), sold: (sold && sold[a.arrangement_code]) || null, arrangementCode: a.arrangement_code, arrangementName: a.arrangement_name, displayName: a.display_name || '',
     createdBy: a.created_by, createdDate: a.created_date, updatedBy: a.updated_by || '', updatedDate: a.updated_date || '', notes: a.notes || '', photoData: a.photo_data || '',
     fromDisplay: a.from_display || '', extras: Array.isArray(a.extras) ? a.extras : [],
     items: items.map((it: any) => ({ chocolateName: it.chocolate_name, qty: Number(it.qty) })) };
@@ -212,7 +221,8 @@ async function getArrangements() {
   ]);
   const by: Record<string, any[]> = {};
   allItems.forEach((it: any) => { (by[it.arrangement_id] = by[it.arrangement_id] || []).push(it); });
-  return arrangements.map((a: any) => mapArr(a, by[a.id] || []));
+  const sold = await soldMap(arrangements.map((a: any) => a.arrangement_code));
+  return arrangements.map((a: any) => mapArr(a, by[a.id] || [], sold));
 }
 async function getArrangementByCode(code: string) {
   code = (code || '').trim().toUpperCase();
@@ -229,7 +239,7 @@ async function getArrangementByCode(code: string) {
   const rows = await sbGet('chocolate_arrangements', `select=*&status=eq.Active&arrangement_code=eq.${encodeURIComponent(code)}`);
   if (!rows.length) return { error: 'No arrangement found for this code.' };
   const items = await sbGet('chocolate_arrangement_items', `select=*&arrangement_id=eq.${rows[0].id}&order=id.asc`);
-  return { success: true, ...mapArr(rows[0], items) };
+  return { success: true, ...mapArr(rows[0], items, await soldMap([rows[0].arrangement_code])) };
 }
 function canManageArr(row: any, u: any) {
   if (String((u && u.role) || '').toLowerCase() === 'admin') return true;
@@ -260,8 +270,9 @@ async function addArrangement(p: Record<string, any>, u: any) {
     await sbPost('chocolate_arrangement_items', items.map((it: any) => ({ arrangement_id: id, chocolate_name: it.chocolateName, qty: it.qty })));
     return { success: true, id, arrangementCode: ex[0].arrangement_code };
   }
-  const codeNum = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Arrangement Code', start_at: 1 });
-  const arrangementCode = 'ARR-' + String(codeNum).padStart(5, '0');
+  const sample = p.mode === 'sample';
+  const codeNum = await sbRpc('get_next_chocolate_counter', { counter_key: sample ? 'Next Sample Code' : 'Next Arrangement Code', start_at: 1 });
+  const arrangementCode = (sample ? 'SMP-' : 'ARR-') + String(codeNum).padStart(5, '0');
   const fromDisplay = /^DISP-\d{1,8}$/i.test(String(p.fromDisplay || '')) ? String(p.fromDisplay).toUpperCase() : null;
   const inserted = await sbPost('chocolate_arrangements', [{ arrangement_name: arrangementName, created_by: String(p.createdBy || me).slice(0, 60), notes, arrangement_code: arrangementCode, photo_data: p.photoData && p.photoData !== '__REMOVE__' ? p.photoData : '', display_name: displayName, extras, from_display: fromDisplay }]);
   const arrangementId = inserted[0].id;
