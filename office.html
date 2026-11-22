@@ -767,6 +767,7 @@
   var warmed = false;
   document.addEventListener('pointerdown', function(){ if(warmed || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return; warmed = true;
     try{ var w = new SpeechSynthesisUtterance(' '); w.volume = 0; var lv = langVoices().filter(function(v){ return v.localService; })[0]; if(lv) w.voice = lv; speechSynthesis.speak(w); }catch(e){} }, { capture:true });
+  window.LBOfficeTalk = function(k, text){ try{ voice(k, text); }catch(e){} };   // 3D office conversations: each worker speaks with their own voice
   window.LBOfficeStopVoice = function(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} };
   function speakWords(k, text, tone, force){
     if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
@@ -1048,7 +1049,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=25'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=26'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);

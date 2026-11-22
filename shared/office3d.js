@@ -422,7 +422,7 @@
   }
   function walk(a, to){ a.path = hallPath(a.pos.clone(), to, a); a.mode = 'walk'; a.dest = to; }
   function think(a, dt){
-    if(a.mode === 'walk') return;
+    if(a.mode === 'walk' || a.mode === 'visit' || a.inConvo) return;
     var st = a.st;
     if(a.k === 'driver'){ if(st === 'working' && a.mode !== 'out'){ walk(a, 'street'); return; } if(st !== 'working' && a.mode === 'out'){ a.g.visible = true; a.hidden = false; a.pos.set(34.5, 0, 10.5); walk(a, 'back'); return; } }
     if(a.mode === 'cafe'){ a.wait -= dt; if(a.wait <= 0 || st === 'alert' || st === 'warn' || follow === a.k) walk(a, 'home'); return; }
@@ -432,7 +432,7 @@
   function step(a, dt, t){
     if(a.mode === 'walk'){
       var nx = a.path[0];
-      if(!nx){ a.mode = a.dest === 'cafe' ? 'cafe' : a.dest === 'street' ? 'out' : 'sit'; if(a.mode === 'cafe') a.wait = 10 + Math.random() * 12; if(a.mode === 'out'){ a.g.visible = false; a.hidden = true; } return; }
+      if(!nx){ a.mode = a.dest === 'cafe' ? 'cafe' : a.dest === 'street' ? 'out' : a.dest === 'visit' ? 'visit' : 'sit'; if(a.mode === 'cafe') a.wait = 10 + Math.random() * 12; if(a.mode === 'out'){ a.g.visible = false; a.hidden = true; } return; }
       var d = nx.clone().sub(a.pos); d.y = 0; var len = d.length(), sp = 2.1 * dt;
       if(len < sp){ a.pos.copy(nx); a.path.shift(); } else { a.pos.addScaledVector(d.normalize(), sp); a.face = Math.atan2(d.x, d.z) + Math.PI; }
       a.l1.position.z = Math.sin(t * 12) * .1; a.l2.position.z = -Math.sin(t * 12) * .1; a.body.position.y = Math.abs(Math.sin(t * 12)) * .06;
@@ -877,7 +877,122 @@
         if(nb){ chat(p, nb, rnd(DESK_TALK[p.room.id] || DESK_TALK.records)); return; } }
     }
   }
-  setInterval(chatter, 6000);
+  setInterval(chatter, 9000);
+
+  // ---------- real conversations (Nov 22 2026, Bench): someone walks to a co-worker's desk and they talk properly —
+  // several turns, about what is REALLY on their screens (live data), one voice at a time, with a live caption feed. ----------
+  var RELATED = { dispatcher:['shopify','bleems','abandoned','delivery'], shopify:['dispatcher','abandoned','bleems'], bleems:['dispatcher','shopify'], abandoned:['shopify','dispatcher'],
+    hr:['timekeeper','boss'], timekeeper:['hr'], delivery:['driver','dispatcher'], driver:['delivery'], watcher:['doctor','scribe'], doctor:['watcher','archivist','odoo'],
+    odoo:['keeper','doctor'], scribe:['auditor','watcher'], auditor:['scribe','archivist'], archivist:['doctor','auditor'], keeper:['barista','odoo','saudi'],
+    barista:['keeper','janitor'], janitor:['barista'], saudi:['keeper','boss'], secretary:['boss'], boss:['secretary','hr','dispatcher','keeper'] };
+  var TALKING = false, FEED = null;
+  function nm(k){ var e = DATA && DATA.EMP[k]; return e ? e.name : k; }
+  function clean(t){ t = String(t || '').replace(/\s+/g, ' ').trim(); if(t.length > 110){ var c = t.slice(0, 108); var i = Math.max(c.lastIndexOf('. '), c.lastIndexOf(' · '), c.lastIndexOf(', ')); t = (i > 40 ? c.slice(0, i) : c) + '…'; } return t; }
+  function greet(){ var h = new Date().getHours(); return h < 12 ? ['Good morning', 'Magandang umaga'] : h < 18 ? ['Good afternoon', 'Magandang hapon'] : ['Good evening', 'Magandang gabi']; }
+  function P2(en, tl){ return TL() ? tl : en; }
+  function script(ak, bk){
+    var E = DATA.EMP, A = E[ak], B = E[bk], g = greet(), out = [];
+    function L2(k, en, tl){ out.push([k, P2(en, tl)]); }
+    function L1(k, pair){ out.push([k, pair[TL() ? 1 : 0]]); }
+    if(bk === 'boss' || ak === 'boss'){
+      var w = ak === 'boss' ? bk : ak, W2 = E[w], bossFirst = ak === 'boss';
+      if(bossFirst) L2('boss', g[0] + ', ' + W2.name + '. How are things?', g[1] + ', ' + W2.name + '. Kumusta tayo?');
+      else { L2(w, 'Boss, quick update?', 'Boss, may update lang po ako.'); L2('boss', 'Sure, go ahead.', 'Sige, ano yun?'); }
+      L2(w, clean(W2.say), clean(W2.say));
+      if(W2.st === 'alert' || W2.st === 'warn'){ L2('boss', 'Hmm, that needs attention. What do you need?', 'Hmm, kailangan asikasuhin yan. Ano kailangan mo?');
+        L2(w, 'Someone to check it in the system today.', 'May mag-check lang sa system ngayon.'); L2('boss', 'Okay. I will tell Bench. Keep me posted.', 'Sige. Sasabihan ko si Bench. Update mo ako ha.'); }
+      else { L1('boss', rnd([['Good work. Anything you need?', 'Ayos ah. May kailangan ka ba?'], ['Nice. Keep it that way.', 'Galing. Ganyan lang palagi.']]));
+        L2(w, 'None for now, Boss. Thank you!', 'Wala na po muna, Boss. Salamat po!'); }
+      L2('boss', 'Good. 👍', 'Sige. 👍');
+      return out.filter(function(x){ return x[1]; });
+    }
+    if(B.st === 'alert' || B.st === 'warn'){
+      L2(ak, B.name + ', I saw your desk light up. What is going on?', B.name + ', nakita kong naka-' + (B.st === 'alert' ? 'pula' : 'dilaw') + ' desk mo. Ano meron?');
+      L2(bk, clean(B.say), clean(B.say));
+      L2(ak, 'Since when?', 'Kailan pa yan?');
+      L2(bk, 'Since the last check. ' + clean(B.out), 'Mula pa nung huling check. ' + clean(B.out));
+      L2(ak, 'Okay, let us tell Boss so someone fixes it.', 'Sige, sabihan natin si Boss para maayos.');
+      L2(bk, 'Thanks! I owe you a coffee ☕', 'Salamat! Libre kita ng kape ☕');
+      return out;
+    }
+    L1(ak, rnd([['Hi ' + B.name + '! Busy?', 'Uy ' + B.name + '! Busy ka?'], [g[0] + ', ' + B.name + '!', g[1] + ', ' + B.name + '!']]));
+    L1(bk, rnd([['A little. What is up?', 'Medyo. Bakit?'], ['Not really, go ahead.', 'Hindi naman, ano yun?'], ['Hey! Come in 😄', 'Uy! Halika 😄']]));
+    L2(ak, 'Quick check — anything new on your side?', 'Check lang — may bago ba sa side mo?');
+    L2(bk, clean(B.say), clean(B.say));
+    if(B.st === 'working') L2(ak, 'Busy day! Keep it moving 💪', 'Ang busy ah! Tuloy lang 💪'); else L2(ak, 'Good, all quiet then.', 'Buti naman, tahimik.');
+    L2(ak, 'On my side: ' + clean(A.say), 'Sa akin naman: ' + clean(A.say));
+    L1(bk, rnd([['Got it, I will keep an eye on that too.', 'Sige, babantayan ko din yan.'], ['Okay, tell me if it changes.', 'Okay, sabihan mo ako pag nagbago.'], ['Noted 📝', 'Noted 📝']]));
+    L2(ak, 'Thanks! Back to work 😄', 'Salamat! Balik trabaho 😄');
+    return out.filter(function(x){ return x[1]; });
+  }
+  function exitOf(R, p){ return R.z === 0 ? new T.Vector3(p.x, 0, R.z + R.d + .2) : new T.Vector3(R.x + R.w / 2, 0, R.z - .2); }
+  function visit(a, b){
+    var hz = 10.5, spot = b.home.clone().add(new T.Vector3(b.home.x <= a.home.x ? .95 : -.95, 0, .55)), pts;
+    if(a.room === b.room) pts = [spot];
+    else { var e1 = exitOf(a.room, a.pos), e2 = exitOf(b.room, spot); pts = [e1, new T.Vector3(e1.x, 0, hz), new T.Vector3(e2.x, 0, hz), e2, spot]; }
+    a.retPts = pts.slice(0, -1).reverse().concat([a.home.clone()]);
+    a.path = pts; a.mode = 'walk'; a.dest = 'visit';
+  }
+  function dur(t){ return Math.min(7500, 1700 + String(t).length * 60); }
+  function feedLine(k, text){
+    if(!FEED){ return; }
+    var box = FEED.querySelector('.o3f-l'), r = document.createElement('div'); r.className = 'o3f-r';
+    r.innerHTML = '<b>' + emoji(k) + ' ' + esc(nm(k)) + '</b> ' + esc(text); box.appendChild(r);
+    while(box.children.length > 5) box.removeChild(box.firstChild);
+    FEED.classList.add('on'); clearTimeout(FEED.t); FEED.t = setTimeout(function(){ FEED.classList.remove('on'); }, 15000);
+  }
+  function speakingNow(){ try{ return window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending); }catch(e){ return false; } }
+  function runLines(lines, i, done){
+    if(i >= lines.length || document.hidden || MEET) return done();
+    var k = lines[i][0], a = AG[k], text = lines[i][1], other = lines[i + 1] && AG[lines[i + 1][0]] !== a ? AG[lines[i + 1][0]] : AG[(lines[i - 1] || [])[0]];
+    if(a && other && other !== a) lookAt(a, other);
+    if(a) bubble(a, text, dur(text) + 600); feedLine(k, text);
+    try{ if(window.LBOfficeTalk) window.LBOfficeTalk(k, text); }catch(e){}
+    var t0 = Date.now(), min = dur(text);
+    (function waitTurn(){ var el = Date.now() - t0; if(el < min || (speakingNow() && el < min + 9000)) return setTimeout(waitTurn, 250); setTimeout(function(){ runLines(lines, i + 1, done); }, 450); })();
+  }
+  function realTalk(force){
+    if(TALKING || !T || !scene || !DATA || MEET || (document.hidden && !force)) return false;
+    var free = Object.keys(AG).map(function(k){ return AG[k]; }).filter(function(a){ return a.mode === 'sit' && !a.hidden && a.k !== 'driver' && follow !== a.k && DATA.EMP[a.k]; });
+    if(free.length < 2) return false;
+    // prefer: someone goes to a co-worker who has a problem; else a related co-worker; else the boss
+    var a = null, b = null, bad = free.filter(function(x){ return x.st === 'alert' || x.st === 'warn'; });
+    if(bad.length && Math.random() < .6){ b = rnd(bad); var helpers = free.filter(function(x){ return x !== b && x.st !== 'alert' && x.st !== 'warn' && (RELATED[x.k] || []).indexOf(b.k) > -1; }); a = helpers.length ? rnd(helpers) : rnd(free.filter(function(x){ return x !== b && x.st !== 'alert'; })); }
+    if(!a || !b){ a = rnd(free.filter(function(x){ return x.st !== 'alert'; })); if(!a) return false; var rel = (RELATED[a.k] || []).map(function(k){ return AG[k]; }).filter(function(x){ return x && free.indexOf(x) > -1 && x !== a; }); b = rel.length ? rnd(rel) : rnd(free.filter(function(x){ return x !== a; })); }
+    if(!a || !b) return false;
+    TALKING = true; a.inConvo = b.inConvo = true; a.chatAt = b.chatAt = Date.now() + 60000;
+    var lines = script(a.k, b.k);
+    visit(a, b);
+    var t0 = Date.now();
+    (function arrive(){
+      if(a.mode === 'visit' || Date.now() - t0 > 25000){
+        lookAt(a, b); lookAt(b, a); b.turnUntil = Date.now() + 60000;
+        runLines(lines, 0, function(){
+          a.laughUntil = b.laughUntil = Date.now() + 1200; b.turnUntil = 0;
+          setTimeout(function(){ a.path = a.retPts || [a.home.clone()]; a.mode = 'walk'; a.dest = 'home'; a.inConvo = b.inConvo = false; TALKING = false; a.chatAt = b.chatAt = Date.now(); }, 900);
+        });
+        return;
+      }
+      setTimeout(arrive, 300);
+    })();
+    return true;
+  }
+  function buildFeed(){
+    if(FEED || !root) return;
+    var st = document.createElement('style');
+    st.textContent = '.o3-feed{position:absolute;left:12px;top:100px;z-index:6;width:min(360px,calc(100% - 24px));background:#1b1535e6;color:#f1ecff;border:1px solid #5d4f95;border-radius:14px;padding:8px 10px;font-size:12px;line-height:1.4;box-shadow:0 8px 24px #0006;transition:opacity .4s;opacity:.35}' +
+      '.o3-feed.on,.o3-feed:hover{opacity:1}.o3-feed .o3f-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#bfb3ff;margin-bottom:4px}' +
+      '.o3-feed .o3f-h button{margin-left:auto;border:0;border-radius:999px;background:#7c5cff;color:#fff;font:inherit;font-size:11px;padding:4px 10px;cursor:pointer;text-transform:none;letter-spacing:0}' +
+      '.o3-feed .o3f-r{padding:2px 0;animation:o3fIn .35s ease}.o3-feed .o3f-r b{color:#ffd68a;font-weight:700}.o3-feed .o3f-l:empty:before{content:attr(data-e);color:#9a90c8}' +
+      '@keyframes o3fIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}@media(max-width:600px){.o3-feed{font-size:11px;top:auto;bottom:8px;left:8px}}';
+    document.head.appendChild(st);
+    FEED = document.createElement('div'); FEED.className = 'o3-feed';
+    FEED.innerHTML = '<div class="o3f-h">💬 ' + esc(P2('Office talk', 'Usapan sa opisina')) + '<button type="button">' + esc(P2('Talk now', 'Mag-usap')) + '</button></div><div class="o3f-l" data-e="' + esc(P2('They talk every minute or so — about the real numbers.', 'Nag-uusap sila kada isang minuto — tungkol sa totoong data.')) + '"></div>';
+    FEED.querySelector('button').onclick = function(e){ e.stopPropagation(); if(!realTalk(true)) { FEED.classList.add('on'); } };
+    (stage.parentNode || root).appendChild(FEED);
+  }
+  setTimeout(function(){ buildFeed(); realTalk(); }, 14000);
+  setInterval(function(){ buildFeed(); if(Math.random() < .8) realTalk(); }, 55000);
 
   // ---------- public API ----------
   window.LBOffice3D = {
