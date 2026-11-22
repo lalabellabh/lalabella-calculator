@@ -991,8 +991,9 @@
     FEED.querySelector('button').onclick = function(e){ e.stopPropagation(); if(!realTalk(true)) { FEED.classList.add('on'); } };
     (stage.parentNode || root).appendChild(FEED);
   }
-  setTimeout(function(){ buildFeed(); realTalk(); }, 14000);
-  setInterval(function(){ buildFeed(); if(Math.random() < .8) realTalk(); }, 55000);
+  // Nov 22 2026 (Bench): no caption box — each person's own speech bubble above the head is enough
+  setTimeout(function(){ realTalk(); }, 14000);
+  setInterval(function(){ if(Math.random() < .8) realTalk(); }, 55000);
 
   // ---------- public API ----------
   window.LBOffice3D = {
@@ -1005,7 +1006,7 @@
       if(!OUT.loadedFor && T && scene) loadCity();
       paintTags(); apply(); renderSide();
     },
-    say:function(k, text, ms){ var a = AG[k]; if(!a || !text) return; var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
+    say:function(k, text, ms){ var a = AG[k]; if(!a || !text || a.inConvo) return; /* don't cut into a real conversation */ var b = a.tag.querySelector('.bub'); b.textContent = text; a.tag.classList.add('talk'); clearTimeout(a.bt); a.bt = setTimeout(function(){ a.tag.classList.remove('talk'); }, ms || 3000); },
     select:select, answer:function(k, r){ if(AG[k]) select(k, r); }, whole:wholeOffice, full:function(on){ if(T) goFull(on); },
     meet:{
       start:meetStart, stop:meetStop, ready:function(){ return !!MEET; },
