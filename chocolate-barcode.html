@@ -634,6 +634,8 @@
       <label style="margin-top:16px;">Branch <span style="font-weight:400;color:var(--ink-dim);">— the chocolates are taken out of this branch's stock when you save</span></label>
       <select id="displayBranch" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14px;background:#fff;color:inherit;"><option value="">— pick the branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
 
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" id="displayRemake" style="width:18px;height:18px;flex:none;"> ♻️ Remake of an old display — new label only, <b>do not</b> take out of stock</label>
+
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
 
@@ -1550,7 +1552,8 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   const dBranch = document.getElementById('displayBranch').value;
   if(!dBranch){ alert('Pick the branch — the chocolates are taken out of its stock.'); document.getElementById('displayBranch').focus(); return; }
   let alreadyOut = null;   // the same chocolates were already taken out (Calc ✓ Sold / another display) → label only
-  if(window.LBDup){
+  if(document.getElementById('displayRemake').checked) alreadyOut = { saleNo: 'an old display (remake)' };
+  if(!alreadyOut && window.LBDup){
     const m = await LBDup.check(dBranch, displayCart.filter(c => !c.extra).map(c => ({ name: c.name, amount: Number(c.qty) || 0, mode: c.unit === 'kg' ? 'kg' : c.unit === 'g' ? 'grams' : 'pieces' })), 'display');
     if(m && confirm(LBDup.msg(m, 'display'))) alreadyOut = m;
   }
@@ -1592,6 +1595,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
 
       displayCart = []; dispBBManual = false; document.getElementById('displayBestBefore').value = ''; document.getElementById('displayBBNote').textContent = '';
       document.getElementById('displayName').value = '';
+      document.getElementById('displayRemake').checked = false;
       renderDisplayCart();
       await loadData();
       try{ window.lbLogRefresh && window.lbLogRefresh(); }catch(e){}
