@@ -604,7 +604,7 @@
       <div id="displayBBNote" style="font-size:11px;color:var(--ink-dim);margin-top:4px;"></div>
 
       <label style="margin-top:16px;">Branch <span style="font-weight:400;color:var(--ink-dim);">— the chocolates are taken out of this branch's stock when you save</span></label>
-      <select id="displayBranch"><option value="">— pick the branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+      <select id="displayBranch" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14px;background:#fff;color:inherit;"><option value="">— pick the branch —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
 
       <label style="margin-top:16px;">Display Name</label>
       <input type="text" id="displayName" placeholder="e.g. Valentine Box A" />
@@ -1400,6 +1400,8 @@ function displayQtyText(c){
   return c.qty + ' ' + DISPLAY_UNIT_SHORT[u] + (eq ? ' (' + eq + ')' : '');
 }
 
+let displayEditIdx = -1;
+document.getElementById('displayCartList').addEventListener('keydown', e => { const r = e.target.closest('[data-edit-row]'); if(!r) return; if(e.key === 'Enter'){ e.preventDefault(); r.querySelector('[data-e-save]').click(); } if(e.key === 'Escape'){ displayEditIdx = -1; renderDisplayCart(true); } });   // Nov 22 2026: ✏️ edit a line in the display list (chocolate: qty · extra: name + price)
 function renderDisplayCart(skipAuto){
   const el = document.getElementById('displayCartList');
   if(skipAuto !== true && typeof autoDisplayBB === 'function') autoDisplayBB();
@@ -1408,15 +1410,28 @@ function renderDisplayCart(skipAuto){
     document.getElementById('displayTotalRow').style.display = 'none';
     return;
   }
-  el.innerHTML = displayCart.map((c, i) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--line);">
-      <div>
-        <div style="font-weight:600; font-size:13px;">${c.extra ? '✨ ' : ''}${c.name}</div>
+  const inp = 'border:1px solid var(--line);border-radius:9px;padding:7px 9px;font:inherit;font-size:13px;background:#fff;color:inherit;';
+  el.innerHTML = displayCart.map((c, i) => i === displayEditIdx ? `
+    <div data-edit-row="${i}" style="padding:10px;margin:4px 0;border:1px solid #e3c3cf;border-radius:12px;background:#fff8fa;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;">✏️ ${c.extra ? 'Edit extra' : lbEsc(c.name)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        ${c.extra
+          ? `<input data-e="name" value="${lbEsc(c.name)}" style="${inp}flex:2;min-width:140px;"><input data-e="price" type="number" min="0" step="0.001" inputmode="decimal" value="${Number(c.price).toFixed(3)}" style="${inp}width:110px;"><span style="font-size:12px;color:var(--ink-dim)">BD</span>`
+          : `<input data-e="qty" type="number" min="0" step="${c.unit === 'piece' ? 1 : 'any'}" inputmode="decimal" value="${c.qty}" style="${inp}width:110px;"><span style="font-size:12px;color:var(--ink-dim)">${DISPLAY_UNIT_TEXT[c.unit || 'piece']} × ${fmtBD(c.price)}</span>`}
+        <button type="button" data-e-save="${i}" style="margin-left:auto;border:0;border-radius:9px;padding:8px 14px;background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;">Save</button>
+        <button type="button" data-e-cancel style="border:1px solid var(--line);border-radius:9px;padding:8px 12px;background:#fff;font:inherit;font-size:12.5px;cursor:pointer;color:inherit;">Cancel</button>
+      </div>
+    </div>` : `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; padding:8px 0; border-top:1px solid var(--line);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600; font-size:13px;">${c.extra ? '✨ ' : ''}${lbEsc(c.name)}</div>
         <div style="font-size:11px; color:var(--ink-dim);">${c.extra ? 'Extra · ' + fmtBD(c.price) : displayQtyText(c) + ' × ' + fmtBD(c.price) + ((c.unit && c.unit !== 'piece') ? ' / ' + DISPLAY_UNIT_SHORT[c.unit] : '') + ' = ' + fmtBD(c.qty * c.price)}</div>
       </div>
-      <button data-idx="${i}" class="remove-display-item" style="background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer;">✕</button>
+      <button type="button" data-edit-idx="${i}" title="Edit" style="background:none; border:none; font-size:15px; cursor:pointer; padding:4px 6px;">✏️</button>
+      <button data-idx="${i}" class="remove-display-item" title="Remove" style="background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer;">✕</button>
     </div>
   `).join('');
+  const er = el.querySelector('[data-edit-row] input'); if(er) setTimeout(() => { er.focus(); er.select && er.select(); }, 30);
   const total = displayCart.reduce((s, c) => s + c.qty * c.price, 0);
   const totalRow = document.getElementById('displayTotalRow');
   totalRow.style.display = 'block';
@@ -1459,8 +1474,29 @@ document.getElementById('displayBBClr').addEventListener('click', ()=>{ dispBBMa
 
 
 document.getElementById('displayCartList').addEventListener('click', e=>{
+  const ed = e.target.closest('[data-edit-idx]');
+  if(ed){ displayEditIdx = Number(ed.dataset.editIdx); renderDisplayCart(true); return; }
+  if(e.target.closest('[data-e-cancel]')){ displayEditIdx = -1; renderDisplayCart(true); return; }
+  const sv = e.target.closest('[data-e-save]');
+  if(sv){
+    const i = Number(sv.dataset.eSave), c = displayCart[i], row = sv.closest('[data-edit-row]');
+    if(!c) return;
+    if(c.extra){
+      const nm = row.querySelector('[data-e=name]').value.trim(), pr = parseFloat(row.querySelector('[data-e=price]').value);
+      if(!nm || !(pr > 0)){ alert('Type the extra and its price.'); return; }
+      c.name = nm; c.price = Math.round(pr * 1000) / 1000;
+    } else {
+      const q = parseFloat(row.querySelector('[data-e=qty]').value);
+      if(!(q > 0)){ alert('Type the quantity (or press ✕ to remove the line).'); return; }
+      if((c.unit || 'piece') === 'piece' && !Number.isInteger(q)){ alert('Pieces must be a whole number.'); return; }
+      c.qty = q;
+    }
+    displayEditIdx = -1; renderDisplayCart();
+    return;
+  }
   const btn = e.target.closest('.remove-display-item');
   if(!btn) return;
+  displayEditIdx = -1;
   displayCart.splice(Number(btn.dataset.idx), 1);
   renderDisplayCart();
 });
