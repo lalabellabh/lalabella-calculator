@@ -192,6 +192,13 @@
     .label-cell .l-items{ font-size:6pt; line-height:1.25; margin:.6mm 0 .4mm; }
     .label-cell .l-items.sm{ font-size:5pt; }
     body.lp-on{ background:#fff !important; }
+    /* Nov 22 2026 (Bench): labels print alone — nothing else on the page takes space, so no extra blank pages */
+    html.lbl-on, body.lbl-on{ background:#fff !important; margin:0 !important; height:auto !important; min-height:0 !important; }
+    body.lbl-on > *:not(#labelPrintArea){ display:none !important; }
+    body.lbl-on #labelPrintArea.printing{ position:static !important; }
+    #labelPrintArea.one{ padding:0 !important; }
+    #labelPrintArea.one .label-grid{ display:block; }
+    #labelPrintArea.one .label-cell{ border:0; border-radius:0; padding:1.5mm 2mm; page-break-after:avoid; break-after:avoid; }
     body.lp-on > *:not(#lookupPrintArea){ display:none !important; }
     #lookupPrintArea.printing, #lookupPrintArea.printing *{ visibility:visible; }
     #lookupPrintArea.printing{ display:block !important; position:absolute; top:0; left:0; width:80mm; padding:4mm; box-sizing:border-box; color:#000; background:#fff; font-family:Arial,Helvetica,sans-serif; }
@@ -962,9 +969,7 @@
       }catch(e){}
     });
 
-    document.getElementById('labelPrintArea').classList.add('printing');
-    window.print();
-    setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+    lblPrint(false);
   });
 
 
@@ -1525,6 +1530,18 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
   btn.disabled = false; btn.textContent = '💾 Save & Generate Barcode';
 });
 
+// Print only the label area (one label = one page, no blank pages to skip)
+function lblPrint(one){
+  const pa = document.getElementById('labelPrintArea');
+  pa.classList.add('printing'); pa.classList.toggle('one', !!one);
+  document.body.classList.add('lbl-on'); document.documentElement.classList.add('lbl-on');
+  let st = document.getElementById('lbLblPage'); if(!st){ st = document.createElement('style'); st.id = 'lbLblPage'; document.head.appendChild(st); }
+  st.textContent = one ? '@page{ margin:0; }' : '';
+  const done = () => { pa.classList.remove('printing', 'one'); document.body.classList.remove('lbl-on'); document.documentElement.classList.remove('lbl-on'); st.textContent = ''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1500);
+}
 // Nov 22 2026 (Bench): a display uses the chocolates right away, so saving it takes them out of the branch stock
 // (same engine as a ✓ Sold in the Chocolate Calc: FIFO by expiry, one REL- release, stock moves, cancel in Calc Sales puts them back).
 // The DISP code is on that record, so a later Release / Calc sale / Odoo line with this DISP code is not taken out twice.
@@ -1566,9 +1583,7 @@ function printDisplayLabel(D){
   try{
     fitBarcode("#printDpBarcode", lastSavedDisplay.code, 330, lastSavedDisplay.items ? (lastSavedDisplay.n > 6 ? 26 : 32) : 42);   // shorter bars when the item list is on the label, so it all fits
   }catch(e){}
-  document.getElementById('labelPrintArea').classList.add('printing');
-  window.print();
-  setTimeout(()=> document.getElementById('labelPrintArea').classList.remove('printing'), 500);
+  lblPrint(true);
 }
 document.getElementById('printDisplayBtn').addEventListener('click', ()=>{ printDisplayLabel(lastSavedDisplay); });
 
@@ -1598,9 +1613,7 @@ document.getElementById('printDisplayBtn').addEventListener('click', ()=>{ print
     $('labelGrid').innerHTML=h;
     document.querySelectorAll('#labelGrid .mbSvg').forEach(el=>{ try{ fitBarcode(el,c,330,42); }catch(e){} });
     const pa=$('labelPrintArea');
-    pa.classList.add('printing');
-    window.print();
-    setTimeout(()=>pa.classList.remove('printing'),500);
+    lblPrint(n === 1);
   });
 })();
 
