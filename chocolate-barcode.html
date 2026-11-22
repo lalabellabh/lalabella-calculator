@@ -230,6 +230,21 @@
   .cb-right .tabs{ margin-top:0; }
 }
 @media print{ .wrap{ display:block !important; } }
+.cb-log{ display:none; }
+@media (min-width:1000px){
+  .cb-log{ display:block; margin-top:18px; background:rgba(255,255,255,.88); border:1px solid var(--line); border-radius:18px; padding:14px 16px; box-shadow:0 10px 26px rgba(40,20,30,.08); max-height:calc(100vh - 470px); min-height:160px; overflow-y:auto; scrollbar-width:thin; }
+  .cb-log-h{ display:flex; align-items:center; justify-content:space-between; font-size:14px; margin-bottom:4px; }
+  .cb-log-h button{ border:1px solid var(--line); background:#fff; border-radius:8px; width:28px; height:28px; cursor:pointer; color:inherit; }
+  .cb-log-t{ font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); margin:10px 0 4px; }
+  .cb-log-r{ display:flex; gap:8px; align-items:flex-start; padding:7px 6px; border-radius:10px; cursor:pointer; font-size:12.5px; line-height:1.35; }
+  .cb-log-r:hover{ background:#fdf0f3; }
+  .cb-log-r .c{ font-family:monospace; font-size:11.5px; font-weight:700; color:#9e2f4a; white-space:nowrap; }
+  .cb-log-r .n{ flex:1; min-width:0; } .cb-log-r .n small{ display:block; color:var(--ink-dim); font-size:11px; }
+  .cb-log-r .p{ white-space:nowrap; font-weight:600; }
+  .cb-log-e{ color:var(--ink-dim); font-size:12px; padding:4px 6px; }
+  .cb-log-ok{ color:#2f7a4f; } .cb-log-no{ color:#b0703a; }
+}
+@media print{ .cb-log{ display:none !important; } }
 
 /* ===== LALABELLA ROSE + CHOCOLATE ATM UI =====
    Visual add-on only. Existing barcode / lookup / print logic remains untouched.
@@ -459,6 +474,14 @@
     <h1>Chocolate Barcode</h1>
     <p class="sub">Print labels, or look up a release</p>
   </header>
+  <!-- Nov 22 2026 (Bench): log in the empty space — last displays made + your last look-ups; tap one to open it in Look Up -->
+  <section class="cb-log" id="cbLog">
+    <div class="cb-log-h"><b>📜 Log</b><button type="button" id="cbLogRef" title="Refresh">↻</button></div>
+    <div class="cb-log-t">Displays made</div>
+    <div id="cbLogDisp"><div class="cb-log-e">Loading…</div></div>
+    <div class="cb-log-t">Your last look-ups</div>
+    <div id="cbLogLook"></div>
+  </section>
  </div>
  <div class="cb-right">
 
@@ -992,6 +1015,7 @@
   /* ---------- Look Up Release ---------- */
   document.getElementById('lookupBtn').addEventListener('click', async ()=>{
     const releaseNo = document.getElementById('fReleaseNo').value.trim();
+    try{ if(releaseNo && window.lbLogLook) window.lbLogLook(releaseNo); }catch(e){}
     if(!releaseNo){
       alert('Enter or scan a Release No.');
       return;
@@ -1570,6 +1594,7 @@ document.getElementById('saveDisplayBtn').addEventListener('click', async ()=>{
       document.getElementById('displayName').value = '';
       renderDisplayCart();
       await loadData();
+      try{ window.lbLogRefresh && window.lbLogRefresh(); }catch(e){}
     }
   }catch(e){
     alert('Could not save. Check your connection and try again.');
@@ -1634,6 +1659,43 @@ function printDisplayLabel(D){
 }
 document.getElementById('printDisplayBtn').addEventListener('click', ()=>{ printDisplayLabel(lastSavedDisplay); });
 
+
+
+// ===== 📜 Log (Nov 22 2026, Bench): last displays made + your last look-ups, in the empty space on the left =====
+(function(){
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const tok = () => { try{ return sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } };
+  const when = d => { try{ const x = new Date(d); return x.toLocaleDateString('en-GB', { day:'2-digit', month:'short', timeZone:'Asia/Bahrain' }) + ' ' + x.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bahrain' }); }catch(e){ return ''; } };
+  function looks(){ try{ return JSON.parse(localStorage.getItem('lbLookLog') || '[]'); }catch(e){ return []; } }
+  window.lbLogLook = function(code){ code = String(code || '').trim().toUpperCase(); if(!code) return; const L = looks().filter(x => x.c !== code); L.unshift({ c: code, t: Date.now() }); try{ localStorage.setItem('lbLookLog', JSON.stringify(L.slice(0, 12))); }catch(e){} paintLooks(); };
+  function paintLooks(){ const L = looks(); document.getElementById('cbLogLook').innerHTML = L.length ? L.map(x => '<div class="cb-log-r" data-code="' + esc(x.c) + '"><span class="c">' + esc(x.c) + '</span><span class="n"><small>' + when(x.t) + '</small></span></div>').join('') : '<div class="cb-log-e">Nothing looked up yet on this device.</div>'; }
+  async function paintDisplays(){
+    const box = document.getElementById('cbLogDisp');
+    try{
+      const from = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+      const [rows, sales] = await Promise.all([
+        fetch(API_URL + '?action=getDisplayList&_ts=' + Date.now()).then(r => r.json()),
+        fetch(LB_CONFIG.CALC_SALE_API + '?action=listSales&kind=chocolate&limit=300&from=' + from + '&token=' + encodeURIComponent(tok())).then(r => r.json()).catch(() => ({}))
+      ]);
+      const out = {};   // DISP code -> sale taking it out of stock
+      ((sales && sales.sales) || []).forEach(s => { const m = String(s.customer || '').match(/DISP-\d+/i); if(m && s.status === 'Active') out[m[0].toUpperCase()] = s; });
+      const list = (Array.isArray(rows) ? rows : []).slice(0, 15);
+      box.innerHTML = list.length ? list.map(d => { const c = String(d['Display Code'] || ''), s = out[c.toUpperCase()];
+        return '<div class="cb-log-r" data-code="' + esc(c) + '"><span class="c">' + esc(c) + '</span><span class="n">' + esc(d['Display Name'] || '') +
+          '<small>' + when(d['Date']) + (d['Created By'] ? ' · ' + esc(d['Created By']) : '') + ' · ' + (s ? '<span class="cb-log-ok">✓ out of ' + esc(s.branch) + ' stock</span>' : '<span class="cb-log-no">not taken out</span>') + '</small></span>' +
+          '<span class="p">' + fmtBD(d['Total Price'] != null ? d['Total Price'] : (d['Items'] || []).reduce((a, i) => a + (Number(i.qty) || 0) * (Number(i.price) || 0), 0)) + '</span></div>'; }).join('') : '<div class="cb-log-e">No displays yet.</div>';
+    }catch(e){ box.innerHTML = '<div class="cb-log-e">Could not load the log.</div>'; }
+  }
+  window.lbLogRefresh = function(){ paintDisplays(); paintLooks(); };
+  document.getElementById('cbLogRef').onclick = window.lbLogRefresh;
+  document.getElementById('cbLog').addEventListener('click', e => {
+    const r = e.target.closest('[data-code]'); if(!r) return;
+    const t = document.querySelector('.tab[data-tab="lookup"]'); if(t) t.click();
+    document.getElementById('fReleaseNo').value = r.dataset.code; document.getElementById('lookupBtn').click();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  window.lbLogRefresh();
+})();
 
 // ==================== Manual barcode ====================
 (function(){
