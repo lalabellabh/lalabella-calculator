@@ -769,6 +769,13 @@ kbd{
     .sidebar > *{flex-shrink:0}
     .nav-toggle{display:flex!important;align-items:center;justify-content:center}
   }
+  /* Nov 23 2026 (Bench: "ung heart di kita pag apps"): on phone the sunflower art was pushed past the right edge.
+     It now sits fully inside the hero card, on the right of the title. */
+  @media(max-width:700px){
+    .hero-art{position:absolute!important;right:4px;top:50%;width:190px!important;height:190px!important;min-height:0!important;margin:0!important;
+      transform:translateY(-50%) scale(.62);transform-origin:right center;z-index:1}
+    .hero-copy{position:relative;z-index:2}
+  }
 </style>
 
 <style id="garden-music-layout">
@@ -2759,6 +2766,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
 </script>
 <script src="joyboy-bubble.js"></script>
 <script src="shared/pull-refresh.js?v=1"></script>
-<script src="shared/app-bar.js?v=1" data-apps="index.html,flower-dashboard.html,flower-receiving.html,flower-stock-count.html" data-key="flower"></script>
+<script src="shared/app-bar.js?v=2" data-apps="index.html,flower-dashboard.html,flower-receiving.html,flower-stock-count.html" data-key="flower"></script>
 </body>
 </html>
