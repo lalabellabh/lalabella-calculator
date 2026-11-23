@@ -42,6 +42,24 @@
     upload: { d: 'M4 15h16v5H4z', s: 'M12 15V4 M7.5 8.5 12 4l4.5 4.5 M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15' },
     phone: { d: 'M7 3h10v18H7z', s: 'M8 2.5h8A1.5 1.5 0 0 1 17.5 4v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5z M11 18.5h2' },
     calc: { d: 'M5 3.5h14v17H5z', s: 'M6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3z M8 6.5h8v3H8z M8.5 13h.01 M12 13h.01 M15.5 13h.01 M8.5 16.5h.01 M12 16.5h.01 M15.5 16.5h.01' },
+    clock: { d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', s: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3.2 2' },
+    building: { d: 'M5 3.5h10v17H5z', s: 'M5 20.5V4.5A1 1 0 0 1 6 3.5h8a1 1 0 0 1 1 1v16 M15 9.5h3a1 1 0 0 1 1 1v10 M3.5 20.5h17 M8 7.5h1 M11 7.5h1 M8 11h1 M11 11h1 M8 14.5h1 M11 14.5h1 M9 20.5v-3h2v3' },
+    store: { d: 'M4.5 10h15v10h-15z', s: 'M3.5 9.5 5 4h14l1.5 5.5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0z M5 11.5V20h14v-8.5 M9.5 20v-5h5v5' },
+    inbox: { d: 'M3.5 13h5l1.5 2.5h4L15.5 13h5v6.5h-17z', s: 'M3.5 13.5 6 5h12l2.5 8.5v5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5 M12 3v7 M9.5 7.5 12 10l2.5-2.5' },
+    book: { d: 'M4.5 4.5h6a2 2 0 0 1 1.5.7V20a2 2 0 0 0-1.5-.7h-6z', s: 'M12 6v14 M12 6a3 3 0 0 0-2.5-1.5H4v14.8h5.5A2.5 2.5 0 0 1 12 20.5 M12 6a3 3 0 0 1 2.5-1.5H20v14.8h-5.5A2.5 2.5 0 0 0 12 20.5' },
+    health: { d: 'M12 20s-7.5-4.5-7.5-10A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 3c0 5.5-7.5 10-7.5 10z', s: 'M12 20s-7.5-4.5-7.5-10A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 3c0 5.5-7.5 10-7.5 10z M6 12.5h3l1.5-2.5 2 4 1.5-1.5H18' },
+    bulb: { d: 'M12 3.5a6 6 0 0 1 3.5 10.9V16h-7v-1.6A6 6 0 0 1 12 3.5z', s: 'M12 3.5a6 6 0 0 1 3.5 10.9V16h-7v-1.6A6 6 0 0 1 12 3.5z M9 19h6 M10 21.5h4' },
+    map: { d: 'M3.5 6 9 4l6 2 5.5-2v14L15 20l-6-2-5.5 2z', s: 'M3.5 6 9 4l6 2 5.5-2v14L15 20l-6-2-5.5 2z M9 4v14 M15 6v14' },
+    folder: { d: 'M3.5 6.5a1 1 0 0 1 1-1H9l2 2h8.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z', s: 'M3.5 6.5a1 1 0 0 1 1-1H9l2 2h8.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z M3.5 10h17' },
+    link: { d: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1', s: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1' },
+    refresh: { d: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', s: 'M20 12a8 8 0 0 1-14.3 4.9 M4 12A8 8 0 0 1 18.3 7.1 M18.5 3.5v4h-4 M5.5 20.5v-4h4' },
+    doc: { d: 'M6 3h8l4.5 4.5V21H6z', s: 'M6.5 3h7.5l4.5 4.5v12a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3z M13.5 3v5h5 M8.5 13h7 M8.5 16.5h5' },
+    laptop: { d: 'M5 5h14v10H5z', s: 'M5.5 4.5h13a1 1 0 0 1 1 1v9.5h-15V5.5a1 1 0 0 1 1-1z M2.5 18.5h19l-1.5-3.5H4z' },
+    mail: { d: 'M3.5 6h17v12h-17z', s: 'M4.5 5.5h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1z M3.8 6.5 12 13l8.2-6.5' },
+    users: { d: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', s: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20a6.5 6.5 0 0 1 13 0 M16 4.3a3.5 3.5 0 0 1 0 6.4 M18.5 14a6.5 6.5 0 0 1 3 6' },
+    leaf: { d: 'M5 19C5 10 10 5 20 4c0 9-5 15-15 15z', s: 'M5 19C5 10 10 5 20 4c0 9-5 15-15 15z M5 19c3-4 6-7 10-10' },
+    check: { d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', s: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M8 12.3l2.7 2.7L16.2 9.5' },
+    car: { d: 'M4 11h16v6H4z', s: 'M5 11l1.6-4.2A1.5 1.5 0 0 1 8 5.8h8a1.5 1.5 0 0 1 1.4 1L19 11 M3.5 11h17v6h-17z M7 17v2 M17 17v2 M7 14h.01 M17 14h.01' },
     chat: { d: 'M4 5h16v11H9l-5 4z', s: 'M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 16H9l-4.5 4v-4H5a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 5 4.5z M8 9h8 M8 12h5' }
   };
   var MAP = {
@@ -49,7 +67,10 @@
     '🔍': 'search', '🔎': 'search', '📜': 'log', '🕘': 'log', '🗑': 'trash', '💾': 'save', '📋': 'clipboard', '🛒': 'cart', '📊': 'chart', '📈': 'chart',
     '🧾': 'receipt', '📦': 'box', '⭐': 'star', '📍': 'pin', '🌷': 'flower', '🌸': 'flower', '💐': 'flower', '🌹': 'flower', '🍫': 'choc', '🎀': 'gift', '🎁': 'gift',
     '☕': 'coffee', '🆕': 'plus', '➕': 'plus', '🔔': 'bell', '📅': 'calendar', '🗓': 'calendar', '👤': 'user', '🚚': 'truck', '🛵': 'truck', '🏠': 'home',
-    '🔒': 'lock', '⚙': 'gear', '💰': 'money', '💵': 'money', '⚠': 'warn', '✨': 'sparkle', '📤': 'upload', '📱': 'phone', '💬': 'chat', '🧮': 'calc', '🫖': 'coffee'
+    '🔒': 'lock', '⚙': 'gear', '💰': 'money', '💵': 'money', '⚠': 'warn', '✨': 'sparkle', '📤': 'upload', '📱': 'phone', '💬': 'chat', '🧮': 'calc', '🫖': 'coffee', '🕒': 'clock', '🕐': 'clock', '⏰': 'clock', '⏱': 'clock', '🏢': 'building', '🏪': 'store', '🏬': 'store', '📥': 'inbox',
+    '🔐': 'lock', '📖': 'book', '📚': 'book', '🩺': 'health', '🧠': 'bulb', '💡': 'bulb', '🗺': 'map', '🗂': 'folder', '📁': 'folder', '🔗': 'link', '🔄': 'refresh',
+    '📲': 'phone', '📆': 'calendar', '📄': 'doc', '📃': 'doc', '💻': 'laptop', '🖥': 'laptop', '💌': 'mail', '📧': 'mail', '✉': 'mail', '👥': 'users', '🌱': 'leaf', '🌿': 'leaf',
+    '✅': 'check', '🚗': 'car', '🍎': 'phone', '✎': 'pencil'
   };
   // colours for the "Colorful" icon pack (each icon its own little glossy tile)
   var COL = { camera: ['#5b8cff', '#3a5bd9'], mic: ['#ff6b8b', '#d93a63'], image: ['#36c48f', '#1c9467'], printer: ['#7b8aa3', '#4f5d75'], tag: ['#ffb547', '#e98a10'],
@@ -58,7 +79,10 @@
     star: ['#ffd54a', '#f5a400'], pin: ['#ff6b6b', '#d93a3a'], flower: ['#ff7eb6', '#e0457f'], choc: ['#a0673d', '#6b3e1f'], gift: ['#ff6fa1', '#d63a76'],
     coffee: ['#c08a5a', '#8a5a33'], plus: ['#4ade80', '#16a34a'], bell: ['#ffc145', '#f08c00'], calendar: ['#ff8a65', '#e5533d'], user: ['#64b5f6', '#1e88e5'],
     truck: ['#26c6da', '#00838f'], home: ['#81c784', '#43a047'], lock: ['#90a4ae', '#546e7a'], gear: ['#9e9e9e', '#616161'], money: ['#66bb6a', '#2e7d32'],
-    warn: ['#ffb300', '#ef6c00'], sparkle: ['#ffd54a', '#ff8f00'], upload: ['#4dd0e1', '#0097a7'], phone: ['#7986cb', '#3949ab'], chat: ['#4fc3f7', '#0288d1'], calc: ['#a1887f', '#6d4c41'] };
+    warn: ['#ffb300', '#ef6c00'], sparkle: ['#ffd54a', '#ff8f00'], upload: ['#4dd0e1', '#0097a7'], phone: ['#7986cb', '#3949ab'], chat: ['#4fc3f7', '#0288d1'], calc: ['#a1887f', '#6d4c41'], clock: ['#7aa7ff', '#4a6fe0'], building: ['#8ea2c8', '#53668f'], store: ['#ffa36b', '#e9692c'], inbox: ['#5bc0eb', '#2b8cc4'],
+    book: ['#b58cff', '#7b4fe0'], health: ['#ff7c8a', '#e0435a'], bulb: ['#ffd23f', '#f2a100'], map: ['#5fd39a', '#24a56b'], folder: ['#ffc65c', '#f09b1a'], link: ['#7dd3fc', '#0ea5e9'],
+    refresh: ['#67e8f9', '#06b6d4'], doc: ['#a5b4fc', '#6366f1'], laptop: ['#94a3b8', '#475569'], mail: ['#f9a8d4', '#ec4899'], users: ['#93c5fd', '#3b82f6'], leaf: ['#86efac', '#22c55e'],
+    check: ['#4ade80', '#16a34a'], car: ['#fca5a5', '#ef4444'] };
   var PKEY = 'lbIconPack', PACKS = [['duo', 'Duotone'], ['line', 'Line'], ['bold', 'Bold'], ['color', 'Colorful'], ['emoji', 'Emoji']];
   var pack = 'duo'; try { pack = localStorage.getItem(PKEY) || 'duo'; } catch (e) {}
   function setPackAttr() { if (pack === 'duo') document.documentElement.removeAttribute('data-lbi-pack'); else document.documentElement.setAttribute('data-lbi-pack', pack); }

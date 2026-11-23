@@ -217,6 +217,12 @@
   // ---------------- injected CSS ----------------
   var ICONS_ALL = '.card-icon,.hub-icon,.nav-icon,.stat-icon,.desktop-tool-icon,.group-icon,.head-icon,.pxv-ico,.lb-ic';
   var ICONS_BARE = '.card-icon,.hub-icon,.nav-icon,.lb-ic';
+  function zoomFix(z) {
+    var t = document.getElementById('lbZoomFix');
+    if (z === 1) { if (t) t.remove(); return; }
+    if (!t) { t = document.createElement('style'); t.id = 'lbZoomFix'; (document.head || root).appendChild(t); }
+    t.textContent = '.lbnav-btn,.lbnav-drawer,.lbnav-backdrop,.lbset-back,#lbdock-handle,#lbdock-tray,#lbdock-pick,#lbcb-panel,#lbcb-btn,#joyboy-bubble-btn,#joyboy-panel,#lbob-btn,#lbob-panel,.lbck-bg,#lbcl,#lbclBg{zoom:' + (Math.round(1000 / z) / 1000) + '}';
+  }
   function css() {
     if (document.getElementById('lb-look-css')) return;
     var s = document.createElement('style');
@@ -527,6 +533,9 @@
     // --lb-zoom lets full-height layouts divide 100vh by the zoom (with CSS zoom, 100vh grows with it and the page overflows)
     if (st.text === 100 || printingNow) { root.style.removeProperty('zoom'); root.style.removeProperty('--lb-zoom'); }
     else { root.style.zoom = String(st.text / 100); root.style.setProperty('--lb-zoom', String(st.text / 100)); }
+    // Nov 23 2026: the menu, ⚙️ Settings, side dock, chat and Nova pop-ups are placed with screen sizes (innerWidth/Height, vw),
+    // which CSS zoom breaks — they went past the screen edge (✕ out of reach) until a refresh. They stay at 100% instead.
+    zoomFix(st.text === 100 || printingNow ? 1 : st.text / 100);
   }
   function applyIcons() {
     if (st.icons === 'circle' || st.icons === 'square') root.setAttribute('data-lb-icons', st.icons);

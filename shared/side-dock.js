@@ -157,7 +157,7 @@
     });
     orderKeys(keys).forEach(function (k) { made[k].setAttribute('data-k', k); tray.appendChild(made[k]); });
     if (st.items.length < MAX_CUSTOM) {
-      var add = document.createElement('button'); add.type = 'button'; add.className = 'lbd-it add'; add.title = 'Add a shortcut'; add.setAttribute('aria-label', 'Add a shortcut'); add.textContent = '+';
+      var add = document.createElement('button'); add.type = 'button'; add.className = 'lbd-it add'; add.title = 'Add a shortcut'; add.setAttribute('aria-label', 'Add a shortcut'); add.textContent = '➕';
       add.addEventListener('click', openPicker); tray.appendChild(add);
     }
     var sp2 = document.createElement('div'); sp2.className = 'lbd-sep'; tray.appendChild(sp2);
