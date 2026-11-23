@@ -37,6 +37,11 @@
     ap.onload = () => { try { if (document.getElementById('lbsetBody')) drawSettings(); } catch (e) {} };
     (document.head || document.documentElement).appendChild(ap);
   }
+  // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
+  if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=1';
+    (document.head || document.documentElement).appendChild(ic);
+  }
   // ---- Module menus (shown on pages of that module) ----
   const MODULES = {
     chocolate: { title: 'Chocolate Tools', home: 'index.html', homeLabel: 'Chocolate Home', items: [
@@ -589,6 +594,7 @@
     css.textContent = [
       '.lbnav-btn{position:fixed;top:' + top + 'px;' + side + ':14px;z-index:99990;width:42px;height:42px;border-radius:12px;border:1px solid rgba(158,47,74,.18);background:rgba(255,255,255,.94);color:#9e2f4a;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 5px 16px rgba(60,30,40,.16);backdrop-filter:blur(6px);padding:0;font-family:inherit}',
       '.lbnav-btn:hover{background:#9e2f4a;color:#fff}',
+      '.lbnav-btn{transition:transform .25s ease,opacity .25s ease,background .2s}.lbnav-btn.lbnav-hide{transform:translateY(-72px);opacity:0;pointer-events:none}',
       '.lbnav-backdrop{position:fixed;inset:0;z-index:99991;background:rgba(40,20,28,.35);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s}',
       '.lbnav-backdrop.show{opacity:1;pointer-events:auto}',
       '.lbnav-drawer{position:fixed;top:0;bottom:0;left:0;width:min(370px,90vw);z-index:99992;background:#fdfbf9;border-right:1px solid #eee2e0;box-shadow:12px 0 40px rgba(60,30,40,.18);transform:translateX(-102%);transition:transform .25s ease;padding:18px 14px 24px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;font-family:"Space Grotesk",system-ui,sans-serif;text-align:left}',
@@ -616,6 +622,9 @@
     drawer.innerHTML = '<button type="button" class="lbnav-close" aria-label="Close menu">✕</button>' +
       '<div data-lb-menu data-hub-class="lbnav-hub" data-title-class="lbnav-title"></div>';
     const mount = () => { document.body.appendChild(back); document.body.appendChild(drawer); document.body.appendChild(btn); };
+    // Nov 23 2026: the ☰ button slides away while you scroll DOWN (so it doesn't sit on titles) and comes back when you scroll up.
+    let lastY = window.scrollY || 0;
+    window.addEventListener('scroll', () => { const y = window.scrollY || 0; if (Math.abs(y - lastY) < 6) return; btn.classList.toggle('lbnav-hide', y > lastY && y > 80); lastY = y; }, { passive: true });
     if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
 
     const open = () => { drawer.classList.add('show'); back.classList.add('show'); };

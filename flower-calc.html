@@ -278,7 +278,7 @@
             <input type="number" id="extraQty" min="1" step="1" value="1" />
           </div>
           <div>
-            <label>Price each (BD)</label>
+            <label style="white-space:nowrap">Price (BD)</label>
             <input type="number" id="extraPrice" min="0" step="0.001" placeholder="0.000" />
           </div>
           <button class="btn btn-outline btn-sm" id="addExtraBtn">Add</button>
@@ -1079,6 +1079,6 @@
     get: function(){ return { items: cart.map(function(c){ return { name:c.name, qty:c.qty, rate:c.rate }; }), extrasTotal: extras.reduce(function(s,x){ return s + (Number(x.price)||0); }, 0), extrasList: extras.map(function(x){ return { desc: x.desc + ((x.qty || 1) > 1 ? ' × ' + x.qty : ''), price:x.price }; }), customer: (document.getElementById('customerName')||{}).value || '' }; } }); }catch(e){ console.error('calc sale', e); }
 </script>
 <script src="joyboy-bubble.js"></script>
-<script src="shared/calc-log.js?v=1" data-kind="flower"></script>
+<script src="shared/calc-log.js?v=3" data-kind="flower"></script>
 </body>
 </html>

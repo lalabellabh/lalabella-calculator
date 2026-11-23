@@ -623,16 +623,13 @@ body>.wrap{position:relative;z-index:1}
         <input type="number" id="eiPrice" min="0" step="0.001"></div>
     </div>
     <div class="grid-2">
-      <div><label>Cost price (BHD) — bought for</label>
-        <input type="number" id="eiCost" min="0" step="0.001" placeholder="Optional"></div>
-      <div></div>
-    </div>
-    <div class="grid-2">
+      <div><label>Cost price (BHD)</label>
+        <input type="number" id="eiCost" min="0" step="0.001" placeholder="Bought for · optional"></div>
       <div><label>Min Stock</label>
         <input type="number" id="eiMin" min="0" step="1" placeholder="Optional"></div>
-      <div><label>Item Code</label>
-        <input type="text" id="eiCode" autocomplete="off"></div>
     </div>
+    <label>Item Code</label>
+    <input type="text" id="eiCode" autocomplete="off">
     <label>Size</label>
     <input type="text" id="eiSize" list="itemSizeList" maxlength="40" placeholder="e.g. Small, 5 cm" autocomplete="off">
 
@@ -983,17 +980,18 @@ body>.wrap{position:relative;z-index:1}
       </div>
       <div class="grid-2">
         <div>
-          <label>Cost price (BHD) — bought for</label>
-          <input type="number" id="addItemCost" min="0" step="0.001" placeholder="Optional">
+          <label>Cost price (BHD)</label>
+          <input type="number" id="addItemCost" min="0" step="0.001" placeholder="Bought for · optional">
         </div>
-        <div></div>
+        <div>
+          <label>Min Stock</label>
+          <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Blank for Fixed Assets">
+        </div>
       </div>
 
       <label>Size <span style="text-transform:none;">(optional — e.g. ribbon 2.5 cm, vase Large; pick or type)</span></label>
       <input type="text" id="addItemSize" list="itemSizeList" maxlength="40" placeholder="e.g. Small, 5 cm" autocomplete="off">
 
-      <label>Min Stock <span style="text-transform:none;">(leave blank for Fixed Assets)</span></label>
-      <input type="number" id="addItemMinStock" min="0" step="1" placeholder="Optional">
 
       <label>Photo <span style="text-transform:none;">(optional — auto-compressed before upload)</span></label>
       <div style="display:flex; gap:8px;">

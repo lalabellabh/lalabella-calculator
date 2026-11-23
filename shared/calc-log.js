@@ -21,12 +21,16 @@
     '#lbcl .r .a{display:flex;gap:8px;align-items:baseline}#lbcl .r .no{font-family:monospace;font-weight:700;color:#9e2f4a;font-size:12px}#lbcl .r .t{margin-left:auto;font-weight:700;white-space:nowrap}' +
     '#lbcl .r .m{font-size:11.5px;color:#8c7c82;margin-top:2px}#lbcl .r .it{display:none;font-size:12px;margin-top:6px;border-top:1px dashed #eee;padding-top:6px;line-height:1.5}#lbcl .r.open .it{display:block}' +
     '#lbcl .tag{display:inline-block;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;margin-left:4px;background:#f3eef0;color:#7a6a70}#lbcl .tag.c{background:#fde8e8;color:#b8483c}#lbcl .tag.f{background:#e8f3ea;color:#3f7a4f}#lbcl .tag.k{background:#f7ece2;color:#8a5a2b}' +
-    '@media(max-width:600px){#lbclBtn{padding:7px 11px;font-size:12px;left:10px;bottom:10px;opacity:.92}}' +
+    '@media(max-width:600px){#lbclBtn{width:46px;height:46px;padding:0;border-radius:50%;font-size:17px;left:10px;bottom:12px;display:flex;align-items:center;justify-content:center}#lbclBtn .lbcl-t{display:none}body{padding-bottom:72px!important}}' +
     '#lbcl .e{color:#9a8a90;text-align:center;padding:30px 10px;font-size:13px}@media print{#lbclBtn,#lbcl,#lbclBg{display:none!important}}';
   var rows = [], el, bg;
   function build() {
     var s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
-    var b = document.createElement('button'); b.id = 'lbclBtn'; b.type = 'button'; b.textContent = '📜 Log'; b.title = 'Last sales of this calc (reference)'; document.body.appendChild(b);
+    var b = document.createElement('button'); b.id = 'lbclBtn'; b.type = 'button'; b.innerHTML = '📜<span class="lbcl-t"> Log</span>'; b.setAttribute('aria-label', 'Log'); b.title = 'Last sales of this calc (reference)';
+    // Nov 23 2026: sit with the other links at the top (Calc Sales…) instead of floating over the page; float only if there is no such row
+    var pill = [].slice.call(document.querySelectorAll('a[href^="calc-sales.html"]')).filter(function (x) { return !x.closest('.lbnav-drawer,[data-lb-menu],nav,aside'); })[0];
+    if (pill && pill.parentNode) { b.id = 'lbclPill'; b.removeAttribute('class'); b.style.cssText = (pill.getAttribute('style') || '') + ';cursor:pointer;font-family:inherit'; if (pill.className) b.className = pill.className; b.innerHTML = '📜 Log'; pill.parentNode.insertBefore(b, pill.nextSibling); }
+    else document.body.appendChild(b);
     bg = document.createElement('div'); bg.id = 'lbclBg'; document.body.appendChild(bg);
     el = document.createElement('aside'); el.id = 'lbcl'; el.setAttribute('data-lb-look-skip', '');
     el.innerHTML = '<div class="h"><b>📜 ' + (KIND === 'flower' ? 'Flower' : KIND === 'mixed' ? 'Mixed' : 'Chocolate') + ' calc log</b><button type="button" data-r title="Refresh">↻</button><button type="button" data-x title="Close" style="margin-left:0">✕</button></div>' +
