@@ -768,9 +768,24 @@ kbd{
     .sidebar .nav{flex:0 0 auto!important;max-height:none!important;overflow:visible!important}
     .sidebar > *{flex-shrink:0}
     .nav-toggle{display:flex!important;align-items:center;justify-content:center}
+    /* Nov 23 2026 (Bench: "sikip na sikip, tingnan mo sa chocolate ok na ok"): the phone menu is as wide as the
+       Chocolate one, and its rows are the same white rounded boxes, so the weather / hub tiles have room. */
+    .sidebar{width:min(370px,90vw)!important;padding-left:16px!important;padding-right:16px!important}
+    .sidebar [data-lb-menu] a:not(.lb-menu-profile):not(.nav-hub-grid a){display:flex!important;align-items:center;gap:10px;min-height:44px;padding:11px 12px!important;margin:0 0 6px!important;
+      border-radius:10px!important;background:rgba(255,255,255,var(--lb-dra2,.62))!important;color:#3a2530!important;font-size:14px!important;font-weight:600!important;line-height:1.3}
+    .sidebar [data-lb-menu] a.active:not(.nav-hub-grid a),.sidebar [data-lb-menu] a[aria-current]:not(.nav-hub-grid a){background:#9e2f4a!important;color:#fff!important}
+    .sidebar .nav-hub-grid a{font-size:12px!important;white-space:nowrap}
   }
   /* Nov 23 2026 (Bench: "ung heart di kita pag apps"): on phone the sunflower art was pushed past the right edge.
      It now sits fully inside the hero card, on the right of the title. */
+  /* Nov 23 2026: on phone the page is one screen tall — divide by the Text size zoom (else the bottom is cut off)
+     and keep the bottom free for the app bar so it never covers the tools. */
+  @media(max-width:900px){
+    .app{height:calc(100dvh / var(--lb-zoom,1))!important;min-height:0!important;box-sizing:border-box;padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+    /* bigger Text size: the page may not fit one screen any more — let it scroll so the tools stay reachable */
+    html[style*="zoom"] .main{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+    html[style*="zoom"] .hero-art{top:10px!important;transform:scale(.42)!important;transform-origin:top right!important}
+  }
   @media(max-width:700px){
     .hero-art{position:absolute!important;right:4px;top:50%;width:190px!important;height:190px!important;min-height:0!important;margin:0!important;
       transform:translateY(-50%) scale(.62);transform-origin:right center;z-index:1}
