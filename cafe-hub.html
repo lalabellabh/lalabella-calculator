@@ -107,8 +107,10 @@
     .cols{ display:block; padding:10px 12px calc(86px + env(safe-area-inset-bottom)); overflow:hidden; }
     .pane{ display:none; height:100%; border-radius:22px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
     .pane.on{ display:flex; }
-    .pb{ flex:none; overflow:visible; padding:4px 14px 10px; } .ph{ padding:16px 14px 10px; }
-    .pf{ position:sticky; bottom:0; z-index:3; padding:10px 14px 12px; background:rgba(255,255,255,.9); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .pb{ flex:none; overflow:visible; padding:4px 14px 10px; } .pane .pb{ padding-bottom:var(--pfh, 10px); } .ph{ padding:16px 14px 10px; }
+    /* Nov 23 2026 (Bench): footer always on screen, just above the tab bar, while the list scrolls under it */
+    .pf{ position:sticky; bottom:0; z-index:3; }
+    body > .pf[data-pane]{ position:fixed; left:18px; right:18px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:45; border-radius:18px; border:1px solid var(--line); box-shadow:0 -8px 24px rgba(42,36,32,.12); padding:10px 14px 12px; background:rgba(255,255,255,.9); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
     .pf .sum{ flex-wrap:nowrap; overflow-x:auto; margin-bottom:8px; scrollbar-width:none; } .pf .sum span{ white-space:nowrap; }
     .pf .btns .btn{ padding:8px 4px; font-size:11.5px; white-space:nowrap; }
     .grp{ top:0; }
@@ -195,7 +197,21 @@
   $('rDate').value = C.today(); $('cDate').value = C.today(); $('rBy').value = myName; $('cBy').value = myName;
 
   /* ---------- phone tabs ---------- */
-  function showPane(id){ ['p-rec', 'p-cnt', 'p-dash'].forEach(function(p){ $(p).classList.toggle('on', p === id); });
+  // Phone (Nov 23 2026, Bench): the pane footer (Save count / Save receiving…) is lifted out of the pane and pinned just above
+  // the tab bar, so it is always on screen while the list scrolls. The list gets room under it so the last row is not hidden.
+  var PHONE = window.matchMedia('(max-width:1099px)');
+  function pfPin(){
+    [].forEach.call(document.querySelectorAll('.pf[data-pane], .pane .pf'), function(f){
+      var pane = f.getAttribute('data-pane') ? $(f.getAttribute('data-pane')) : f.closest('.pane');
+      if(!pane || !f.querySelector('button')) return;
+      if(PHONE.matches && f.parentNode !== document.body){ f.setAttribute('data-pane', pane.id); f.__home = f.parentNode; document.body.appendChild(f); }
+      else if(!PHONE.matches && f.parentNode === document.body && f.__home){ f.__home.appendChild(f); f.removeAttribute('data-pane'); }
+      if(f.parentNode === document.body){ var on = pane.classList.contains('on'); f.style.display = on && f.textContent.trim() ? '' : 'none'; if(on) pane.style.setProperty('--pfh', (f.offsetHeight + 24) + 'px'); }
+    });
+  }
+  if(PHONE.addEventListener) PHONE.addEventListener('change', pfPin);
+  setTimeout(pfPin, 300); setInterval(pfPin, 2500);
+  function showPane(id){ setTimeout(pfPin, 30); ['p-rec', 'p-cnt', 'p-dash'].forEach(function(p){ $(p).classList.toggle('on', p === id); });
     [].forEach.call(document.querySelectorAll('#tabbar button'), function(b){ b.classList.toggle('on', b.getAttribute('data-p') === id); });
     try{ history.replaceState(null, '', '#' + id.slice(2)); }catch(e){} }
   $('tabbar').addEventListener('click', function(e){ var b = e.target.closest('[data-p]'); if(b) showPane(b.getAttribute('data-p')); });

@@ -51,6 +51,18 @@
     '☕': 'coffee', '🆕': 'plus', '➕': 'plus', '🔔': 'bell', '📅': 'calendar', '🗓': 'calendar', '👤': 'user', '🚚': 'truck', '🛵': 'truck', '🏠': 'home',
     '🔒': 'lock', '⚙': 'gear', '💰': 'money', '💵': 'money', '⚠': 'warn', '✨': 'sparkle', '📤': 'upload', '📱': 'phone', '💬': 'chat', '🧮': 'calc', '🫖': 'coffee'
   };
+  // colours for the "Colorful" icon pack (each icon its own little glossy tile)
+  var COL = { camera: ['#5b8cff', '#3a5bd9'], mic: ['#ff6b8b', '#d93a63'], image: ['#36c48f', '#1c9467'], printer: ['#7b8aa3', '#4f5d75'], tag: ['#ffb547', '#e98a10'],
+    pencil: ['#ffcf4a', '#f0a500'], search: ['#4fc3f7', '#1e88e5'], log: ['#a78bfa', '#7c3aed'], trash: ['#ff7a6b', '#e5484d'], save: ['#3ecf8e', '#16a36a'],
+    clipboard: ['#8d9cf8', '#5b6be0'], cart: ['#ff9f43', '#ee6c12'], chart: ['#34d1bf', '#0e9f8f'], receipt: ['#c0a6ff', '#8b5cf6'], box: ['#d9a066', '#b3763a'],
+    star: ['#ffd54a', '#f5a400'], pin: ['#ff6b6b', '#d93a3a'], flower: ['#ff7eb6', '#e0457f'], choc: ['#a0673d', '#6b3e1f'], gift: ['#ff6fa1', '#d63a76'],
+    coffee: ['#c08a5a', '#8a5a33'], plus: ['#4ade80', '#16a34a'], bell: ['#ffc145', '#f08c00'], calendar: ['#ff8a65', '#e5533d'], user: ['#64b5f6', '#1e88e5'],
+    truck: ['#26c6da', '#00838f'], home: ['#81c784', '#43a047'], lock: ['#90a4ae', '#546e7a'], gear: ['#9e9e9e', '#616161'], money: ['#66bb6a', '#2e7d32'],
+    warn: ['#ffb300', '#ef6c00'], sparkle: ['#ffd54a', '#ff8f00'], upload: ['#4dd0e1', '#0097a7'], phone: ['#7986cb', '#3949ab'], chat: ['#4fc3f7', '#0288d1'], calc: ['#a1887f', '#6d4c41'] };
+  var PKEY = 'lbIconPack', PACKS = [['duo', 'Duotone'], ['line', 'Line'], ['bold', 'Bold'], ['color', 'Colorful'], ['emoji', 'Emoji']];
+  var pack = 'duo'; try { pack = localStorage.getItem(PKEY) || 'duo'; } catch (e) {}
+  function setPackAttr() { if (pack === 'duo') document.documentElement.removeAttribute('data-lbi-pack'); else document.documentElement.setAttribute('data-lbi-pack', pack); }
+  setPackAttr();
   var keys = Object.keys(MAP).sort(function (a, b) { return b.length - a.length; });
   var RX = new RegExp('^(\\s*)(' + keys.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')\\uFE0F?(\\s*)');
   var SKIP = 'script,style,textarea,input,select,option,svg,code,pre,title,noscript,[contenteditable],.lbi-skip,.lbi-w,#lbsu,[class^="o3-"],.o3,iframe';
@@ -67,6 +79,7 @@
     var only = !t.slice(m[0].length).trim() && !node.previousSibling && !node.nextSibling;
     var w = document.createElement('span'); w.className = 'lbi-w' + (only ? ' lbi-only' : '');
     w.innerHTML = svg(name) + '<span class="lbi-e">' + m[2] + '</span>';
+    var cc = COL[name]; if (cc) { w.style.setProperty('--c1', cc[0]); w.style.setProperty('--c2', cc[1]); }
     var rest = t.slice(m[0].length);
     var cs = getComputedStyle(el), flex = /flex|grid/.test(cs.display) && rest.trim();
     if (flex) {   // keep the icon and its words together as ONE item in a flex/grid parent (titles with space-between etc.)
@@ -96,6 +109,14 @@
     '.lbi{width:1.2em;height:1.2em;flex:none;overflow:visible;filter:drop-shadow(0 .6px .4px rgba(0,0,0,.12))}' +
     '.lbi-only .lbi{width:1.45em;height:1.45em}' +
     '.lbi .lbi-d{fill:currentColor;opacity:.2;stroke:none}.lbi .lbi-s{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}' +
+    // icon packs (⚙️ Settings → Look & feel → Icon style)
+    'html[data-lbi-pack="line"] .lbi .lbi-d{opacity:0}' +
+    'html[data-lbi-pack="bold"] .lbi .lbi-s{stroke-width:2.5}html[data-lbi-pack="bold"] .lbi .lbi-d{opacity:.38}' +
+    'html[data-lbi-pack="color"] .lbi-w{background:linear-gradient(150deg,var(--c1,#8aa0ff),var(--c2,#5a6fe0));color:#fff!important;border-radius:.45em;padding:.2em;' +
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 3px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.2)}' +
+    'html[data-lbi-pack="color"] .lbi{width:1.02em;height:1.02em;filter:drop-shadow(0 1px 0 rgba(0,0,0,.18))}html[data-lbi-pack="color"] .lbi .lbi-d{fill:#fff;opacity:.28}' +
+    'html[data-lbi-pack="color"] .lbi-only .lbi{width:1.2em;height:1.2em}' +
+    'html[data-lbi-pack="emoji"] .lbi{display:none}html[data-lbi-pack="emoji"] .lbi-e{position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important}' +
     '.lbi-e{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}';
   (document.head || document.documentElement).appendChild(css);
   var queued = [], timer = 0;
@@ -110,6 +131,7 @@
       if (!timer && queued.length) timer = setTimeout(flush, 60);
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
   }
-  window.LBIcons = { scan: scan, svg: svg };
+  window.LBIcons = { scan: scan, svg: svg, packs: function () { return PACKS.slice(); }, pack: function (v) {
+    if (v === undefined) return pack; pack = PACKS.some(function (p) { return p[0] === v; }) ? v : 'duo'; try { localStorage.setItem(PKEY, pack); } catch (e) {} setPackAttr(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

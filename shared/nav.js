@@ -39,8 +39,13 @@
   }
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
-    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=1';
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=2';
     (document.head || document.documentElement).appendChild(ic);
+  }
+  // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
+  if (!window.LBAccent && !document.querySelector('script[src^="shared/accent.js"]')) {
+    const ac = document.createElement('script'); ac.src = 'shared/accent.js?v=1';
+    (document.head || document.documentElement).appendChild(ac);
   }
   // ---- Module menus (shown on pages of that module) ----
   const MODULES = {
@@ -673,6 +678,8 @@
       '.lbset-head b{font-size:17px}',
       '.lbset-x{background:none;border:0;font-size:20px;color:var(--s-dim);cursor:pointer;padding:4px 8px}',
       '.lbset h4{margin:16px 0 8px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--s-acc)}',
+      '.lbset-acc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.lbset-acc button{display:flex;align-items:center;gap:7px;border:1.5px solid var(--s-line,#eadfe3);background:var(--s-card,#fff);border-radius:11px;padding:7px 8px;font:inherit;font-size:11.5px;font-weight:600;color:inherit;cursor:pointer;text-align:left;min-width:0}' +
+      '.lbset-acc button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbset-acc button i{flex:none;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 1px 3px rgba(0,0,0,.2)}.lbset-acc button.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(0,0,0,.06)}',
       '.lbset-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.lbset-seg2{grid-template-columns:1fr 1fr}',
       '.lbset-link{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--s-line);color:var(--s-ink);text-decoration:none;font-size:13.5px;font-weight:600}.lbset-link:last-child{border-bottom:0}.lbset-link:hover{background:var(--s-acc-soft)}',
       '.lbset-seg button,.lbset-tabs button{border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);border-radius:10px;padding:10px 4px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}',
@@ -741,7 +748,20 @@
     const L = window.LBLook;
     if (!L) return '';
     const g = L.get(), pres = L.presets(), mine = L.walls();
-    let h = '<h4>Wallpaper</h4><div class="lbset-walls">';
+    let h = '';
+    const A = window.LBAccent, IC = window.LBIcons;
+    if (A) {
+      const cur = A.get();
+      h += '<h4>Color theme</h4><div class="lbset-acc">' + A.list().map(p => '<button type="button" data-accent="' + p.id + '" class="' + (cur === p.id ? 'on' : '') + '" title="' + esc(p.name) + '">' +
+        '<i style="background:linear-gradient(135deg,' + p.a + ' 0 50%,' + p.d + ' 50% 100%)"></i><span>' + esc(p.name) + '</span></button>').join('') + '</div>' +
+        '<div class="lbset-note">Changes the main colour of the buttons, titles and boxes. Lalabella Rose = as designed. Saved on this device.</div>';
+    }
+    if (IC && IC.packs) {
+      const pk = IC.pack();
+      h += '<h4>Icon style</h4><div class="lbset-seg lbset-seg2">' + IC.packs().map(p => '<button type="button" data-ipack="' + p[0] + '" class="' + (pk === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
+        '<div class="lbset-note">Duotone = default · Line = thin outline · Bold = thicker · Colorful = each icon on its own colour tile · Emoji = the old emoji.</div>';
+    }
+    h += '<h4>Wallpaper</h4><div class="lbset-walls">';
     h += '<button type="button" class="lbset-wall none' + (g.wall === 'off' ? ' on' : '') + '" data-wall="off">No wallpaper</button>';
     pres.forEach(p => { h += '<button type="button" class="lbset-wall' + (g.wall === p.id ? ' on' : '') + '" data-wall="' + p.id + '" style="background-image:url(&quot;' + p.uri + '&quot;)"><span>' + esc(p.name) + '</span></button>'; });
     mine.forEach((u, i) => {
@@ -945,6 +965,8 @@
     if (t.dataset.wallx) { if (!confirm('Remove this photo?')) return; lookErr = ''; window.LBLook.removeWall(parseInt(t.dataset.wallx, 10)); drawSettings(); return; }
     if (t.dataset.glass) { window.LBLook.set({ glass: t.dataset.glass === 'on' }); drawSettings(); return; }
     if (t.dataset.icons) { window.LBLook.set({ icons: t.dataset.icons }); drawSettings(); return; }
+    if (t.dataset.accent) { window.LBAccent.set(t.dataset.accent); drawSettings(); return; }
+    if (t.dataset.ipack) { window.LBIcons.pack(t.dataset.ipack); drawSettings(); return; }
     if (t.hasAttribute('data-lookreset')) { if (!confirm('Reset wallpaper, text size, boxes and icons to the default look?')) return; lookErr = ''; window.LBLook.reset(); drawSettings(); return; }
     if (t.hasAttribute('data-pushon')) { t.disabled = true; window.LBPush.turnOn().then(ok => { pushMsg = ok ? '' : 'Could not turn on. Allow notifications when asked, or check phone settings.'; fillPush(); }); return; }
     if (t.hasAttribute('data-pushoff')) { t.disabled = true; window.LBPush.turnOff().then(() => { fillPush(); }); return; }
