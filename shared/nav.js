@@ -586,6 +586,28 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { hookBars(); setTimeout(hookBars, 800); }); else { hookBars(); setTimeout(hookBars, 800); }
   }
 
+  // Nov 23 2026 (Bench: "ung mp3 lagyan mo ng hide button"): the ♫ Music box in the menu can be folded away (remembered on this device).
+  (function musicHide() {
+    const run = () => {
+      const inp = document.getElementById('chocoMusicUrlInput'); if (!inp) return;
+      const box = inp.closest('.choco-music-box') || inp.parentElement; if (!box || box.__lbmh) return; box.__lbmh = 1;
+      if (!document.getElementById('lbmhCss')) { const c = document.createElement('style'); c.id = 'lbmhCss';
+        c.textContent = '.lbmh-head{display:flex!important;align-items:center;justify-content:space-between;gap:8px}button.lbmh-btn.lbmh-btn{width:auto!important;flex:0 0 auto!important;margin:0!important;border:1px solid rgba(158,47,74,.25)!important;background:rgba(255,255,255,.75)!important;color:#9e2f4a!important;border-radius:999px!important;padding:3px 10px!important;font-size:10px!important;font-weight:700!important;line-height:1.2!important;font-family:inherit;letter-spacing:.04em;cursor:pointer;text-transform:none;box-shadow:none!important;height:auto!important;min-height:0!important}' +
+          '.lbmh-off>*:not(.lbmh-head){display:none!important}.lbmh-off .lbmh-head{margin-bottom:0!important}';
+        document.head.appendChild(c); }
+      let head = box.querySelector('label');
+      if (!head || head.parentElement !== box) { head = document.createElement('div'); head.style.cssText = 'font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9e2f4a;margin-bottom:6px'; head.textContent = 'Music'; box.insertBefore(head, box.firstChild); }
+      head.classList.add('lbmh-head');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'lbmh-btn';
+      const set = off => { box.classList.toggle('lbmh-off', off); b.textContent = off ? '▸ Show' : '▾ Hide'; try { localStorage.setItem('lbMusicHidden', off ? '1' : ''); } catch (e) {} };
+      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); set(!box.classList.contains('lbmh-off')); });
+      head.appendChild(b);
+      let off = false; try { off = localStorage.getItem('lbMusicHidden') === '1'; } catch (e) {}
+      set(off);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+  })();
+
   if (!document.getElementById('lb-nav-style')) {
     const st = document.createElement('style');
     st.id = 'lb-nav-style';

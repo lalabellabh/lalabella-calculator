@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-lb-no-zoom>
 <head>
 <meta name="robots" content="noindex, nofollow">
 <script src="shared/config.js"></script>
@@ -778,13 +778,11 @@ kbd{
   }
   /* Nov 23 2026 (Bench: "ung heart di kita pag apps"): on phone the sunflower art was pushed past the right edge.
      It now sits fully inside the hero card, on the right of the title. */
-  /* Nov 23 2026: on phone the page is one screen tall — divide by the Text size zoom (else the bottom is cut off)
-     and keep the bottom free for the app bar so it never covers the tools. */
+  /* Nov 23 2026: Flower Tools keeps its original size (<html data-lb-no-zoom>, Bench: "ok na ang original size") — no scroll;
+     the bottom stays free for the app bar so it never covers the tools, and the Select a Tool box fills down to it. */
   @media(max-width:900px){
-    .app{height:calc(100dvh / var(--lb-zoom,1))!important;min-height:0!important;box-sizing:border-box;padding-bottom:calc(86px + env(safe-area-inset-bottom))}
-    /* bigger Text size: the page may not fit one screen any more — let it scroll so the tools stay reachable */
-    html[style*="zoom"] .main{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
-    html[style*="zoom"] .hero-art{top:10px!important;transform:scale(.42)!important;transform-origin:top right!important}
+    .app{height:100dvh!important;min-height:0!important}
+    .content{box-sizing:border-box!important;padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
   }
   @media(max-width:700px){
     .hero-art{position:absolute!important;right:4px;top:50%;width:190px!important;height:190px!important;min-height:0!important;margin:0!important;
@@ -2781,6 +2779,6 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
 </script>
 <script src="joyboy-bubble.js"></script>
 <script src="shared/pull-refresh.js?v=1"></script>
-<script src="shared/app-bar.js?v=4" data-apps="index.html,flower-dashboard.html,flower-receiving.html,flower-stock-count.html" data-key="flower"></script>
+<script src="shared/app-bar.js?v=5" data-apps="index.html,flower-dashboard.html,flower-receiving.html,flower-stock-count.html" data-key="flower"></script>
 </body>
 </html>

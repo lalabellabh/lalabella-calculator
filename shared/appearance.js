@@ -239,6 +239,10 @@
       'html[data-lb-theme="dark"].lb-wall .choco-drawer a,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer a,html[data-lb-theme="dark"].lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,.08)!important}',
       'html[data-lb-glass] #app .glass{-webkit-backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8);backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8)}',
       // iPhone-style glass: strong blur + vivid colours, bright rim light on top/left, soft depth shadow
+      'html.lb-wall .lbset{--s-bg:rgba(253,251,249,var(--lb-sa,.98));--s-card:rgba(255,255,255,var(--lb-sa,.98));-webkit-backdrop-filter:blur(var(--lb-gblur,26px));backdrop-filter:blur(var(--lb-gblur,26px))}',
+      'html.lb-wall[data-lb-theme="dark"] .lbset{--s-bg:rgba(29,23,25,var(--lb-sa,.98));--s-card:rgba(39,32,35,var(--lb-sa,.98))}',
+      'html.lb-wall .lbset-head{background:rgba(253,251,249,.94)!important}html.lb-wall[data-lb-theme="dark"] .lbset-head{background:rgba(29,23,25,.94)!important}',
+      'html.lb-wall .lbset-back{background:rgba(30,15,22,.18)!important;backdrop-filter:none!important}',
       '[data-lbglass]{-webkit-backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8) brightness(1.04);backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8) brightness(1.04);border:1px solid rgba(255,255,255,.55)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 1px 0 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.12),0 8px 28px rgba(60,20,40,.14)!important}',
       'html[data-lb-theme="dark"] [data-lbglass]{border-color:rgba(255,255,255,.2)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 28px rgba(0,0,0,.35)!important}',
       'html[data-lb-icons="circle"] :is(' + ICONS_ALL + '){border-radius:50%!important;overflow:hidden}',
@@ -531,6 +535,8 @@
   var printingNow = false;
   function applyText() {
     // --lb-zoom lets full-height layouts divide 100vh by the zoom (with CSS zoom, 100vh grows with it and the page overflows)
+    // a page can keep its own size (Nov 23 2026, Bench: Flower Tools looks right only at its original size): <html data-lb-no-zoom>
+    if (st.text === 100 || printingNow || root.hasAttribute('data-lb-no-zoom')) { root.style.removeProperty('zoom'); root.style.removeProperty('--lb-zoom'); zoomFix(1); return; }
     if (st.text === 100 || printingNow) { root.style.removeProperty('zoom'); root.style.removeProperty('--lb-zoom'); }
     else { root.style.zoom = String(st.text / 100); root.style.setProperty('--lb-zoom', String(st.text / 100)); }
     // Nov 23 2026: the menu, ⚙️ Settings, side dock, chat and Nova pop-ups are placed with screen sizes (innerWidth/Height, vw),
@@ -555,6 +561,9 @@
     // so a higher % really shows the wallpaper (26px blur at 0% → 5px at 70%).
     var e = eff(); root.style.setProperty('--lb-gblur', Math.round(26 - e * 0.3) + 'px');
     var dra = e > 0 ? Math.max(0.16, Math.min(0.88, 0.9 - e / 90)) : 0.88;
+    // ⚙️ Settings sheet + app bar see-through too, so you can watch the slider work (readable: never below 40% solid)
+    root.style.setProperty('--lb-sa', String(Math.round((e > 0 ? Math.max(0.4, 1 - e / 100 * 0.85) : 0.98) * 100) / 100));
+    root.style.setProperty('--lb-ba', String(Math.round((e > 0 ? Math.max(0.22, 0.86 - e / 100 * 0.9) : 0.86) * 100) / 100));
     root.style.setProperty('--lb-dra', String(Math.round(dra * 100) / 100)); root.style.setProperty('--lb-dra2', String(Math.round(dra * 85) / 100));
     applyBoxes();
     textStart();
