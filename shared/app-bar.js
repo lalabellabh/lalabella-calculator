@@ -42,6 +42,12 @@
     '#lbab[data-s=glass]{background:rgba(255,255,255,.35);backdrop-filter:blur(26px) saturate(1.8);-webkit-backdrop-filter:blur(26px) saturate(1.8);border-color:rgba(255,255,255,.7)}#lbab[data-s=glass] .t{background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}' +
     '#lbab[data-s=color]{background:linear-gradient(135deg,#c9506b,#9e2f4a);border:0}#lbab[data-s=color] a,#lbab[data-s=color] button{color:#fff}#lbab[data-s=color] a.on .t{background:linear-gradient(160deg,#fff,#ffe3ea);box-shadow:0 10px 22px rgba(0,0,0,.25)}' +
     '#lbab[data-s=mini]{height:58px;align-items:center;padding:0 10px;left:50%;right:auto;transform:translateX(-50%);width:auto;gap:6px;border-radius:999px}#lbab[data-s=mini] a,#lbab[data-s=mini] button{flex:0 0 auto}#lbab[data-s=mini] .l{display:none}#lbab[data-s=mini] .t{width:44px;height:44px;margin:0;border-radius:50%;font-size:21px}#lbab[data-s=mini].lp{transform:translateX(-50%) scale(.97)}' +
+    '#lbab[data-s=glossy]{background:linear-gradient(180deg,rgba(255,255,255,.5) 0,rgba(255,255,255,.12) 46%,rgba(255,255,255,0) 50%),linear-gradient(135deg,#c9506b,#9e2f4a);border:1px solid rgba(255,255,255,.45);box-shadow:0 14px 34px rgba(158,47,74,.38),inset 0 1px 0 rgba(255,255,255,.8),inset 0 -3px 8px rgba(0,0,0,.18)}' +
+    '#lbab[data-s=glossy] a,#lbab[data-s=glossy] button{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.25)}#lbab[data-s=glossy] .t,#lbab[data-s=color] .t{color:#5a4048;text-shadow:none}' +
+    '#lbab[data-s=glossy] .t,#lbab[data-s=pearl] .t{background:linear-gradient(180deg,#fff 0,#fdf3f6 48%,#f3dde4 52%,#fbeef2 100%);box-shadow:0 8px 18px rgba(60,30,40,.25),inset 0 2px 0 #fff,inset 0 -3px 6px rgba(158,47,74,.12);border:1px solid rgba(255,255,255,.95)}' +
+    '#lbab[data-s=glossy] a.on .t{background:linear-gradient(180deg,#fff6d8 0,#ffe39a 48%,#f6c75a 52%,#ffe08a 100%)}' +
+    '#lbab[data-s=pearl]{background:linear-gradient(180deg,rgba(255,255,255,.98) 0,rgba(255,255,255,.75) 48%,rgba(246,232,238,.85) 52%,rgba(255,255,255,.9) 100%);border:1px solid #fff;box-shadow:0 14px 34px rgba(60,30,40,.22),inset 0 1px 0 #fff,inset 0 -2px 6px rgba(158,47,74,.1)}' +
+    'body.nav-open #lbab{opacity:0;pointer-events:none}' +
     'body.lbab-on{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}}' +
     '.lbab-tip{position:fixed;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9001;background:rgba(40,22,30,.9);color:#fff;font:600 12px/1.3 system-ui,sans-serif;padding:8px 13px;border-radius:999px;white-space:nowrap;pointer-events:none;transition:opacity .4s}' +
     '.lbab-bg{position:fixed;inset:0;z-index:2147483000;background:rgba(30,15,22,.45);display:flex;align-items:flex-end;justify-content:center}' +
@@ -57,7 +63,7 @@
     '.lbab-sh .st i{display:block;width:100%;height:22px;margin-top:6px;border-radius:9px;position:relative;border:1px solid #eadfe3}.lbab-sh .st i:before,.lbab-sh .st i:after{content:"";position:absolute;top:-5px;width:16px;height:16px;border-radius:6px;background:inherit;box-shadow:0 2px 5px rgba(0,0,0,.18)}.lbab-sh .st i:before{left:22%}.lbab-sh .st i:after{right:22%}' +
     '.lbab-sh .f{display:flex;gap:8px;margin-top:14px}.lbab-sh .f button{flex:1;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid #eadfe3;background:#fff;color:inherit}.lbab-sh .f .go{background:linear-gradient(135deg,#c9506b,#9e2f4a);color:#fff;border:0}';
   var STYLES = [['raised', 'Raised', 'linear-gradient(#fff,#f3e6ea)'], ['flat', 'Flat', '#fff'], ['glass', 'Glass', 'rgba(255,255,255,.5)'],
-    ['dark', 'Dark', '#2a1c22'], ['color', 'Color', 'linear-gradient(135deg,#c9506b,#9e2f4a)'], ['mini', 'Mini pill', '#fdeef2']];
+    ['glossy', 'Glossy', 'linear-gradient(180deg,rgba(255,255,255,.55) 0,rgba(255,255,255,.1) 46%,transparent 50%),linear-gradient(135deg,#c9506b,#9e2f4a)'], ['pearl', 'Pearl', 'linear-gradient(180deg,#fff 0,#fff 48%,#f3dde4 52%,#fff 100%)'], ['dark', 'Dark', '#2a1c22'], ['color', 'Color', 'linear-gradient(135deg,#c9506b,#9e2f4a)'], ['mini', 'Mini pill', '#fdeef2']];
   var SKEY = 'lbAppBarStyle';
   function getStyle() { try { return localStorage.getItem(SKEY) || 'raised'; } catch (e) { return 'raised'; } }
   var bar = null;

@@ -233,13 +233,13 @@
       'html.lb-wall body{background:transparent!important;background-image:none!important}',
       'html.lb-wall #app{background:transparent!important}',
       // the side menu (hamburger drawer) turns into frosted glass too, so the wallpaper shows through it
-      'html.lb-wall .choco-drawer,html[data-lb-glass] .choco-drawer,html.lb-wall .lbnav-drawer,html[data-lb-glass] .lbnav-drawer{background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(30px) saturate(1.8)!important;backdrop-filter:blur(30px) saturate(1.8)!important;border-right:1px solid rgba(255,255,255,.6)!important}',
-      'html.lb-wall .choco-drawer a,html[data-lb-glass] .choco-drawer a,html.lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,.42)!important}',
-      'html[data-lb-theme="dark"].lb-wall .choco-drawer,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer,html[data-lb-theme="dark"].lb-wall .lbnav-drawer,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer{background:rgba(22,15,20,.52)!important;border-right-color:rgba(255,255,255,.14)!important}',
+      'html.lb-wall .choco-drawer,html.lb-wall .app>.sidebar,html[data-lb-glass] .app>.sidebar,html[data-lb-glass] .choco-drawer,html.lb-wall .lbnav-drawer,html[data-lb-glass] .lbnav-drawer{background:rgba(255,255,255,var(--lb-dra,.5))!important;-webkit-backdrop-filter:blur(var(--lb-gblur,30px)) saturate(1.8)!important;backdrop-filter:blur(var(--lb-gblur,30px)) saturate(1.8)!important;border-right:1px solid rgba(255,255,255,.6)!important}',
+      'html.lb-wall .choco-drawer a,html[data-lb-glass] .choco-drawer a,html.lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,var(--lb-dra2,.42))!important}',
+      'html[data-lb-theme="dark"].lb-wall .choco-drawer,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer,html[data-lb-theme="dark"].lb-wall .lbnav-drawer,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer{background:rgba(22,15,20,var(--lb-dra,.52))!important;border-right-color:rgba(255,255,255,.14)!important}',
       'html[data-lb-theme="dark"].lb-wall .choco-drawer a,html[data-lb-theme="dark"][data-lb-glass] .choco-drawer a,html[data-lb-theme="dark"].lb-wall .lbnav-drawer .lbnav-hub a,html[data-lb-theme="dark"][data-lb-glass] .lbnav-drawer .lbnav-hub a{background:rgba(255,255,255,.08)!important}',
-      'html[data-lb-glass] #app .glass{-webkit-backdrop-filter:blur(26px) saturate(1.8);backdrop-filter:blur(26px) saturate(1.8)}',
+      'html[data-lb-glass] #app .glass{-webkit-backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8);backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8)}',
       // iPhone-style glass: strong blur + vivid colours, bright rim light on top/left, soft depth shadow
-      '[data-lbglass]{-webkit-backdrop-filter:blur(26px) saturate(1.8) brightness(1.04);backdrop-filter:blur(26px) saturate(1.8) brightness(1.04);border:1px solid rgba(255,255,255,.55)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 1px 0 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.12),0 8px 28px rgba(60,20,40,.14)!important}',
+      '[data-lbglass]{-webkit-backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8) brightness(1.04);backdrop-filter:blur(var(--lb-gblur,26px)) saturate(1.8) brightness(1.04);border:1px solid rgba(255,255,255,.55)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 1px 0 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.12),0 8px 28px rgba(60,20,40,.14)!important}',
       'html[data-lb-theme="dark"] [data-lbglass]{border-color:rgba(255,255,255,.2)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 28px rgba(0,0,0,.35)!important}',
       'html[data-lb-icons="circle"] :is(' + ICONS_ALL + '){border-radius:50%!important;overflow:hidden}',
       'html[data-lb-icons="square"] :is(' + ICONS_ALL + '){border-radius:24%!important;overflow:hidden}',
@@ -551,6 +551,11 @@
   function applyAll() {
     css(); applyWall(); applyIcons(); applyText();
     if (st.glass && !nativeDark()) root.setAttribute('data-lb-glass', '1'); else root.removeAttribute('data-lb-glass');
+    // Nov 23 2026 (Bench: "parang solid padin"): the See-through slider also thins the frosted blur and the ☰ menu,
+    // so a higher % really shows the wallpaper (26px blur at 0% → 5px at 70%).
+    var e = eff(); root.style.setProperty('--lb-gblur', Math.round(26 - e * 0.3) + 'px');
+    var dra = e > 0 ? Math.max(0.16, Math.min(0.88, 0.9 - e / 90)) : 0.88;
+    root.style.setProperty('--lb-dra', String(Math.round(dra * 100) / 100)); root.style.setProperty('--lb-dra2', String(Math.round(dra * 85) / 100));
     applyBoxes();
     textStart();
   }

@@ -573,10 +573,17 @@
     const bs = document.createElement('style');
     bs.id = 'lb-burger-size';
     const B = ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s).join(',');
-    bs.textContent = B + '{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;border-radius:12px!important;padding:0!important;font-size:20px!important;line-height:1!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}' +
+    bs.textContent = B + '{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;border-radius:12px!important;padding:0!important;font-size:25px!important;line-height:1!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}' +
       ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s + ' svg').join(',') + '{width:22px!important;height:22px!important}' +
       '@media print{' + B + '{display:none!important}}';
     document.head.appendChild(bs);
+    // the text ☰ is thinner than the Home one: draw the same 3 rounded bars as index.html (✕ and other text stay as they are)
+    const BARS = '<svg class="lb-bars" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect y="3" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="8.9" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="14.8" width="20" height="2.2" rx="1.1" fill="currentColor"/></svg>';
+    const fixBars = b => { if (b.children.length === 0 && b.textContent.trim() === '☰') b.innerHTML = BARS; };
+    const hookBars = () => document.querySelectorAll('.choco-nav-toggle,.nav-toggle,.lbnav-btn').forEach(b => {
+      fixBars(b); if (b.__lbBars || !window.MutationObserver) return; b.__lbBars = 1;
+      new MutationObserver(() => fixBars(b)).observe(b, { childList: true, characterData: true, subtree: true }); });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { hookBars(); setTimeout(hookBars, 800); }); else { hookBars(); setTimeout(hookBars, 800); }
   }
 
   if (!document.getElementById('lb-nav-style')) {
