@@ -4,7 +4,9 @@
  * Loaded on every page by shared/nav.js (skipped on the HQ office, which uses its own characters).
  */
 (function () {
-  if (window.LBIcons || /office\.html$/i.test(location.pathname)) return;
+  if (window.LBIcons) return;
+  // On the HQ office only the menu, ⚙️ Settings and the side dock get icons (the office itself has its own characters).
+  var ONLY = /office\.html$/i.test(location.pathname) ? '.lbnav-drawer,.lbnav-btn,.lbset-back,#lbdock-tray,#lbdock-pick' : '';
   // 24×24 · d = soft fill (duotone), s = outline. Drawn for Lalabella, Lucide-like proportions.
   var I = {
     camera: { d: 'M4 8.5h3l1.6-2.3h6.8L17 8.5h3v10H4z', s: 'M4 8.5h3l1.6-2.3h6.8L17 8.5h3a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z M12 16.4a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z M17.6 11h.01' },
@@ -83,7 +85,7 @@
     book: ['#b58cff', '#7b4fe0'], health: ['#ff7c8a', '#e0435a'], bulb: ['#ffd23f', '#f2a100'], map: ['#5fd39a', '#24a56b'], folder: ['#ffc65c', '#f09b1a'], link: ['#7dd3fc', '#0ea5e9'],
     refresh: ['#67e8f9', '#06b6d4'], doc: ['#a5b4fc', '#6366f1'], laptop: ['#94a3b8', '#475569'], mail: ['#f9a8d4', '#ec4899'], users: ['#93c5fd', '#3b82f6'], leaf: ['#86efac', '#22c55e'],
     check: ['#4ade80', '#16a34a'], car: ['#fca5a5', '#ef4444'] };
-  var PKEY = 'lbIconPack', PACKS = [['duo', 'Duotone'], ['line', 'Line'], ['bold', 'Bold'], ['color', 'Colorful'], ['emoji', 'Emoji']];
+  var PKEY = 'lbIconPack', PACKS = [['duo', 'Classic'], ['tint', 'Colored'], ['color', 'App tiles'], ['glass', '3D Glass'], ['pastel', 'Pastel'], ['neon', 'Neon'], ['gold', 'Gold'], ['line', 'Thin line'], ['bold', 'Bold'], ['emoji', 'Emoji']];
   var pack = 'duo'; try { pack = localStorage.getItem(PKEY) || 'duo'; } catch (e) {}
   function setPackAttr() { if (pack === 'duo') document.documentElement.removeAttribute('data-lbi-pack'); else document.documentElement.setAttribute('data-lbi-pack', pack); }
   setPackAttr();
@@ -99,6 +101,7 @@
     var m = RX.exec(t); if (!m) return;
     var el = node.parentNode; if (!el || el.nodeType !== 1 || el.closest(SKIP)) return;
     if (!el.closest(HOSTS)) return;
+    if (ONLY && !el.closest(ONLY)) return;
     var name = MAP[m[2]]; if (!name) return;
     var only = !t.slice(m[0].length).trim() && !node.previousSibling && !node.nextSibling;
     var w = document.createElement('span'); w.className = 'lbi-w' + (only ? ' lbi-only' : '');
@@ -133,14 +136,24 @@
     '.lbi{width:1.2em;height:1.2em;flex:none;overflow:visible;filter:drop-shadow(0 .6px .4px rgba(0,0,0,.12))}' +
     '.lbi-only .lbi{width:1.45em;height:1.45em}' +
     '.lbi .lbi-d{fill:currentColor;opacity:.2;stroke:none}.lbi .lbi-s{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}' +
-    // icon packs (⚙️ Settings → Look & feel → Icon style)
-    'html[data-lbi-pack="line"] .lbi .lbi-d{opacity:0}' +
-    'html[data-lbi-pack="bold"] .lbi .lbi-s{stroke-width:2.5}html[data-lbi-pack="bold"] .lbi .lbi-d{opacity:.38}' +
-    'html[data-lbi-pack="color"] .lbi-w{background:linear-gradient(150deg,var(--c1,#8aa0ff),var(--c2,#5a6fe0));color:#fff!important;border-radius:.45em;padding:.2em;' +
-      'box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 3px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.2)}' +
-    'html[data-lbi-pack="color"] .lbi{width:1.02em;height:1.02em;filter:drop-shadow(0 1px 0 rgba(0,0,0,.18))}html[data-lbi-pack="color"] .lbi .lbi-d{fill:#fff;opacity:.28}' +
-    'html[data-lbi-pack="color"] .lbi-only .lbi{width:1.2em;height:1.2em}' +
-    'html[data-lbi-pack="emoji"] .lbi{display:none}html[data-lbi-pack="emoji"] .lbi-e{position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important}' +
+    // icon packs (⚙️ Settings → Look & feel → Icon style). P(x) = the whole page in that pack OR a preview chip of it.
+    (function () {
+      // page rules skip the preview chips ([data-ipv]), so each chip shows its own pack whatever the page uses
+      function P(x, sel) { return sel.split(',').map(function (q) { return 'html[data-lbi-pack="' + x + '"] ' + q + ':not([data-ipv] *),[data-ipv="' + x + '"] ' + q; }).join(','); }
+      return P('line', '.lbi .lbi-d') + '{opacity:0}' +
+        P('bold', '.lbi .lbi-s') + '{stroke-width:2.5}' + P('bold', '.lbi .lbi-d') + '{opacity:.38}' +
+        P('tint', '.lbi-w') + '{color:var(--c2,#5a6fe0)!important}' + P('tint', '.lbi .lbi-d') + '{fill:var(--c1,#8aa0ff);opacity:.55}' + P('tint', '.lbi .lbi-s') + '{stroke-width:1.9}' +
+        P('color', '.lbi-w') + '{background:linear-gradient(150deg,var(--c1,#8aa0ff),var(--c2,#5a6fe0));color:#fff!important;border-radius:.45em;padding:.2em;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 3px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.2)}' +
+        P('color', '.lbi') + '{width:1.02em;height:1.02em}' + P('color', '.lbi .lbi-d') + '{fill:#fff;opacity:.28}' + P('color', '.lbi-only .lbi') + '{width:1.2em;height:1.2em}' +
+        P('glass', '.lbi-w') + '{background:radial-gradient(120% 90% at 30% 18%,rgba(255,255,255,.95) 0 18%,rgba(255,255,255,0) 46%),linear-gradient(165deg,var(--c1,#8aa0ff),var(--c2,#5a6fe0) 78%);color:#fff!important;border-radius:32%;padding:.24em;' +
+          'box-shadow:inset 0 -.18em .3em rgba(0,0,0,.28),inset 0 .08em .1em rgba(255,255,255,.7),0 .22em .45em rgba(0,0,0,.22),0 .05em 0 rgba(0,0,0,.12)}' +
+        P('glass', '.lbi') + '{width:1em;height:1em;filter:drop-shadow(0 .06em .06em rgba(0,0,0,.35))}' + P('glass', '.lbi .lbi-d') + '{fill:#fff;opacity:.35}' + P('glass', '.lbi .lbi-s') + '{stroke-width:2}' + P('glass', '.lbi-only .lbi') + '{width:1.2em;height:1.2em}' +
+        P('pastel', '.lbi-w') + '{background:color-mix(in srgb,var(--c1,#8aa0ff) 24%,#fff);color:var(--c2,#5a6fe0)!important;border-radius:50%;padding:.24em;box-shadow:0 0 0 1px color-mix(in srgb,var(--c1,#8aa0ff) 35%,transparent)}' +
+        P('pastel', '.lbi') + '{width:1em;height:1em}' + P('pastel', '.lbi .lbi-d') + '{fill:var(--c1,#8aa0ff);opacity:.45}' + P('pastel', '.lbi-only .lbi') + '{width:1.2em;height:1.2em}' +
+        P('neon', '.lbi-w') + '{color:var(--c1,#8aa0ff)!important}' + P('neon', '.lbi') + '{filter:drop-shadow(0 0 .04em var(--c1,#8aa0ff)) drop-shadow(0 0 .1em var(--c2,#5a6fe0))}' + P('neon', '.lbi .lbi-d') + '{opacity:.18}' + P('neon', '.lbi .lbi-s') + '{stroke-width:2.1}' +
+        P('gold', '.lbi-w') + '{color:#9a6a12!important}' + P('gold', '.lbi') + '{filter:drop-shadow(0 .05em .05em rgba(120,80,10,.35))}' + P('gold', '.lbi .lbi-d') + '{fill:#f2cf6b;opacity:.85}' + P('gold', '.lbi .lbi-s') + '{stroke:#a8761c;stroke-width:1.9}' +
+        P('emoji', '.lbi') + '{display:none}' + P('emoji', '.lbi-w') + '{line-height:1.1}' + P('emoji', '.lbi-e') + '{position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important}';
+    })() +
     '.lbi-e{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}';
   (document.head || document.documentElement).appendChild(css);
   var queued = [], timer = 0;
@@ -155,7 +168,8 @@
       if (!timer && queued.length) timer = setTimeout(flush, 60);
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
   }
-  window.LBIcons = { scan: scan, svg: svg, packs: function () { return PACKS.slice(); }, pack: function (v) {
+  function chip(name) { var cc = COL[name] || ['#8aa0ff', '#5a6fe0']; return '<span class="lbi-w lbi-only" style="--c1:' + cc[0] + ';--c2:' + cc[1] + '">' + svg(name) + '<span class="lbi-e">' + Object.keys(MAP).filter(function (k) { return MAP[k] === name; })[0] + '</span></span>'; }
+  window.LBIcons = { scan: scan, svg: svg, chip: chip, packs: function () { return PACKS.slice(); }, pack: function (v) {
     if (v === undefined) return pack; pack = PACKS.some(function (p) { return p[0] === v; }) ? v : 'duo'; try { localStorage.setItem(PKEY, pack); } catch (e) {} setPackAttr(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

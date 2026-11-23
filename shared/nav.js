@@ -39,7 +39,7 @@
   }
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
-    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=3';
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=4';
     (document.head || document.documentElement).appendChild(ic);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
@@ -678,6 +678,8 @@
       '.lbset-head b{font-size:17px}',
       '.lbset-x{background:none;border:0;font-size:20px;color:var(--s-dim);cursor:pointer;padding:4px 8px}',
       '.lbset h4{margin:16px 0 8px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--s-acc)}',
+      '.lbset-ipk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.lbset-ipk button{display:flex;flex-direction:column;align-items:center;gap:6px;border:1.5px solid var(--s-line,#eadfe3);background:var(--s-card,#fff);border-radius:13px;padding:10px 6px 8px;font:inherit;color:inherit;cursor:pointer}' +
+      '.lbset-ipk button.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(0,0,0,.06)}.lbset-ipk .ipv{display:flex;gap:9px;font-size:19px;color:#3a2a32;line-height:1}.lbset-ipk .ipv .lbi-w{margin:0}.lbset-ipk b{font-size:12px;font-weight:600}',
       '.lbset-acc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.lbset-acc button{display:flex;align-items:center;gap:7px;border:1.5px solid var(--s-line,#eadfe3);background:var(--s-card,#fff);border-radius:11px;padding:7px 8px;font:inherit;font-size:11.5px;font-weight:600;color:inherit;cursor:pointer;text-align:left;min-width:0}' +
       '.lbset-acc button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbset-acc button i{flex:none;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 1px 3px rgba(0,0,0,.2)}.lbset-acc button.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(0,0,0,.06)}',
       '.lbset-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.lbset-seg2{grid-template-columns:1fr 1fr}',
@@ -756,11 +758,6 @@
         '<i style="background:linear-gradient(135deg,' + p.a + ' 0 50%,' + p.d + ' 50% 100%)"></i><span>' + esc(p.name) + '</span></button>').join('') + '</div>' +
         '<div class="lbset-note">Changes the main colour of the buttons, titles and boxes. Lalabella Rose = as designed. Saved on this device.</div>';
     }
-    if (IC && IC.packs) {
-      const pk = IC.pack();
-      h += '<h4>Icon style</h4><div class="lbset-seg lbset-seg2">' + IC.packs().map(p => '<button type="button" data-ipack="' + p[0] + '" class="' + (pk === p[0] ? 'on' : '') + '">' + p[1] + '</button>').join('') + '</div>' +
-        '<div class="lbset-note">Duotone = default · Line = thin outline · Bold = thicker · Colorful = each icon on its own colour tile · Emoji = the old emoji.</div>';
-    }
     h += '<h4>Wallpaper</h4><div class="lbset-walls">';
     h += '<button type="button" class="lbset-wall none' + (g.wall === 'off' ? ' on' : '') + '" data-wall="off">No wallpaper</button>';
     pres.forEach(p => { h += '<button type="button" class="lbset-wall' + (g.wall === p.id ? ' on' : '') + '" data-wall="' + p.id + '" style="background-image:url(&quot;' + p.uri + '&quot;)"><span>' + esc(p.name) + '</span></button>'; });
@@ -783,6 +780,10 @@
       '<div class="lbset-note">0% = solid boxes. Higher = you see the wallpaper through them. Glassy adds a frosted blur.</div>' +
       '<div class="lbset-rl" style="margin:12px 0 6px"><span>Icon shape</span></div><div class="lbset-seg">' +
       [['plain', 'Default'], ['circle', '⭕ Circle'], ['square', '⬜ Box']].map(m => '<button type="button" data-icons="' + m[0] + '" class="' + (g.icons === m[0] ? 'on' : '') + '">' + m[1] + '</button>').join('') + '</div>' +
+      (window.LBIcons && window.LBIcons.packs ? (() => { const IC = window.LBIcons, pk = IC.pack(), demo = ['flower', 'choc', 'camera', 'cart'];
+        return '<div class="lbset-rl" style="margin:14px 0 6px"><span>Icon style</span><span>' + esc((IC.packs().filter(p => p[0] === pk)[0] || ['', ''])[1]) + '</span></div><div class="lbset-ipk">' +
+          IC.packs().map(p => '<button type="button" data-ipack="' + p[0] + '" class="' + (pk === p[0] ? 'on' : '') + '"><span class="ipv" data-ipv="' + p[0] + '">' + demo.map(n => IC.chip(n)).join('') + '</span><b>' + esc(p[1]) + '</b></button>').join('') + '</div>' +
+          '<div class="lbset-note">Changes the icons everywhere — the ☰ menu, the side dock, buttons and titles on every page. Saved on this device.</div>'; })() : '') +
       '<button type="button" class="lbset-reset" data-lookreset>↺ Reset look &amp; feel</button>';
     return h;
   }
