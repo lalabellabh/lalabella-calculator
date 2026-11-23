@@ -761,6 +761,14 @@ kbd{
   .sidebar{min-height:0;overflow:hidden}
   .sidebar .nav{flex:1 1 auto;min-height:120px;max-height:none}
   .sidebar .side-bottom,.sidebar > div:last-child{flex-shrink:0}
+  /* Nov 23 2026 (Bench: "di ko ma-scroll down para sa Fresh"): on phone the WHOLE menu scrolls as one
+     (the list used to be a small scroll box of its own squeezed between the profile and the Music box). */
+  @media(max-width:900px){
+    .sidebar{overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
+    .sidebar .nav{flex:0 0 auto!important;max-height:none!important;overflow:visible!important}
+    .sidebar > *{flex-shrink:0}
+    .nav-toggle{display:flex!important;align-items:center;justify-content:center}
+  }
 </style>
 
 <style id="garden-music-layout">
@@ -2750,6 +2758,7 @@ document.querySelectorAll('.nav a, .quick-card-link, .stats-toggle, .music-bar')
 })();
 </script>
 <script src="joyboy-bubble.js"></script>
+<script src="shared/pull-refresh.js?v=1"></script>
 <script src="shared/app-bar.js?v=1" data-apps="index.html,flower-dashboard.html,flower-receiving.html,flower-stock-count.html" data-key="flower"></script>
 </body>
 </html>

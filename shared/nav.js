@@ -567,6 +567,18 @@
     if (window.LBAppUpdate) window.LBAppUpdate.paint();
   }
 
+  // Nov 23 2026 (Bench): every page's ☰ button = the same size as the main Home (index) one — 44×44, rounded square.
+  // Only the size/shape is unified; each page keeps its own position and colours.
+  if (!document.getElementById('lb-burger-size')) {
+    const bs = document.createElement('style');
+    bs.id = 'lb-burger-size';
+    const B = ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s).join(',');
+    bs.textContent = B + '{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;border-radius:12px!important;padding:0!important;font-size:20px!important;line-height:1!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}' +
+      ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s + ' svg').join(',') + '{width:22px!important;height:22px!important}' +
+      '@media print{' + B + '{display:none!important}}';
+    document.head.appendChild(bs);
+  }
+
   if (!document.getElementById('lb-nav-style')) {
     const st = document.createElement('style');
     st.id = 'lb-nav-style';
