@@ -103,7 +103,9 @@
     if (!el.closest(HOSTS)) return;
     if (ONLY && !el.closest(ONLY)) return;
     var name = MAP[m[2]]; if (!name) return;
-    var only = !t.slice(m[0].length).trim() && !node.previousSibling && !node.nextSibling;
+    // icon-only = no other words next to it (a badge / dot element beside it doesn't count — e.g. the side dock buttons)
+    var only = !t.slice(m[0].length).trim() && [].every.call(el.childNodes, function (c) { return c === node || c.nodeType !== 3 || !c.nodeValue.trim(); }) &&
+      ![].some.call(el.children, function (c) { return c.textContent.trim() && !/(^|[-_ ])(b|badge|dot|cnt|count)([-_ ]|$)|lbd-b/.test(c.className || ''); });
     var w = document.createElement('span'); w.className = 'lbi-w' + (only ? ' lbi-only' : '');
     w.innerHTML = svg(name) + '<span class="lbi-e">' + m[2] + '</span>';
     var cc = COL[name]; if (cc) { w.style.setProperty('--c1', cc[0]); w.style.setProperty('--c2', cc[1]); }

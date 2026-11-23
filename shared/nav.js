@@ -39,7 +39,7 @@
   }
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
-    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=4';
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=5';
     (document.head || document.documentElement).appendChild(ic);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
