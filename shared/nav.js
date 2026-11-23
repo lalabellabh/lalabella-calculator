@@ -37,6 +37,33 @@
     ap.onload = () => { try { if (document.getElementById('lbsetBody')) drawSettings(); } catch (e) {} };
     (document.head || document.documentElement).appendChild(ap);
   }
+  // Nov 23 2026 (Bench): in any pop-up / sheet that scrolls, its ✕ (close / back) stays at the top instead of scrolling away.
+  (function stickyClose() {
+    const isClose = b => { const t = (b.textContent || '').trim(), al = (b.getAttribute('aria-label') || '') + ' ' + (b.title || '');
+      return /^(✕|×|✖|x|X|←|‹|Close|Done|Back)$/.test(t) || /\b(close|back)\b/i.test(al); };
+    const scroller = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const cs = getComputedStyle(p);
+      if (/(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight + 30) return p; } return null; };
+    const bgOf = el => { for (let p = el; p && p !== document.documentElement; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return '#fff'; };
+    function run() {
+      document.querySelectorAll('button, [role="button"], .x, .close, .modal-close').forEach(b => {
+        if (b.__lbsk || !b.offsetParent || !isClose(b)) return;
+        if (b.closest('.lbnav-drawer, #lbcl, .lbset-head, [data-lb-nosticky]')) { b.__lbsk = 1; return; }
+        const sc = scroller(b); if (!sc) return;
+        const fixedHost = (() => { for (let p = sc; p && p !== document.body; p = p.parentElement) if (getComputedStyle(p).position === 'fixed') return p; return null; })();
+        if (!fixedHost) return;                                  // only pop-ups / sheets, not normal pages
+        const br = b.getBoundingClientRect(), sr = sc.getBoundingClientRect();
+        if (br.top - sr.top + sc.scrollTop > 140) return;        // only a ✕ that sits at the top of the pop-up
+        b.__lbsk = 1;
+        let row = b.parentElement;
+        if (row && row !== sc && row.offsetHeight < 110 && row.parentElement && row.getBoundingClientRect().width > sr.width * .6) {
+          row.style.position = 'sticky'; row.style.top = '-1px'; row.style.zIndex = '6'; if (/rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(row).backgroundColor)) row.style.background = bgOf(row.parentElement);
+        } else { b.style.position = 'sticky'; b.style.top = '6px'; b.style.zIndex = '6'; }
+      });
+    }
+    let tm = 0; const later = () => { if (tm) return; tm = setTimeout(() => { tm = 0; run(); }, 400); };
+    document.addEventListener('click', later, true);
+    try { new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'open', 'hidden'] }); } catch (e) {}
+  })();
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
     const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=5';
@@ -44,7 +71,7 @@
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
   if (!window.LBAccent && !document.querySelector('script[src^="shared/accent.js"]')) {
-    const ac = document.createElement('script'); ac.src = 'shared/accent.js?v=1';
+    const ac = document.createElement('script'); ac.src = 'shared/accent.js?v=2';
     (document.head || document.documentElement).appendChild(ac);
   }
   // ---- Module menus (shown on pages of that module) ----
@@ -674,9 +701,10 @@
       '.lbset-back{position:fixed;inset:0;z-index:2147483000;background:rgba(30,15,22,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;font-family:"Space Grotesk",system-ui,sans-serif}',
       '.lbset{--s-bg:#fdfbf9;--s-card:#fff;--s-ink:#3a2530;--s-dim:#8a7078;--s-line:#eee2e0;--s-acc:#9e2f4a;--s-acc-soft:rgba(158,47,74,.1);background:var(--s-bg);color:var(--s-ink);width:min(440px,100%);max-height:88vh;overflow-y:auto;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.3);padding:18px 16px 16px;text-align:left}',
       'html[data-lb-theme="dark"] .lbset{--s-bg:#1d1719;--s-card:#272023;--s-ink:#f1e6e8;--s-dim:#b3a0a6;--s-line:#3a3034;--s-acc:#e0879c;--s-acc-soft:rgba(224,135,156,.14)}',
-      '.lbset-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}',
+      // Nov 23 2026: the title + ✕ stay at the top while you scroll the settings (no scrolling back up to close)
+      '.lbset-head{display:flex;align-items:center;justify-content:space-between;margin:-18px -16px 14px;padding:14px 16px 10px;position:sticky;top:-18px;z-index:5;background:var(--s-bg);border-radius:18px 18px 0 0;box-shadow:0 6px 12px -10px rgba(0,0,0,.25)}',
       '.lbset-head b{font-size:17px}',
-      '.lbset-x{background:none;border:0;font-size:20px;color:var(--s-dim);cursor:pointer;padding:4px 8px}',
+      '.lbset-x{background:var(--s-card);border:1px solid var(--s-line);border-radius:50%;width:40px;height:40px;font-size:18px;color:var(--s-ink);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;flex:none}',
       '.lbset h4{margin:16px 0 8px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--s-acc)}',
       '.lbset-ipk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.lbset-ipk button{display:flex;flex-direction:column;align-items:center;gap:6px;border:1.5px solid var(--s-line,#eadfe3);background:var(--s-card,#fff);border-radius:13px;padding:10px 6px 8px;font:inherit;color:inherit;cursor:pointer}' +
       '.lbset-ipk button.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(0,0,0,.06)}.lbset-ipk .ipv{display:flex;gap:9px;font-size:19px;color:#3a2a32;line-height:1}.lbset-ipk .ipv .lbi-w{margin:0}.lbset-ipk b{font-size:12px;font-weight:600}',
@@ -754,7 +782,7 @@
     const A = window.LBAccent, IC = window.LBIcons;
     if (A) {
       const cur = A.get();
-      h += '<h4>Color theme</h4><div class="lbset-acc">' + A.list().map(p => '<button type="button" data-accent="' + p.id + '" class="' + (cur === p.id ? 'on' : '') + '" title="' + esc(p.name) + '">' +
+      h += '<h4>Color theme</h4><div class="lbset-acc" data-lb-acc-skip>' + A.list().map(p => '<button type="button" data-accent="' + p.id + '" class="' + (cur === p.id ? 'on' : '') + '" title="' + esc(p.name) + '">' +
         '<i style="background:linear-gradient(135deg,' + p.a + ' 0 50%,' + p.d + ' 50% 100%)"></i><span>' + esc(p.name) + '</span></button>').join('') + '</div>' +
         '<div class="lbset-note">Changes the main colour of the buttons, titles and boxes. Lalabella Rose = as designed. Saved on this device.</div>';
     }

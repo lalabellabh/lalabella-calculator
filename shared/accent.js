@@ -40,6 +40,7 @@
     var n = swap(o); if (el.textContent !== n) el.textContent = n;
   }
   function doAttr(el) {
+    if (el.closest && el.closest('[data-lb-acc-skip]')) return;   // e.g. the colour swatches in ⚙️ Settings
     var o = origAttr.has(el) ? origAttr.get(el) : el.getAttribute('style');
     if (!o) return;
     if (!origAttr.has(el)) { if (!RX.test(o)) { RX.lastIndex = 0; return; } RX.lastIndex = 0; origAttr.set(el, o); touched.push(el); }
