@@ -199,6 +199,7 @@
   .o3-clock{font-family:'Press Start 2P',monospace;font-size:11px;background:#0f0b1fcc;border:1px solid #4a3f7a;border-radius:8px;padding:7px 9px;color:#7ff0e0}
   .o3-live-pill{font-size:11px;font-weight:700;background:#0f0b1fcc;border:1px solid #4a3f7a;border-radius:99px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px}
   .o3-count{font-size:11.5px;background:#0f0b1fcc;border:1px solid #4a3f7a;border-radius:99px;padding:5px 10px}
+  #o3d.o3-outside .o3-room{display:none!important}
   .o3-zoom{position:absolute;right:10px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
   .o3-zoom button{width:36px;height:36px;border-radius:50%;border:1px solid #5d4f95;background:#171230e6;color:#f1ecff;font-size:17px;font-weight:700;cursor:pointer}
   .o3-tag{position:absolute;left:0;top:0;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:700;background:#ffffffee;color:#2a2140;border-radius:99px;padding:3px 8px 3px 5px;box-shadow:0 2px 8px #0006}
@@ -279,7 +280,7 @@
       <div class="o3-main"><div class="o3-stage"></div><div class="o3-tags"></div><form class="o3-ask" id="o3Ask" autocomplete="off"><input id="o3AskIn" maxlength="160" placeholder="💬 Ask the team… e.g. last stock count Moda"><button type="button" id="o3Mic" title="Talk">🎤</button><button type="submit">Ask</button><button type="button" id="o3AskTog" title="Hide the ask box">✕</button></form>
         <div class="o3-top"><span class="o3-clock">--:--</span><span class="o3-live-pill"><span class="o3-dot"></span>LIVE</span><span class="o3-count"></span></div>
         <div class="o3-tr"><button data-su title="Daily Stand-up (meeting of the team)">🎥</button><button data-o3="team" title="Team panel">👥</button><button data-o3="set" title="Settings">⚙️</button><button data-o3="exit" class="o3-exit" title="Exit full screen">✕</button><div class="o3-menu"><button data-m="snd">🔊 Sound</button><button data-m="names">🏷️ Names on / off</button><button data-m="loc">📍 Place</button><button data-m="all">⌂ Whole office</button><button data-m="classic">🕹️ Classic 2D view</button><button data-m="exit" class="o3-exit">✕ Exit full screen</button></div></div>
-        <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="full" title="Full screen">⛶</button></div></div>
+        <div class="o3-zoom"><button data-o3="in" title="Zoom in">＋</button><button data-o3="out" title="Zoom out">－</button><button data-o3="all" title="Whole office">⌂</button><button data-o3="city" title="Outside — Moda Mall &amp; the World Trade Center">🏙</button><button data-o3="full" title="Full screen">⛶</button></div></div>
       <button class="o3-sidebtn" id="o3SideBtn" title="Hide the side panel">❯</button>
       <div class="o3-side">Loading…</div>
     </section>
@@ -1049,7 +1050,7 @@
   // ---------- 3D / Classic switch (3D is the default) ----------
   function set3d(on){ document.body.classList.toggle('v3d', on); $('v3dBtn').textContent = on ? '🕹️ Classic' : '🧊 3D'; 
     var sn = $('snd'); (on ? document.querySelector('#o3d .o3-main') : $('ow')).appendChild(sn); try{ localStorage.setItem('lbOffice3d', on ? '1' : '0'); }catch(e){}
-    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=27'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
+    if(on && !window.__o3loaded){ window.__o3loaded = 1; var sc = document.createElement('script'); sc.src = 'shared/office3d.js?v=28'; sc.onload = function(){ if(S) render(); }; document.body.appendChild(sc); } }
   $('v3dBtn').addEventListener('click', function(){ set3d(!document.body.classList.contains('v3d')); });
   var want3d = true; try{ want3d = localStorage.getItem('lbOffice3d') !== '0'; }catch(e){}
   set3d(want3d);

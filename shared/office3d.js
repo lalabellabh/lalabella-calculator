@@ -267,7 +267,7 @@
     var sun = new T.DirectionalLight('#ffe2b8', .95); sun.position.set(-14, 30, 18); sun.target.position.set(17, 0, 10); sun.castShadow = true; sun.shadow.mapSize.set(innerWidth < 700 ? 1024 : 2048, innerWidth < 700 ? 1024 : 2048);
     var sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 22; sc.bottom = -22; sc.near = 1; sc.far = 90; sun.shadow.bias = -.0008; scene.add(sun); scene.add(sun.target);
     var fill = new T.PointLight('#ffb36b', .35, 60); fill.position.set(17, 8, 24); scene.add(fill);
-    SKY.sun = sun; SKY.fill = fill; buildRain(); buildOutside();
+    SKY.sun = sun; SKY.fill = fill; buildRain(); buildOutside(); buildLandmark();
     ROOMS.forEach(buildRoom); buildDecor();
     ROOMS.forEach(function(R){
       R.agents.forEach(function(k, i){ var s = R.slots[i], a = buildAgent(k); a.room = R; a.desk = buildDesk(k, s[0], s[1], k === 'boss'); a.desk.rug.material.color.set(R.rug);
@@ -285,10 +285,12 @@
     var asp = W / H, vs = viewSize; camera.left = -vs * asp / 2; camera.right = vs * asp / 2; camera.top = vs / 2; camera.bottom = -vs / 2; camera.updateProjectionMatrix();
   }
   var DIR = null;
-  function placeCam(){ if(!DIR) DIR = new T.Vector3(1, 1.18, 1.05).normalize(); camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
+  function placeCam(){ if(!DIR) DIR = new T.Vector3(0, .86, 1).normalize();   /* Nov 23 2026 (Bench): straight from the front, no more diagonal */ camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
   var zoomGoal = 1, targetGoal = null;
-  function setZoom(z){ zoomGoal = Math.max(.6, Math.min(6, z)); }
-  function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1); renderSide(); }
+  function setZoom(z){ zoomGoal = Math.max(.15, Math.min(6, z)); }
+  function homeZoom(){ return W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1; }
+  function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(homeZoom()); renderSide(); }
+  function outsideView(){ closeReport(); follow = ''; targetGoal = new T.Vector3(LM.on ? 30 : 17, 0, LM.on ? 12 : 10); setZoom(homeZoom() * (LM.on ? .34 : .6)); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
   function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom);
     if(!custom && window.LBOfficeOnSelect){ try{ window.LBOfficeOnSelect(k); }catch(e){} } }   // Nov 2026: e.g. tapping Bea checks Bleems right away
@@ -349,7 +351,7 @@
       if(ids.length === 2){ var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if(pinch0) setZoom(z0 * d / pinch0); moved += 10; return; }
       moved += Math.abs(dx) + Math.abs(dy); if(moved < 6) return;
       if(follow){ follow = ''; renderSide(); }
-      var s = viewSize / H / camera.zoom, right = new T.Vector3(1, 0, -1).normalize(), fwd = new T.Vector3(-1, 0, -1).normalize();
+      var s = viewSize / H / camera.zoom, right = new T.Vector3(1, 0, 0), fwd = new T.Vector3(0, 0, -1);
       var base = targetGoal || target.clone(); base.addScaledVector(right, -dx * s).addScaledVector(fwd, dy * s * 1.35); targetGoal = base; });
     function up(e){ var was = !!ptrs[e.pointerId]; delete ptrs[e.pointerId]; if(Object.keys(ptrs).length < 2) pinch0 = 0;
       if(was && moved < 6 && e.type === 'pointerup'){ var r = el.getBoundingClientRect(), m = new T.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), rc = new T.Raycaster(); rc.setFromCamera(m, camera);
@@ -359,6 +361,7 @@
     root.querySelector('[data-o3=in]').onclick = function(){ setZoom(zoomGoal * 1.35); };
     root.querySelector('[data-o3=out]').onclick = function(){ setZoom(zoomGoal / 1.35); };
     root.querySelector('[data-o3=all]').onclick = wholeOffice;
+    var cb = root.querySelector('[data-o3=city]'); if(cb) cb.onclick = outsideView;
     root.querySelector('[data-o3=full]').onclick = function(){ goFull(!root.classList.contains('full')); };
     document.addEventListener('fullscreenchange', function(){ if(!document.fullscreenElement && root.classList.contains('full') && !autoFull) goFull(false, true); });
     root.querySelector('[data-o3=team]').onclick = function(e){ e.stopPropagation(); drawer(!root.classList.contains('dopen')); };
@@ -415,7 +418,7 @@
     var R = a.room, cafeR = ROOMS[6];
     if(to === 'cafe'){ var c = CAFE(Object.keys(AG).indexOf(a.k)); if(R !== cafeR){ pts.push(exit(R, from), new T.Vector3(exit(R, from).x, 0, hz)); pts.push(new T.Vector3(cafeR.x + cafeR.w / 2, 0, hz), new T.Vector3(cafeR.x + cafeR.w / 2, 0, cafeR.z + .6)); } pts.push(c); }
     else if(to === 'home'){ if(R !== cafeR){ pts.push(new T.Vector3(cafeR.x + cafeR.w / 2, 0, cafeR.z + .6), new T.Vector3(cafeR.x + cafeR.w / 2, 0, hz)); var ex = exit(R, a.home); pts.push(new T.Vector3(ex.x, 0, hz), ex); } pts.push(a.home.clone()); }
-    else if(to === 'street'){ pts.push(exit(R, from), new T.Vector3(exit(R, from).x, 0, hz), new T.Vector3(34.5, 0, hz)); }
+    else if(to === 'street'){ pts.push(exit(R, from), new T.Vector3(exit(R, from).x, 0, hz), new T.Vector3(34.5, 0, hz)); if(LM.on) pts.push(new T.Vector3(VANP.x - 1.4, 0, hz)); }
     else if(to === 'back'){ var ex2 = exit(R, a.home); pts.push(new T.Vector3(ex2.x, 0, hz), ex2, a.home.clone()); }
     else if(to === 'patrol'){ pts.push(exit(R, from), new T.Vector3(exit(R, from).x, 0, hz), new T.Vector3(2 + Math.random() * 28, 0, hz), new T.Vector3(exit(R, from).x, 0, hz), exit(R, from), a.home.clone()); }
     return pts;
@@ -424,7 +427,10 @@
   function think(a, dt){
     if(a.mode === 'walk' || a.mode === 'visit' || a.inConvo) return;
     var st = a.st;
-    if(a.k === 'driver'){ if(st === 'working' && a.mode !== 'out'){ walk(a, 'street'); return; } if(st !== 'working' && a.mode === 'out'){ a.g.visible = true; a.hidden = false; a.pos.set(34.5, 0, 10.5); walk(a, 'back'); return; } }
+    if(a.k === 'driver'){ if(st === 'working' && a.mode !== 'out'){ walk(a, 'street'); return; }
+      if(a.mode === 'out' && st === 'working' && LM.on && LM.van && LM.van.state === 'parked') LM.van.state = 'go';   // got in: drive out to the delivery
+      if(st !== 'working' && a.mode === 'out'){ if(LM.on && LM.van && LM.van.state !== 'parked'){ LM.van.state = 'return'; return; }
+        a.g.visible = true; a.hidden = false; a.pos.set(LM.on ? VANP.x - 1.4 : 34.5, 0, 10.5); walk(a, 'back'); return; } }
     if(a.mode === 'cafe'){ a.wait -= dt; if(a.wait <= 0 || st === 'alert' || st === 'warn' || follow === a.k) walk(a, 'home'); return; }
     if(a.mode === 'sit'){ a.nextWander -= dt;
       if(a.nextWander <= 0 && follow !== a.k && (st === 'ok') && a.k !== 'boss'){ a.nextWander = 40 + Math.random() * 70; if(a.k === 'janitor') walk(a, 'patrol'); else walk(a, 'cafe'); } }
@@ -452,7 +458,7 @@
       a.body.position.y = jump; a.head.rotation.x = 0; a.head.rotation.y = 0;
       var wave = st === 'alert' || st === 'warn' || follow === a.k;
       a.hL.position.set(-.3, .62, -.1); a.hR.position.set(.3, wave ? 1.0 + Math.sin(t * 8) * .08 : .62, -.1);
-      if(st === 'warn' || st === 'alert' || (sit && follow === a.k)) a.face = Math.atan2(-1, -1.05);   // turn to the camera
+      if(st === 'warn' || st === 'alert' || (sit && follow === a.k)) a.face = Math.PI;   // turn to the camera
       // "check": walks back and forth next to the desk (thinking), stops now and then to face you
       a.paceX = 0;
       if(sit && st === 'warn'){ var ph = Math.sin(t * .6 + a.seed), vel = Math.cos(t * .6 + a.seed);
@@ -533,9 +539,9 @@
       a.desk.ring.scale.setScalar(a.st === 'alert' ? 1 + Math.sin(t * 6) * .12 : 1); });
     scrT += dt; if(scrT > .12){ scrT = 0; Object.keys(AG).forEach(function(k){ var a = AG[k]; var near = !follow || follow === k || camera.zoom < 2.5; if(near) drawScreen(a, a.st, t); }); }
     LED.forEach(function(l, i){ l.visible = Math.sin(t * (3 + i % 4) + i) > -.3; });
-    stepRain(dt); stepOutside(dt, t);
+    stepRain(dt); stepOutside(dt, t); stepLandmark(dt, t);
     if(follow && AG[follow]){ targetGoal = AG[follow].pos.clone().add(new T.Vector3(0, .7, -.3));
-      if(root.classList.contains('dopen')){ var pw = Math.min(320, W * .86) / 2; targetGoal.addScaledVector(new T.Vector3(1, 0, -1).normalize(), pw * viewSize / H / camera.zoom); } }
+      if(root.classList.contains('dopen')){ var pw = Math.min(320, W * .86) / 2; targetGoal.addScaledVector(new T.Vector3(1, 0, 0), pw * viewSize / H / camera.zoom); } }
     if(targetGoal) target.lerp(targetGoal, Math.min(1, dt * 4));
     camera.zoom += (zoomGoal - camera.zoom) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); placeCam();
     renderer.render(scene, camera);
@@ -544,6 +550,7 @@
     Object.keys(AG).forEach(function(k){ var a = AG[k]; if(a.hidden){ a.tag.style.display = 'none'; return; }
       vtmp.copy(a.pos); vtmp.y += 2; vtmp.project(camera); var x = (vtmp.x + 1) / 2 * W, y = (1 - vtmp.y) / 2 * H;
       var show = x > -40 && x < W + 40 && y > -20 && y < H + 20; a.tag.style.display = show ? '' : 'none';
+      if(show && LM.on && LM.op > .5) show = false, a.tag.style.display = 'none';
       if(show){ a.tag.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(-50%,-100%)'; a.tag.classList.toggle('mini', camera.zoom < .9 && follow !== k); } });
     roomTags.forEach(function(r){ vtmp.copy(r.v).project(camera); var x = (vtmp.x + 1) / 2 * W, y = (1 - vtmp.y) / 2 * H; r.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'; r.el.style.display = (follow || x < -100 || x > W + 50 || y < -20 || y > H) ? 'none' : ''; });
   }
@@ -674,6 +681,132 @@
     OUT.csMat = csm;
     stage.appendChild(over); OUT.sky = over; OUT.over = over;
   }
+  // ---------- Nov 23 2026 (Bench): Moda Mall + the Bahrain World Trade Center, streets, palms, traffic ----------
+  // Zoomed out you see the mall with its glass dome and the two WTC sail towers with the 3 wind turbines; zoom in and the
+  // mall walls fade away = you are inside the office. The driver walks out to the Lalabella van and drives the delivery.
+  var LM = { on:false, g:null, shell:[], shellMats:[], rotors:[], cars:[], van:null }, VANP = { x:42, z:12.5 };
+  var LOOP = { x0:-20, x1:47, z0:-17, z1:35 };   // the road around the mall (centre line)
+  function lmMat(c, o){ o = o || {}; var m = new T.MeshStandardMaterial({ color:c, roughness:o.r == null ? .8 : o.r, metalness:o.m || 0, transparent:!!o.t, opacity:o.op == null ? 1 : o.op }); if(o.e){ m.emissive = new T.Color(o.e); m.emissiveIntensity = o.ei || .4; } return m; }
+  function lmBox(w, h, d, m, x, y, z, g, shadow){ var b = new T.Mesh(new T.BoxGeometry(w, h, d), m); b.position.set(x, y, z); if(shadow){ b.castShadow = true; b.receiveShadow = true; } g.add(b); return b; }
+  function signTex(text, bg, fg, w, h){ var c = document.createElement('canvas'); c.width = w || 1024; c.height = h || 160; var x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height);
+    x.fillStyle = fg; x.font = '700 ' + Math.round(c.height * .52) + 'px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, c.width / 2, c.height / 2 + 4); var t = new T.CanvasTexture(c); t.anisotropy = 4; return t; }
+  function floorsTex(){ var c = document.createElement('canvas'); c.width = 64; c.height = 256; var x = c.getContext('2d'); x.fillStyle = '#a9c9dc'; x.fillRect(0, 0, 64, 256);
+    for(var i = 0; i < 32; i++){ x.fillStyle = i % 2 ? '#86aac2' : '#c3dbe8'; x.fillRect(0, i * 8, 64, 5); x.fillStyle = '#e8f2f8'; x.fillRect(0, i * 8 + 5, 64, 1); }
+    var t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; return t; }
+  function palm(x, z, s, g){ s = s || 1; var tr = lmMat('#8a6a48'), lf = lmMat('#3f8f4a'), lf2 = lmMat('#57a85a');
+    for(var i = 0; i < 5; i++){ var seg = new T.Mesh(new T.CylinderGeometry(.13 * s, .17 * s, .7 * s, 6), tr); seg.position.set(x + i * .05 * s, -.45 + i * .68 * s, z); seg.rotation.z = -.05; g.add(seg); }
+    for(var k = 0; k < 7; k++){ var a = k / 7 * Math.PI * 2, f = new T.Mesh(new T.ConeGeometry(.28 * s, 2 * s, 4), k % 2 ? lf : lf2);
+      f.position.set(x + .25 * s + Math.cos(a) * .9 * s, 2.75 * s - .45, z + Math.sin(a) * .9 * s); f.rotation.set(Math.sin(a) * 1.25, 0, -Math.cos(a) * 1.25); f.scale.set(1, 1, .35); f.castShadow = true; g.add(f); } }
+  function tree(x, z, s, g){ s = s || 1; lmBox(.25 * s, 1 * s, .25 * s, lmMat('#7a5233'), x, -.3 + .5 * s, z, g); var c = new T.Mesh(new T.IcosahedronGeometry(1 * s, 0), lmMat(Math.random() < .5 ? '#4f9a50' : '#3f8a4a', { r:.9 }));
+    c.position.set(x, 1.05 * s, z); c.castShadow = true; g.add(c); }
+  function car(col, g){ var c = new T.Group(); lmBox(2.2, .55, 1.05, lmMat(col, { r:.45, m:.2 }), 0, .45, 0, c, true); lmBox(1.2, .42, .95, lmMat('#cfe3ef', { r:.2, m:.3 }), -.1, .9, 0, c);
+    [[.7, .45], [-.7, .45], [.7, -.45], [-.7, -.45]].forEach(function(w){ var wh = new T.Mesh(new T.CylinderGeometry(.22, .22, .16, 10), lmMat('#222')); wh.rotation.x = Math.PI / 2; wh.position.set(w[0], .22, w[1]); c.add(wh); });
+    c.position.y = -.8; g.add(c); return c; }
+  function bus(g){ var c = new T.Group(); lmBox(5.4, 1.5, 1.4, lmMat('#e8483f', { r:.5 }), 0, .95, 0, c, true); lmBox(5, .45, 1.42, lmMat('#bfe0f2', { r:.2 }), 0, 1.25, 0, c); lmBox(5.42, .18, 1.44, lmMat('#f4f1ea'), 0, .55, 0, c);
+    [[1.8, .6], [-1.8, .6], [1.8, -.6], [-1.8, -.6]].forEach(function(w){ var wh = new T.Mesh(new T.CylinderGeometry(.3, .3, .2, 10), lmMat('#222')); wh.rotation.x = Math.PI / 2; wh.position.set(w[0], .3, w[1]); c.add(wh); });
+    c.position.y = -.8; g.add(c); return c; }
+  function van(g){ var c = new T.Group(); lmBox(2.6, 1.15, 1.25, lmMat('#fbf7f4', { r:.4 }), -.15, .8, 0, c, true); lmBox(.8, .75, 1.2, lmMat('#fbf7f4', { r:.4 }), 1.4, .6, 0, c, true);
+    lmBox(.05, .5, 1.05, lmMat('#bfe0f2', { r:.2 }), 1.81, .85, 0, c); lmBox(2.62, .2, 1.27, lmMat('#c9506b'), -.15, .55, 0, c);
+    var sgn = new T.Mesh(new T.PlaneGeometry(2.2, .45), new T.MeshBasicMaterial({ map:signTex('LALABELLA', '#fbf7f4', '#9e2f4a', 512, 100) })); sgn.position.set(-.15, 1.05, .63); c.add(sgn);
+    var s2 = sgn.clone(); s2.rotation.y = Math.PI; s2.position.z = -.63; c.add(s2);
+    [[.9, .55], [-.9, .55], [.9, -.55], [-.9, -.55]].forEach(function(w){ var wh = new T.Mesh(new T.CylinderGeometry(.26, .26, .18, 10), lmMat('#222')); wh.rotation.x = Math.PI / 2; wh.position.set(w[0], .26, w[1]); c.add(wh); });
+    c.position.set(VANP.x, -.8, VANP.z); c.rotation.y = Math.PI / 2; g.add(c); return c; }
+  // a point on the road loop: d = distance along it (clockwise from the top-left corner), lane = -1 inner / +1 outer
+  function loopLen(){ return 2 * (LOOP.x1 - LOOP.x0) + 2 * (LOOP.z1 - LOOP.z0); }
+  function loopAt(d, lane){ var L = loopLen(), w = LOOP.x1 - LOOP.x0, h = LOOP.z1 - LOOP.z0, o = 1.1 * (lane || 1); d = ((d % L) + L) % L;
+    if(d < w) return [LOOP.x0 + d, LOOP.z0 - o, 0];
+    if(d < w + h) return [LOOP.x1 + o, LOOP.z0 + (d - w), -Math.PI / 2];
+    if(d < 2 * w + h) return [LOOP.x1 - (d - w - h), LOOP.z1 + o, Math.PI];
+    return [LOOP.x0 - o, LOOP.z1 - (d - 2 * w - h), Math.PI / 2]; }
+  function buildLandmark(){
+    var g = new T.Group(); g.visible = false; scene.add(g); LM.g = g;
+    var asph = lmMat('#4c4d57', { r:.9 }), side = lmMat('#d9d4c8', { r:.95 }), dash = lmMat('#f2f2f2'), lawn = lmMat('#8fbf6a', { r:1 }), plaza = lmMat('#e6dccb', { r:.95 });
+    // roads: the loop around the mall + the avenue east past the towers + a road south to the city
+    var road = function(x, z, w, d){ lmBox(w, .04, d, asph, x, -.78, z, g); };
+    var cx = (LOOP.x0 + LOOP.x1) / 2, cz = (LOOP.z0 + LOOP.z1) / 2, W2 = LOOP.x1 - LOOP.x0, H2 = LOOP.z1 - LOOP.z0;
+    road(cx, LOOP.z0, W2 + 4.4, 4.4); road(cx, LOOP.z1, W2 + 4.4, 4.4); road(LOOP.x0, cz, 4.4, H2); road(LOOP.x1, cz, 4.4, H2);
+    road(LOOP.x1 + 32, LOOP.z1, 60, 4.4); road(LOOP.x1 + 32, LOOP.z0, 60, 4.4); road(cx, LOOP.z1 + 25, 4.4, 46);
+    for(var i = LOOP.x0 + 2; i < LOOP.x1 + 60; i += 3.2){ lmBox(1.4, .05, .14, dash, i, -.75, LOOP.z1, g); if(i < LOOP.x1 - 2) lmBox(1.4, .05, .14, dash, i, -.75, LOOP.z0, g); }
+    for(var j = LOOP.z0 + 2; j < LOOP.z1 - 2; j += 3.2){ lmBox(.14, .05, 1.4, dash, LOOP.x0, -.75, j, g); lmBox(.14, .05, 1.4, dash, LOOP.x1, -.75, j, g); }
+    // sidewalks + the mall plaza + lawns
+    lmBox(W2 - 4.4, .1, H2 - 4.4, plaza, cx, -.74, cz, g);
+    lmBox(14, .12, 4, lawn, 2, -.68, 31, g); lmBox(14, .12, 4, lawn, 32, -.68, 31, g); lmBox(4, .12, 22, lawn, -15, -.68, 10, g);
+    // ===== Moda Mall: stone + glass box around our office, with the big glass dome =====
+    var x0 = -6.5, x1 = 40, z0 = -6.5, z1 = 27.5, hh = 8, sh = [];
+    var stone = lmMat('#ece4d6', { r:.85, t:true }), glass = lmMat('#5d89aa', { r:.15, m:.35, t:true }), gold = lmMat('#b8883a', { r:.4, m:.4, t:true }), roof = lmMat('#cfc6b6', { r:.9, t:true });
+    var add = function(m){ sh.push(m); return m; };
+    add(lmBox(x1 - x0, hh, .6, stone, (x0 + x1) / 2, -.8 + hh / 2, z1, g, true));            // front
+    add(lmBox(x1 - x0, hh, .6, stone, (x0 + x1) / 2, -.8 + hh / 2, z0, g, true));            // back
+    add(lmBox(.6, hh, z1 - z0, stone, x0, -.8 + hh / 2, (z0 + z1) / 2, g, true)); add(lmBox(.6, hh, z1 - z0, stone, x1, -.8 + hh / 2, (z0 + z1) / 2, g, true));
+    for(var b = 0; b < 2; b++){ add(lmBox(x1 - x0 - 2, 1.4, .1, glass, (x0 + x1) / 2, 1.6 + b * 3, z1 + .32, g)); add(lmBox(.1, 1.4, z1 - z0 - 2, glass, x1 + .32, 1.6 + b * 3, (z0 + z1) / 2, g)); add(lmBox(.1, 1.4, z1 - z0 - 2, glass, x0 - .32, 1.6 + b * 3, (z0 + z1) / 2, g)); }
+    for(var p = x0 + 3; p < x1; p += 4.6) add(lmBox(.35, hh, .2, stone, p, -.8 + hh / 2, z1 + .4, g));
+    [[x1 - x0 + .8, .6, (x0 + x1) / 2, z1], [x1 - x0 + .8, .6, (x0 + x1) / 2, z0], [.6, z1 - z0, x0, (z0 + z1) / 2], [.6, z1 - z0, x1, (z0 + z1) / 2]].forEach(function(e){ add(lmBox(e[0], .55, e[1], gold, e[2], -.8 + hh + .27, e[3], g)); });
+    add(lmBox(x1 - x0, .3, z1 - z0, roof, (x0 + x1) / 2, -.8 + hh, (z0 + z1) / 2, g));
+    // entrance + sign
+    var sgnM = new T.MeshBasicMaterial({ map:signTex('MODA MALL', '#2b2420', '#e7c27a'), transparent:true });
+    var sg = new T.Mesh(new T.PlaneGeometry(14, 2.2), sgnM); sg.position.set(17, 5.4, z1 + .45); g.add(sg); add(sg);
+    add(lmBox(10, .35, 3, gold, 17, 2.4, z1 + 1.6, g)); add(lmBox(8, 3, .1, glass, 17, .7, z1 + .36, g));
+    // the dome
+    var dome = new T.Mesh(new T.SphereGeometry(9, 40, 18, 0, Math.PI * 2, 0, Math.PI / 2), lmMat('#5f9cc7', { r:.1, m:.45, t:true, op:.9, e:'#3f7fb0', ei:.18 })); dome.scale.y = .62; dome.position.set(17, -.8 + hh + .5, 10.5); g.add(dome); add(dome);
+    for(var r2 = 0; r2 < 12; r2++){ var rib = new T.Mesh(new T.TorusGeometry(9.02, .07, 6, 40, Math.PI), gold); rib.rotation.set(0, r2 / 12 * Math.PI, 0); rib.scale.y = .62; rib.position.copy(dome.position); g.add(rib); add(rib); }
+    for(var r3 = 1; r3 < 4; r3++){ var ring = new T.Mesh(new T.TorusGeometry(9 * Math.cos(r3 * .38), .07, 6, 48), gold); ring.rotation.x = Math.PI / 2; ring.position.set(17, dome.position.y + 9 * .62 * Math.sin(r3 * .38), 10.5); g.add(ring); add(ring); }
+    var drum = new T.Mesh(new T.CylinderGeometry(9.4, 9.6, .9, 48), stone); drum.position.set(17, -.8 + hh + .45, 10.5); g.add(drum); add(drum);
+    for(var sk = 0; sk < 4; sk++) add(lmBox(3.2, .25, 2.2, glass, sk < 2 ? 0 : 34, -.8 + hh + .2, sk % 2 ? 22 : -1, g));
+    LM.shell = sh; sh.forEach(function(m){ if(m.material && LM.shellMats.indexOf(m.material) < 0) LM.shellMats.push(m.material); });
+    LM.shellMats.forEach(function(m){ m.userData.op = m.opacity; });
+    // ===== Bahrain World Trade Center: two sail towers + 3 sky bridges with wind turbines =====
+    var tw = new T.Group(); tw.position.set(60, -.8, 8); g.add(tw);
+    var ft = floorsTex(); ft.repeat.set(2, 6);
+    var twMat = new T.MeshStandardMaterial({ color:'#d6ecf7', map:ft, roughness:.2, metalness:.25 }), frame = lmMat('#e7ecef', { r:.5, m:.3 });
+    var sail = function(dir){ var H = 36, Wb = 8, sp = new T.Shape(); sp.moveTo(0, 0); sp.lineTo(Wb, 0); sp.quadraticCurveTo(Wb * .5, H * .5, .9, H); sp.lineTo(0, H); sp.lineTo(0, 0);
+      var geo = new T.ExtrudeGeometry(sp, { depth:5.5, bevelEnabled:false }); geo.translate(0, 0, -2.75); var m = new T.Mesh(geo, [twMat, frame]); m.scale.x = dir; m.position.x = dir * 3.2; m.castShadow = true; tw.add(m);
+      lmBox(.4, 37.5, 5.8, frame, dir * 3.2, 18.75, 0, tw); return m; };
+    sail(-1); sail(1);
+    lmBox(6.4, 2.2, 6.5, lmMat('#e9e1d3'), 0, 1.1, 0, tw, true);
+    [10, 18.5, 26.5].forEach(function(y){ lmBox(6.4, .7, 1.4, frame, 0, y, 0, tw, true);
+      var rot = new T.Group(); rot.position.set(0, y + .1, 1.4); tw.add(rot); var hub = new T.Mesh(new T.CylinderGeometry(.55, .55, 1, 12), frame); hub.rotation.x = Math.PI / 2; rot.add(hub);
+      for(var k = 0; k < 3; k++){ var bl = lmBox(.4, 2.9, .12, lmMat('#f4f6f8', { r:.4 }), 0, 1.45, 0, new T.Group()); var arm = bl.parent; arm.rotation.z = k * Math.PI * 2 / 3; rot.add(arm); }
+      LM.rotors.push(rot); });
+    // palms, trees, lamps
+    for(var px = LOOP.x0 + 4; px < LOOP.x1 - 2; px += 7){ palm(px, LOOP.z1 - 3.2, 1, g); palm(px + 3.5, LOOP.z0 + 3, .9, g); }
+    for(var pz = LOOP.z0 + 6; pz < LOOP.z1 - 4; pz += 7){ palm(LOOP.x0 + 3.2, pz, .95, g); }
+    for(var tx = LOOP.x1 + 6; tx < LOOP.x1 + 60; tx += 6){ tree(tx, LOOP.z1 + 3.4, 1, g); tree(tx + 3, LOOP.z0 - 3.4, 1.1, g); }
+    for(var tz = LOOP.z1 + 6; tz < LOOP.z1 + 46; tz += 6){ tree(cx - 3.6, tz, .9, g); tree(cx + 3.6, tz + 3, 1, g); }
+    // the neighbourhood: simple buildings in the blocks outside the loop (lit windows at night like the rest)
+    var bmats = ['#f1e6d2', '#e8d9c0', '#dfe6ec', '#f3ddd5', '#e6e1f0'].map(function(c){ var m = new T.MeshStandardMaterial({ color:c, map:winTex(false), emissiveMap:winTex(true), emissive:'#ffffff', emissiveIntensity:0, roughness:.85 }); OUT.winMat.push(m); return m; });
+    var rs = 7; var rr = function(){ rs = (rs * 16807) % 2147483647; return rs / 2147483647; };
+    var free = function(x, z, r){ if(x + r > LOOP.x0 - 3 && x - r < LOOP.x1 + 3 && z + r > LOOP.z0 - 3 && z - r < LOOP.z1 + 3) return false;
+      if(Math.abs(z - LOOP.z1) < r + 3 || Math.abs(z - LOOP.z0) < r + 3) return false; if(Math.abs(x - cx) < r + 3 && z > LOOP.z1) return false;
+      if(Math.abs(x - 60) < r + 9 && Math.abs(z - 8) < r + 7) return false; return true; };
+    for(var bx = -60; bx < 110; bx += 11) for(var bz = -50; bz < 80; bz += 11){ var w0 = 5 + rr() * 4, d0 = 5 + rr() * 4, x2 = bx + rr() * 3, z2 = bz + rr() * 3;
+      if(!free(x2, z2, Math.max(w0, d0) / 2 + 1) || rr() < .25) continue; var hb = 2.5 + rr() * (rr() < .2 ? 12 : 5);
+      var bb = lmBox(w0, hb, d0, bmats[Math.floor(rr() * bmats.length)], x2, -.8 + hb / 2, z2, g, true); lmBox(w0 + .2, .25, d0 + .2, lmMat('#bfb5a3'), x2, -.8 + hb + .12, z2, g); }
+    // the van's parking bay + the walkway from the office door
+    lmBox(4.2, .06, 3, lmMat('#5c5d66'), VANP.x, -.76, VANP.z, g); lmBox(VANP.x - 34, .78, 2.6, plaza, (34 + VANP.x) / 2, -.39, 10.5, g);
+    // traffic
+    var cols = ['#e05a5a', '#5a8be0', '#f0c04a', '#ffffff', '#3a3a48', '#6bc26b', '#e08a3a'];
+    for(var c2 = 0; c2 < 9; c2++){ var cc = car(cols[c2 % cols.length], g); LM.cars.push({ m:cc, d:c2 * loopLen() / 9 + Math.random() * 6, sp:(5 + Math.random() * 3) * (c2 % 2 ? 1 : -1), lane:c2 % 2 ? 1 : -1 }); }
+    LM.cars.push({ m:bus(g), d:20, sp:4, lane:1 });
+    LM.van = { m:van(g), state:'parked', d:0 };
+  }
+  function showLandmark(on){ LM.on = on; if(LM.g) LM.g.visible = on; }
+  function stepLandmark(dt, t){
+    if(!LM.on || !LM.g) return;
+    // the mall walls fade away as you zoom in (= you walk inside)
+    var hz = homeZoom(), op = Math.max(0, Math.min(1, (hz * .8 - camera.zoom) / (hz * .32)));
+    LM.shellMats.forEach(function(m){ m.opacity = (m.userData.op == null ? 1 : m.userData.op) * op; m.depthWrite = op > .97; });
+    LM.shell.forEach(function(m){ m.visible = op > .02; }); LM.op = op; root.classList.toggle('o3-outside', op > .5);
+    LM.rotors.forEach(function(r, i){ r.rotation.z -= dt * (1.4 + (WX.wind || 10) / 18) * (1 + i * .08); });
+    LM.cars.forEach(function(c){ c.d += c.sp * dt; var p = loopAt(c.d, c.lane); c.m.position.x = p[0]; c.m.position.z = p[1]; c.m.rotation.y = p[2] + (c.sp < 0 ? Math.PI : 0); });
+    var V = LM.van; if(!V) return;
+    var joinD = 2 * (LOOP.x1 - LOOP.x0) + (LOOP.z1 - LOOP.z0) - 0 + (LOOP.z1 - VANP.z) ;   // where the east road passes the bay (driving north)
+    joinD = (LOOP.x1 - LOOP.x0) + (VANP.z - LOOP.z0);   // clockwise: along the top, then down the east side to the bay
+    if(V.state === 'go'){ V.d = joinD; V.state = 'drive'; }
+    if(V.state === 'drive' || V.state === 'return'){
+      V.d += 7 * dt; var p = loopAt(V.d, 1); V.m.position.set(p[0], -.8, p[1]); V.m.rotation.y = p[2];
+      if(V.state === 'return' && Math.abs(((V.d - joinD) % loopLen() + loopLen()) % loopLen()) < 7 * dt * 1.5){ V.state = 'parked'; V.m.position.set(VANP.x, -.8, VANP.z); V.m.rotation.y = Math.PI / 2; } }
+  }
+
   // ---- the real neighbourhood ----
   function pickBranch(list, cb){
     var saved = ''; try { saved = localStorage.getItem('lbHqBranch') || ''; } catch(e){}
@@ -740,7 +873,7 @@
     if(rp.length){ var rg = new T.BufferGeometry(); rg.setAttribute('position', new T.Float32BufferAttribute(rp, 3)); rg.computeVertexNormals();
       var rm = new T.Mesh(rg, new T.MeshStandardMaterial({ color:'#4a4b55', roughness:.7, side:T.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1 })); rm.receiveShadow = true; city.add(rm); OUT.roadMat = rm.material; }
     // buildings -> merged meshes (roofs + 3 wall colours)
-    var dir = new T.Vector3(1, 0, 1.05).normalize(), seen = 0;
+    var dir = new T.Vector3(0, 0, 1), seen = 0;
     var walls = [[], [], []], roofs = [];
     var addBuilding = function(pts, hIn){
       var cx = 0, cz = 0; pts.forEach(function(p){ cx += p[0]; cz += p[1]; }); cx /= pts.length; cz /= pts.length;
@@ -793,6 +926,10 @@
   function loadCity(){
     var list = (DATA && DATA.S && DATA.S.branches && DATA.S.branches.length) ? DATA.S.branches : BRANCH_FALLBACK;
     pickBranch(list, function(b, how){ if(!b) return; var id = b.name + '@' + b.lat; if(OUT.loadedFor === id) return; OUT.loadedFor = id; OUT.branch = b; OUT.how = how;
+      if(/moda/i.test(b.name)){ buildCity(b, null); showLandmark(true); setPlace('📍 Moda Mall · Bahrain World Trade Center');
+        if(!LM.intro && !follow){ LM.intro = 1; outsideView(); target.copy(targetGoal); camera.zoom = zoomGoal; setTimeout(function(){ if(!follow && zoomGoal < homeZoom() * .5) wholeOffice(); }, 3200); }   // fly in: the mall from outside, then into the office
+        return; }
+      showLandmark(false);
       setPlace('📍 ' + b.name + ' · loading map…');
       osmGet(b, function(d){ buildCity(b, d); setPlace('📍 ' + b.name + (d ? '' : ' · map not available, trying again in 2 min'));
         if(!d) setTimeout(function(){ if(OUT.loadedFor === id){ OUT.loadedFor = ''; loadCity(); } }, 120000); }); });
@@ -997,6 +1134,9 @@
 
   // ---------- public API ----------
   window.LBOffice3D = {
+    dbg:function(){ return { van:LM.van && [LM.van.state, Math.round(LM.van.m.position.x), Math.round(LM.van.m.position.z)], drv:AG.driver && [AG.driver.mode, AG.driver.st], t:clock && clock.elapsedTime, hidden:document.hidden, ow:root.offsetWidth, zoom:camera && camera.zoom, goal:zoomGoal, follow:follow, lm:LM.on, W:W, H:H, tg:targetGoal && [targetGoal.x, targetGoal.z] }; },
+    skipWalk:function(k){ var a = AG[k]; if(a && a.mode === 'walk' && a.path.length){ a.pos.copy(a.path[a.path.length - 1]); a.path = [a.pos.clone()]; } },
+    view:function(v){ if(!T) return; if(v === 'city') outsideView(); else wholeOffice(); },
     update:function(d){
       DATA = d; LOADED_AT = Date.now(); NEXT_AT = Date.now() + (d.every || 30000);
       d.KEYS.forEach(function(k){ var e = d.EMP[k]; if(!e) return; var sig = e.st + '|' + e.say;
