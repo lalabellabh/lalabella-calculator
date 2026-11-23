@@ -2301,14 +2301,23 @@ function getStep(){
   return Math.min(180, Math.max(150, carousel.clientWidth/3.6));
 }
 
+/* Nov 23 2026 (Bench: "naka 140, ung icon sa flower di sumabay"): this page keeps its own size, but the tool icons in
+   Select a Tool still follow ⚙️ Text size (phone), so they fill the box the way the rest of the app grows. */
+function toolZoom(){
+  if(!window.matchMedia("(max-width:900px)").matches)return 1;
+  let t=100; try{ t=(window.LBLook&&LBLook.get().text)||JSON.parse(localStorage.getItem('lbLook')||'{}').text||100; }catch(e){}
+  return Math.max(.85,Math.min(1.4,t/100));
+}
+addEventListener('lb:look-changed',()=>renderCarousel(false));
 function renderCarousel(animate=true){
   const count=allTools.length;
   if(!count)return;
-  const step=getStep();
+  const tz=toolZoom();
+  const step=getStep()*Math.min(tz,1.18);
   allTools.forEach((tool,i)=>{
     const d=shortestOffset(i,activeIndex,count);
     const distance=Math.abs(d);
-    const scale=d===0 ? 1.05 : (distance===1 ? .96 : .88);
+    const scale=(d===0 ? 1.05 : (distance===1 ? .96 : .88))*tz;
     const opacity=d===0 ? 1 : (distance<=2 ? .68 : .28);
     tool.classList.toggle("active",d===0);
     tool.style.transition=animate ? "" : "none";
