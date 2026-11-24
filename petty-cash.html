@@ -1439,7 +1439,11 @@ async function slCall(params, post){
   return res.json();
 }
 // "➕ Add to list": type invoices one by one; Save sends them all and the totals are worked out automatically.
-SL.draft = [];
+SL.draft = []; SL.drEdit = -1;   // drEdit = index of the list line being corrected (✎), -1 = none
+// Nov 24 2026 (Bench: "walang edit para matama ko"): the not-saved list is kept on this device too, so a refresh doesn't lose it
+const SL_DKEY = 'lbSalesDraft';
+function slDraftKeep(){ try{ if(SL.draft.length) localStorage.setItem(SL_DKEY, JSON.stringify({ d: document.getElementById('slDate').value || slToday(), b: document.getElementById('branchSelect').value, list: SL.draft })); else localStorage.removeItem(SL_DKEY); }catch(e){} }
+try{ const k = JSON.parse(localStorage.getItem(SL_DKEY) || 'null'); if(k && Array.isArray(k.list) && k.list.length){ SL.draft = k.list; if(k.d) document.getElementById('slDate').value = k.d; } }catch(e){}
 function slFormLine(){
   const l = { cash: slNum('slCash'), card: slNum('slCard'), myfatoorah: slNum('slMf'), benefit: slNum('slBn'), credit: slNum('slCredit'),
     channel: document.getElementById('slChannel').value, ref: document.getElementById('slRef').value.trim(), notes: document.getElementById('slNotes').value.trim() };
@@ -1448,23 +1452,39 @@ function slFormLine(){
 }
 function slDraftRender(){
   const box = document.getElementById('slDraft');
+  slDraftKeep();
   if(!SL.draft.length){ box.style.display='none'; box.innerHTML=''; document.getElementById('slSaveBtn').textContent = SL.editId ? 'Save changes' : 'Save'; return; }
   const t = slTotals(SL.draft);
   const m = l => [['Cash',l.cash],['Card',l.card],['MyFatoorah',l.myfatoorah],['Fawri+/Benefit',l.benefit],['Credit',l.credit]].filter(x=>x[1]).map(x=>x[0]+' '+x[1].toFixed(3)).join(' · ');
   box.style.display='block';
   box.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px;">NOT SAVED YET · ' + SL.draft.length + ' ITEM' + (SL.draft.length>1?'S':'') + '</div>' +
-    SL.draft.map((l,i)=>`<div class="sl-dr"><div><b>${fmtBD(l.amount)}</b> <span style="color:var(--dim)">${m(l)}</span><br><span style="color:var(--dim);font-size:11px;">${l.channel?SL_CH[l.channel]:''}${l.ref?' · '+esc(l.ref):''}${l.notes?' · '+esc(l.notes):''}</span></div><button type="button" data-drx="${i}" title="Remove">✕</button></div>`).join('') +
+    SL.draft.map((l,i)=>`<div class="sl-dr"><div><b>${fmtBD(l.amount)}</b> <span style="color:var(--dim)">${m(l)}</span><br><span style="color:var(--dim);font-size:11px;">${l.channel?SL_CH[l.channel]:''}${l.ref?' · '+esc(l.ref):''}${l.notes?' · '+esc(l.notes):''}</span></div><span style="white-space:nowrap"><button type="button" data-dre="${i}" title="Edit">✎</button><button type="button" data-drx="${i}" title="Remove">✕</button></span></div>`).join('') +
     `<div class="sl-dsum"><div>Cash<b>${t.cash.toFixed(3)}</b></div><div>Card<b>${t.card.toFixed(3)}</b></div><div>MyFatoorah<b>${t.mf.toFixed(3)}</b></div><div>Fawri+/Benefit<b>${t.bn.toFixed(3)}</b></div><div>Credit<b>${t.credit.toFixed(3)}</b></div><div class="t">Total<b>${t.inv.toFixed(3)}</b></div></div>`;
-  box.querySelectorAll('[data-drx]').forEach(b=>b.addEventListener('click',()=>{ SL.draft.splice(Number(b.dataset.drx),1); slDraftRender(); }));
+  box.querySelectorAll('[data-drx]').forEach(b=>b.addEventListener('click',()=>{ const i = Number(b.dataset.drx); SL.draft.splice(i,1); if(SL.drEdit === i) slDrEditEnd(); else if(SL.drEdit > i) SL.drEdit--; slDraftRender(); }));
+  box.querySelectorAll('[data-dre]').forEach(b=>b.addEventListener('click',()=>slDrEdit(Number(b.dataset.dre))));
+  if(SL.drEdit > -1){ const r = box.querySelectorAll('.sl-dr')[SL.drEdit]; if(r) r.style.outline = '2px solid var(--rose, #c9506b)'; }
   document.getElementById('slSaveBtn').textContent = 'Save all (' + SL.draft.length + ')';
 }
+function slDrEdit(i){
+  const l = SL.draft[i]; if(!l) return;
+  const v = n => n ? Number(n).toFixed(3) : '';
+  document.getElementById('slCash').value = v(l.cash); document.getElementById('slCard').value = v(l.card); document.getElementById('slMf').value = v(l.myfatoorah);
+  document.getElementById('slBn').value = v(l.benefit); document.getElementById('slCredit').value = v(l.credit);
+  document.getElementById('slChannel').value = l.channel || ''; document.getElementById('slRef').value = l.ref || ''; document.getElementById('slNotes').value = l.notes || '';
+  if(SL.drEdit < 0) SL.addHtml = document.getElementById('slAddBtn').innerHTML;
+  SL.drEdit = i; document.getElementById('slAddBtn').innerHTML = '✓ Update line'; slCalc(); slDraftRender();
+  document.getElementById('slCash').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function slDrEditEnd(){ if(SL.drEdit > -1 && SL.addHtml) document.getElementById('slAddBtn').innerHTML = SL.addHtml; SL.drEdit = -1; }
 window.addEventListener('beforeunload', e => { if(SL.draft && SL.draft.length){ e.preventDefault(); e.returnValue=''; } });
+if(SL.draft.length) setTimeout(slDraftRender, 0);   // list kept from before the refresh
 function slClearLine(){ ['slCash','slCard','slMf','slBn','slCredit','slRef','slNotes'].forEach(id=>document.getElementById(id).value=''); slCalc(); }
 document.getElementById('slAddBtn').addEventListener('click', ()=>{
   const msg = document.getElementById('slMsg'); msg.className='msg';
   if(SL.editId){ msg.textContent='Finish or cancel the edit first.'; msg.className='msg error'; return; }
   const l = slFormLine();
   if(l.amount <= 0){ msg.textContent='Enter an amount first (Cash, Card, MyFatoorah, Fawri+/Benefit or Credit).'; msg.className='msg error'; return; }
+  if(SL.drEdit > -1){ SL.draft[SL.drEdit] = l; slDrEditEnd(); slClearLine(); slDraftRender(); msg.textContent = 'Line updated ✓'; msg.className = 'msg success'; return; }
   if(l.ref && SL.draft.some(x=>x.ref && x.ref.toLowerCase()===l.ref.toLowerCase())){ msg.textContent='That invoice no. is already in the list.'; msg.className='msg error'; return; }
   SL.draft.push(l); slClearLine(); slDraftRender();
   document.getElementById('slCash').focus();
@@ -1476,7 +1496,7 @@ document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
     msg.className='msg';
     if(branch === 'All'){ msg.textContent='Please pick a branch first (top of the page).'; msg.className='msg error'; return; }
     if(!by){ msg.textContent='Please type your name.'; msg.className='msg error'; return; }
-    const cur = slFormLine(); if(cur.amount > 0){ SL.draft.push(cur); slClearLine(); slDraftRender(); }
+    const cur = slFormLine(); if(cur.amount > 0){ if(SL.drEdit > -1) SL.draft[SL.drEdit] = cur; else SL.draft.push(cur); slDrEditEnd(); slClearLine(); slDraftRender(); }
     btn.disabled = true; document.getElementById('slAddBtn').disabled = true;
     const date = document.getElementById('slDate').value; let ok = 0, total = 0;
     while(SL.draft.length){
