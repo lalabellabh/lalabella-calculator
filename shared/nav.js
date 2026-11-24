@@ -575,7 +575,11 @@
     const B = ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s).join(',');
     bs.textContent = B + '{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;border-radius:12px!important;padding:0!important;font-size:25px!important;line-height:1!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}' +
       ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s + ' svg').join(',') + '{width:22px!important;height:22px!important}' +
-      '@media print{' + B + '{display:none!important}}';
+      '@media print{' + B + '{display:none!important}}' +
+      // Nov 24 2026 (Bench: "ung icon sa tab di pantay-pantay"): in the menu's hub / calculator tiles every icon sits at the same
+      // height — the icon is pinned to the top, so a 2-line name ("Flower Calc") no longer pushes its icon up.
+      'html body .lbnav-grid.lbnav-grid.lbnav-grid>a{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;text-align:center!important;gap:6px!important;padding-top:12px!important;line-height:1.15!important;word-break:keep-all!important;overflow-wrap:normal!important;hyphens:none!important}' +
+      'html body .lbnav-grid.lbnav-grid.lbnav-grid>a>.hub-icon{flex:0 0 auto!important;margin:0!important}';
     document.head.appendChild(bs);
     // the text ☰ is thinner than the Home one: draw the same 3 rounded bars as index.html (✕ and other text stay as they are)
     const BARS = '<svg class="lb-bars" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect y="3" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="8.9" width="20" height="2.2" rx="1.1" fill="currentColor"/><rect y="14.8" width="20" height="2.2" rx="1.1" fill="currentColor"/></svg>';
