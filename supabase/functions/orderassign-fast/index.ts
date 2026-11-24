@@ -173,7 +173,7 @@ async function getUnassignedStatus(isAdmin: boolean) {
   // Nov 24 2026 (Bench: "nakuha na sa branch, notification pa rin"): a web order the dashboard has not shown for 20 min is no longer
   // in its New list (taken / moved) -> close it and stop its alarm. Before, a report from a single-branch page never closed
   // orders of other branches, so e.g. #20270 kept ringing for a whole day.
-  try { const stale = new Date(Date.now() - 20 * 60000).toISOString(); await sbPatch('live_orders', `source=eq.web&section=eq.new&last_seen_at=lt.${stale}`, { section: 'gone', gone_at: new Date().toISOString(), ack_at: new Date().toISOString(), ack_by: 'Auto: off dashboard' }); } catch (e) { console.error('live stale', e); }
+  await closeStaleLive();
   try { newAssigned = ((await sbGet('live_orders', 'select=id,source,order_no,branch,assigned_at&section=eq.new&ack_at=is.null&order=assigned_at.desc&limit=20')) || []).map((r: any) => ({ id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, assignedAt: r.assigned_at })); } catch (e) { console.error('live orders', e); }
   const extra = { pendingApprovals: total, approvalsDetail: appr, newAssigned };
   if (!rows.length) return { count: 0, ordersDetail: [], ...extra };
@@ -208,6 +208,11 @@ function cleanLive(o: any) {
     sender: T(o && o.sender, 60), senderPhone: T(o && o.senderPhone, 30), receiver: T(o && o.receiver, 60), receiverPhone: T(o && o.receiverPhone, 30), address: T(o && o.address, 200), price: T(o && o.price, 30),
     stage: (o && o.stage) === 'processed' ? 'processed' : 'new', placedAt: T(o && o.placedAt, 40), inAt: T(o && o.inAt, 40) };
 }
+async function closeStaleLive() {
+  try { const stale = new Date(Date.now() - 20 * 60000).toISOString(), now = new Date().toISOString();
+    await sbPatch('live_orders', `source=eq.web&section=eq.new&last_seen_at=lt.${stale}`, { section: 'gone', gone_at: now, ack_at: now, ack_by: 'Auto: off dashboard' });
+  } catch (e) { console.error('live stale', e); }
+}
 async function reportNewOrders(p: any) {
   if (String(p.found || '') !== '1') return { success: true, skipped: 'list not on screen' };
   let list: any[] = [];
@@ -237,6 +242,7 @@ async function reportNewOrders(p: any) {
   const scope = sk(T(p.scope, 40));
   const goneIds = cur.filter((r) => r.section === 'new' && !seen.has(r.order_no) && (!scope || sk(r.branch) === scope)).map((r) => r.id);
   if (goneIds.length) await sbPatch('live_orders', `id=in.(${goneIds.join(',')})`, { section: 'gone', gone_at: now });
+  await closeStaleLive();
   // keep the table small: forget orders gone for more than 3 days
   try { await fetch(`${SB_URL}/rest/v1/live_orders?section=eq.gone&gone_at=lt.${new Date(Date.now() - 3 * 86400000).toISOString()}`, { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }); } catch (_) { /* ignore */ }
   return { success: true, now: list.length, added: inserts.length, gone: goneIds.length };
