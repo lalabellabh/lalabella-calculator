@@ -212,16 +212,17 @@
     fetch(API, { method:'POST', body:new URLSearchParams({ action:'doneLiveOrder', id:d.getAttribute('data-done'), token:token() }) }).then(function(r){ return r.json(); }).then(function(x){ if(!x || !x.success) alert((x && x.error) || 'Failed.'); load(); }, load); });
   document.addEventListener('click', function(e){ var b = e.target.closest('[data-ack]'); if(!b) return; b.disabled = true; ack({ id:b.getAttribute('data-ack') }).then(load); });
 
-  var busy = false;
+  var busy = false, openNow = true;   // Nov 24 2026: the first load after opening / coming back = "I opened Live Orders" (staff: their branch's NEW count as seen)
   function load(){
     if(busy) return; busy = true;
-    fetch(API + '?action=getLiveOrders&token=' + encodeURIComponent(token()) + '&_=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
+    var op = openNow ? '&opened=1' : ''; openNow = false;
+    fetch(API + '?action=getLiveOrders&token=' + encodeURIComponent(token()) + op + '&_=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
       if(d && d.success){ DATA = d; render(); } else if(d && d.error){ $('liveTxt').textContent = d.error; }
     }).catch(function(){ $('liveTxt').textContent = 'Connection problem — retrying…'; $('dot').className = 'dot off'; }).then(function(){ busy = false; });
   }
   load(); setInterval(function(){ if(!document.hidden) load(); }, 5000);
   setInterval(function(){ if(DATA) render(); }, 30000);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ openNow = true; busy = false; load(); } });
 })();
 </script>
 <div id="tmBox" style="display:none;position:fixed;inset:0;background:rgba(30,18,24,.5);z-index:9999;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto">

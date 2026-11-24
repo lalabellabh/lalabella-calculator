@@ -303,7 +303,21 @@ async function syncBleemsLive() {
     if (old.length) await sbPatch('live_orders', `id=in.(${old.join(',')})`, { section: 'gone', gone_at: now });
   } catch (e) { console.error('bleems live', e); }
 }
-async function getLiveOrders() {
+// Nov 24 2026 (Bench: "sige mas ok pa un"): when a staff member of a branch opens Live Orders, the new orders of THEIR branch
+// count as seen -> the 🎁 alarm stops even if the order is not accepted on lalabella.web.app yet. Only on OPENING the page (opened=1),
+// so an order that arrives while the page is already open still rings until tapped. (Admins only look: no auto-seen.)
+function brKeyOf(b: unknown) { const k = String(b || '').toLowerCase().replace(/[^a-z]/g, ''); return k === 'galali' ? 'qalali' : k; }
+async function autoSeenByBranch(me: any) {
+  if (!me || String(me.role || '').toLowerCase() === 'admin') return;
+  const mine = brKeyOf(me.branch); if (!mine || mine === 'headoffice') return;
+  const open: any[] = (await sbGet('live_orders', 'select=id,branch&section=eq.new&ack_at=is.null&limit=200')) || [];
+  const ids = open.filter((r) => brKeyOf(r.branch) === mine).map((r) => r.id);
+  if (!ids.length) return;
+  const who = T(me.full_name || me.username, 50) || 'staff';
+  await sbPatch('live_orders', `id=in.(${ids.join(',')})&ack_at=is.null`, { ack_at: new Date().toISOString(), ack_by: who + ' (opened Live Orders)' });
+}
+async function getLiveOrders(me?: any) {
+  try { await autoSeenByBranch(me); } catch (e) { console.error('auto seen', e); }
   await syncBleemsLive();
   const since = new Date(Date.now() - 6 * 3600000).toISOString();
   const [rows, gone, st] = await Promise.all([
@@ -370,7 +384,7 @@ Deno.serve(async (req) => {
     if (action === 'reportUnassignedStatus') return json(await reportUnassignedStatus(p));
     if (action === 'getUnassignedStatus') return json(await getUnassignedStatus(!!me && String(me.role || '').toLowerCase() === 'admin'));
     if (action === 'reportNewOrders') { if (!viaAutomation) return json({ success: false, error: 'Automation key needed.' }); return json(await reportNewOrders(p)); }
-    if (action === 'getLiveOrders') return json(await getLiveOrders());
+    if (action === 'getLiveOrders') return json(await getLiveOrders(String(p.opened || '') === '1' ? me : null));
     if (action === 'bleemsTiming') { if (!me || String(me.role || '').toLowerCase() !== 'admin') return json({ success: false, error: 'Admin only.' }); return json(await bleemsTiming()); }
     if (action === 'ackLiveOrder') return json(await ackLiveOrder(p, me));
     if (action === 'doneLiveOrder') return json(await doneLiveOrder(p, me));
