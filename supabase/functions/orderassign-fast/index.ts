@@ -170,6 +170,10 @@ async function getUnassignedStatus(isAdmin: boolean) {
   // Live Orders (Nov 2026): orders just given to a branch that nobody marked "seen" yet -> gift alarm in the bell.
   let newAssigned: any[] = [];
   await syncBleemsLive();
+  // Nov 24 2026 (Bench: "nakuha na sa branch, notification pa rin"): a web order the dashboard has not shown for 20 min is no longer
+  // in its New list (taken / moved) -> close it and stop its alarm. Before, a report from a single-branch page never closed
+  // orders of other branches, so e.g. #20270 kept ringing for a whole day.
+  try { const stale = new Date(Date.now() - 20 * 60000).toISOString(); await sbPatch('live_orders', `source=eq.web&section=eq.new&last_seen_at=lt.${stale}`, { section: 'gone', gone_at: new Date().toISOString(), ack_at: new Date().toISOString(), ack_by: 'Auto: off dashboard' }); } catch (e) { console.error('live stale', e); }
   try { newAssigned = ((await sbGet('live_orders', 'select=id,source,order_no,branch,assigned_at&section=eq.new&ack_at=is.null&order=assigned_at.desc&limit=20')) || []).map((r: any) => ({ id: r.id, source: r.source, orderNo: r.order_no, branch: r.branch, assignedAt: r.assigned_at })); } catch (e) { console.error('live orders', e); }
   const extra = { pendingApprovals: total, approvalsDetail: appr, newAssigned };
   if (!rows.length) return { count: 0, ordersDetail: [], ...extra };
@@ -210,7 +214,7 @@ async function reportNewOrders(p: any) {
   try { list = JSON.parse(p.orders || '[]'); } catch { return { success: false, error: 'bad list' }; }
   list = (Array.isArray(list) ? list : []).map(cleanLive).filter((o) => o.orderNo).slice(0, 200);
   const now = new Date().toISOString();
-  const cur: any[] = await sbGet('live_orders', 'select=id,order_no,branch,section,ack_at&source=eq.web') || [];
+  const cur: any[] = await sbGet('live_orders', 'select=id,order_no,branch,section,ack_at,ack_by&source=eq.web') || [];
   const byNo: Record<string, any> = {}; cur.forEach((r) => { byNo[r.order_no] = r; });
   const seen = new Set<string>();
   const inserts: any[] = [];
@@ -222,6 +226,7 @@ async function reportNewOrders(p: any) {
     if (!r) { inserts.push({ source: 'web', order_no: o.orderNo, branch: o.branch, section: 'new', details: o, first_seen_at: now, assigned_at: now, last_seen_at: now, ack_at: accepted ? now : null, ack_by: accepted ? 'Accepted on web' : null }); continue; }   // same keys on every row (bulk insert)
     const patch: any = { details: o, last_seen_at: now, section: 'new', gone_at: null };
     if (T(r.branch, 40).toLowerCase() !== o.branch.toLowerCase()) { patch.branch = o.branch; patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }
+    else if (r.section !== 'new' && r.ack_by === 'Auto: off dashboard') { /* closed only because the dashboard was off a while: show again, no new alarm */ }
     else if (r.section !== 'new') { patch.assigned_at = now; patch.ack_at = null; patch.ack_by = null; }   // came back to New
     if (accepted && (patch.ack_at === null || !r.ack_at)) { patch.ack_at = now; patch.ack_by = 'Accepted on web'; }
     await sbPatch('live_orders', `id=eq.${r.id}`, patch);
