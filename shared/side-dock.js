@@ -52,6 +52,7 @@
   st.y = isFinite(st.y) ? st.y : Math.round(window.innerHeight * 0.42);
   st.order = Array.isArray(st.order) ? st.order : [];
   st.items = Array.isArray(st.items) ? st.items.filter(function (h) { return PAGES.some(function (p) { return p[0] === h; }); }).slice(0, MAX_CUSTOM) : [];
+  st.names = !!st.names;   // Nov 25 2026 (Bench): ✎ edit → Aa = show / hide the names next to the icons
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -88,6 +89,12 @@
     '.lbd-b{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e03a3a;color:#fff;font:700 10px "Space Grotesk",Arial,sans-serif;display:none;align-items:center;justify-content:center;border:2px solid #fff;}.lbd-b.show{display:flex;}' +
     '.lbd-x{position:absolute;top:-5px;left:-5px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#c9506b;color:#fff;font-size:11px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;}' +
     '#lbdock-tray.edit .lbd-x{display:flex;}#lbdock-tray.edit .lbd-w .lbd-it:not(.drag){animation:lbdWig .5s ease-in-out infinite alternate;}' +
+    '#lbdock-tray.names .lbd-w{display:flex;align-items:center;gap:8px;align-self:stretch}#lbdock-tray.names.r .lbd-w{flex-direction:row-reverse}' +
+    '.lbd-l{display:none;font:700 12px/1.2 "Space Grotesk",Arial,sans-serif;color:#3a2530;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 0 rgba(255,255,255,.7)}' +
+    '#lbdock-tray.names .lbd-l{display:block}#lbdock-tray.names.r .lbd-l{text-align:right;margin-left:auto}' +
+    '#lbdock-tray.names.r .lbd-x{left:auto;right:33px}#lbdock-tray.names.r>.lbd-it{align-self:flex-end}#lbdock-tray.names.l>.lbd-it{align-self:flex-start}#lbdock-tray.names>.lbd-it.tool{margin:0 7px}' +
+    '.lbd-it.tool.aa{font:800 13px "Space Grotesk",Arial,sans-serif;color:#9e2f4a}.lbd-it.tool.aa.on{background:#a8405e;color:#fff;border-color:#a8405e}' +
+    '#lbdock-tray:not(.edit) .lbd-it.tool.aa{display:none}' +
     '@keyframes lbdWig{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}' +
     '.lbd-sep{height:1px;background:rgba(255,255,255,.55);margin:0 6px;flex:0 0 auto;}' +
     '#lbdock-pick{position:fixed;inset:0;z-index:100002;background:rgba(40,20,28,.35);display:none;align-items:center;justify-content:center;padding:14px;}#lbdock-pick.show{display:flex;}' +
@@ -112,7 +119,7 @@
   function applySide() {
     root.setAttribute('data-lbside', st.side);
     handle.className = (st.side === 'right' ? 'r' : 'l') + (handle.classList.contains('alert') ? ' alert' : '');
-    tray.className = (st.side === 'right' ? 'r' : 'l') + (tray.classList.contains('open') ? ' open' : '') + (tray.classList.contains('edit') ? ' edit' : '');
+    tray.className = (st.side === 'right' ? 'r' : 'l') + (tray.classList.contains('open') ? ' open' : '') + (tray.classList.contains('edit') ? ' edit' : '') + (st.names ? ' names' : '');
   }
   function clampY(y) { return Math.max(8, Math.min(window.innerHeight - 76, y)); }
   function placeHandle() {
@@ -133,6 +140,7 @@
     var pos = function (k) { var i = ord.indexOf(k); return i === -1 ? 1e6 : i; };
     return keys.map(function (k, i) { return [k, i]; }).sort(function (a, b) { return (pos(a[0]) - pos(b[0])) || (a[1] - b[1]); }).map(function (x) { return x[0]; });
   }
+  function nameTag(t) { var l = document.createElement('span'); l.className = 'lbd-l'; l.textContent = t; return l; }
   function build() {
     tray.innerHTML = '';
     var made = {}, keys = [];
@@ -142,7 +150,7 @@
       var el = document.createElement('button'); el.type = 'button'; el.className = 'lbd-it'; el.title = b.label; el.setAttribute('aria-label', b.label);
       el.innerHTML = b.icon + (b.badge ? '<span class="lbd-b" data-b="' + b.badge + '"></span>' : '');
       el.addEventListener('click', function () { if (tray.classList.contains('edit')) return; closeTray(); var t = document.getElementById(b.id); if (t) t.click(); });
-      var w = document.createElement('div'); w.className = 'lbd-w'; w.appendChild(el);
+      var w = document.createElement('div'); w.className = 'lbd-w'; w.appendChild(el); w.appendChild(nameTag(b.label));
       made['b:' + b.id] = w; keys.push('b:' + b.id);
     });
     st.items.forEach(function (h) {
@@ -152,7 +160,7 @@
       a.addEventListener('click', function (e) { if (tray.classList.contains('edit')) e.preventDefault(); });
       var x = document.createElement('button'); x.type = 'button'; x.className = 'lbd-x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Remove ' + pg[2]);
       x.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); st.items = st.items.filter(function (i) { return i !== h; }); save(); build(); tray.classList.add('edit'); });
-      w.appendChild(a); w.appendChild(x);
+      w.appendChild(a); w.appendChild(x); w.appendChild(nameTag(pg[2]));
       made['p:' + h] = w; keys.push('p:' + h);
     });
     orderKeys(keys).forEach(function (k) { made[k].setAttribute('data-k', k); tray.appendChild(made[k]); });
@@ -165,6 +173,11 @@
     function paintEd() { var on = tray.classList.contains('edit'); ed.textContent = on ? '✓' : '✎'; ed.title = on ? 'Done' : 'Rearrange / remove shortcuts'; ed.setAttribute('aria-label', ed.title); }
     ed.addEventListener('click', function () { tray.classList.toggle('edit'); paintEd(); });
     paintEd(); tray.appendChild(ed);
+    var aa = document.createElement('button'); aa.type = 'button'; aa.className = 'lbd-it tool aa' + (st.names ? ' on' : ''); aa.textContent = 'Aa';
+    aa.title = st.names ? 'Hide names' : 'Show names'; aa.setAttribute('aria-label', aa.title);
+    aa.addEventListener('click', function () { st.names = !st.names; save(); build(); tray.classList.add('edit'); var e2 = document.getElementById('lbd-edit'); if (e2) e2.textContent = '✓'; });
+    tray.appendChild(aa);
+    tray.classList.toggle('names', st.names);
     syncBadges(); placeTray();
   }
 

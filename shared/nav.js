@@ -1334,9 +1334,9 @@
   // 'lb-dock' is always on: the old floating buttons are retired for good. 'lb-dock-off' = the user switched the dock itself off in Settings (nothing floats).
   document.documentElement.classList.add('lb-dock');
   try { if (localStorage.getItem('lbDockOff') === '1') document.documentElement.classList.add('lb-dock-off'); } catch (e) {}
-  if (!window.LBSideDock && !document.querySelector('script[src="shared/side-dock.js"]')) {
+  if (!window.LBSideDock && !document.querySelector('script[src^="shared/side-dock.js"]')) {
     const sd = document.createElement('script');
-    sd.src = 'shared/side-dock.js';
+    sd.src = 'shared/side-dock.js?v=2';
     document.body.appendChild(sd);
   }
 
