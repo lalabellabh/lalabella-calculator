@@ -69,6 +69,11 @@
     const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=5';
     (document.head || document.documentElement).appendChild(ic);
   }
+  // Section shortcuts at the top of Chocolate / Flower / Item / Café pages — see shared/section-bar.js
+  if (!window.LBSectionBar && !document.querySelector('script[src^="shared/section-bar.js"]')) {
+    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=1';
+    (document.head || document.documentElement).appendChild(sb);
+  }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
   if (!window.LBAccent && !document.querySelector('script[src^="shared/accent.js"]')) {
     const ac = document.createElement('script'); ac.src = 'shared/accent.js?v=2';
