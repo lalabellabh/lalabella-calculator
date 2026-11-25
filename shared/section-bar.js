@@ -49,7 +49,7 @@
     '.lbsb a.on{background:#a8405e;color:#fff;border-color:#a8405e}.lbsb a:hover{border-color:rgba(168,64,94,.4)}' +
     /* Nov 25 2026: premium controls — a small capsule (tune + fold arrow) instead of loose ✎ ✕ */
     '.lbsb-ctl{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:99px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(246,236,240,.85));border:1px solid rgba(158,47,74,.14);box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(60,30,40,.08)}' +
-    '.lbsb-b{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:0;background:transparent;color:#8a2f48;cursor:pointer;transition:background .15s,transform .15s}' +
+    '.lbsb-b{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:0;background:transparent;color:#8a2f48;cursor:pointer;transition:background .15s,transform .15s}' +
     '.lbsb-b:hover{background:rgba(158,47,74,.1)}.lbsb-b:active{transform:scale(.92)}.lbsb-ctl .lbsb-b+.lbsb-b{border-left:1px solid rgba(158,47,74,.12);border-radius:0 50% 50% 0}' +
     '.lbsb-open{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 10px 0 12px;border-radius:99px;border:1px solid rgba(158,47,74,.18);cursor:pointer;color:#8a2f48;font:700 12px/1 "Space Grotesk",system-ui,sans-serif;' +
       'background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(246,236,240,.9));box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(60,30,40,.12)}.lbsb-open .d{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#c9506b,#9e2f4a);box-shadow:0 0 0 3px rgba(201,80,107,.15)}.lbsb-open:hover{transform:translateY(-1px)}' +
@@ -87,7 +87,7 @@
     if (a.right > r.left && a.left < r.right && a.bottom > r.top && a.top < r.bottom) bar.style.marginLeft = Math.ceil(a.right - r.left + 8) + 'px';
     // line the bar up with the ☰ (same height, same top) — Nov 25 2026, Bench: "ung alignment ng hamburger"
     if (getComputedStyle(bt).position === 'fixed' && bar.style.position !== 'relative' && !bar.classList.contains('min') && window.scrollY < 5) {
-      bar.style.minHeight = Math.round(a.height) + 'px'; bar.style.top = Math.round(a.top) + 'px';
+      bar.style.minHeight = Math.round(a.height) + 'px'; bar.style.top = Math.round(a.top) + 'px';   // as tall as the ☰, on the same line
       var r2 = bar.getBoundingClientRect(), d = Math.round(a.top - r2.top), mt = parseFloat(getComputedStyle(bar).marginTop) || 0;
       if (Math.abs(d) > 1 && Math.abs(d) < 60 && mt + d >= -40) bar.style.marginTop = (mt + d) + 'px';
     }

@@ -71,12 +71,12 @@
   }
   // Compact (not full-width) action buttons on big screens — see shared/compact-buttons.js
   if (!window.LBCompactButtons && !document.querySelector('script[src^="shared/compact-buttons.js"]')) {
-    const cb = document.createElement('script'); cb.src = 'shared/compact-buttons.js?v=1';
+    const cb = document.createElement('script'); cb.src = 'shared/compact-buttons.js?v=3';
     (document.head || document.documentElement).appendChild(cb);
   }
   // Section shortcuts at the top of Chocolate / Flower / Item / Café pages — see shared/section-bar.js
   if (!window.LBSectionBar && !document.querySelector('script[src^="shared/section-bar.js"]')) {
-    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=4';
+    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=5';
     (document.head || document.documentElement).appendChild(sb);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js

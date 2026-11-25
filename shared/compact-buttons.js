@@ -14,6 +14,8 @@
       'margin-left:auto!important;margin-right:auto!important;padding-left:26px!important;padding-right:26px!important;border-radius:14px!important;' +
       'box-shadow:0 6px 16px rgba(60,30,40,.14),inset 0 1px 0 rgba(255,255,255,.35)!important;transition:transform .15s ease,box-shadow .15s ease!important;letter-spacing:.01em}' +
     '.lbcb.lbcb{display:flex;align-items:center;justify-content:center;gap:6px}' +   /* not !important: a page that hides the button (display:none) still wins */
+    /* Nov 25 2026 (Bench: "baka may nakadikit"): stacked pills / rows always keep a little space between them */
+    '.lbcb-row+.lbcb,.lbcb+.lbcb,.lbcb+.lbcb-row,.lbcb-row+.lbcb-row,input+.lbcb,input+.lbcb-row,select+.lbcb,select+.lbcb-row,textarea+.lbcb,textarea+.lbcb-row{margin-top:10px!important}' +
     '.lbcb-row.lbcb-row{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px}.lbcb-row>.lbcb{margin:0!important}' +
     '.lbcb:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(60,30,40,.18),inset 0 1px 0 rgba(255,255,255,.35)!important}' +
     '.lbcb:active{transform:translateY(0) scale(.98)}}';
