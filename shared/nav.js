@@ -1336,7 +1336,7 @@
   try { if (localStorage.getItem('lbDockOff') === '1') document.documentElement.classList.add('lb-dock-off'); } catch (e) {}
   if (!window.LBSideDock && !document.querySelector('script[src^="shared/side-dock.js"]')) {
     const sd = document.createElement('script');
-    sd.src = 'shared/side-dock.js?v=2';
+    sd.src = 'shared/side-dock.js?v=3';
     document.body.appendChild(sd);
   }
 

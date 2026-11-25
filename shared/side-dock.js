@@ -92,6 +92,10 @@
     '#lbdock-tray.names .lbd-w{display:flex;align-items:center;gap:8px;align-self:stretch}#lbdock-tray.names.r .lbd-w{flex-direction:row-reverse}' +
     '.lbd-l{display:none;font:700 12px/1.2 "Space Grotesk",Arial,sans-serif;color:#3a2530;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 0 rgba(255,255,255,.7)}' +
     '#lbdock-tray.names .lbd-l{display:block}#lbdock-tray.names.r .lbd-l{text-align:right;margin-left:auto}' +
+    /* Nov 25 2026 (Bench: "pag dinaanan ng cursor o touch, umaangat din ang text"): icon + name lift together */
+    '.lbd-l{transition:transform .18s ease,color .18s ease,text-shadow .18s ease;cursor:pointer}#lbdock-tray:not(.edit) .lbd-w:hover .lbd-it,#lbdock-tray:not(.edit) .lbd-w:active .lbd-it{transform:scale(1.1);background:rgba(255,255,255,.7)}' +
+    '#lbdock-tray:not(.edit) .lbd-w:hover .lbd-l,#lbdock-tray:not(.edit) .lbd-w:active .lbd-l{transform:translateY(-2px) scale(1.08);color:#9e2f4a;text-shadow:0 2px 6px rgba(158,47,74,.25),0 1px 0 rgba(255,255,255,.8)}' +
+    '#lbdock-tray.names.r .lbd-l{transform-origin:right center}#lbdock-tray.names.l .lbd-l{transform-origin:left center}' +
     '#lbdock-tray.names.r .lbd-x{left:auto;right:33px}#lbdock-tray.names.r>.lbd-it{align-self:flex-end}#lbdock-tray.names.l>.lbd-it{align-self:flex-start}#lbdock-tray.names>.lbd-it.tool{margin:0 7px}' +
     '.lbd-it.tool.aa{font:800 13px "Space Grotesk",Arial,sans-serif;color:#9e2f4a}.lbd-it.tool.aa.on{background:#a8405e;color:#fff;border-color:#a8405e}' +
     '#lbdock-tray:not(.edit) .lbd-it.tool.aa{display:none}' +
@@ -140,7 +144,8 @@
     var pos = function (k) { var i = ord.indexOf(k); return i === -1 ? 1e6 : i; };
     return keys.map(function (k, i) { return [k, i]; }).sort(function (a, b) { return (pos(a[0]) - pos(b[0])) || (a[1] - b[1]); }).map(function (x) { return x[0]; });
   }
-  function nameTag(t) { var l = document.createElement('span'); l.className = 'lbd-l'; l.textContent = t; return l; }
+  function nameTag(t) { var l = document.createElement('span'); l.className = 'lbd-l'; l.textContent = t;
+    l.addEventListener('click', function () { if (tray.classList.contains('edit')) return; var it = l.parentNode && l.parentNode.querySelector('.lbd-it'); if (it) it.click(); }); return l; }
   function build() {
     tray.innerHTML = '';
     var made = {}, keys = [];
