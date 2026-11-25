@@ -71,7 +71,7 @@
   }
   // Section shortcuts at the top of Chocolate / Flower / Item / Café pages — see shared/section-bar.js
   if (!window.LBSectionBar && !document.querySelector('script[src^="shared/section-bar.js"]')) {
-    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=1';
+    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=2';
     (document.head || document.documentElement).appendChild(sb);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
