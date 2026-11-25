@@ -586,6 +586,9 @@
     bs.textContent = B + '{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;border-radius:12px!important;padding:0!important;font-size:25px!important;line-height:1!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}' +
       ['.choco-nav-toggle', '.nav-toggle', '.lbnav-btn', '.burger'].map(s => 'html body ' + s + ' svg').join(',') + '{width:22px!important;height:22px!important}' +
       '@media print{' + B + '{display:none!important}}' +
+      // Nov 25 2026 (Bench: "gawin mo sa lahat ng may shortcut"): the calcs' / Calc Sales' own shortcut pills lift and glow too
+      '[data-lb-pills]>a,[data-lb-pills]>button{transition:transform .18s ease,box-shadow .18s ease,color .18s ease,border-color .18s ease,background .18s ease!important}' +
+      '[data-lb-pills]>a:hover,[data-lb-pills]>a:active,[data-lb-pills]>button:hover,[data-lb-pills]>button:active{transform:translateY(-2px) scale(1.05);color:#9e2f4a!important;border-color:rgba(168,64,94,.45)!important;background:#fff!important;box-shadow:0 6px 14px rgba(158,47,74,.22)}' +
       // Nov 24 2026 (Bench: "ung icon sa tab di pantay-pantay"): in the menu's hub / calculator tiles every icon sits at the same
       // height — the icon is pinned to the top, so a 2-line name ("Flower Calc") no longer pushes its icon up.
       'html body .lbnav-grid.lbnav-grid.lbnav-grid>a{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;text-align:center!important;gap:6px!important;padding-top:12px!important;line-height:1.15!important;word-break:keep-all!important;overflow-wrap:normal!important;hyphens:none!important}' +
