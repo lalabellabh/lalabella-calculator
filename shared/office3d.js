@@ -297,7 +297,7 @@
   function setZoom(z){ zoomGoal = Math.max(.15, Math.min(6, z)); }
   function homeZoom(){ return W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1; }
   function wholeOffice(){ closeReport(); follow = ''; resetView(); targetGoal = new T.Vector3(17, 0, 10); setZoom(homeZoom()); renderSide(); }
-  function outsideView(){ closeReport(); follow = ''; targetGoal = new T.Vector3(LM.on ? 30 : 17, 0, LM.on ? 12 : 10); setZoom(homeZoom() * (LM.on ? .34 : .6)); renderSide(); }
+  function outsideView(){ closeReport(); follow = ''; targetGoal = new T.Vector3(LM.on ? 14 : 17, 0, LM.on ? 10 : 10); setZoom(homeZoom() * (LM.on ? .26 : .6)); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
   function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom);
     if(!custom && window.LBOfficeOnSelect){ try{ window.LBOfficeOnSelect(k); }catch(e){} } }   // Nov 2026: e.g. tapping Bea checks Bleems right away
@@ -696,8 +696,8 @@
   // ---------- Nov 23 2026 (Bench): Moda Mall + the Bahrain World Trade Center, streets, palms, traffic ----------
   // Zoomed out you see the mall with its glass dome and the two WTC sail towers with the 3 wind turbines; zoom in and the
   // mall walls fade away = you are inside the office. The driver walks out to the Lalabella van and drives the delivery.
-  var LM = { on:false, g:null, shell:[], shellMats:[], rotors:[], cars:[], van:null }, VANP = { x:42, z:12.5 };
-  var LOOP = { x0:-20, x1:47, z0:-17, z1:35 };   // the road around the mall (centre line)
+  var LM = { on:false, g:null, shell:[], shellMats:[], rotors:[], cars:[], van:null }, VANP = { x:64, z:12.5 };
+  var LOOP = { x0:-44, x1:68, z0:-17, z1:35 };   // Nov 26 2026: wider, the WTC towers sit ON the mall (east) + Sheraton on the west   // the road around the mall (centre line)
   function lmMat(c, o){ o = o || {}; var m = new T.MeshStandardMaterial({ color:c, roughness:o.r == null ? .8 : o.r, metalness:o.m || 0, transparent:!!o.t, opacity:o.op == null ? 1 : o.op }); if(o.e){ m.emissive = new T.Color(o.e); m.emissiveIntensity = o.ei || .4; } return m; }
   function lmBox(w, h, d, m, x, y, z, g, shadow){ var b = new T.Mesh(new T.BoxGeometry(w, h, d), m); b.position.set(x, y, z); if(shadow){ b.castShadow = true; b.receiveShadow = true; } g.add(b); return b; }
   function signTex(text, bg, fg, w, h){ var c = document.createElement('canvas'); c.width = w || 1024; c.height = h || 160; var x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height);
@@ -742,9 +742,9 @@
     for(var j = LOOP.z0 + 2; j < LOOP.z1 - 2; j += 3.2){ lmBox(.14, .05, 1.4, dash, LOOP.x0, -.75, j, g); lmBox(.14, .05, 1.4, dash, LOOP.x1, -.75, j, g); }
     // sidewalks + the mall plaza + lawns
     lmBox(W2 - 4.4, .1, H2 - 4.4, plaza, cx, -.74, cz, g);
-    lmBox(14, .12, 4, lawn, 2, -.68, 31, g); lmBox(14, .12, 4, lawn, 32, -.68, 31, g); lmBox(4, .12, 22, lawn, -15, -.68, 10, g);
+    lmBox(14, .12, 4, lawn, 2, -.68, 31, g); lmBox(14, .12, 4, lawn, 32, -.68, 31, g); lmBox(4, .12, 22, lawn, -37, -.68, 10, g);
     // ===== Moda Mall: stone + glass box around our office, with the big glass dome =====
-    var x0 = -6.5, x1 = 40, z0 = -6.5, z1 = 27.5, hh = 8, sh = [];
+    var x0 = -6.5, x1 = 61, z0 = -6.5, z1 = 27.5, hh = 8, sh = [];
     var stone = lmMat('#ece4d6', { r:.85, t:true }), glass = lmMat('#5d89aa', { r:.15, m:.35, t:true }), gold = lmMat('#b8883a', { r:.4, m:.4, t:true }), roof = lmMat('#cfc6b6', { r:.9, t:true });
     var add = function(m){ sh.push(m); return m; };
     add(lmBox(x1 - x0, hh, .6, stone, (x0 + x1) / 2, -.8 + hh / 2, z1, g, true));            // front
@@ -764,12 +764,11 @@
     for(var r3 = 1; r3 < 4; r3++){ var ring = new T.Mesh(new T.TorusGeometry(9 * Math.cos(r3 * .38), .07, 6, 48), gold); ring.rotation.x = Math.PI / 2; ring.position.set(17, dome.position.y + 9 * .62 * Math.sin(r3 * .38), 10.5); g.add(ring); add(ring); }
     var drum = new T.Mesh(new T.CylinderGeometry(9.4, 9.6, .9, 48), stone); drum.position.set(17, -.8 + hh + .45, 10.5); g.add(drum); add(drum);
     for(var sk = 0; sk < 4; sk++) add(lmBox(3.2, .25, 2.2, glass, sk < 2 ? 0 : 34, -.8 + hh + .2, sk % 2 ? 22 : -1, g));
-    LM.shell = sh; sh.forEach(function(m){ if(m.material && LM.shellMats.indexOf(m.material) < 0) LM.shellMats.push(m.material); });
-    LM.shellMats.forEach(function(m){ m.userData.op = m.opacity; });
     // ===== Bahrain World Trade Center: two sail towers + 3 sky bridges with wind turbines =====
-    var tw = new T.Group(); tw.position.set(60, -.8, 8); g.add(tw);
+    // Nov 26 2026 (Bench: "itong tower nakadikit sa Moda"): the towers rise out of the mall's east wing (Moda Mall is the WTC podium)
+    var tw = new T.Group(); tw.position.set(50, -.8, 4); g.add(tw);
     var ft = floorsTex(); ft.repeat.set(2, 6);
-    var twMat = new T.MeshStandardMaterial({ color:'#d6ecf7', map:ft, roughness:.2, metalness:.25 }), frame = lmMat('#e7ecef', { r:.5, m:.3 });
+    var twMat = new T.MeshStandardMaterial({ color:'#d6ecf7', map:ft, roughness:.2, metalness:.25, transparent:true }), frame = lmMat('#e7ecef', { r:.5, m:.3, t:true });
     var sail = function(dir){ var H = 36, Wb = 8, sp = new T.Shape(); sp.moveTo(0, 0); sp.lineTo(Wb, 0); sp.quadraticCurveTo(Wb * .5, H * .5, .9, H); sp.lineTo(0, H); sp.lineTo(0, 0);
       var geo = new T.ExtrudeGeometry(sp, { depth:5.5, bevelEnabled:false }); geo.translate(0, 0, -2.75); var m = new T.Mesh(geo, [twMat, frame]); m.scale.x = dir; m.position.x = dir * 3.2; m.castShadow = true; tw.add(m);
       lmBox(.4, 37.5, 5.8, frame, dir * 3.2, 18.75, 0, tw); return m; };
@@ -779,6 +778,18 @@
       var rot = new T.Group(); rot.position.set(0, y + .1, 1.4); tw.add(rot); var hub = new T.Mesh(new T.CylinderGeometry(.55, .55, 1, 12), frame); hub.rotation.x = Math.PI / 2; rot.add(hub);
       for(var k = 0; k < 3; k++){ var bl = lmBox(.4, 2.9, .12, lmMat('#f4f6f8', { r:.4 }), 0, 1.45, 0, new T.Group()); var arm = bl.parent; arm.rotation.z = k * Math.PI * 2 / 3; rot.add(arm); }
       LM.rotors.push(rot); });
+    // ===== Sheraton Bahrain Hotel: next to Moda Mall on the west, joined by a low link =====
+    var sht = new T.Group(); sht.position.set(-24, -.8, 6); g.add(sht);
+    var hotW = new T.MeshStandardMaterial({ color:'#efe9df', map:winTex(false), emissiveMap:winTex(true), emissive:'#ffffff', emissiveIntensity:0, roughness:.8, transparent:true }); OUT.winMat.push(hotW);
+    var hb1 = lmBox(9, 22, 26, hotW, 0, 11, 0, sht, true), hb2 = lmBox(16, 7, 10, hotW, 4, 3.5, 14, sht, true);
+    var hRoof = lmMat('#c8bfae', { r:.9, t:true }); lmBox(9.4, .5, 26.4, hRoof, 0, 22.2, 0, sht); lmBox(16.4, .4, 10.4, hRoof, 4, 7.2, 14, sht);
+    var hSg = new T.Mesh(new T.PlaneGeometry(8, 1.6), new T.MeshBasicMaterial({ map:signTex('SHERATON', '#1f3550', '#ffffff'), transparent:true })); hSg.position.set(4.55, 19.5, 0); hSg.rotation.y = Math.PI / 2; sht.add(hSg);
+    var hSg2 = hSg.clone(); hSg2.position.set(0, 19.5, 13.05); hSg2.rotation.y = 0; sht.add(hSg2);
+    lmBox(6, .35, 3, gold, 4, 2.6, 19.6, sht); lmBox(13, 4, 3, glass, 11.5, 2, 4, sht);   // porte-cochère + the glass link to the mall
+    // the towers + hotel fade with the mall walls when you zoom into the office
+    tw.traverse(function(o){ if(o.isMesh) sh.push(o); }); sht.traverse(function(o){ if(o.isMesh) sh.push(o); });
+    LM.shell = sh; sh.forEach(function(m){ (Array.isArray(m.material) ? m.material : [m.material]).forEach(function(mt){ if(mt && LM.shellMats.indexOf(mt) < 0){ mt.transparent = true; LM.shellMats.push(mt); } }); });
+    LM.shellMats.forEach(function(m){ m.userData.op = m.opacity; });
     // palms, trees, lamps
     for(var px = LOOP.x0 + 4; px < LOOP.x1 - 2; px += 7){ palm(px, LOOP.z1 - 3.2, 1, g); palm(px + 3.5, LOOP.z0 + 3, .9, g); }
     for(var pz = LOOP.z0 + 6; pz < LOOP.z1 - 4; pz += 7){ palm(LOOP.x0 + 3.2, pz, .95, g); }
@@ -789,8 +800,8 @@
     var rs = 7; var rr = function(){ rs = (rs * 16807) % 2147483647; return rs / 2147483647; };
     var free = function(x, z, r){ if(x + r > LOOP.x0 - 3 && x - r < LOOP.x1 + 3 && z + r > LOOP.z0 - 3 && z - r < LOOP.z1 + 3) return false;
       if(Math.abs(z - LOOP.z1) < r + 3 || Math.abs(z - LOOP.z0) < r + 3) return false; if(Math.abs(x - cx) < r + 3 && z > LOOP.z1) return false;
-      if(Math.abs(x - 60) < r + 9 && Math.abs(z - 8) < r + 7) return false; return true; };
-    for(var bx = -60; bx < 110; bx += 11) for(var bz = -50; bz < 80; bz += 11){ var w0 = 5 + rr() * 4, d0 = 5 + rr() * 4, x2 = bx + rr() * 3, z2 = bz + rr() * 3;
+      return true; };
+    for(var bx = -85; bx < 130; bx += 11) for(var bz = -50; bz < 80; bz += 11){ var w0 = 5 + rr() * 4, d0 = 5 + rr() * 4, x2 = bx + rr() * 3, z2 = bz + rr() * 3;
       if(!free(x2, z2, Math.max(w0, d0) / 2 + 1) || rr() < .25) continue; var hb = 2.5 + rr() * (rr() < .2 ? 12 : 5);
       var bb = lmBox(w0, hb, d0, bmats[Math.floor(rr() * bmats.length)], x2, -.8 + hb / 2, z2, g, true); lmBox(w0 + .2, .25, d0 + .2, lmMat('#bfb5a3'), x2, -.8 + hb + .12, z2, g); }
     // the van's parking bay + the walkway from the office door
