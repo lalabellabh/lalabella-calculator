@@ -20,7 +20,7 @@
     'flower-barcode': { cols: 'minmax(0,1fr) minmax(0,1fr)' },
     'item-inventory': { cols: '210px minmax(0,1fr)', place: { '#desktopToolNav': ['1'] } },
     'flower-admin': { cols: 'minmax(270px,.85fr) minmax(0,1.3fr) minmax(0,.85fr)' },
-    'item-admin': { cols: 'minmax(0,1fr)' }
+    'item-admin': { cols: 'minmax(0,1.3fr) minmax(0,1fr)' }   /* Nov 25 2026: 2 cards (Fix an Item + Check & Fix Barcodes) side by side; 1 col squeezed the form */
   };
   function go() {
     var b = document.body; if (!b || b.hasAttribute('data-skin')) return;

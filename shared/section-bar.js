@@ -28,8 +28,7 @@
   };
   var EXTRA = { 'receiving-approval.html': 'chocolate', 'chocolate-odoo-import.html': 'chocolate', 'flower-odoo-import.html': 'flower', 'item-odoo-import.html': 'item', 'live-orders.html': 'orders' };
   var key = EXTRA[page] || null;
-  if (!key) for (var k in S) { if (k === 'orders') continue;   /* orders row = Live Orders only (Petty Cash / Order Form have their own layout) */
-    if (S[k].some(function (x) { return x[0].split('?')[0] === page && x[0] !== 'index.html' && x[0] !== 'flower-tools.html'; })) { key = k; break; } }
+  if (!key) for (var k in S) { if (S[k].some(function (x) { return x[0].split('?')[0] === page && x[0] !== 'index.html' && x[0] !== 'flower-tools.html'; })) { key = k; break; } }
   if (/^cafe-/.test(page)) key = 'cafe';
   if (!key) return;
   var admin = false; try { admin = String(JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}').role || '').toLowerCase() === 'admin'; } catch (e) {}
@@ -142,7 +141,10 @@
         if (/flex/.test(getComputedStyle(tb).display)) tb.style.flexWrap = 'wrap';
         bar.style.margin = '6px 0 0'; bar.style.position = 'relative'; bar.style.top = '0'; bar.style.flex = '1 1 100%'; bar.style.order = '99'; tb.appendChild(bar);
       }
-      else tb.parentNode.insertBefore(bar, tb.nextSibling);
+      else {   // Nov 25 2026 fix (Petty Cash went blank): in a column-flex box flex-basis:100% means 100% HEIGHT -> keep the bar its own size
+        var pd = getComputedStyle(gp); if (/flex/.test(pd.display) && /column/.test(pd.flexDirection)) { bar.style.flexBasis = 'auto'; bar.style.flex = 'none'; }
+        tb.parentNode.insertBefore(bar, tb.nextSibling);
+      }
     }
     else host.insertBefore(bar, back ? back.nextSibling : host.firstChild);
     bar.addEventListener('click', function (e) {
@@ -150,7 +152,17 @@
       else if (e.target.closest('[data-hide]')) { setHidden(true); draw(); }
       else if (e.target.closest('[data-show]')) { setHidden(false); draw(); }
     });
-    draw(); setTimeout(clearBurger, 600);
+    draw(); setTimeout(clearBurger, 600); setTimeout(fit, 50);
+  }
+  // Nov 25 2026 (Bench: "check mo ung ibang page baka may error din"): if the box it sits in squeezes the bar
+  // (a centred column page like Flower Purchase, or a grid whose columns are implicit) -> give it a proper width
+  function fit() {
+    if (!bar || !bar.parentElement) return;
+    var p = bar.parentElement, w = bar.getBoundingClientRect().width, pw = p.getBoundingClientRect().width;
+    if (w >= Math.min(pw * 0.6, 300)) return;
+    var cs = getComputedStyle(p);
+    if (/grid/.test(cs.display)) bar.style.gridColumn = '1 / span ' + Math.max(1, cs.gridTemplateColumns.split(' ').length);
+    else { bar.style.alignSelf = 'center'; bar.style.width = 'min(1100px, 100%)'; bar.style.flex = 'none'; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(mount, 0); }); else setTimeout(mount, 0);
 })();
