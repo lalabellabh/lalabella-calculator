@@ -121,6 +121,22 @@
     .col-main{ flex:1.3; display:flex; flex-direction:column; gap:16px; }
     .col-side{ flex:1; display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
   }
+  /* 🗑️ Daily Waste */
+  .w-add{display:grid;grid-template-columns:minmax(0,1fr) 90px auto;gap:8px;align-items:center}
+  .w-add input{margin:0!important}
+  .w-btn{border:0;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:700;line-height:1;font-family:inherit;color:#fff;background:linear-gradient(135deg,#c9506b,#9e2f4a);cursor:pointer;white-space:nowrap}
+  .w-reasons{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+  .w-reasons button{border:1px solid var(--line,#eadfe3);background:rgba(255,255,255,.7);border-radius:99px;padding:5px 11px;font-size:12px;font-weight:600;line-height:1.2;font-family:inherit;cursor:pointer;color:inherit}
+  .w-reasons button.on{background:#a8405e;color:#fff;border-color:#a8405e}
+  .w-msg{font-size:12px;min-height:16px;margin:2px 0 6px}
+  .w-sum{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+  .w-sum span{background:rgba(168,64,94,.1);color:#8a2f48;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:700}
+  .w-row{display:flex;align-items:center;gap:8px;padding:7px 2px;border-top:1px dashed rgba(0,0,0,.08);font-size:12.5px}
+  .w-row .q{font-weight:800;min-width:42px}.w-row .m{color:var(--ink-dim);font-size:11px}
+  .w-row button{margin-left:auto;border:0;background:none;color:#b2402e;cursor:pointer;font-size:14px}
+  .w-logged{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;color:#8a2f48;background:rgba(168,64,94,.1);border-radius:99px;padding:1px 7px}
+  #wList{max-height:300px;overflow-y:auto}
+  @media(max-width:520px){.w-add{grid-template-columns:minmax(0,1fr) 74px}.w-add .w-btn{grid-column:1/-1}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style id="chocoSharedNavStyles">
@@ -235,6 +251,22 @@
         </div>
         <button class="btn btn-secondary" id="searchBtn">🔍 Search History (Read-only)</button>
         <div id="statusLabel" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Nov 25 2026 (Bench): 🗑️ Daily Waste — log the wilted / broken stems from the tray every day.
+           Taken off the live stock right away; the Saturday count puts the total in its Waste column; starts again after each count. -->
+      <div class="card" id="wasteCard">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">🗑️ Daily Waste <span id="wSince" style="font-weight:400;font-size:11px;color:var(--ink-dim)"></span>
+          <span style="margin-left:auto;font-size:12px;font-weight:700" id="wTot"></span></div>
+        <div class="w-add">
+          <input type="text" id="wFlower" list="wFlowerList" placeholder="Flower (type or pick)" autocomplete="off" />
+          <datalist id="wFlowerList"></datalist>
+          <input type="text" id="wQty" inputmode="decimal" placeholder="Stems" />
+          <button type="button" class="w-btn" id="wAdd">+ Waste</button>
+        </div>
+        <div class="w-reasons" id="wReasons"><button type="button" class="on" data-r="Wilted">🥀 Wilted</button><button type="button" data-r="Broken">💔 Broken</button><button type="button" data-r="Old / expired">⏳ Old</button><button type="button" data-r="Damaged on arrival">📦 Arrival</button><button type="button" data-r="Other">📝 Other</button></div>
+        <div class="w-msg" id="wMsg"></div>
+        <div id="wList"><div class="empty-note">Loading…</div></div>
       </div>
 
       <div class="card" id="countCard" style="display:none;">
@@ -651,7 +683,7 @@
         return `
         <div class="flower-row">
           <div class="flower-info">
-            <div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(b.flowerName):''}${lbEsc(b.flowerName)}</div>
+            <div class="flower-name">${window.LBFlowerScan?LBFlowerScan.thumb(b.flowerName):''}${lbEsc(b.flowerName)}${loggedFor(b.flowerName) ? '<span class="w-logged" title="Daily Waste logged since the last count - added to the Waste when this flower is counted and saved">🗑️ ' + loggedFor(b.flowerName) + ' logged</span>' : ''}</div>
             <div class="flower-meta">Legacy: ${b.legacyRate.toFixed(3)} BD <select class="unit-sel ${b.unit==='bunch'?'bunch':''}" data-idx="${idx}" ${isReadOnlyView?'disabled':''}><option value="pcs" ${b.unit==='pcs'?'selected':''}>pcs</option><option value="bunch" ${b.unit==='bunch'?'selected':''}>bunch</option></select>${b.unit==='bunch'?' <span class="spb-note" data-idx="'+idx+'">1 bunch = '+lbEsc(b.spb)+' pcs ✎</span>':''}${(()=>{const sb=savedBase[baseKey(b.flowerName)];return sb?' · <b style="color:#2f7d4f">✔ saved '+lbEsc(sb.count)+' pcs'+(sb.waste?' / waste '+sb.waste:'')+'</b>':''})()}</div>
           </div>
           <div class="flower-inputs">
@@ -809,6 +841,54 @@
     renderSummary();
   });
 
+  // ---------- 🗑️ Daily Waste (Nov 25 2026, Bench) ----------
+  let WASTE = { totals:{}, list:[] }, wReason = 'Wilted';
+  function loggedFor(name){ const k = String(name||'').trim().toLowerCase(); let t = 0; Object.keys(WASTE.totals||{}).forEach(n => { if(n.trim().toLowerCase() === k) t += Number(WASTE.totals[n]) || 0; }); return Math.round(t*100)/100; }
+  function wHm(iso){ try{ return new Date(iso).toLocaleString('en-GB', { timeZone:'Asia/Bahrain', weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); }catch(e){ return ''; } }
+  async function loadWaste(){
+    const box = document.getElementById('wList');
+    try{
+      const d = await (await fetch(API_URL + '?action=getWaste&branch=' + encodeURIComponent(currentBranch) + '&_ts=' + Date.now())).json();
+      if(!d || !d.success){ box.innerHTML = '<div class="empty-note">' + lbEsc((d && d.error) || 'Could not load.') + '</div>'; return; }
+      WASTE = d;
+      document.getElementById('wSince').textContent = d.since ? '· since the count of ' + new Date(d.since).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : '· no count yet';
+      document.getElementById('wTot').textContent = d.stems ? d.stems + ' stems' + (d.value ? ' · ' + d.value.toFixed(3) + ' BD' : '') : '';
+      const tot = Object.keys(d.totals).sort((a,b) => d.totals[b] - d.totals[a]);
+      box.innerHTML = d.list.length ? '<div class="w-sum">' + tot.map(n => '<span>' + lbEsc(n) + ' ' + d.totals[n] + '</span>').join('') + '</div>' +
+        d.list.map(r => '<div class="w-row"><span class="q">' + r.qty + '</span><div><b>' + lbEsc(r.flower) + '</b><div class="m">' + lbEsc(wHm(r.at)) + ' · ' + lbEsc(r.by) + (r.reason ? ' · ' + lbEsc(r.reason) : '') + '</div></div><button type="button" data-wdel="' + r.id + '" title="Remove">✕</button></div>').join('')
+        : '<div class="empty-note">No waste logged since the last count. 🌷</div>';
+      if(backing.length) renderFlowerList();
+    }catch(e){ box.innerHTML = '<div class="empty-note">Connection problem.</div>'; }
+  }
+  async function wFill(){
+    try{ if(!stockList.length) await loadFlowerItemsAndList(); }catch(e){}
+    const names = new Set(); (stockList||[]).forEach(x => x.flowerName && names.add(String(x.flowerName).trim())); (flowerItems||[]).forEach(x => x.Flowers && String(x.Status||'Active') === 'Active' && names.add(String(x.Flowers).trim()));
+    document.getElementById('wFlowerList').innerHTML = [...names].sort().map(n => '<option value="' + lbEsc(n) + '"></option>').join('');
+  }
+  document.getElementById('wReasons').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if(!b) return; wReason = b.dataset.r; document.querySelectorAll('#wReasons button').forEach(x => x.classList.toggle('on', x === b)); });
+  document.getElementById('wAdd').addEventListener('click', async () => {
+    const f = document.getElementById('wFlower'), q = document.getElementById('wQty'), msg = document.getElementById('wMsg'), btn = document.getElementById('wAdd');
+    const name = f.value.trim(), qty = Number(q.value);
+    if(!name || !(qty > 0)){ msg.style.color = '#b2402e'; msg.textContent = 'Type the flower and how many stems.'; return; }
+    const opts = [...document.querySelectorAll('#wFlowerList option')].map(o => o.value), hit = opts.find(o => o.toLowerCase() === name.toLowerCase());
+    if(!hit && !confirm('"' + name + '" is not in the flower list. Log it anyway?')) return;
+    btn.disabled = true; msg.style.color = ''; msg.textContent = 'Saving…';
+    const by = (document.getElementById('countedByInput') || {}).value || '';
+    try{
+      const d = await (await fetch(API_URL + '?' + new URLSearchParams({ action:'addWaste', branch:currentBranch, flowerName: hit || name, qty:String(qty), reason:wReason, by }))).json();
+      if(d && d.success){ msg.style.color = '#2f7a4f'; msg.textContent = '✓ ' + qty + ' ' + (hit || name) + ' logged as waste (' + wReason + ') — taken off the stock.'; f.value = ''; q.value = ''; f.focus(); loadWaste(); }
+      else { msg.style.color = '#b2402e'; msg.textContent = (d && d.error) || 'Failed.'; }
+    }catch(e){ msg.style.color = '#b2402e'; msg.textContent = 'Connection problem.'; }
+    btn.disabled = false;
+  });
+  document.getElementById('wQty').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('wAdd').click(); });
+  document.getElementById('wList').addEventListener('click', async e => { const b = e.target.closest('[data-wdel]'); if(!b) return;
+    if(!confirm('Remove this waste entry? The stems go back to the stock.')) return; b.disabled = true;
+    try{ const d = await (await fetch(API_URL + '?' + new URLSearchParams({ action:'deleteWaste', id:b.dataset.wdel }))).json(); if(!d || !d.success) alert((d && d.error) || 'Failed.'); }catch(x){ alert('Connection problem.'); }
+    loadWaste(); });
+  document.getElementById('branchTabs').addEventListener('click', e => { if(e.target.closest('.branch-tab')) setTimeout(loadWaste, 0); });
+  wFill(); loadWaste();
+
   document.getElementById('saveBtn').addEventListener('click', async ()=>{
     if(isReadOnlyView){ alert('This is a read-only view. Click Recall Count first to edit.'); return; }
     const dateVal = document.getElementById('countDate').value;
@@ -823,7 +903,8 @@
       const sb = savedBase[baseKey(b.flowerName)] || {count:0, waste:0};
       const hasC = b.physicalCount !== '' && !isNaN(b.physicalCount);
       const hasW = b.wastage !== '' && !isNaN(b.wastage) && Number(b.wastage) > 0;
-      const c = (hasC ? Number(b.physicalCount) : 0) + sb.count, w = (hasW ? Number(b.wastage) : 0) + sb.waste;
+      const lg = (hasC && !sb.count && !sb.waste) ? loggedFor(b.flowerName) : 0;   // Daily Waste since the last count (already off the stock)
+      const c = (hasC ? Number(b.physicalCount) : 0) + sb.count, w = (hasW ? Number(b.wastage) : 0) + sb.waste + lg;
       return Object.assign({}, b, { physicalCount: (hasC || sb.count) ? String(Math.round(c*1000)/1000) : '', wastage: w ? String(Math.round(w*1000)/1000) : (b.wastage === '' ? '' : b.wastage) });
     });
     if(toSave.length === 0){ alert('No Physical Count or Wastage entered yet.'); return; }

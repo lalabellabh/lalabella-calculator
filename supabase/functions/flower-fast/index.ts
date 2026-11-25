@@ -554,7 +554,7 @@ async function saveStockCount(p: Record<string, any>) {
   }
   function fulfilledQtySince(branch: string, flowerNameLower: string, fromExclusive: Date, toInclusive: Date) {
     let total = 0;
-    allFulfillments.forEach((row: any) => { if (String(row.branch || '').trim() !== branch) return; if (String(row.flower_name || '').trim().toLowerCase() !== flowerNameLower) return; const d = row.fulfilled_date ? new Date(row.fulfilled_date) : null; if (!d || isNaN(d.getTime())) return; if (!(d > fromExclusive && d <= toInclusive)) return; total += Number(row.qty) || 0; });
+    allFulfillments.forEach((row: any) => { if (String(row.arrangement_code || '') === 'WASTE') return; if (String(row.branch || '').trim() !== branch) return; if (String(row.flower_name || '').trim().toLowerCase() !== flowerNameLower) return; const d = row.fulfilled_date ? new Date(row.fulfilled_date) : null; if (!d || isNaN(d.getTime())) return; if (!(d > fromExclusive && d <= toInclusive)) return; total += Number(row.qty) || 0; });
     return total;
   }
 
@@ -606,7 +606,58 @@ async function saveStockCount(p: Record<string, any>) {
     savedCount++;
     results.push({ flowerName, countType, openingStock, purchasedQty, expectedStock, physicalCount, stockUsed, variance, stockValue, standardRate });
   }
+  // Daily Waste logged on the count day itself was already taken off the shelf before counting -> it belongs to THIS count
+  // (move it to 1 minute before the count date so it is not taken off the stock a second time after the count)
+  try {
+    const dayEnd = new Date(countDate.getTime() + 86400000).toISOString(), before = new Date(countDate.getTime() - 60000).toISOString();
+    await sbPatch('flower_arrangement_fulfillments', `arrangement_code=eq.WASTE&branch=eq.${encodeURIComponent(branch)}&fulfilled_date=gte.${countDate.toISOString()}&fulfilled_date=lt.${dayEnd}`, { fulfilled_date: before });
+  } catch (e) { console.error('waste redate', e); }
   return { success: true, savedCount, results };
+}
+// ---------------------------------------------------------------
+// DAILY WASTE (Nov 25 2026, Bench: "live daily waste, every Saturday auto sa waste, reset every inventory")
+//   Each log = a row in flower_arrangement_fulfillments with arrangement_code 'WASTE' -> taken off the live stock right away
+//   (dashboard, calcs, alerts already subtract that table). The list shows what was logged since the branch's last stock count;
+//   the Saturday count fills its Waste column with that total, then the list starts again.
+// ---------------------------------------------------------------
+async function lastCountDate(branch: string) {
+  const r = await sbGet('flower_stock_history', `select=count_date&item_code=eq.CONSOLIDATED&branch=eq.${encodeURIComponent(branch)}&count_date=lte.${new Date().toISOString()}&order=count_date.desc&limit=1`);
+  return r && r[0] && r[0].count_date ? new Date(r[0].count_date) : null;
+}
+async function getWaste(p: Record<string, any>) {
+  const branch = String(p.branch || '').trim(); if (!branch || branch === 'All') return { success: false, error: 'Pick a branch.' };
+  const since = await lastCountDate(branch);
+  const q = `select=id,flower_name,qty,fulfilled_by,fulfilled_date&arrangement_code=eq.WASTE&branch=eq.${encodeURIComponent(branch)}` + (since ? `&fulfilled_date=gt.${since.toISOString()}` : '') + '&order=fulfilled_date.desc&limit=500';
+  const rows = await sbGet('flower_arrangement_fulfillments', q) || [];
+  const rates = await sbGet('flower_item', 'select=flower_name,rate,origin&origin=eq.Legacy/Unknown');
+  const rate: Record<string, number> = {}; (rates || []).forEach((r: any) => { rate[String(r.flower_name || '').trim().toLowerCase()] = Number(r.rate) || 0; });
+  const tot: Record<string, number> = {}; let value = 0, stems = 0;
+  const list = rows.map((r: any) => { const by = String(r.fulfilled_by || ''), i = by.indexOf(' · '), q = Number(r.qty) || 0, n = String(r.flower_name || '').trim();
+    tot[n] = (tot[n] || 0) + q; stems += q; value += q * (rate[n.toLowerCase()] || 0);
+    return { id: r.id, flower: n, qty: q, by: i > -1 ? by.slice(0, i) : by, reason: i > -1 ? by.slice(i + 3) : '', at: r.fulfilled_date }; });
+  return { success: true, since: since ? since.toISOString() : null, list, totals: tot, stems: Math.round(stems * 100) / 100, value: Math.round(value * 1000) / 1000 };
+}
+async function addWaste(p: Record<string, any>, me: any) {
+  const branch = String(p.branch || '').trim(); if (!branch || branch === 'All') return { success: false, error: 'Pick a branch first.' };
+  let items: any[] = []; try { items = JSON.parse(p.items || '[]'); } catch { items = []; }
+  if (!items.length && p.flowerName) items = [{ flowerName: p.flowerName, qty: p.qty }];
+  const reason = String(p.reason || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 40);
+  const who = String(p.by || (me && (me.full_name || me.username)) || 'staff').trim().slice(0, 50);
+  const now = new Date().toISOString();
+  const rows = items.map((x: any) => ({ flower: String(x.flowerName || '').trim().slice(0, 80), qty: Math.round((Number(x.qty) || 0) * 100) / 100 })).filter((x: any) => x.flower && x.qty > 0 && x.qty < 10000)
+    .map((x: any) => ({ arrangement_id: null, arrangement_code: 'WASTE', branch, flower_name: x.flower, qty: x.qty, fulfilled_by: who + (reason ? ' · ' + reason : ''), fulfilled_date: now }));
+  if (!rows.length) return { success: false, error: 'Enter a flower and how many stems.' };
+  await sbPost('flower_arrangement_fulfillments', rows);
+  return { success: true, added: rows.length };
+}
+async function deleteWaste(p: Record<string, any>, me: any) {
+  const id = Number(p.id); if (!Number.isInteger(id) || id < 1) return { success: false, error: 'Invalid.' };
+  const r = (await sbGet('flower_arrangement_fulfillments', `select=id,fulfilled_date,arrangement_code&id=eq.${id}`))[0];
+  if (!r || r.arrangement_code !== 'WASTE') return { success: false, error: 'Not a waste entry.' };
+  const admin = String((me && me.role) || '').toLowerCase() === 'admin';
+  if (!admin && Date.now() - new Date(r.fulfilled_date).getTime() > 2 * 86400000) return { success: false, error: 'Only an admin can remove waste older than 2 days.' };
+  await sbDelete('flower_arrangement_fulfillments', `id=eq.${id}&arrangement_code=eq.WASTE`);
+  return { success: true };
 }
 async function getStockCountByDate(p: Record<string, any>) {
   const branch = p.branch, dateStr = p.date;
@@ -937,6 +988,9 @@ Deno.serve(async (req) => {
     }
     if (action === 'getHollandTracking') return json((await sbGet('flower_holland_tracking', 'select=*&order=id.asc')).map((r: any) => ({ 'Flower Name': r.flower_name, 'Odoo Price (BHD)': r.odoo_price_bhd, 'Date Checked': r.date_checked })));
     if (action === 'getStockCountByDate') return json(await getStockCountByDate(p));
+    if (action === 'getWaste') return json(await getWaste(p));
+    if (action === 'addWaste') return json(await addWaste(p, authUser));
+    if (action === 'deleteWaste') return json(await deleteWaste(p, authUser));
     if (action === 'getFlowerArrangements') return json(await getFlowerArrangements());
     if (action === 'getFlowerArrangementByCode') return json(await getFlowerArrangementByCode(p.code));
 
