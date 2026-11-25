@@ -46,7 +46,11 @@
       'background:rgba(255,255,255,.62);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.75);box-shadow:0 6px 18px rgba(60,30,40,.1)}' +
     '.lbsb-s{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.lbsb-s::-webkit-scrollbar{display:none}' +
     '.lbsb a,.lbsb-b{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font:700 12px/1.3 "Space Grotesk",system-ui,sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer}' +
-    '.lbsb a.on{background:#a8405e;color:#fff;border-color:#a8405e}.lbsb a:hover{border-color:rgba(168,64,94,.4)}' +
+    '.lbsb a.on{background:#a8405e;color:#fff;border-color:#a8405e}' +
+    /* Nov 25 2026 (Bench: "ito din"): a pill lifts and glows under the cursor / finger, like the side dock */
+    '.lbsb a{transition:transform .18s ease,box-shadow .18s ease,color .18s ease,border-color .18s ease,background .18s ease}' +
+    '.lbsb a:hover,.lbsb a:active,.lbsb a:focus-visible{transform:translateY(-2px) scale(1.05);color:#9e2f4a;border-color:rgba(168,64,94,.45);background:#fff;box-shadow:0 6px 14px rgba(158,47,74,.22)}' +
+    '.lbsb a.on:hover,.lbsb a.on:active{color:#fff;background:#b8486a}.lbsb-s{padding:3px 2px}' +
     /* Nov 25 2026: premium controls — a small capsule (tune + fold arrow) instead of loose ✎ ✕ */
     '.lbsb-ctl{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:99px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(246,236,240,.85));border:1px solid rgba(158,47,74,.14);box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(60,30,40,.08)}' +
     '.lbsb-b{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:0;background:transparent;color:#8a2f48;cursor:pointer;transition:background .15s,transform .15s}' +
