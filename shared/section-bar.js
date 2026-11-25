@@ -28,7 +28,8 @@
   };
   var EXTRA = { 'receiving-approval.html': 'chocolate', 'chocolate-odoo-import.html': 'chocolate', 'flower-odoo-import.html': 'flower', 'item-odoo-import.html': 'item', 'live-orders.html': 'orders' };
   var key = EXTRA[page] || null;
-  if (!key) for (var k in S) { if (S[k].some(function (x) { return x[0].split('?')[0] === page && x[0] !== 'index.html' && x[0] !== 'flower-tools.html'; })) { key = k; break; } }
+  if (!key) for (var k in S) { if (k === 'orders') continue;   /* orders row = Live Orders only (Petty Cash / Order Form have their own layout) */
+    if (S[k].some(function (x) { return x[0].split('?')[0] === page && x[0] !== 'index.html' && x[0] !== 'flower-tools.html'; })) { key = k; break; } }
   if (/^cafe-/.test(page)) key = 'cafe';
   if (!key) return;
   var admin = false; try { admin = String(JSON.parse(sessionStorage.getItem('lalabellaUser') || localStorage.getItem('lalabellaUser') || '{}').role || '').toLowerCase() === 'admin'; } catch (e) {}
