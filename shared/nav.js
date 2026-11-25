@@ -590,6 +590,27 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { hookBars(); setTimeout(hookBars, 800); }); else { hookBars(); setTimeout(hookBars, 800); }
   }
 
+  // Nov 25 2026 (Bench: "bakit 4 ung print kung kasya isa"): the print pages hide everything with visibility:hidden, which keeps
+  // the hidden page's HEIGHT -> Chrome counted 3-4 sheets for a 1-sheet receipt. While printing, everything that is not the
+  // receipt / print area (or one of its parents) is taken out with display:none, so only the real pages are counted.
+  (function printOnlyRoot() {
+    const ROOTS = ['#labelPrintArea.printing', '#receiptPrintArea.printing', '[data-print-root]', '#rp', '#receipt', '#printArea', '#printView', '#pr'];
+    let hidden = [];
+    const filled = el => el && (el.textContent.trim() || el.querySelector('img,svg,canvas,table'));
+    function before() {
+      let root = null;
+      for (const q of ROOTS) { const el = document.querySelector(q); if (filled(el)) { root = el; break; } }
+      if (!root) return;
+      if (!document.getElementById('lbpCss')) { const c = document.createElement('style'); c.id = 'lbpCss'; c.textContent = '@media print{.lbp-off{display:none!important}}'; document.head.appendChild(c); }
+      for (let a = root; a && a !== document.body && a.parentElement; a = a.parentElement) {
+        for (const sib of a.parentElement.children) if (sib !== a && !/^(STYLE|SCRIPT|LINK)$/.test(sib.tagName) && !sib.classList.contains('lbp-off')) { sib.classList.add('lbp-off'); hidden.push(sib); }
+      }
+    }
+    function after() { hidden.forEach(el => el.classList.remove('lbp-off')); hidden = []; }
+    addEventListener('beforeprint', before); addEventListener('afterprint', after);
+    if (window.matchMedia) { const mq = matchMedia('print'); const f = e => (e.matches ? before() : after()); if (mq.addEventListener) mq.addEventListener('change', f); else if (mq.addListener) mq.addListener(f); }
+  })();
+
   // Nov 23 2026 (Bench: "ung mp3 lagyan mo ng hide button"): the ♫ Music box in the menu can be folded away (remembered on this device).
   (function musicHide() {
     const run = () => {
