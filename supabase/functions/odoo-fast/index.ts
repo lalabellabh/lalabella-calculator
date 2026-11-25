@@ -47,7 +47,27 @@ async function sessionUser(token: string) {
   return u;
 }
 
+// Nov 25 2026: the company's main Odoo is version 18 — it has no /json/2 API (that came with Odoo 19, which the trial ran).
+// With the ODOO_LOGIN secret set (the e-mail of the user who made the API key) we talk the classic JSON-RPC way instead.
+const ODOO_LOGIN = Deno.env.get('ODOO_LOGIN') || '';
+let rpcUid = 0;
+async function rpc(service: string, method: string, args: unknown[]) {
+  const res = await fetch(`${ODOO_URL}/jsonrpc`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'lalabella-system' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service, method, args }, id: Date.now() }), signal: AbortSignal.timeout(15000) });
+  const data: any = await res.json().catch(() => null);
+  if (!data) throw new Error('Odoo: no answer (HTTP ' + res.status + ')');
+  if (data.error) throw new Error('Odoo: ' + ((data.error.data && data.error.data.message) || data.error.message || 'error'));
+  return data.result;
+}
 async function odoo(model: string, method: string, body: Record<string, unknown> = {}) {
+  if (ODOO_LOGIN) {
+    if (!rpcUid) { rpcUid = Number(await rpc('common', 'authenticate', [ODOO_DB, ODOO_LOGIN, ODOO_KEY, {}])) || 0; if (!rpcUid) throw new Error('Odoo: login / API key not accepted'); }
+    const kw: Record<string, unknown> = { ...body }; let args: unknown[] = [];
+    if (Array.isArray(kw.ids)) { args = [kw.ids]; delete kw.ids; }                 // read / write on records
+    if (Array.isArray(kw.vals_list)) { args = [kw.vals_list]; delete kw.vals_list; } // create
+    if (Array.isArray(kw.vals)) { args.push(kw.vals); delete kw.vals; }
+    return await rpc('object', 'execute_kw', [ODOO_DB, rpcUid, ODOO_KEY, model, method, args, kw]);
+  }
   const h: Record<string, string> = { Authorization: `bearer ${ODOO_KEY}`, 'Content-Type': 'application/json; charset=utf-8', 'User-Agent': 'lalabella-system' };
   if (ODOO_DB) h['X-Odoo-Database'] = ODOO_DB;
   const res = await fetch(`${ODOO_URL}/json/2/${model}/${method}`, { method: 'POST', headers: h, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
