@@ -20,9 +20,13 @@
       ['chocolate-calc.html', '🍫', 'Choco Calc'], ['flower-admin.html', '🔐', 'Admin', 'admin'], ['flower-photos.html', '🖼️', 'Photos', 'admin'], ['flower-guide.html', '📖', 'Guide']],
     item: [['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-saudi.html', '🚚', 'Saudi Transfers'],
       ['cafe-inventory.html', '☕', 'Café Items'], ['cafe-hub.html', '🏪', 'Café Stock Room'], ['item-admin.html', '🔐', 'Admin', 'admin'], ['item-photos.html', '🖼️', 'Photos', 'admin']],
+    // Nov 25 2026 (Bench: "itong live order lagyan mo ng shortcut sa taas")
+    orders: [['live-orders.html', '🎁', 'Live Orders'], ['flower-dashboard.html', '📊', 'Flower Dashboard'], ['dashboard.html', '📊', 'Choco Dashboard'],
+      ['flower-calc.html', '🌸', 'Flower Calc'], ['chocolate-calc.html', '🍫', 'Choco Calc'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['calc-sales.html', '🧾', 'Calc Sales'],
+      ['order-form.html', '📝', 'Order Form'], ['petty-cash.html', '💰', 'Petty Cash']],
     cafe: [['cafe-hub.html', '🏪', 'Café Stock Room'], ['cafe-inventory.html', '☕', 'Café Items'], ['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard']]
   };
-  var EXTRA = { 'receiving-approval.html': 'chocolate', 'chocolate-odoo-import.html': 'chocolate', 'flower-odoo-import.html': 'flower', 'item-odoo-import.html': 'item' };
+  var EXTRA = { 'receiving-approval.html': 'chocolate', 'chocolate-odoo-import.html': 'chocolate', 'flower-odoo-import.html': 'flower', 'item-odoo-import.html': 'item', 'live-orders.html': 'orders' };
   var key = EXTRA[page] || null;
   if (!key) for (var k in S) { if (S[k].some(function (x) { return x[0].split('?')[0] === page && x[0] !== 'index.html' && x[0] !== 'flower-tools.html'; })) { key = k; break; } }
   if (/^cafe-/.test(page)) key = 'cafe';
@@ -32,7 +36,7 @@
   var DEF = S[key].filter(vis);
   // ✎ Edit (Nov 25 2026, Bench: "lagyan mo ng edit para kung ano gusto nila na shortcut, tapos ung ✕, at naka-fix sa taas")
   var ALL = [], seen = {};
-  var PRE = { chocolate: 'Choco ', flower: 'Flower ', item: 'Item ', cafe: '' }, GEN = /^(Dashboard|Receiving|Stock Count|Barcode|Admin|Photos|Guide|Arrangements|Release|Purchase|Catalog|Transfer|Stock Approval)$/;
+  var PRE = { chocolate: 'Choco ', flower: 'Flower ', item: 'Item ', cafe: '', orders: '' }, GEN = /^(Dashboard|Receiving|Stock Count|Barcode|Admin|Photos|Guide|Arrangements|Release|Purchase|Catalog|Transfer|Stock Approval)$/;
   function tag(sec) { return S[sec].map(function (x) { return GEN.test(x[2]) ? [x[0], x[1], PRE[sec] + x[2], x[3]] : x; }); }
   [].concat(tag('chocolate'), tag('flower'), tag('item'), tag('cafe'), [['live-orders.html', '🎁', 'Live Orders'], ['petty-cash.html', '💰', 'Petty Cash'], ['order-form.html', '📝', 'Order Form'],
     ['card-print.html', '💌', 'Card Print'], ['schedule.html', '📆', 'Duty Schedule'], ['attendance.html', '🕒', 'Attendance'], ['notes.html', '🗒️', 'Notes'], ['profile.html', '👤', 'My Profile'],
