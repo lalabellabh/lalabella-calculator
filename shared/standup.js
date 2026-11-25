@@ -71,6 +71,8 @@
     '#lbsu .lob .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}#lbsu .lob button{border:0;border-radius:12px;padding:13px 22px;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer}',
     '#lbsu .lob .go{background:#3ddc84;color:#06210f;min-width:220px}#lbsu .lob .go:hover{background:#4ff096}#lbsu .lob .alt{background:#22252c;color:#e2e5ec}',
     '#lbsu .lob .sm{margin-top:14px;font-size:12px;color:#7d828f}',
+    /* Nov 26 2026 (Bench: "walang X para sa back") */
+    '#lbsu .lobby .lbx{position:absolute;top:max(14px,env(safe-area-inset-top));right:14px;width:44px;height:44px;border-radius:50%;border:0;background:#2a2d35;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}#lbsu .lobby .lbx:hover{background:#e5484d}',
     '#lbsu .sum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,10,12,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:5}',
     '#lbsu .sum .card{background:#fff;color:#2a2420;border-radius:18px;width:min(580px,100%);max-height:92%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.5)}',
     '#lbsu .sum .hd{padding:18px 22px 12px}#lbsu .sum h3{margin:0;font-size:20px}#lbsu .sum .meta{color:#8c8279;font-size:12.5px;margin-top:3px}',
@@ -216,7 +218,7 @@
       '<div class="ctl"><button data-a="mute"><i>🔊</i><span class="lbl">' + L('Sound', 'Tunog') + '</span></button><button data-a="cc" class=""><i>💬</i><span class="lbl">' + L('Captions', 'Captions') + '</span></button>' +
       '<div class="mid"><button data-a="prev"><i>⏮</i><span class="lbl">' + L('Back', 'Bumalik') + '</span></button><button data-a="pause"><i>⏸️</i><span class="lbl">Pause</span></button><button data-a="next"><i>⏭</i><span class="lbl">' + L('Next', 'Susunod') + '</span></button><button data-a="notes"><i>📋</i><span class="lbl">Notes</span></button></div>' +
       '<button class="leave" data-a="leave">' + L('Leave', 'Umalis') + '</button></div>' +
-      '<div class="lobby"><div class="lob"><div class="k">Lalabella HQ</div><h2>' + L('Daily Stand-up', 'Daily Stand-up') + '</h2><p>' + bh().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', timeZone:'UTC' }) + ' · ' + clock() + ' · ' + ks.length + L(' desks are waiting for you', ' desk ang naghihintay sa inyo') + '</p>' +
+      '<div class="lobby"><button class="lbx" data-a="leave" title="' + L('Back', 'Bumalik') + '" aria-label="Back">✕</button><div class="lob"><div class="k">Lalabella HQ</div><h2>' + L('Daily Stand-up', 'Daily Stand-up') + '</h2><p>' + bh().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', timeZone:'UTC' }) + ' · ' + clock() + ' · ' + ks.length + L(' desks are waiting for you', ' desk ang naghihintay sa inyo') + '</p>' +
       '<div class="stack">' + uniq.slice(0, 7).map(function (k) { return '<span data-k="' + k + '">' + (live ? '<canvas width="96" height="96"></canvas>' : EMO[k] || '🙂') + '</span>'; }).join('') + (uniq.length > 7 ? '<span class="more">+' + (uniq.length - 7) + '</span>' : '') + '</div>' +
       '<div class="row"><button class="go" data-a="join">' + L('Join with sound', 'Sumali (may tunog)') + '</button><button class="alt" data-a="joinq">' + L('Join muted', 'Sumali nang tahimik') + '</button></div>' +
       '<div class="sm">' + L('Space = pause · ← → = back / next · Esc = leave', 'Space = pause · ← → = bumalik / susunod · Esc = umalis') + '</div></div></div>';

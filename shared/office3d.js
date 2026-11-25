@@ -194,22 +194,54 @@
   var MEET = null;
   function meetRoomOf(k){ return ROOMS.filter(function(R){ return R.agents.indexOf(k) >= 0; })[0] || ROOMS[0]; }
   function meetBuild(k){
-    var R = meetRoomOf(k), wallC = new T.Color(R.floor[0]).lerp(new T.Color('#fff4e6'), .62), sc = new T.Scene();
-    sc.background = wallC.clone(); sc.fog = new T.Fog(wallC.clone(), 3.4, 7.5);
-    sc.add(new T.HemisphereLight('#fff4e6', '#7a6a5a', .78));
+    // Nov 26 2026 (Bench: "gawin mong 3D ang likod nila, hindi pare-pareho"): every worker gets their OWN backdrop -
+    // one of 6 rooms (corner, library, city window, flower studio, whiteboard, lounge), own wall colour, real depth.
+    var R = meetRoomOf(k), hs = 0; for(var hi = 0; hi < k.length; hi++) hs = (hs * 31 + k.charCodeAt(hi)) >>> 0;
+    var ORDER = MEET_KEYS || [], oi = ORDER.indexOf(k), V = (oi >= 0 ? oi : hs) % 6;
+    var PAL = ['#f6e4d4', '#e3ecf4', '#e8f0e0', '#f4e2ea', '#ece6f6', '#f3ecd9', '#e0eeec', '#f7e6da'];
+    var wallC = new T.Color(PAL[(hs >> 3) % PAL.length]).lerp(new T.Color(R.floor[0]), .18), sc = new T.Scene();
+    sc.background = wallC.clone().multiplyScalar(.92); sc.fog = new T.Fog(sc.background.clone(), 4.6, 10);
+    sc.add(new T.HemisphereLight('#fff4e6', '#7a6a5a', .74));
     var key = new T.DirectionalLight('#ffe7c8', .95); key.position.set(-1.6, 3.2, -3); sc.add(key);
-    var rim = new T.DirectionalLight('#d6e6ff', .6); rim.position.set(1.8, 2.6, 2.4); sc.add(rim);
-    var g = new T.Group(); sc.add(g);
-    box(10, 5, .1, '#' + wallC.getHexString(), 0, 2.2, 2.7, g);
-    box(10, .05, 7, R.floor[1], 0, 0, .6, g);
-    box(10, .14, .06, '#f5ebd8', 0, .07, 2.62, g);
-    // window with a bright sky
-    var wx = -1.25; box(1.7, 1.3, .06, '#f5ebd8', wx, 1.85, 2.6, g); box(1.52, 1.12, .05, mat('#cfe8ff', { e:'#a9d6ff', ei:.75, r:.2 }), wx, 1.85, 2.57, g);
-    box(.05, 1.12, .07, '#f5ebd8', wx, 1.85, 2.55, g); box(1.52, .05, .07, '#f5ebd8', wx, 1.85, 2.55, g);
-    // shelf, plant, wall art, lamp glow
-    shelf(1.55, 2.35, g); plant(.72, 2.15, 1.25, g); plant(-2.35, 2.1, 1.5, g);
-    box(.62, .44, .03, R.rug, .35, 2.15, 2.62, g); box(.5, .32, .02, '#fffaf0', .35, 2.15, 2.6, g);
-    var glow = new T.PointLight('#ffcf8a', .45, 4); glow.position.set(-2.1, 1.6, 1.6); sc.add(glow);
+    var rim = new T.DirectionalLight('#d6e6ff', .55); rim.position.set(1.8, 2.6, 2.4); sc.add(rim);
+    var g = new T.Group(); sc.add(g); var wc = '#' + wallC.getHexString(), dk = '#' + wallC.clone().multiplyScalar(.86).getHexString(), wood = ['#8a5a36', '#6b4226', '#a7744a', '#5b3a24'][hs % 4];
+    var BZ = V === 1 || V === 3 ? 3.4 : 2.9;                                   // back wall depth (some rooms are deeper)
+    box(12, 5.2, .1, wc, 0, 2.3, BZ, g); box(12, .05, 8, R.floor[1], 0, 0, .8, g); box(12, .14, .06, '#f5ebd8', 0, .07, BZ - .08, g);
+    // side walls make it a real corner (the camera sees them at an angle)
+    var side = function(x){ var w = box(.1, 5.2, BZ + 1.2, dk, x, 2.3, BZ / 2 - .5, g); return w; };
+    var glow = new T.PointLight('#ffcf8a', .5, 5);
+    var winBox = function(x, y, w, h, sky, z){ z = z || BZ - .1; box(w + .18, h + .18, .08, '#f5ebd8', x, y, z, g); box(w, h, .05, mat(sky, { e:sky, ei:.7, r:.2 }), x, y, z - .03, g);
+      box(.05, h, .09, '#f5ebd8', x, y, z - .05, g); box(w, .05, .09, '#f5ebd8', x, y, z - .05, g); };
+    var frame = function(x, y, w, h, c, z){ box(w, h, .04, '#3a2a20', x, y, z || BZ - .08, g); box(w - .08, h - .08, .03, c, x, y, (z || BZ - .08) - .02, g); };
+    var lamp = function(x, z, c){ cyl(.03, .03, 1.6, '#3b3b42', x, .8, z, g); var sh = cyl(.16, .26, .3, mat(c || '#fff1d6', { e:'#ffcf8a', ei:.55 }), x, 1.66, z, g); sh.castShadow = false; var l = new T.PointLight('#ffcf8a', .55, 3.5); l.position.set(x, 1.5, z); sc.add(l); };
+    if(V === 0){        // corner office: angled side wall with art + window
+      side(2.05); side(-2.6); winBox(-1.1, 1.9, 1.5, 1.2, '#cfe8ff'); frame(2.0, 1.9, .06, .9, R.rug, BZ - 1.2);
+      var art = box(.04, .7, .9, R.rug, 1.97, 1.9, 1.4, g); plant(1.55, BZ - .5, 1.3, g); lamp(-1.95, 1.6);
+    } else if(V === 1){ // library: two shelves at different depths + reading lamp
+      shelf(-1.2, BZ - .3, g); shelf(.35, BZ - .3, g); shelf(1.95, 1.6, g, -Math.PI / 2.4); lamp(-2.2, 1.4, '#e9d7b8'); plant(1.2, BZ - .6, .9, g);
+    } else if(V === 2){ // big window with the city (WTC sails + towers) outside
+      box(4.2, 2.3, .05, mat('#9fc8ec', { e:'#8ec1f0', ei:.55, r:.2 }), 0, 1.95, BZ + .02, g);
+      [[-1.5, 1.1], [-.8, 1.6], [.9, 1.3], [1.5, .9]].forEach(function(b){ box(.42, b[1], .05, '#7f9fbd', b[0], .85 + b[1] / 2, BZ + .01, g); });
+      [-.25, .25].forEach(function(x, i){ var t = box(.32, 1.9, .05, '#dfeef7', x, 1.75, BZ, g); t.rotation.z = i ? .07 : -.07; });
+      box(4.4, .1, .2, '#f5ebd8', 0, .8, BZ - .1, g); box(4.4, .1, .2, '#f5ebd8', 0, 3.1, BZ - .1, g);
+      [-2.25, 2.25].forEach(function(x){ box(.5, 2.6, .12, R.rug, x, 1.9, BZ - .25, g); }); plant(-1.7, BZ - .7, 1.1, g);
+    } else if(V === 3){ // flower + chocolate studio: shelves with vases and boxes
+      side(-2.3); box(3.2, .07, .45, wood, .4, 1.25, BZ - .25, g); box(3.2, .07, .45, wood, .4, 1.95, BZ - .25, g); box(3.2, .07, .45, wood, .4, 2.65, BZ - .25, g);
+      var fc = ['#e85d8a', '#f4a13a', '#ffffff', '#c94bd1', '#ff6b6b', '#f7d046'];
+      for(var vi = 0; vi < 5; vi++){ var vx = -.9 + vi * .62, vy = vi % 2 ? 1.28 : 1.98; cyl(.08, .06, .28, '#cfe3ea', vx, vy + .14, BZ - .25, g); for(var fl = 0; fl < 3; fl++) ball(.08, fc[(vi + fl + hs) % fc.length], vx + (fl - 1) * .07, vy + .36 + (fl % 2) * .06, BZ - .25, g); }
+      for(var cb = 0; cb < 4; cb++) box(.32, .16, .3, ['#5a3420', '#b8883a', '#9e2f4a', '#2f2420'][cb], -.7 + cb * .55, 2.07 + (cb % 2) * .7, BZ - .25, g);
+      lamp(1.9, 1.5, '#ffe3ee');
+    } else if(V === 4){ // whiteboard with a chart + sticky notes + clock
+      box(2.6, 1.5, .05, '#fbfbfb', -.2, 1.9, BZ - .07, g); box(2.7, 1.6, .03, '#9aa3ad', -.2, 1.9, BZ - .05, g);
+      [.35, .6, .45, .85, .7].forEach(function(h, i){ box(.22, h, .02, ['#3ddc84', '#4f8ef7', '#f4a13a', '#e85d8a', '#9e6cf0'][i], -1.1 + i * .38, 1.25 + h / 2, BZ - .1, g); });
+      ['#ffe873', '#ffb3c7', '#b9f0c9', '#bfe0ff'].forEach(function(c, i){ var n = box(.26, .26, .02, c, 1.45 + (i % 2) * .32, 2.35 - Math.floor(i / 2) * .34, BZ - .08, g); n.rotation.z = (i % 2 ? .08 : -.06); });
+      var ck = cyl(.26, .26, .05, '#ffffff', 1.6, 1.4, BZ - .08, g); ck.rotation.x = Math.PI / 2; side(2.25); plant(-1.9, BZ - .5, 1.2, g);
+    } else {            // lounge: pendant lights, sofa back, framed art, rug colour
+      for(var pi = 0; pi < 3; pi++){ var px = -1.2 + pi * 1.2; cyl(.01, .01, 1.1, '#333', px, 3.5, .9 + pi * .5, g); var pl = ball(.17, mat('#fff1d6', { e:'#ffd38f', ei:.8 }), px, 2.9, .9 + pi * .5, g); pl.castShadow = false; }
+      box(3.2, .7, .5, R.rug, 0, .55, BZ - .6, g); box(3.2, .5, .25, R.rug, 0, 1.05, BZ - .4, g);
+      frame(-.8, 2.2, 1, .7, '#f4a13a'); frame(.5, 2.35, .7, .9, '#4f8ef7'); frame(1.4, 2.05, .5, .5, '#e85d8a'); side(-2.4); plant(2.0, BZ - .9, 1.4, g);
+    }
+    glow.position.set(-2.1, 1.6, 1.6); sc.add(glow);
     // the worker
     var a = buildAgent(k); if(a.g.parent) a.g.parent.remove(a.g); sc.add(a.g); a.g.position.set(0, 0, 0); a.hit.visible = false;
     a.hL.position.set(-.27, .86, -.34); a.hR.position.set(.27, .86, -.34);
@@ -240,7 +272,9 @@
     if(big){ m.cam.fov = 30; m.cam.position.set(.1 + cx * 1.4, 1.42 + cy, -3.6); m.cam.lookAt(0, 1.1, 0); }
     else { m.cam.fov = 31; m.cam.position.set(.12 + cx, 1.3 + cy, -2.55); m.cam.lookAt(0, 1.02, 0); }
   }
+  var MEET_KEYS = null;
   function meetStart(keys){
+    MEET_KEYS = keys.slice();
     if(!T && window.THREE) T = window.THREE;
     if(!T) return false;
     meetStop();
