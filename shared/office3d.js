@@ -3,7 +3,7 @@
  * office.html keeps all the data logic (compute / EMP); it calls:
  *   LBOffice3D.update({ EMP, KEYS, LBL, tl, S })   after every data load (every 30 s)
  *   LBOffice3D.say(k, text, ms, tone)              when a worker talks
- * Tap a worker = zoom in and follow (the computer screen is live). Drag = move, wheel / pinch / + − = zoom.
+ * Tap a worker = zoom in and follow (the computer screen is live). Drag = turn the office (right-drag / two fingers = move), wheel / pinch / + − = zoom, 🧭 = top view.
  */
 (function(){
   'use strict';
@@ -284,12 +284,19 @@
     W = stage.clientWidth || 600; H = stage.clientHeight || 400; renderer.setSize(W, H, false);
     var asp = W / H, vs = viewSize; camera.left = -vs * asp / 2; camera.right = vs * asp / 2; camera.top = vs / 2; camera.bottom = -vs / 2; camera.updateProjectionMatrix();
   }
-  var DIR = null;
-  function placeCam(){ if(!DIR) DIR = new T.Vector3(0, .86, 1).normalize();   /* Nov 23 2026 (Bench): straight from the front, no more diagonal */ camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
+  var DIR = null;   // made when three.js is ready
+  // Nov 25 2026 (Bench: "na-rorotate ang field, gamit phone at cursor"): the camera can turn around the office and tilt.
+  // yaw = turn left/right around the office, pitch = how high we look from (0.71 = the old front view, 1.45 = straight from the top)
+  var YAW0 = 0, PITCH0 = Math.atan2(.86, 1), yaw = YAW0, pitch = PITCH0, yawGoal = YAW0, pitchGoal = PITCH0;
+  function placeCam(){ if(!DIR) DIR = new T.Vector3(); DIR.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)); camera.position.copy(target).addScaledVector(DIR, 80); camera.lookAt(target); }
+  function rotate(dx, dy){ yawGoal -= dx * .008; pitchGoal = Math.max(.28, Math.min(1.45, pitchGoal + dy * .006)); }
+  function resetView(){ var t = Math.round((yawGoal - YAW0) / (Math.PI * 2)); yawGoal = YAW0 + t * Math.PI * 2; pitchGoal = PITCH0; }   // back to the front view the short way
+  function panBy(dx, dy){ var s = viewSize / H / camera.zoom, right = new T.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)), fwd = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    var base = targetGoal || target.clone(); base.addScaledVector(right, -dx * s).addScaledVector(fwd, dy * s / Math.max(.35, Math.sin(pitch)) * .9); targetGoal = base; }
   var zoomGoal = 1, targetGoal = null;
   function setZoom(z){ zoomGoal = Math.max(.15, Math.min(6, z)); }
   function homeZoom(){ return W / H < 1 ? .62 : W / H > 1.8 ? 1.55 : W / H > 1.4 ? 1.25 : 1; }
-  function wholeOffice(){ closeReport(); follow = ''; targetGoal = new T.Vector3(17, 0, 10); setZoom(homeZoom()); renderSide(); }
+  function wholeOffice(){ closeReport(); follow = ''; resetView(); targetGoal = new T.Vector3(17, 0, 10); setZoom(homeZoom()); renderSide(); }
   function outsideView(){ closeReport(); follow = ''; targetGoal = new T.Vector3(LM.on ? 30 : 17, 0, LM.on ? 12 : 10); setZoom(homeZoom() * (LM.on ? .34 : .6)); renderSide(); }
   function zoomRoom(R){ follow = ''; targetGoal = new T.Vector3(R.x + R.w / 2, 0, R.z + R.d / 2); setZoom(Math.min(3, 22 / Math.max(R.w, R.d) * (W / H < 1 ? .7 : 1))); renderSide(R.id); }
   function select(k, custom){ if(!AG[k]) return; follow = k; setZoom(W / H < 1 ? 3.8 : 5); renderSide(); apply(); if(root.classList.contains('full')) drawer(true); showReport(k, false, custom);
@@ -342,18 +349,21 @@
 
   // ---------- controls ----------
   function bindControls(){
-    var el = renderer.domElement, ptrs = {}, start = null, moved = 0, pinch0 = 0, z0 = 1;
+    var el = renderer.domElement, ptrs = {}, start = null, moved = 0, pinch0 = 0, z0 = 1, mid0 = null, panMode = false;
     el.style.touchAction = 'none';
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); });   // right-drag = move, not the browser menu
     el.addEventListener('pointerdown', function(e){ var rr = el.getBoundingClientRect(); if(root.classList.contains('full') && e.pointerType === 'touch' && e.clientX > rr.right - 34) return; ptrs[e.pointerId] = [e.clientX, e.clientY]; el.setPointerCapture(e.pointerId); moved = 0;
-      var ids = Object.keys(ptrs); if(ids.length === 2){ var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = zoomGoal; } start = [e.clientX, e.clientY]; });
+      // mouse: left-drag = turn the office, right-drag (or Shift + drag) = move · finger: one = turn, two = pinch to zoom + move
+      panMode = e.pointerType === 'mouse' && (e.button === 2 || e.button === 1 || e.shiftKey);
+      var ids = Object.keys(ptrs); if(ids.length === 2){ var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = zoomGoal; mid0 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; } start = [e.clientX, e.clientY]; });
     el.addEventListener('pointermove', function(e){ if(!ptrs[e.pointerId]) return; var p = ptrs[e.pointerId], dx = e.clientX - p[0], dy = e.clientY - p[1]; ptrs[e.pointerId] = [e.clientX, e.clientY];
       var ids = Object.keys(ptrs);
-      if(ids.length === 2){ var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if(pinch0) setZoom(z0 * d / pinch0); moved += 10; return; }
+      if(ids.length === 2){ var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if(pinch0) setZoom(z0 * d / pinch0);
+        var mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; if(mid0){ if(follow){ follow = ''; renderSide(); } panBy(mid[0] - mid0[0], mid[1] - mid0[1]); } mid0 = mid; moved += 10; return; }
       moved += Math.abs(dx) + Math.abs(dy); if(moved < 6) return;
-      if(follow){ follow = ''; renderSide(); }
-      var s = viewSize / H / camera.zoom, right = new T.Vector3(1, 0, 0), fwd = new T.Vector3(0, 0, -1);
-      var base = targetGoal || target.clone(); base.addScaledVector(right, -dx * s).addScaledVector(fwd, dy * s * 1.35); targetGoal = base; });
-    function up(e){ var was = !!ptrs[e.pointerId]; delete ptrs[e.pointerId]; if(Object.keys(ptrs).length < 2) pinch0 = 0;
+      if(panMode){ if(follow){ follow = ''; renderSide(); } panBy(dx, dy); }
+      else rotate(dx, dy); });
+    function up(e){ var was = !!ptrs[e.pointerId]; delete ptrs[e.pointerId]; if(Object.keys(ptrs).length < 2){ pinch0 = 0; mid0 = null; }
       if(was && moved < 6 && e.type === 'pointerup'){ var r = el.getBoundingClientRect(), m = new T.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), rc = new T.Raycaster(); rc.setFromCamera(m, camera);
         var hits = rc.intersectObjects(Object.keys(AG).map(function(k){ return AG[k].hit; })); if(hits.length) select(hits[0].object.userData.k); } }
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
@@ -362,6 +372,7 @@
     root.querySelector('[data-o3=out]').onclick = function(){ setZoom(zoomGoal / 1.35); };
     root.querySelector('[data-o3=all]').onclick = wholeOffice;
     var cb = root.querySelector('[data-o3=city]'); if(cb) cb.onclick = outsideView;
+    var tb = root.querySelector('[data-o3=top]'); if(tb) tb.onclick = function(){ if(pitchGoal > 1.3) resetView(); else { pitchGoal = 1.45; } };   // 🧭 top view ↔ 3D
     root.querySelector('[data-o3=full]').onclick = function(){ goFull(!root.classList.contains('full')); };
     document.addEventListener('fullscreenchange', function(){ if(!document.fullscreenElement && root.classList.contains('full') && !autoFull) goFull(false, true); });
     root.querySelector('[data-o3=team]').onclick = function(e){ e.stopPropagation(); drawer(!root.classList.contains('dopen')); };
@@ -543,7 +554,8 @@
     if(follow && AG[follow]){ targetGoal = AG[follow].pos.clone().add(new T.Vector3(0, .7, -.3));
       if(root.classList.contains('dopen')){ var pw = Math.min(320, W * .86) / 2; targetGoal.addScaledVector(new T.Vector3(1, 0, 0), pw * viewSize / H / camera.zoom); } }
     if(targetGoal) target.lerp(targetGoal, Math.min(1, dt * 4));
-    camera.zoom += (zoomGoal - camera.zoom) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); placeCam();
+    camera.zoom += (zoomGoal - camera.zoom) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
+    yaw += (yawGoal - yaw) * Math.min(1, dt * 7); pitch += (pitchGoal - pitch) * Math.min(1, dt * 7); placeCam();
     renderer.render(scene, camera);
     // HTML tags follow the 3D world
     vtmp = vtmp || new T.Vector3();
