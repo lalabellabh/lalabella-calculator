@@ -120,7 +120,16 @@
     if (only) {   // an icon-only button: make sure the icon shows on a dark button (the emoji had its own colours)
       var host = el.closest('button,a,label,[role="button"]') || el, hs = getComputedStyle(host);
       if (lum(hs.backgroundColor) < .35 && lum(hs.color) < .45 && !/gradient|url/.test(hs.backgroundImage)) w.style.color = '#fff';
+      // Nov 25 2026 (Bench: camera / mic buttons looked like a box inside a box): on a coloured or dark button the icon is drawn
+      // straight on the button in white — no second tile inside it
+      var bgc = String(hs.backgroundColor).match(/[\d.]+/g), solid = bgc && !(bgc.length > 3 && +bgc[3] < .5);
+      if (host !== el && ((/gradient/.test(hs.backgroundImage) && gradDark(hs.backgroundImage)) || (solid && (lum(hs.backgroundColor) < .6 || Math.max(+bgc[0], +bgc[1], +bgc[2]) - Math.min(+bgc[0], +bgc[1], +bgc[2]) > 60)))) w.classList.add('lbi-onbg');
     }
+  }
+  function gradDark(g) {   // the colours of a gradient are mostly dark / strong (not a light white-pink one)
+    var cs = String(g).match(/rgba?\([^)]+\)/g) || []; if (!cs.length) return false;
+    var n = 0; cs.forEach(function (c) { var m = c.match(/[\d.]+/g); if (m && !(m.length > 3 && +m[3] < .5) && (lum(c) < .6 || Math.max(+m[0], +m[1], +m[2]) - Math.min(+m[0], +m[1], +m[2]) > 70)) n++; });
+    return n >= Math.ceil(cs.length / 2);
   }
   function lum(c) { var m = String(c).match(/[\d.]+/g); if (!m || (m.length > 3 && +m[3] < .5)) return 1; return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; }
   function scan(root) {
@@ -133,6 +142,8 @@
   }
   var css = document.createElement('style'); css.id = 'lbiCss';
   css.textContent = '.lbi-w{display:inline-flex;align-items:center;justify-content:center;vertical-align:-.2em;margin-right:.38em;line-height:0}' +
+    'html body .lbi-w.lbi-only.lbi-onbg{background:none!important;box-shadow:none!important;border:0!important;padding:0!important;color:#fff!important;filter:none!important}' +
+    'html body .lbi-onbg .lbi{filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))!important;width:1.25em!important;height:1.25em!important}html body .lbi-onbg .lbi .lbi-d{fill:#fff!important;opacity:.3!important}html body .lbi-onbg .lbi .lbi-s{stroke:#fff!important}' +
     '.lbi-w.lbi-only{margin-right:0;vertical-align:middle}.lbi-g{display:inline-flex;align-items:center;white-space:nowrap}' +
     'button:has(> .lbi-w:not(.lbi-only)),a:has(> .lbi-w:not(.lbi-only)){white-space:nowrap}' +
     '.lbi{width:1.2em;height:1.2em;flex:none;overflow:visible;filter:drop-shadow(0 .6px .4px rgba(0,0,0,.12))}' +

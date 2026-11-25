@@ -1,6 +1,6 @@
 /* LALABELLA — section shortcuts (Nov 25 2026, Bench: "sa lahat ng page ng chocolate may shortcut na sa taas, pati flower, item inventory at coffee").
  * A row of small pill links at the top of every Chocolate / Flower / Item Inventory / Café page, to jump to the other pages of
- * the same section (+ the other calcs). The page you are on is highlighted. ✎ = pick your own, ✕ = hide (⭐ brings it back).
+ * the same section (+ the other calcs). The page you are on is highlighted. tune icon = pick your own, ‹ = fold ("Shortcuts ›" brings it back).
  * Stays on top while you scroll (sticky). Saved on this device per section. Loaded by shared/nav.js.
  * Skipped on pages that already have their own row (the calcs, Calc Sales) and on the home hubs.
  */
@@ -42,12 +42,17 @@
   function load() { try { var a = JSON.parse(localStorage.getItem(KEY) || 'null'); if (Array.isArray(a) && a.length) { var l = a.map(byHref).filter(Boolean); if (l.length) return l; } } catch (e) {} return DEF; }
   function hiddenNow() { try { return localStorage.getItem(HKEY) === '1'; } catch (e) { return false; } }
   function setHidden(v) { try { if (v) localStorage.setItem(HKEY, '1'); else localStorage.removeItem(HKEY); } catch (e) {} }
-  var css = '.lbsb{position:sticky;top:8px;z-index:60;display:flex;align-items:center;gap:6px;max-width:100%;box-sizing:border-box;min-width:0;contain:inline-size;overflow:hidden;padding:6px;margin:0 0 10px;border-radius:16px;' +
+  var css = '.lbsb{position:sticky;top:8px;z-index:60;display:flex;align-items:center;gap:6px;max-width:100%;box-sizing:border-box;min-width:0;contain:inline-size;overflow:hidden;padding:4px 5px;margin:0 0 10px;border-radius:16px;' +
       'background:rgba(255,255,255,.62);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.75);box-shadow:0 6px 18px rgba(60,30,40,.1)}' +
     '.lbsb-s{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.lbsb-s::-webkit-scrollbar{display:none}' +
     '.lbsb a,.lbsb-b{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font:700 12px/1.3 "Space Grotesk",system-ui,sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer}' +
     '.lbsb a.on{background:#a8405e;color:#fff;border-color:#a8405e}.lbsb a:hover{border-color:rgba(168,64,94,.4)}' +
-    '.lbsb-b{width:30px;height:30px;padding:0;justify-content:center;border-radius:50%;font-size:13px}.lbsb-x{background:#f6e6ea;color:#8a2f48}' +
+    /* Nov 25 2026: premium controls — a small capsule (tune + fold arrow) instead of loose ✎ ✕ */
+    '.lbsb-ctl{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:99px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(246,236,240,.85));border:1px solid rgba(158,47,74,.14);box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(60,30,40,.08)}' +
+    '.lbsb-b{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:0;background:transparent;color:#8a2f48;cursor:pointer;transition:background .15s,transform .15s}' +
+    '.lbsb-b:hover{background:rgba(158,47,74,.1)}.lbsb-b:active{transform:scale(.92)}.lbsb-ctl .lbsb-b+.lbsb-b{border-left:1px solid rgba(158,47,74,.12);border-radius:0 50% 50% 0}' +
+    '.lbsb-open{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 10px 0 12px;border-radius:99px;border:1px solid rgba(158,47,74,.18);cursor:pointer;color:#8a2f48;font:700 12px/1 "Space Grotesk",system-ui,sans-serif;' +
+      'background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(246,236,240,.9));box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(60,30,40,.12)}.lbsb-open .d{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#c9506b,#9e2f4a);box-shadow:0 0 0 3px rgba(201,80,107,.15)}.lbsb-open:hover{transform:translateY(-1px)}' +
     '.lbsb.min{contain:none;overflow:visible;display:inline-flex;width:auto;padding:4px;background:transparent;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}' +
     '@media(min-width:901px){.lbsb-s{flex-wrap:wrap;overflow:visible}}@media print{.lbsb{display:none!important}}' +
     '.lbsb-bg{position:fixed;inset:0;z-index:2147483000;background:rgba(30,15,22,.45);display:flex;align-items:flex-end;justify-content:center}' +
@@ -65,21 +70,27 @@
     if (!bar) return;
     if (hiddenNow()) {
       bar.className = 'lbsb min';
-      bar.innerHTML = '<button type="button" class="lbsb-b" data-show title="Show shortcuts" style="width:auto;padding:0 11px;border-radius:99px">⭐ Shortcuts</button>';
+      bar.innerHTML = '<button type="button" class="lbsb-open" data-show title="Show shortcuts" aria-label="Show shortcuts"><span class="d"></span>Shortcuts<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>';
     } else {
       bar.className = 'lbsb';
       bar.innerHTML = '<div class="lbsb-s">' + load().map(function (x) { var on = x[0].split('?')[0] === page; return '<a href="' + esc(x[0]) + '"' + (on ? ' class="on" aria-current="page"' : '') + '>' + x[1] + ' ' + esc(x[2]) + '</a>'; }).join('') + '</div>' +
-        '<button type="button" class="lbsb-b" data-edit title="Edit shortcuts" aria-label="Edit shortcuts">✎</button><button type="button" class="lbsb-b lbsb-x" data-hide title="Hide shortcuts" aria-label="Hide shortcuts">✕</button>';
+        '<span class="lbsb-ctl"><button type="button" class="lbsb-b" data-edit title="Edit shortcuts" aria-label="Edit shortcuts"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button><button type="button" class="lbsb-b" data-hide title="Fold shortcuts" aria-label="Fold shortcuts"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></span>';
       var sc = bar.querySelector('.lbsb-s'), cur = sc.querySelector('.on'); if (cur && sc.scrollWidth > sc.clientWidth) sc.scrollLeft = Math.max(0, cur.offsetLeft - 40);
     }
     try { if (window.LBIcons) LBIcons.scan(bar); } catch (e) {}
     clearBurger();
   }
   function clearBurger() {   // keep clear of the ☰ button (fixed, top-left)
-    if (!bar) return; bar.style.marginLeft = '';
+    if (!bar) return; bar.style.marginLeft = ''; bar.style.marginTop = '';
     var bt = [].slice.call(document.querySelectorAll('.choco-nav-toggle,.nav-toggle,.lbnav-btn')).filter(function (e) { return e.offsetWidth; })[0];
     if (!bt) return; var a = bt.getBoundingClientRect(), r = bar.getBoundingClientRect();
     if (a.right > r.left && a.left < r.right && a.bottom > r.top && a.top < r.bottom) bar.style.marginLeft = Math.ceil(a.right - r.left + 8) + 'px';
+    // line the bar up with the ☰ (same height, same top) — Nov 25 2026, Bench: "ung alignment ng hamburger"
+    if (getComputedStyle(bt).position === 'fixed' && bar.style.position !== 'relative' && !bar.classList.contains('min') && window.scrollY < 5) {
+      bar.style.minHeight = Math.round(a.height) + 'px'; bar.style.top = Math.round(a.top) + 'px';
+      var r2 = bar.getBoundingClientRect(), d = Math.round(a.top - r2.top), mt = parseFloat(getComputedStyle(bar).marginTop) || 0;
+      if (Math.abs(d) > 1 && Math.abs(d) < 60 && mt + d >= -40) bar.style.marginTop = (mt + d) + 'px';
+    }
   }
   function edit() {
     var pick = load().map(function (x) { return x[0]; }), bg = document.createElement('div'); bg.className = 'lbsb-bg';

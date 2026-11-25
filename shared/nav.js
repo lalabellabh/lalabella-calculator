@@ -66,12 +66,17 @@
   })();
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
-    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=5';
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=6';
     (document.head || document.documentElement).appendChild(ic);
+  }
+  // Compact (not full-width) action buttons on big screens — see shared/compact-buttons.js
+  if (!window.LBCompactButtons && !document.querySelector('script[src^="shared/compact-buttons.js"]')) {
+    const cb = document.createElement('script'); cb.src = 'shared/compact-buttons.js?v=1';
+    (document.head || document.documentElement).appendChild(cb);
   }
   // Section shortcuts at the top of Chocolate / Flower / Item / Café pages — see shared/section-bar.js
   if (!window.LBSectionBar && !document.querySelector('script[src^="shared/section-bar.js"]')) {
-    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=2';
+    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=4';
     (document.head || document.documentElement).appendChild(sb);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
