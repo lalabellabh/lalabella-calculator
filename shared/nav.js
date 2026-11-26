@@ -66,7 +66,7 @@
   })();
   // Real duotone icons instead of emoji on buttons / tabs / titles (Nov 23 2026). See shared/icons.js.
   if (!window.LBIcons && !document.querySelector('script[src^="shared/icons.js"]')) {
-    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=6';
+    const ic = document.createElement('script'); ic.src = 'shared/icons.js?v=7';
     (document.head || document.documentElement).appendChild(ic);
   }
   // Compact (not full-width) action buttons on big screens — see shared/compact-buttons.js
@@ -609,7 +609,9 @@
   // the hidden page's HEIGHT -> Chrome counted 3-4 sheets for a 1-sheet receipt. While printing, everything that is not the
   // receipt / print area (or one of its parents) is taken out with display:none, so only the real pages are counted.
   (function printOnlyRoot() {
-    const ROOTS = ['#labelPrintArea.printing', '#receiptPrintArea.printing', '[data-print-root]', '#rp', '#receipt', '#printArea', '#printView', '#pr'];
+    // Nov 26 2026 (Bench: "bakit dalawa ang print"): the calcs print .receipt-a4 / .receipt-thermal (position:fixed). A fixed box is
+    // printed again on EVERY page, so a long page behind it (hidden, but still taking space) = the same receipt twice -> hide the rest.
+    const ROOTS = ['#labelPrintArea.printing', '#receiptPrintArea.printing', 'body.print-a4 .receipt-a4', 'body.print-thermal .receipt-thermal', '[data-print-root]', '#rp', '#receipt', '#printArea', '#printView', '#pr'];
     let hidden = [];
     const filled = el => el && (el.textContent.trim() || el.querySelector('img,svg,canvas,table'));
     function before() {

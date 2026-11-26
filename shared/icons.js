@@ -62,6 +62,7 @@
     leaf: { d: 'M5 19C5 10 10 5 20 4c0 9-5 15-15 15z', s: 'M5 19C5 10 10 5 20 4c0 9-5 15-15 15z M5 19c3-4 6-7 10-10' },
     check: { d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', s: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M8 12.3l2.7 2.7L16.2 9.5' },
     car: { d: 'M4 11h16v6H4z', s: 'M5 11l1.6-4.2A1.5 1.5 0 0 1 8 5.8h8a1.5 1.5 0 0 1 1.4 1L19 11 M3.5 11h17v6h-17z M7 17v2 M17 17v2 M7 14h.01 M17 14h.01' },
+    party: { d: 'M4 20l4.4-11.6 7.2 7.2z', s: 'M4 20l4.4-11.6 7.2 7.2z M7 12.5l4.5 4.5 M13.2 4.2c.7 1.5.3 2.7-1 3.4 M19.8 10.8c-1.5-.7-2.7-.3-3.4 1 M16 3.5v1.6 M20.5 8h-1.6 M18.2 5.8l1.1-1.1' },   // 🎉 Event Receiving (Nov 26 2026)
     chat: { d: 'M4 5h16v11H9l-5 4z', s: 'M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 16H9l-4.5 4v-4H5a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 5 4.5z M8 9h8 M8 12h5' }
   };
   var MAP = {
@@ -72,13 +73,13 @@
     '🔒': 'lock', '⚙': 'gear', '💰': 'money', '💵': 'money', '⚠': 'warn', '✨': 'sparkle', '📤': 'upload', '📱': 'phone', '💬': 'chat', '🧮': 'calc', '🫖': 'coffee', '🕒': 'clock', '🕐': 'clock', '⏰': 'clock', '⏱': 'clock', '🏢': 'building', '🏪': 'store', '🏬': 'store', '📥': 'inbox',
     '🔐': 'lock', '📖': 'book', '📚': 'book', '🩺': 'health', '🧠': 'bulb', '💡': 'bulb', '🗺': 'map', '🗂': 'folder', '📁': 'folder', '🔗': 'link', '🔄': 'refresh',
     '📲': 'phone', '📆': 'calendar', '📄': 'doc', '📃': 'doc', '💻': 'laptop', '🖥': 'laptop', '💌': 'mail', '📧': 'mail', '✉': 'mail', '👥': 'users', '🌱': 'leaf', '🌿': 'leaf',
-    '✅': 'check', '🚗': 'car', '🍎': 'phone', '✎': 'pencil'
+    '✅': 'check', '🚗': 'car', '🍎': 'phone', '✎': 'pencil', '🎉': 'party', '🎊': 'party'
   };
   // colours for the "Colorful" icon pack (each icon its own little glossy tile)
   var COL = { camera: ['#5b8cff', '#3a5bd9'], mic: ['#ff6b8b', '#d93a63'], image: ['#36c48f', '#1c9467'], printer: ['#7b8aa3', '#4f5d75'], tag: ['#ffb547', '#e98a10'],
     pencil: ['#ffcf4a', '#f0a500'], search: ['#4fc3f7', '#1e88e5'], log: ['#a78bfa', '#7c3aed'], trash: ['#ff7a6b', '#e5484d'], save: ['#3ecf8e', '#16a36a'],
     clipboard: ['#8d9cf8', '#5b6be0'], cart: ['#ff9f43', '#ee6c12'], chart: ['#34d1bf', '#0e9f8f'], receipt: ['#c0a6ff', '#8b5cf6'], box: ['#d9a066', '#b3763a'],
-    star: ['#ffd54a', '#f5a400'], pin: ['#ff6b6b', '#d93a3a'], flower: ['#ff7eb6', '#e0457f'], choc: ['#a0673d', '#6b3e1f'], gift: ['#ff6fa1', '#d63a76'],
+    star: ['#ffd54a', '#f5a400'], pin: ['#ff6b6b', '#d93a3a'], flower: ['#ff7eb6', '#e0457f'], choc: ['#a0673d', '#6b3e1f'], gift: ['#ff6fa1', '#d63a76'], party: ['#ffb347', '#e0457f'],
     coffee: ['#c08a5a', '#8a5a33'], plus: ['#4ade80', '#16a34a'], bell: ['#ffc145', '#f08c00'], calendar: ['#ff8a65', '#e5533d'], user: ['#64b5f6', '#1e88e5'],
     truck: ['#26c6da', '#00838f'], home: ['#81c784', '#43a047'], lock: ['#90a4ae', '#546e7a'], gear: ['#9e9e9e', '#616161'], money: ['#66bb6a', '#2e7d32'],
     warn: ['#ffb300', '#ef6c00'], sparkle: ['#ffd54a', '#ff8f00'], upload: ['#4dd0e1', '#0097a7'], phone: ['#7986cb', '#3949ab'], chat: ['#4fc3f7', '#0288d1'], calc: ['#a1887f', '#6d4c41'], clock: ['#7aa7ff', '#4a6fe0'], building: ['#8ea2c8', '#53668f'], store: ['#ffa36b', '#e9692c'], inbox: ['#5bc0eb', '#2b8cc4'],
