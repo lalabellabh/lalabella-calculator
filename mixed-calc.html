@@ -333,7 +333,7 @@
           <h4>✓ Sold — take out of stock</h4>
           <div class="s">Flowers and chocolate both leave the branch stock. Press only when the customer is <b>sure</b>. For a quotation just Print.</div>
           <div class="r">
-            <select id="mxSrc" style="flex:0 1 170px"><option value="">Source — pick —</option><option value="Walk-in">🚶 Walk-in</option><option value="Pick-up">🛍️ Pick-up</option><option value="Website order">🌐 Website order</option><option value="WhatsApp">💬 WhatsApp</option><option value="Corporate">🏢 Corporate</option><option value="Others">📝 Others</option></select>
+            <select id="mxSrc" style="flex:0 1 170px"><option value="">Source — pick —</option><option value="Walk-in">🚶 Walk-in</option><option value="Pick-up">🛍️ Pick-up</option><option value="Website order">🌐 Website order</option><option value="WhatsApp">💬 WhatsApp</option><option value="Corporate">🏢 Corporate</option><option value="Others">📝 Others</option><option value="Event">🎉 Used for an event</option></select>
             <input id="mxRef" placeholder="Invoice no. or customer name / phone" maxlength="60">
           </div>
           <button class="go" type="button" id="mxSold">✓ Sold</button>
@@ -404,7 +404,7 @@
   (function(){ var s = ls('lbCalcSaleBranch'); if(s) $('mxBranch').value = s;
     fetch(SAPI + '?action=getMode&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(d){
       if(d && d.success){ if(!branch() && d.userBranch){ var o = Array.prototype.find.call($('mxBranch').options, function(x){ return norm(x.value) === norm(d.userBranch); }); if(o) $('mxBranch').value = o.value; }
-        if(d.mode === 'odoo'){ $('mxSold').disabled = true; $('mxRes').innerHTML = '<span class="warn">🔗 Odoo now takes sales out of stock — this calc is for quotes and printing only.</span>'; } }
+        if(d.mode === 'odoo'){ ODOO = true; evMode(); if(!EVENT) $('mxRes').innerHTML = '<span class="warn">🔗 Odoo now takes sales out of stock — this calc is for quotes and printing only. (🎉 Event use still works: choose "Used for an event".)</span>'; } }
       loadStock();
     }).catch(function(){ loadStock(); }); })();
   // stock now (before this order) and what is in the list
@@ -528,21 +528,35 @@
     var s = sums(), t = '*Lalabella*' + ($('mxCustomer').value ? ' — ' + $('mxCustomer').value : '') + '\n' + lines().join('\n') + '\n*Total: ' + f3(s.g) + ' BD*';
     if(navigator.share){ navigator.share({ text:t }).catch(function(){}); } else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); };
 
+  // ---------- 🎉 Used for an event (Nov 26 2026, Bench) ----------
+  // mixed-calc.html?event=1 = the "Used for Events" page: source fixed to Event, the name of the event is required,
+  // flowers + chocolates leave the stock, saved with the event name (Calc Sales › 🎉 Events shows them).
+  var EVENT = /[?&]event=1/.test(location.search), ODOO = false;
+  function evMode(){ var on = EVENT || $('mxSrc').value === 'Event';
+    $('mxRef').placeholder = on ? 'Event name (required) — e.g. Gulf Hotel wedding' : 'Invoice no. or customer name / phone';
+    document.querySelector('.mx-sold h4').textContent = on ? '🎉 Used for an event — take out of stock' : '✓ Sold — take out of stock';
+    if(!busy) $('mxSold').textContent = on ? '🎉 Save — used for event' : '✓ Sold';
+    $('mxSold').disabled = ODOO && !on; }
+  if(EVENT){ $('mxSrc').value = 'Event'; $('mxSrc').style.display = 'none'; var h1 = document.querySelector('h1'); if(h1){ h1.textContent = '🎉 Used for Events'; var sub = h1.nextElementSibling; if(sub) sub.textContent = 'Flowers and chocolates used for an event: add them, type the event name, save — they leave the branch stock.'; } document.title = 'Used for Events';
+    document.querySelector('.mx-sold .s').innerHTML = 'Flowers and chocolates used for an <b>event</b> leave the branch stock and are saved with the event name. Check them in <a href="calc-sales.html?q=Event">Calc Sales › 🎉 Events</a>.'; }
+  $('mxSrc').addEventListener('change', evMode); evMode();
+
   // ---------- ✓ Sold: both kinds leave the stock ----------
   var busy = false, pendSig = '', pendKey = '';
   $('mxSold').onclick = function(){
-    var b = branch(), src = $('mxSrc').value, ref = ($('mxRef').value || '').trim() || ($('mxCustomer').value || '').trim() || src;
+    var b = branch(), src = EVENT ? 'Event' : $('mxSrc').value, isEv = src === 'Event', ref = ($('mxRef').value || '').trim() || (isEv ? '' : ($('mxCustomer').value || '').trim() || src);
+    if(isEv && !ref){ alert('Type the event name first.'); $('mxRef').focus(); return; }
     if(!b){ alert('Choose the branch first (top of the page).'); $('mxBranch').focus(); return; }
     if(!src){ alert('Choose the source first.'); $('mxSrc').focus(); return; }
     var fl = LIST.filter(function(l){ return l.type === 'flower'; }), ch = LIST.filter(function(l){ return l.type === 'choc'; }), ex = LIST.filter(function(l){ return l.type === 'extra'; });
     if(!fl.length && !ch.length){ alert('Add at least one flower or chocolate.'); return; }
-    if(sig() === lastSig && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastSale + '.\n\nPress OK ONLY if this is a NEW customer buying the same again.')) return;
-    if(!confirm('Source: ' + src + (ref !== src ? '\nSold to: ' + ref : '') + '\nTake this out of ' + b + ' stock?\n\n' + lines().join('\n'))) return;
+    if(sig() === lastSig && !isEv && !confirm('⚠ ALREADY SOLD: this same list was saved as ' + lastSale + '.\n\nPress OK ONLY if this is a NEW customer buying the same again.')) return;
+    if(!confirm((isEv ? '🎉 Event: ' + ref : 'Source: ' + src + (ref !== src ? '\nSold to: ' + ref : '')) + '\nTake this out of ' + b + ' stock?\n\n' + lines().join('\n'))) return;
     if(busy) return; busy = true;
     if(sig() !== pendSig){ pendSig = sig(); pendKey = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…'; $('mxRes').innerHTML = '';
     var exList = ex.map(function(x){ return { desc: x.desc + (x.qty > 1 ? ' × ' + x.qty : ''), price: x.total }; });
-    var body = new URLSearchParams({ action:'saveMixedSale', token:tk(), reqKey:pendKey, branch:b, source:src, ref:ref, customer:($('mxCustomer').value || '').trim() || (ref === src ? src : ''),
+    var body = new URLSearchParams({ action:isEv ? 'saveEventUse' : 'saveMixedSale', token:tk(), reqKey:pendKey, branch:b, source:src, ref:ref, customer:($('mxCustomer').value || '').trim() || (ref === src ? src : ''),
       flowers: JSON.stringify(fl.map(function(l){ return { name:l.name, qty:l.qty, rate:l.rate }; })),
       chocs: JSON.stringify(ch.map(function(l){ return { name:l.name, code:l.code, cat:l.cat || '', amount:l.amount, mode:l.mode, kg:l.kg, gpp:l.gpp, total:l.total }; })),
       extras: String(ex.reduce(function(s, x){ return s + x.total; }, 0)), extrasList: JSON.stringify(exList) });
@@ -550,12 +564,12 @@
       if(!d || !d.success){ $('mxRes').innerHTML = '<span class="warn">⚠ ' + e((d && d.error) || 'Not saved.') + '</span>'; return; }
       lastSale = d.saleNo; lastSig = sig(); pendSig = ''; pendKey = '';
       var sh = (d.short || []).map(function(s){ return '<div class="warn">⚠ ' + e(s.name) + ': needed ' + e(s.need) + ', the system has only ' + e(s.have) + '</div>'; }).join('');
-      $('mxRes').innerHTML = '<div class="ok">✓ ' + e(src) + (ref !== src ? ' · sold to ' + e(ref) : '') + ' — taken out of ' + e(d.branch || b) + ' stock · ' + e(d.saleNo) + (d.releaseNo ? ' · ' + e(d.releaseNo) : '') + '</div>' +
+      $('mxRes').innerHTML = '<div class="ok">✓ ' + (isEv ? '🎉 Event: ' + e(ref) : e(src) + (ref !== src ? ' · sold to ' + e(ref) : '')) + ' — taken out of ' + e(d.branch || b) + ' stock · ' + e(d.saleNo) + (d.releaseNo ? ' · ' + e(d.releaseNo) : '') + '</div>' +
         (d.chocError ? '<div class="warn">⚠ Chocolate was NOT saved: ' + e(d.chocError) + '</div>' : '') + (sh ? sh + '<div class="s" style="margin:4px 0 0">Saved anyway. The next stock count will show the difference.</div>' : '');
-      $('mxRef').value = ''; $('mxSrc').value = ''; loadStock();
+      $('mxRef').value = ''; if(!EVENT) $('mxSrc').value = ''; evMode(); loadStock();
       $('mxRes').innerHTML += '<button type="button" data-new style="width:100%;margin-top:8px;border:1px solid #2f7a4f;border-radius:11px;padding:9px;font:inherit;font-weight:800;background:#fff;color:#1f5a38;cursor:pointer">🆕 New order — clear the list</button>';
     }).catch(function(){ $('mxRes').innerHTML = '<span class="warn">⚠ Connection problem. Please try again.</span>'; })
-      .then(function(){ busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; });
+      .then(function(){ busy = false; btn.disabled = false; btn.textContent = '✓ Sold'; evMode(); });
   };
   // 🆕 New order (Bench, Nov 20): clears the list; asks first only when it was not sold yet
   function newOrder(sold){
@@ -565,7 +579,7 @@
   }
   $('mxNew').onclick = function(){ newOrder(false); };
   $('mxRes').addEventListener('click', function(ev){ if(ev.target.closest('[data-new]')) newOrder(true); });
-  setInterval(function(){ if(busy) return; var done = !!lastSig && sig() === lastSig; $('mxSold').textContent = done ? '✓ Already sold · ' + lastSale : '✓ Sold'; $('mxSold').style.background = done ? '#9aa79f' : ''; }, 800);
+  setInterval(function(){ if(busy) return; var done = !!lastSig && sig() === lastSig, ev = EVENT || $('mxSrc').value === 'Event'; $('mxSold').textContent = done ? (ev ? '🎉 Saved · ' : '✓ Already sold · ') + lastSale : (ev ? '🎉 Save — used for event' : '✓ Sold'); $('mxSold').style.background = done ? '#9aa79f' : ''; }, 800);
   render();
 })();
 </script>

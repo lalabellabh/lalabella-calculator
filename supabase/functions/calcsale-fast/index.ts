@@ -118,9 +118,9 @@ async function saveFlowerSale(p: any, u: any) {
   const head = (await sbPost('calc_sales', [{ kind: 'flower', branch, extras: exList, ref: txt(p.ref, 60) || null, source: txt(p.source, 30) || null, disp_code: /^(DISP|SMP|FSMP)-\d{1,8}$/i.test(String(p.disp || '')) ? String(p.disp).toUpperCase() : null, customer: txt(p.customer, 80) || null, items: names.map((n) => ({ name: n, qty: sum[n], rate: rate[n] || 0 })), short, total, created_by: who(u), req_key: p._reqKey || null }]))[0];
   const saleNo = await nextSaleNo(head.id);
   const now = new Date().toISOString();
-  await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: 'Calc · ' + who(u), fulfilled_date: now })));
+  await sbPost('flower_arrangement_fulfillments', names.map((n) => ({ arrangement_id: null, arrangement_code: saleNo, branch, flower_name: n, qty: sum[n], fulfilled_by: (p.source === 'Event' ? 'Event · ' + (txt(p.ref, 60) || '') + ' · ' : 'Calc · ') + who(u), fulfilled_date: now })));
   await sbPatch('calc_sales', `id=eq.${head.id}`, { sale_no: saleNo, deducted: names.map((n) => ({ name: n, qty: sum[n] })) });
-  await logMoves(names.map((n) => ({ kind: 'flower', branch, item: n, unit: 'stems', before: avail[n], change: -sum[n], after: r3(avail[n] - sum[n]), ref: saleNo, action: 'Sold', by: who(u) })));
+  await logMoves(names.map((n) => ({ kind: 'flower', branch, item: n, unit: 'stems', before: avail[n], change: -sum[n], after: r3(avail[n] - sum[n]), ref: saleNo, action: p.source === 'Event' ? 'Used for event' : 'Sold', by: who(u) })));
   return { success: true, saleNo, branch, lines: names.length, short };
 }
 
@@ -150,14 +150,14 @@ async function takeChoc(branch: string, items: any[], saleNo: string, p: any, u:
       if (q <= 0) continue;
       if (!releaseNo) { const n = await sbRpc('get_next_chocolate_counter', { counter_key: 'Next Release No', start_at: 1 }); releaseNo = 'REL-' + String(n).padStart(6, '0'); }
       const price = Number(kgU ? b.price_per_kg : (b.price_per_piece ?? b.price_per_kg)) || 0;
-      await sbPost('chocolate_release_database', [{ release_no: releaseNo, transaction_type: 'Sale (Calc)', branch, customer_department: txt(p.customer, 80) || 'Calc sale', chocolate_name: b.chocolate_name, product_code: b.product_code || '', batch_no: b.batch_no, qty_release: q, unit: b.unit, price, total: r3(q * price), remarks: saleNo + (p.source ? ' · ' + txt(p.source, 30) : '') + (p.ref ? ' · ' + txt(p.ref, 60) : ''), prepared_by: who(u), release_date: day, database_id: String(b.id), to_branch: '' }]);
+      await sbPost('chocolate_release_database', [{ release_no: releaseNo, transaction_type: p.source === 'Event' ? 'Event' : 'Sale (Calc)', branch, customer_department: txt(p.customer, 80) || (p.source === 'Event' ? 'Event' : 'Calc sale'), chocolate_name: b.chocolate_name, product_code: b.product_code || '', batch_no: b.batch_no, qty_release: q, unit: b.unit, price, total: r3(q * price), remarks: saleNo + (p.source ? ' · ' + txt(p.source, 30) : '') + (p.ref ? ' · ' + txt(p.ref, 60) : ''), prepared_by: who(u), release_date: day, database_id: String(b.id), to_branch: '' }]);
       await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) - q), qty_used: r3(Number(b.qty_used || 0) + q) });
       deducted.push({ name: b.chocolate_name, id: b.id, batch: b.batch_no, qty: q, unit: b.unit });
       mvTaken[unitLabel(b.unit)] = r3((mvTaken[unitLabel(b.unit)] || 0) + q);
       if (kgU || gU) { const g = kgU ? q * 1000 : q; leftG = (leftG ?? 0) - g; if (leftP != null && grams && pcs) leftP = leftG * pcs / grams; }
       else { leftP = (leftP ?? 0) - q; if (leftG != null && pcs) leftG = leftP * (grams! / pcs); }
     }
-    moves.push(...Object.keys(mvTaken).map((k) => ({ kind: 'chocolate', branch, item: mvName, unit: k, before: mvBefore[k] || 0, change: -mvTaken[k], after: r3((mvBefore[k] || 0) - mvTaken[k]), action: 'Sold', by: who(u) })));
+    moves.push(...Object.keys(mvTaken).map((k) => ({ kind: 'chocolate', branch, item: mvName, unit: k, before: mvBefore[k] || 0, change: -mvTaken[k], after: r3((mvBefore[k] || 0) - mvTaken[k]), action: p.source === 'Event' ? 'Used for event' : 'Sold', by: who(u) })));
     if (!batches.length) short.push({ name: c.name, need: c.mode === 'pieces' ? c.amount + ' pcs' : r3(grams || 0) + ' g', have: 'not in this branch stock' });
     else if (leftG != null && leftG > 0.5) short.push({ name: c.name, need: r3(grams || 0) + ' g', have: r3((grams || 0) - leftG) + ' g' });
     else if (leftG == null && leftP != null && leftP > 0.01) short.push({ name: c.name, need: r3(pcs || 0) + ' pcs', have: r3((pcs || 0) - leftP) + ' pcs' });
@@ -240,7 +240,7 @@ async function cancelSale(p: any, u: any) {
       const b = (await sbGet(`chocolate_database?select=id,current_stock,qty_used&id=eq.${Number(d.id)}`))[0];
       if (b) await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) + Number(d.qty)), qty_used: r3(Math.max(0, Number(b.qty_used || 0) - Number(d.qty))) });
     }
-    if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=eq.${encodeURIComponent('Sale (Calc)')}`);
+    if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=in.(${encodeURIComponent('"Sale (Calc)"')},Event)`);
   }
   await sbPatch('calc_sales', `id=eq.${id}`, { status: 'Cancelled', cancelled_by: who(u), cancelled_at: new Date().toISOString() });
   await logMoves(moves.map((m) => ({ ...m, ref: s.sale_no, action: 'Cancelled (put back)', by: who(u) })));
@@ -275,7 +275,7 @@ async function editSale(p: any, u: any) {
       const b = (await sbGet(`chocolate_database?select=id,current_stock,qty_used&id=eq.${Number(d.id)}`))[0];
       if (b) await sbPatch('chocolate_database', `id=eq.${b.id}`, { current_stock: r3(Number(b.current_stock) + Number(d.qty)), qty_used: r3(Math.max(0, Number(b.qty_used || 0) - Number(d.qty))) });
     }
-    if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=eq.${encodeURIComponent('Sale (Calc)')}`);
+    if (s.release_no) await sbDelete('chocolate_release_database', `release_no=eq.${encodeURIComponent(s.release_no)}&transaction_type=in.(${encodeURIComponent('"Sale (Calc)"')},Event)`);
     const t = await takeChoc(newBr, s.items || [], s.sale_no, { customer: s.customer, source: fields.source, ref: fields.ref }, u);
     await logMoves(mvBack.concat(t.moves.map((m: any) => ({ ...m, ref: s.sale_no, action: 'Sold (moved from ' + s.branch + ')' }))));
     fields.branch = newBr; fields.release_no = t.releaseNo || null; fields.deducted = t.deducted; fields.short = t.short;
@@ -351,6 +351,21 @@ Deno.serve(async (req) => {
       }
       p._reqKey = key;
       return json(await saveMixedSale(p, u));
+    }
+    // Nov 26 2026 (Bench: "used by events, para makita na ginamit sa events"): flowers / chocolates used for an event.
+    // Same as a mixed sale (stock goes down, shows in Calc Sales, Admin Cancel puts it back) but: source 'Event', the
+    // event name is required, the moves say "Used for event", chocolate release type 'Event' - and it ALWAYS takes the
+    // stock out, even when Odoo does the sales (Odoo never sees event use).
+    if (a === 'saveEventUse') {
+      const ev = txt(p.ref, 60);
+      if (!ev) return json({ success: false, error: 'Type the event name.' });
+      const key = /^[A-Za-z0-9_-]{8,60}$/.test(String(p.reqKey || '')) ? String(p.reqKey) : '';
+      if (key) {
+        const was = await sbGet(`calc_sales?select=sale_no,branch,release_no,short,group_no&req_key=in.(${key}f,${key}c)`);
+        if (was && was.length) return json({ success: true, duplicate: true, saleNo: was.map((w: any) => w.sale_no).join(' + '), groupNo: was[0].group_no || '', releaseNo: (was.find((w: any) => w.release_no) || {}).release_no || '', branch: was[0].branch, short: [] });
+      }
+      p._reqKey = key;
+      return json(await saveMixedSale({ ...p, source: 'Event', ref: ev, customer: txt(p.customer, 80) || ev }, u));
     }
     if (a === 'listSales') return json(await listSales(p));
     // receiving approved (called by flower-fast / chocolate-fast with the approver's token): the stock now already has it -> before = now - qty

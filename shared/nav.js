@@ -76,7 +76,7 @@
   }
   // Section shortcuts at the top of Chocolate / Flower / Item / Café pages — see shared/section-bar.js
   if (!window.LBSectionBar && !document.querySelector('script[src^="shared/section-bar.js"]')) {
-    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=10';
+    const sb = document.createElement('script'); sb.src = 'shared/section-bar.js?v=11';
     (document.head || document.documentElement).appendChild(sb);
   }
   // Color theme (Rose / Ocean / Emerald / Candy …) — see shared/accent.js
@@ -91,6 +91,7 @@
       ['chocolate-receiving.html', '📥', 'Receiving'],
       ['chocolate-release.html', '📤', 'Release'],
       ['stock-count.html', '📋', 'Stock Count'],
+      ['mixed-calc.html?event=1', '🎉', 'Used for Events'],   // Nov 26 2026 (Bench)
       ['stock-approval.html', '✅', 'Stock Approval'],
       ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],
@@ -108,6 +109,7 @@
       ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['flower-purchase.html', '🧾', 'Flower Purchase'],
       ['flower-stock-count.html', '📋', 'Stock Count'],
+      ['mixed-calc.html?event=1', '🎉', 'Used for Events'],   // Nov 26 2026 (Bench)
       ['flower-catalog.html', '📚', 'Flower Catalog'],
       ['flower-arrangements.html', '💐', 'Flower Arrangements'],
       ['flower-transfer.html', '🔄', 'Flower Transfer'],
