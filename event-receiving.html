@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<script src="shared/config.js"></script>
+<script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
+<script src="shared/theme.js"></script>
+<script src="auth-guard.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Event Receiving</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="lb-theme-keep" content=".wrap, .card">
+<!-- Nov 26 2026 (Bench): "parang flower receiving — may invoice, flower list, may total — pero may pangalan, used by events".
+     Flowers / chocolates bought for an event. Record only: NOT in the branch stock, NOT in the weekly budget. Backend: event-fast. -->
+<style>
+  :root{ --ink:#2a1c22; --dim:#7a6670; --line:#ecdfe3; --ok:#2f7a4f; --bad:#c5483a; --acc:#9e2f4a; }
+  *{ box-sizing:border-box; min-width:0; }
+  body{ margin:0; font-family:'Space Grotesk',Arial,sans-serif; color:var(--ink); background:linear-gradient(160deg,#fbeff2,#eef6f0); min-height:100vh; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:16px 16px 60px; }
+  header{ padding-left:56px; margin:6px 0 12px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:26px; margin:0; }
+  .sub{ color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .card{ background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .card h2{ font-size:15px; margin:0 0 10px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+  label{ display:block; font-size:11px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  input,select,textarea{ width:100%; font:inherit; font-size:15px; border:1px solid #e2d3d8; border-radius:10px; padding:9px 10px; background:#fff; color:var(--ink); }
+  .note{ font-size:12px; color:var(--dim); background:#fff7e8; border:1px solid #f3dfb5; border-radius:10px; padding:8px 10px; margin:0 0 12px; }
+  .tbl{ overflow-x:auto; margin-top:10px; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; font-size:11px; color:var(--dim); font-weight:700; border-bottom:1px solid var(--line); padding:6px 5px; }
+  td{ border-bottom:1px solid var(--line); padding:5px; vertical-align:middle; }
+  td input,td select{ font-size:14px; padding:7px 8px; }
+  td.n{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .x{ border:0; background:none; color:var(--bad); font-size:18px; cursor:pointer; padding:4px 8px; }
+  .btn{ font:inherit; font-weight:700; font-size:14px; border:1px solid var(--line); border-radius:11px; padding:9px 14px; background:#fff; color:var(--ink); cursor:pointer; }
+  .btn.go{ background:var(--acc); border-color:var(--acc); color:#fff; }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .tots{ display:grid; grid-template-columns:1fr auto; gap:4px 16px; max-width:360px; margin:12px 0 0 auto; font-size:14px; }
+  .tots b{ text-align:right; font-variant-numeric:tabular-nums; }
+  .tots .g{ font-size:18px; color:var(--acc); border-top:2px solid var(--acc); padding-top:4px; }
+  .tally{ font-size:12.5px; margin-top:6px; text-align:right; }
+  .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .bar select,.bar input{ width:auto; font-size:13px; padding:7px 10px; }
+  .ev{ border-top:1px solid var(--line); padding:10px 0; font-size:13px; }
+  .ev:first-child{ border-top:0; }
+  .ev .top{ display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; }
+  .ev .top b{ font-size:15px; } .m{ color:var(--dim); font-size:11.5px; }
+  .tag{ font-size:11px; font-weight:700; border-radius:99px; padding:1px 8px; background:#fde3ea; }
+  .sumbox{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  .sumbox span{ background:#f6eef0; border-radius:10px; padding:6px 10px; font-size:12.5px; }
+  .sumbox b{ font-variant-numeric:tabular-nums; }
+  .empty{ color:var(--dim); text-align:center; padding:18px 0; font-size:13px; }
+  .pbtn{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:5px 10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; color:var(--ink); }
+  .pbtn.red{ color:var(--bad); border-color:#f0c9c3; }
+  #rp{ display:none; }
+  @media print{ body *{ visibility:hidden; } #rp,#rp *{ visibility:visible; } #rp{ display:block; position:absolute; left:0; top:0; width:100%; padding:10mm; font:12px Arial,sans-serif; color:#000; }
+    #rp table{ width:100%; border-collapse:collapse; } #rp th,#rp td{ border-bottom:1px solid #ccc; padding:4px; text-align:left; } @page{ size:A4; margin:10mm; } }
+  @media (max-width:600px){ header{ padding-left:52px; } h1{ font-size:22px; }
+    .tbl thead{ display:none; } #lines tr{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; padding:10px 0; border-bottom:1px solid var(--line); }
+    #lines td{ border:0; padding:0; } #lines td:nth-child(2){ grid-column:1 / -1; order:-1; } #lines td.n{ align-self:center; font-weight:700; } #lines td:last-child{ text-align:right; } }
+</style>
+</head>
+<body>
+<script src="shared/nav.js" data-standalone></script>
+<div class="wrap">
+  <header>
+    <h1>🎉 Event Receiving</h1>
+    <div class="sub">Flowers and chocolates bought for an event — invoice, list and total, saved with the event name.</div>
+  </header>
+
+  <div class="card" id="formCard">
+    <h2 id="fTitle">New event receiving</h2>
+    <div class="note">For events only: this does <b>not</b> go into the branch stock and is <b>not</b> counted in the weekly flower budget.</div>
+    <div class="grid">
+      <div><label for="evName">Event name *</label><input id="evName" list="evNames" maxlength="80" placeholder="e.g. Gulf Hotel wedding"><datalist id="evNames"></datalist></div>
+      <div><label for="evDate">Event date</label><input id="evDate" type="date"></div>
+      <div><label for="branch">Branch (handled by)</label><select id="branch"><option value="">— none —</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select></div>
+      <div><label for="supplier">Supplier</label><input id="supplier" list="supList" maxlength="80" placeholder="Supplier name"><datalist id="supList"></datalist></div>
+      <div><label for="invoiceNo">Invoice no.</label><input id="invoiceNo" maxlength="40" placeholder="From the supplier paper"></div>
+      <div><label for="date">Received on</label><input id="date" type="date"></div>
+    </div>
+
+    <div class="tbl"><table>
+      <thead><tr><th style="width:120px">Type</th><th>Item</th><th style="width:90px">Qty</th><th style="width:100px">Unit</th><th style="width:110px">Price (BD)</th><th style="width:100px;text-align:right">Subtotal</th><th style="width:36px"></th></tr></thead>
+      <tbody id="lines"></tbody>
+    </table></div>
+    <datalist id="flList"></datalist><datalist id="chList"></datalist>
+    <div class="row" style="margin-top:8px"><button class="btn" type="button" data-add="Flower">＋ Flower</button><button class="btn" type="button" data-add="Chocolate">＋ Chocolate</button><button class="btn" type="button" data-add="Other">＋ Other item</button></div>
+
+    <div class="tots">
+      <span>Subtotal</span><b id="tSub">0.000</b>
+      <span>VAT <input id="vat" type="number" min="0" max="100" step="0.5" value="10" style="width:64px;padding:3px 6px;font-size:13px;display:inline-block"> %</span><b id="tVat">0.000</b>
+      <span class="g">Total</span><b class="g" id="tTot">0.000 BD</b>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <div><label for="paper">Invoice total on the paper</label><input id="paper" type="number" min="0" step="0.001" placeholder="Type the total printed on the invoice"><div class="tally" id="tally"></div></div>
+      <div><label for="notes">Notes</label><input id="notes" maxlength="300" placeholder="optional"></div>
+    </div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn" type="button" id="cancelEdit" hidden>Cancel edit</button><button class="btn go" type="button" id="saveBtn">💾 Save event receiving</button></div>
+    <div id="res" style="margin-top:8px;font-size:13px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Saved events</h2>
+    <div class="bar">
+      <select id="fBr"><option value="">All branches</option><option>ModaMall</option><option>Hamala</option><option>Galali</option></select>
+      <input id="fFrom" type="date" aria-label="From"><input id="fTo" type="date" aria-label="To">
+      <input id="fQ" placeholder="Search event, supplier, invoice, item…" style="flex:1 1 200px">
+    </div>
+    <div class="sumbox" id="sum"></div>
+    <div id="list"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+<div id="rp"></div>
+<script>
+(function(){
+  var API = (window.LB_CONFIG && LB_CONFIG.EVENT_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/event-fast';
+  var FAPI = (window.LB_CONFIG && LB_CONFIG.FLOWER_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/flower-fast';
+  var CAPI = (window.LB_CONFIG && LB_CONFIG.CHOCOLATE_FAST_API) || 'https://zoratiahjeldgsognfsj.supabase.co/functions/v1/chocolate-fast';
+  var $ = function(id){ return document.getElementById(id); }, esc = window.lbEsc;
+  function tk(){ try{ return window.LALABELLA_TOKEN || sessionStorage.getItem('lalabellaToken') || localStorage.getItem('lalabellaToken') || ''; }catch(e){ return ''; } }
+  function f3(n){ return (Number(n) || 0).toFixed(3); }
+  function today(){ return new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10); }
+  var FL = {}, CH = {}, LINES = [], EDIT = 0, ROWS = [], ADMIN = false, ME = '';
+  var UNITS = { Flower:['stems', 'bunch', 'box'], Chocolate:['kg', 'g', 'pcs', 'box'], Other:['pcs', 'box', 'roll', 'set'] };
+
+  // ---------- catalogs (names + codes; the price stays what the invoice says) ----------
+  fetch(FAPI + '?action=getFlowerItems&_ts=' + Date.now() + '&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(rows){
+    if(!Array.isArray(rows)) return;
+    rows.forEach(function(it){ if(String(it['Status'] || '').trim() !== 'Active') return; var n = String(it['Flowers'] || '').trim(); if(n && !FL[n]) FL[n] = String(it['Item Code'] || ''); });
+    $('flList').innerHTML = Object.keys(FL).sort().map(function(n){ return '<option value="' + esc(n) + '">'; }).join('');
+  }).catch(function(){});
+  fetch(CAPI + '?action=getItems&_ts=' + Date.now() + '&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(rows){
+    if(!Array.isArray(rows)) return;
+    rows.forEach(function(it){ var n = String(it['Chocolate Name'] || '').trim(); if(n) CH[n] = String(it['Product Code'] || ''); });
+    $('chList').innerHTML = Object.keys(CH).sort().map(function(n){ return '<option value="' + esc(n) + '">'; }).join('');
+  }).catch(function(){});
+  fetch(FAPI + '?action=getSuppliers&_ts=' + Date.now()).then(function(r){ return r.json(); }).then(function(rows){
+    if(Array.isArray(rows)) $('supList').innerHTML = rows.map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); }).catch(function(){});
+  fetch(API + '?action=names&token=' + encodeURIComponent(tk())).then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.success) $('evNames').innerHTML = d.names.map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); }).catch(function(){});
+
+  // ---------- the item lines ----------
+  function addLine(type, o){ o = o || {}; LINES.push({ type:type, name:o.name || '', qty:o.qty == null ? '' : o.qty, unit:o.unit || UNITS[type][0], rate:o.rate == null ? '' : o.rate }); draw(); var ins = $('lines').querySelectorAll('tr:last-child input[data-f=name]'); if(ins[0] && !o.name) ins[0].focus(); }
+  function draw(){
+    $('lines').innerHTML = LINES.map(function(l, i){
+      var dl = l.type === 'Flower' ? 'flList' : l.type === 'Chocolate' ? 'chList' : '';
+      return '<tr data-i="' + i + '"><td><select data-f="type">' + ['Flower', 'Chocolate', 'Other'].map(function(t){ return '<option' + (t === l.type ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></td>' +
+        '<td><input data-f="name" value="' + esc(l.name) + '"' + (dl ? ' list="' + dl + '"' : '') + ' placeholder="' + (l.type === 'Flower' ? 'Flower name' : l.type === 'Chocolate' ? 'Chocolate name' : 'Item') + '" maxlength="120"></td>' +
+        '<td><input data-f="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="Qty" value="' + esc(l.qty) + '"></td>' +
+        '<td><select data-f="unit">' + UNITS[l.type].map(function(u){ return '<option' + (u === l.unit ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></td>' +
+        '<td><input data-f="rate" type="number" min="0" step="0.001" inputmode="decimal" placeholder="Price" value="' + esc(l.rate) + '"></td>' +
+        '<td class="n" data-sub>' + f3((Number(l.qty) || 0) * (Number(l.rate) || 0)) + '</td><td><button class="x" type="button" data-del="' + i + '" aria-label="Remove line">✕</button></td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty">Add the flowers and chocolates from the invoice.</td></tr>';
+    totals();
+  }
+  function totals(){
+    var sub = LINES.reduce(function(s, l){ return s + (Number(l.qty) || 0) * (Number(l.rate) || 0); }, 0), vp = Number($('vat').value) || 0, vat = sub * vp / 100, tot = sub + vat;
+    $('tSub').textContent = f3(sub); $('tVat').textContent = f3(vat); $('tTot').textContent = f3(tot) + ' BD';
+    var p = $('paper').value, el = $('tally');
+    if(p === '' || !LINES.length){ el.textContent = ''; return; }
+    var diff = tot - Number(p);
+    if(Math.abs(diff) <= 0.01){ el.style.color = 'var(--ok)'; el.textContent = '✓ Tally — matches the invoice.'; }
+    else { el.style.color = 'var(--bad)'; el.textContent = '⚠ Not tally: the list is ' + f3(Math.abs(diff)) + ' BD ' + (diff > 0 ? 'MORE' : 'LESS') + ' than the invoice.'; }
+  }
+  $('lines').addEventListener('input', function(e){ var tr = e.target.closest('tr[data-i]'), f = e.target.getAttribute('data-f'); if(!tr || !f) return; var l = LINES[Number(tr.getAttribute('data-i'))];
+    if(f === 'type'){ l.type = e.target.value; l.unit = UNITS[l.type][0]; draw(); return; }
+    l[f] = e.target.value; if(f === 'qty' || f === 'rate'){ tr.querySelector('[data-sub]').textContent = f3((Number(l.qty) || 0) * (Number(l.rate) || 0)); totals(); } });
+  $('lines').addEventListener('change', function(e){ if(e.target.getAttribute('data-f') === 'type' || e.target.getAttribute('data-f') === 'unit'){ var tr = e.target.closest('tr[data-i]'); LINES[Number(tr.getAttribute('data-i'))][e.target.getAttribute('data-f')] = e.target.value; if(e.target.getAttribute('data-f') === 'type'){ LINES[Number(tr.getAttribute('data-i'))].unit = UNITS[e.target.value][0]; draw(); } } });
+  $('lines').addEventListener('click', function(e){ var b = e.target.closest('[data-del]'); if(!b) return; LINES.splice(Number(b.getAttribute('data-del')), 1); draw(); });
+  document.querySelectorAll('[data-add]').forEach(function(b){ b.addEventListener('click', function(){ addLine(b.getAttribute('data-add')); }); });
+  $('vat').addEventListener('input', totals); $('paper').addEventListener('input', totals);
+
+  function resetForm(){ EDIT = 0; LINES = []; ['evName', 'evDate', 'supplier', 'invoiceNo', 'paper', 'notes'].forEach(function(id){ $(id).value = ''; }); $('date').value = today(); $('vat').value = 10;
+    $('fTitle').textContent = 'New event receiving'; $('saveBtn').textContent = '💾 Save event receiving'; $('cancelEdit').hidden = true; addLine('Flower'); }
+  $('cancelEdit').onclick = function(){ resetForm(); $('res').innerHTML = ''; };
+
+  // ---------- save ----------
+  var busy = false;
+  $('saveBtn').onclick = function(){
+    var ev = $('evName').value.trim();
+    if(!ev){ alert('Type the event name.'); $('evName').focus(); return; }
+    var items = LINES.filter(function(l){ return String(l.name).trim() && Number(l.qty) > 0; }).map(function(l){ var n = String(l.name).trim(); return { type:l.type, name:n, code:(l.type === 'Flower' ? FL[n] : l.type === 'Chocolate' ? CH[n] : '') || '', qty:Number(l.qty), unit:l.unit, rate:Number(l.rate) || 0 }; });
+    if(!items.length){ alert('Add at least one item with a Qty.'); return; }
+    var noPrice = items.filter(function(it){ return !(it.rate > 0); }).map(function(it){ return it.name; });
+    if(noPrice.length && !confirm('No price for: ' + noPrice.join(', ') + '\n\nSave anyway?')) return;
+    if($('paper').value === '' && !confirm('You did not type the invoice total from the supplier paper.\nIt helps catch typing mistakes.\n\nSave anyway?')){ $('paper').focus(); return; }
+    if(busy) return; busy = true; var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    var body = new URLSearchParams({ action:'save', token:tk(), id:String(EDIT || ''), eventName:ev, eventDate:$('evDate').value, branch:$('branch').value, supplier:$('supplier').value.trim(), invoiceNo:$('invoiceNo').value.trim(),
+      date:$('date').value, vatPercent:$('vat').value, paperTotal:$('paper').value, notes:$('notes').value.trim(), items:JSON.stringify(items) });
+    fetch(API, { method:'POST', body:body }).then(function(r){ return r.json(); }).then(function(d){
+      if(!d || !d.success){ $('res').innerHTML = '<span style="color:var(--bad)">⚠ ' + esc((d && d.error) || 'Not saved.') + '</span>'; return; }
+      $('res').innerHTML = '<span style="color:var(--ok)">✓ ' + (EDIT ? 'Updated' : 'Saved') + ': 🎉 ' + esc(d.row.eventName) + ' · ' + f3(d.row.total) + ' BD' + (d.duplicate ? ' (already saved)' : '') + '</span> <button class="pbtn" type="button" data-print="' + d.row.id + '">🖨️ Print</button>';
+      ROWS = [d.row].concat(ROWS.filter(function(x){ return x.id !== d.row.id; })); resetForm(); load();
+    }).catch(function(){ $('res').innerHTML = '<span style="color:var(--bad)">⚠ Connection problem. Please try again.</span>'; })
+      .then(function(){ busy = false; btn.disabled = false; btn.textContent = EDIT ? '💾 Save changes' : '💾 Save event receiving'; });
+  };
+
+  // ---------- list ----------
+  function load(){
+    var q = new URLSearchParams({ action:'list', token:tk(), branch:$('fBr').value, from:$('fFrom').value, to:$('fTo').value });
+    fetch(API + '?' + q).then(function(r){ return r.json(); }).then(function(d){
+      if(!d || !d.success){ $('list').innerHTML = '<div class="empty">' + esc((d && d.error) || 'Could not load.') + '</div>'; return; }
+      ADMIN = !!d.admin; ME = d.me || ''; ROWS = d.rows || []; if(!$('branch').value && d.userBranch && !EDIT) $('branch').value = d.userBranch; show();
+    }).catch(function(){ $('list').innerHTML = '<div class="empty">Connection problem.</div>'; });
+  }
+  function show(){
+    var t = $('fQ').value.trim().toLowerCase();
+    var rows = ROWS.filter(function(r){ return !t || [r.eventName, r.supplier, r.invoiceNo, r.branch, r.notes].concat(r.items.map(function(i){ return i.name; })).join(' ').toLowerCase().indexOf(t) !== -1; });
+    var by = {}; rows.forEach(function(r){ by[r.eventName] = (by[r.eventName] || 0) + r.total; });
+    var all = rows.reduce(function(s, r){ return s + r.total; }, 0);
+    $('sum').innerHTML = rows.length ? '<span>' + rows.length + ' receiving' + (rows.length > 1 ? 's' : '') + ' · <b>' + f3(all) + ' BD</b></span>' + Object.keys(by).slice(0, 12).map(function(k){ return '<span>🎉 ' + esc(k) + ' · <b>' + f3(by[k]) + '</b></span>'; }).join('') : '';
+    $('list').innerHTML = rows.map(function(r){
+      var fl = r.items.filter(function(i){ return i.type === 'Flower'; }), ch = r.items.filter(function(i){ return i.type === 'Chocolate'; }), ot = r.items.filter(function(i){ return i.type === 'Other'; });
+      var grp = function(list, ic){ return list.length ? '<div>' + ic + ' ' + list.map(function(i){ return esc(i.name) + ' × ' + esc(i.qty) + ' ' + esc(i.unit) + ' @ ' + f3(i.rate); }).join(' · ') + '</div>' : ''; };
+      var canDel = ADMIN || (r.by === ME && new Date(r.at).getTime() > Date.now() - 24 * 3600000), canEd = ADMIN || r.by === ME;
+      return '<div class="ev"><div class="top"><b>🎉 ' + esc(r.eventName) + '</b>' + (r.eventDate ? '<span class="m">event ' + esc(r.eventDate) + '</span>' : '') + (r.branch ? '<span class="tag">' + esc(r.branch) + '</span>' : '') +
+        '<span style="margin-left:auto;font-weight:800">' + f3(r.total) + ' BD</span></div>' +
+        '<div class="m">' + esc(r.date) + (r.supplier ? ' · ' + esc(r.supplier) : '') + (r.invoiceNo ? ' · Inv ' + esc(r.invoiceNo) : '') + ' · by ' + esc(r.by) + (r.editedBy ? ' · edited by ' + esc(r.editedBy) : '') +
+        (r.paperTotal != null && Math.abs(r.paperTotal - r.total) > 0.01 ? ' · <span style="color:var(--bad)">⚠ paper ' + f3(r.paperTotal) + '</span>' : '') + '</div>' +
+        '<div style="margin-top:4px">' + grp(fl, '🌸') + grp(ch, '🍫') + grp(ot, '🎀') + '</div>' + (r.notes ? '<div class="m">📝 ' + esc(r.notes) + '</div>' : '') +
+        '<div class="row" style="margin-top:6px"><button class="pbtn" type="button" data-print="' + r.id + '">🖨️ Print</button>' + (canEd ? '<button class="pbtn" type="button" data-edit="' + r.id + '">✎ Edit</button>' : '') + (canDel ? '<button class="pbtn red" type="button" data-rm="' + r.id + '">🗑️ Remove</button>' : '') + '</div></div>';
+    }).join('') || '<div class="empty">No event receiving yet.</div>';
+  }
+  ['fBr', 'fFrom', 'fTo'].forEach(function(id){ $(id).addEventListener('change', load); });
+  $('fQ').addEventListener('input', show);
+  document.addEventListener('click', function(e){
+    var p = e.target.closest('[data-print]'); if(p){ printRow(ROWS.find(function(r){ return String(r.id) === p.getAttribute('data-print'); })); return; }
+    var ed = e.target.closest('[data-edit]'); if(ed){ var r = ROWS.find(function(x){ return String(x.id) === ed.getAttribute('data-edit'); }); if(!r) return;
+      EDIT = r.id; $('evName').value = r.eventName; $('evDate').value = r.eventDate || ''; $('branch').value = r.branch || ''; $('supplier').value = r.supplier; $('invoiceNo').value = r.invoiceNo; $('date').value = r.date; $('vat').value = r.vatPercent;
+      $('paper').value = r.paperTotal == null ? '' : r.paperTotal; $('notes').value = r.notes; LINES = r.items.map(function(i){ return { type:i.type, name:i.name, qty:i.qty, unit:i.unit, rate:i.rate }; }); draw();
+      $('fTitle').textContent = 'Edit: 🎉 ' + r.eventName; $('saveBtn').textContent = '💾 Save changes'; $('cancelEdit').hidden = false; $('formCard').scrollIntoView({ behavior:'smooth' }); return; }
+    var rm = e.target.closest('[data-rm]'); if(rm){ var x = ROWS.find(function(r){ return String(r.id) === rm.getAttribute('data-rm'); }) || {};
+      if(!confirm('Remove the event receiving "' + (x.eventName || '') + '" (' + f3(x.total) + ' BD)?')) return; rm.disabled = true;
+      fetch(API, { method:'POST', body:new URLSearchParams({ action:'remove', id:rm.getAttribute('data-rm'), token:tk() }) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success){ alert(d.error || 'Failed.'); rm.disabled = false; } else load(); }).catch(function(){ alert('Connection problem.'); rm.disabled = false; }); }
+  });
+  function printRow(r){
+    if(!r) return;
+    $('rp').innerHTML = '<h2 style="margin:0">Lalabella — Event Receiving</h2><div style="margin:4px 0 10px">🎉 <b>' + esc(r.eventName) + '</b>' + (r.eventDate ? ' · event ' + esc(r.eventDate) : '') + (r.branch ? ' · ' + esc(r.branch) : '') + '<br>' +
+      'Received ' + esc(r.date) + (r.supplier ? ' · Supplier: ' + esc(r.supplier) : '') + (r.invoiceNo ? ' · Invoice: ' + esc(r.invoiceNo) : '') + '</div>' +
+      '<table><thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Price</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>' +
+      r.items.map(function(i){ return '<tr><td>' + esc(i.type) + '</td><td>' + esc(i.name) + '</td><td>' + esc(i.qty) + ' ' + esc(i.unit) + '</td><td>' + f3(i.rate) + '</td><td style="text-align:right">' + f3(i.subtotal) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      '<div style="margin-top:8px;text-align:right">Subtotal ' + f3(r.subtotal) + ' · VAT ' + esc(r.vatPercent) + '% ' + f3(r.vat) + '<br><b style="font-size:16px">TOTAL ' + f3(r.total) + ' BD</b></div>' +
+      '<div style="margin-top:10px;font-size:11px;color:#555">Not in branch stock · not in the weekly budget · saved by ' + esc(r.by) + '</div>';
+    setTimeout(function(){ window.print(); }, 60);
+  }
+  $('date').value = today(); resetForm(); load();
+})();
+</script>
+</body>
+</html>

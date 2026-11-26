@@ -12,11 +12,11 @@
   var S = {
     chocolate: [['index.html', '🏠', 'Choco Home'], ['dashboard.html', '📊', 'Dashboard'], ['chocolate-receiving.html', '📥', 'Receiving'], ['chocolate-release.html', '📤', 'Release'],
       ['stock-count.html', '📋', 'Stock Count'], ['stock-approval.html', '✅', 'Stock Approval'], ['chocolate-arrangements.html', '🎁', 'Arrangements'], ['chocolate-barcode.html', '🏷️', 'Barcode'],
-      ['chocolate-calc.html', '🍫', 'Choco Calc'], ['calc-sales.html?kind=chocolate', '🧾', 'Choco Sales'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['mixed-calc.html?event=1', '🎉', 'Used for Events'], ['flower-calc.html', '🌸', 'Flower Calc'],
+      ['chocolate-calc.html', '🍫', 'Choco Calc'], ['calc-sales.html?kind=chocolate', '🧾', 'Choco Sales'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['event-receiving.html', '🎉', 'Event Receiving'], ['flower-calc.html', '🌸', 'Flower Calc'],
       ['chocolate-admin.html', '🔐', 'Admin', 'admin'], ['chocolate-photos.html', '🖼️', 'Photos', 'admin'], ['chocolate-guide.html', '📖', 'Guide']],
     flower: [['flower-tools.html', '🏠', 'Flower Tools'], ['flower-dashboard.html', '📊', 'Dashboard'], ['flower-receiving.html', '🛒', 'Receiving'], ['flower-purchase.html', '🧾', 'Purchase'],
       ['flower-stock-count.html', '📋', 'Stock Count'], ['flower-catalog.html', '📚', 'Catalog'], ['flower-arrangements.html', '💐', 'Arrangements'], ['flower-transfer.html', '🔄', 'Transfer'],
-      ['flower-barcode.html', '🏷️', 'Barcode'], ['flower-calc.html', '🌸', 'Flower Calc'], ['calc-sales.html?kind=flower', '🧾', 'Flower Sales'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['mixed-calc.html?event=1', '🎉', 'Used for Events'],
+      ['flower-barcode.html', '🏷️', 'Barcode'], ['flower-calc.html', '🌸', 'Flower Calc'], ['calc-sales.html?kind=flower', '🧾', 'Flower Sales'], ['mixed-calc.html', '💐', 'Mixed Calc'], ['event-receiving.html', '🎉', 'Event Receiving'],
       ['chocolate-calc.html', '🍫', 'Choco Calc'], ['flower-admin.html', '🔐', 'Admin', 'admin'], ['flower-photos.html', '🖼️', 'Photos', 'admin'], ['flower-guide.html', '📖', 'Guide']],
     item: [['item-inventory.html', '📦', 'Item Inventory'], ['item-dashboard.html', '📊', 'Item Dashboard'], ['item-saudi.html', '🚚', 'Saudi Transfers'],
       ['cafe-inventory.html', '☕', 'Café Items'], ['cafe-hub.html', '🏪', 'Café Stock Room'], ['item-admin.html', '🔐', 'Admin', 'admin'], ['item-photos.html', '🖼️', 'Photos', 'admin']],

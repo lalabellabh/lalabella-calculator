@@ -91,7 +91,7 @@
       ['chocolate-receiving.html', '📥', 'Receiving'],
       ['chocolate-release.html', '📤', 'Release'],
       ['stock-count.html', '📋', 'Stock Count'],
-      ['mixed-calc.html?event=1', '🎉', 'Used for Events'],   // Nov 26 2026 (Bench)
+      ['event-receiving.html', '🎉', 'Event Receiving'],   // Nov 26 2026 (Bench)
       ['stock-approval.html', '✅', 'Stock Approval'],
       ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['chocolate-arrangements.html', '🎁', 'Chocolate Arrangements'],
@@ -109,7 +109,7 @@
       ['receiving-approval.html', '📝', 'Receiving Approval', 'admin'],
       ['flower-purchase.html', '🧾', 'Flower Purchase'],
       ['flower-stock-count.html', '📋', 'Stock Count'],
-      ['mixed-calc.html?event=1', '🎉', 'Used for Events'],   // Nov 26 2026 (Bench)
+      ['event-receiving.html', '🎉', 'Event Receiving'],   // Nov 26 2026 (Bench)
       ['flower-catalog.html', '📚', 'Flower Catalog'],
       ['flower-arrangements.html', '💐', 'Flower Arrangements'],
       ['flower-transfer.html', '🔄', 'Flower Transfer'],

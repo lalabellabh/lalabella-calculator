@@ -82,8 +82,6 @@
       <a href="#" data-kind="flower" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🧾 Flower Sales</a>
       <a href="#" data-kind="chocolate" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🧾 Choco Sales</a>
       <a href="#" data-kind="" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🧾 All Sales</a>
-      <a href="#" data-ev style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">🎉 Events</a>
-      <a href="mixed-calc.html?event=1" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.08);color:#5a3a46;font-size:12px;font-weight:700;text-decoration:none;">＋ Used for event</a>
     </div>
     <h1>🧾 Calc Sales</h1>
     <div class="sub">Every "✓ Sold" from the Flower Calc and Chocolate Calc — what was taken out of each branch's stock</div>
@@ -306,9 +304,6 @@
   }
   $('br').onchange = load; $('kind').onchange = load; $('ref').onclick = load; $('from').onchange = load; $('to').onchange = load;
   var qt; $('q').oninput = function(){ clearTimeout(qt); qt = setTimeout(load, 350); };
-  // Nov 26 2026 (Bench): 🎉 Events = flowers / chocolates used for events (source Event); ?q=Event opens it
-  (function(){ var ev = document.querySelector('#backCalc [data-ev]'); if(ev) ev.addEventListener('click', function(e){ e.preventDefault(); $('q').value = 'Event'; load(); });
-    try{ var q0 = new URL(location.href).searchParams.get('q'); if(q0) $('q').value = q0; }catch(x){} })();
   load();
 })();
 </script>
