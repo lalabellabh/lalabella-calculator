@@ -5,6 +5,7 @@
 <script src="shared/config.js"></script>
 <script>window.lbEsc=window.lbEsc||function(v){return String(v==null?"":v).replace(/[&<>"'`]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","`":"&#96;"}[c];});};</script>
 <script src="shared/scanner.js"></script>
+<script src="shared/voice.js?v=7"></script>
 <script src="shared/excel.js" data-auto></script>
 <script src="shared/theme.js"></script>
 <script src="shared/history-tools.js"></script>
@@ -379,7 +380,7 @@
   <div class="card">
     <div class="card-title">Items to Count</div>
     <label>Search Chocolate</label>
-    <div class="sc-search"><input type="text" id="fItemSearch" placeholder="Name, barcode / code, or batch… (scanner gun: scan + Enter)" autocomplete="off" /><button type="button" class="sc-scan" id="scScanBtn" title="Scan barcode with camera">📷</button></div>
+    <div class="sc-search"><input type="text" id="fItemSearch" placeholder="Name, barcode / code, or batch… (scanner gun: scan + Enter)" autocomplete="off" /><button type="button" class="sc-scan" id="scMicBtn" title="Say the chocolate and the count — e.g. pistachio walnut 1.2">🎤</button><button type="button" class="sc-scan" id="scScanBtn" title="Scan barcode with camera">📷</button></div>
     <div class="sc-msg" id="scMsg"></div>
     <div class="scanner-modal" id="scScanModal"><video id="scScanVideo" autoplay playsinline muted></video><div class="scanner-hint">Point the camera at the chocolate barcode</div><button class="close-scan" id="scScanClose" type="button">Cancel</button></div>
     <label>Category</label>
@@ -684,6 +685,29 @@
     catch(e){ alert(LBScan.message(e)); scCloseScan(); }
   });
   scLoadCodes();
+  // ---------- 🎤 Voice (Nov 26 2026, Bench: "wala palang mic, add ka") ----------
+  // Say "pistachio walnut 1.2" -> finds it and puts 1.2 in its Physical Count. Just a name -> finds it. Nothing is saved by voice.
+  (function(){
+    const btn = document.getElementById('scMicBtn');
+    if(!window.LBVoice || !LBVoice.supported()){ btn.style.display = 'none'; return; }
+    btn.addEventListener('click', async () => {
+      const names = [...new Set(stockItems.map(it => String(it.ChocolateName || '').trim()).filter(Boolean))];
+      if(!names.length){ alert('Pick the branch first — no chocolate in the list yet.'); return; }
+      const alts = await LBVoice.listen({ hint: 'Say the chocolate and the count — e.g. “pistachio walnut 1.2” or “mia gold 25”' });
+      if(!alts || !alts.length) return;
+      const v = LBVoice.parseBest(alts, names), msg = document.getElementById('scMsg');
+      if(!v || !v.name || v.nameScore < .55){ msg.textContent = '🎤 “' + (alts[0] || '') + '” — chocolate not found, please try again.'; return; }
+      scFind(v.name);
+      if(v.qty == null){ msg.textContent = '🎤 ' + v.name + ' — type or say the count.'; return; }
+      const row = document.querySelector('#itemsList .count-row'); if(!row) return;
+      const it = stockItems[Number(row.getAttribute('data-idx'))] || {}, u = String(it.Unit || '').toLowerCase();
+      let q = v.qty; if(/^kg/.test(u) && v.unit === 'g') q = q / 1000; else if(/^g/.test(u) && v.unit === 'Kg') q = q * 1000;
+      const inp = row.querySelector('.physicalInput'); inp.value = Math.round(q * 1000) / 1000; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.classList.remove('count-flash'); void inp.offsetWidth; inp.classList.add('count-flash');
+      msg.textContent = '🎤 ✓ ' + v.name + ': ' + inp.value + ' ' + (it.Unit || '') + (document.querySelectorAll('#itemsList .count-row').length > 1 ? ' (first batch — check the others)' : '');
+      try{ LBVoice.speak(v.name + ', ' + inp.value); }catch(e){}
+    });
+  })();
 
   document.getElementById('fItemSearch').addEventListener('input', function(){
     document.getElementById('scMsg').textContent = '';
